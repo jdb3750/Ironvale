@@ -1,0 +1,123 @@
+"""Exercise catalog with muscle-group mappings and how-to cues.
+Used for quest generation, recency tracking, and the Compendium."""
+
+GROUPS = ["legs", "posterior", "chest", "back", "shoulders", "arms", "core"]
+
+# equipment: kettlebell / barbell / dumbbell / bodyweight
+EXERCISES = {
+    # ---- kettlebell ----
+    "Kettlebell Swing": {
+        "equipment": "kettlebell", "groups": ["posterior", "core"], "scheme": ("reps", 10, 20),
+        "how": "Hinge at the hips, hike the bell back, then snap the hips forward to float it to chest height. Arms are ropes — all power comes from the hips.",
+    },
+    "Goblet Squat": {
+        "equipment": "kettlebell", "groups": ["legs"], "scheme": ("reps", 8, 12),
+        "how": "Hold the bell at your chest, elbows tucked. Sit down between your heels with a tall chest, then stand tall.",
+    },
+    "Kettlebell Clean & Press": {
+        "equipment": "kettlebell", "groups": ["shoulders", "legs"], "scheme": ("reps", 5, 8),
+        "how": "Clean the bell to the rack position without banging your forearm, brace, then press to lockout overhead. Lower with control.",
+    },
+    "Kettlebell Snatch": {
+        "equipment": "kettlebell", "groups": ["posterior", "shoulders"], "scheme": ("reps", 6, 10),
+        "how": "One motion: hike, hip snap, and punch through at the top so the bell lands softly overhead. It should float, never crash.",
+    },
+    "Turkish Get-Up": {
+        "equipment": "kettlebell", "groups": ["core", "shoulders"], "scheme": ("reps", 2, 4),
+        "how": "Floor to standing with the bell locked overhead, in stages: to the elbow, to the hand, bridge, sweep the leg, lunge, stand. Then reverse. Slow is correct.",
+    },
+    "Kettlebell Row": {
+        "equipment": "kettlebell", "groups": ["back", "arms"], "scheme": ("reps", 8, 12),
+        "how": "Hinge with a flat back and pull the bell to your hip. Squeeze the shoulder blade at the top; no shrugging or heaving.",
+    },
+    "Kettlebell Floor Press": {
+        "equipment": "kettlebell", "groups": ["chest", "arms"], "scheme": ("reps", 8, 12),
+        "how": "On your back, elbow at ~45 degrees, press the bell to lockout. Let the elbow rest on the floor a beat between reps.",
+    },
+    "Kettlebell Halo": {
+        "equipment": "kettlebell", "groups": ["shoulders", "core"], "scheme": ("reps", 8, 12),
+        "how": "Circle the bell slowly around your head at collar height, both directions. Ribs down; the trunk stays perfectly still.",
+    },
+    "Farmer Carry": {
+        "equipment": "kettlebell", "groups": ["core", "back"], "scheme": ("steps", 30, 60),
+        "how": "Pick up heavy bells, stand tall, and walk. Shoulders packed, no leaning. Continue until your grip files a complaint.",
+    },
+    "Kettlebell Lunge": {
+        "equipment": "kettlebell", "groups": ["legs"], "scheme": ("reps", 6, 10),
+        "how": "Bell at the chest or by your side. Take a long step, let the back knee kiss the floor, and drive up through the front heel.",
+    },
+    "Kettlebell Deadlift": {
+        "equipment": "kettlebell", "groups": ["posterior", "legs"], "scheme": ("reps", 8, 12),
+        "how": "Bell between the feet. Hinge with a flat back, grip, and push the floor away. Finish tall — the lockout is hips, not lean-back.",
+    },
+    # ---- barbell / dumbbell ----
+    "Back Squat": {
+        "equipment": "barbell", "groups": ["legs", "posterior"], "scheme": ("reps", 5, 8),
+        "how": "Bar on the traps, big breath and brace, sit down to below parallel with knees tracking over toes, then drive up.",
+    },
+    "Deadlift": {
+        "equipment": "barbell", "groups": ["posterior", "back"], "scheme": ("reps", 3, 6),
+        "how": "Bar over midfoot. Hinge, flat back, wedge yourself in, and push the floor away. Lock out with the hips; never yank with the back.",
+    },
+    "Bench Press": {
+        "equipment": "barbell", "groups": ["chest", "arms"], "scheme": ("reps", 5, 8),
+        "how": "Shoulder blades pinned, feet planted. Lower the bar to mid-chest and press to lockout, wrists stacked over elbows.",
+    },
+    "Overhead Press": {
+        "equipment": "barbell", "groups": ["shoulders", "arms"], "scheme": ("reps", 5, 8),
+        "how": "Squeeze the glutes, brace hard, press the bar past your face and lock out overhead. If the legs help, it's a different exercise.",
+    },
+    "Barbell Row": {
+        "equipment": "barbell", "groups": ["back", "arms"], "scheme": ("reps", 6, 10),
+        "how": "Hinge to roughly 45 degrees and pull the bar to your lower ribs. Control the descent; momentum is lying about your strength.",
+    },
+    "Romanian Deadlift": {
+        "equipment": "barbell", "groups": ["posterior"], "scheme": ("reps", 6, 10),
+        "how": "From standing, push the hips back with soft knees until the hamstrings object, then stand. The bar never leaves your legs.",
+    },
+    "Dumbbell Curl": {
+        "equipment": "dumbbell", "groups": ["arms"], "scheme": ("reps", 8, 12),
+        "how": "Elbows pinned to your sides. Curl, squeeze, lower slowly. If you're swinging, the dumbbell is curling you.",
+    },
+    "Dumbbell Shoulder Press": {
+        "equipment": "dumbbell", "groups": ["shoulders"], "scheme": ("reps", 8, 12),
+        "how": "Dumbbells at the ears, press to lockout without flaring the ribs. Seated is stricter; standing is braver.",
+    },
+    "Dumbbell Bench Press": {
+        "equipment": "dumbbell", "groups": ["chest", "arms"], "scheme": ("reps", 8, 12),
+        "how": "Like the barbell bench with a deeper stretch. Control the bottom and don't let the bells drift apart.",
+    },
+    # ---- bodyweight ----
+    "Pull-Up": {
+        "equipment": "bodyweight", "groups": ["back", "arms"], "scheme": ("reps", 4, 10),
+        "how": "From a dead hang, pull until your chin clears the bar — chest up, elbows driving down. No swinging.",
+    },
+    "Push-Up": {
+        "equipment": "bodyweight", "groups": ["chest", "arms"], "scheme": ("reps", 10, 20),
+        "how": "Rigid plank, hands under shoulders. Chest to the floor and press away, elbows at ~45 degrees. Hips never sag.",
+    },
+    "Dip": {
+        "equipment": "bodyweight", "groups": ["chest", "arms"], "scheme": ("reps", 5, 12),
+        "how": "Support on the bars, lower until the shoulders dip below the elbows, press out. Lean forward for chest, stay upright for triceps.",
+    },
+    "Plank": {
+        "equipment": "bodyweight", "groups": ["core"], "scheme": ("seconds", 30, 60),
+        "how": "Forearms down, body one rigid line, glutes and ribs locked in. Breathe small. Shaking is the point.",
+    },
+    "Hanging Leg Raise": {
+        "equipment": "bodyweight", "groups": ["core"], "scheme": ("reps", 6, 12),
+        "how": "Hang from a bar, ribs down, and raise the legs (or knees) without swinging. Lower slower than you lifted.",
+    },
+    "Bulgarian Split Squat": {
+        "equipment": "bodyweight", "groups": ["legs"], "scheme": ("reps", 8, 12),
+        "how": "Rear foot up on a bench, drop the back knee straight down, drive up through the front heel. Cursed, and extremely effective.",
+    },
+}
+
+KB_NAMES = [k for k, v in EXERCISES.items() if v["equipment"] == "kettlebell"]
+GYM_NAMES = [k for k, v in EXERCISES.items() if v["equipment"] in ("barbell", "dumbbell", "bodyweight")]
+
+
+def groups_for(exercise):
+    ex = EXERCISES.get(exercise)
+    return ex["groups"] if ex else []

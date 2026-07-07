@@ -1,0 +1,12 @@
+services:
+  ironvale:
+    build: .
+    container_name: ironvale
+    ports:
+      - "8321:8321"
+    volumes:
+      - ./data:/data
+    environment:
+      # Optional: require a password (recommended if exposed beyond your LAN)
+      - APP_PASSWORD=${APP_PASSWORD:-}
+    restart: unless-stopped
