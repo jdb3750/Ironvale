@@ -278,3 +278,22 @@ exactly this to find Pip/relics).
   tests, use `db.set_profile(db.DB_PATH)` (which resolves to the same
   `ironvale.db` that the middleware routes to for the "main" profile) rather
   than hardcoding a custom filename.
+- **Wellness table has no per-row source tag.** The `wellness` table is a
+  simple date-keyed ledger — `INSERT OR REPLACE` (or `ON CONFLICT(date) DO
+  UPDATE`) with no guard. Dev mode's "seed 60d of fake training" silently
+  overwrites any real `wellness` rows that share a date, and the "wipe fake
+  training" dev action only clears `activities WHERE source='dev'` — it
+  never touches the `wellness` table at all. If a profile has real intervals
+  data and someone ever hits "seed" in dev mode, the wellness window is
+  corrupted with no self-healing path (ordinary rolling syncs only go back
+  30 days). Fingerprinting trick for post-hoc detection: dev-seed writes raw
+  `random.uniform()` floats with long decimal tails (e.g. `77.0544878621`);
+  real intervals.icu data is always cleanly rounded (e.g. `78.743`). Search
+  for >6-digit fractional parts to find contaminated rows.
+- **intervals.icu always reports weight in kg** regardless of the athlete's
+  display preference there. The `weight_unit` setting in Iron Vale
+  (`kg`/`lb`) is a lift-weight display label (manually-entered, so it
+  matches whatever the player typed). But bodyweight charts in the Vitals
+  tab are driven by synced wellness data, which is always metric no matter
+  what. If the player sets `weight_unit=lb`, you must convert on the
+  frontend — storage stays kg (single source of truth from the API).
