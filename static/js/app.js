@@ -5,6 +5,7 @@ const S = {
   params: {},
   exercises: [],
   hist: [],           // back stack: [{screen, params}]
+  fennQueue: [],       // unguided-run bonuses awaiting their speech-bubble moment
 };
 
 const $app = () => document.getElementById('app');
@@ -27,7 +28,22 @@ async function api(path, opts = {}) {
 
 async function refreshState() {
   S.state = await api('/state');
+  queueFennBubbles(S.state.unguided_pending);
   return S.state;
+}
+
+/* Old Fenn pays a bonus for runs done with no quest accepted, but only once
+   his speech bubble is actually tapped (see render() below and
+   showFennBubbleIfQueued/G.claimFennBubble in screens.js) — the reward is
+   NOT applied server-side until that click (/api/unguided/claim). The
+   server is the source of truth for what's still unclaimed today (it also
+   silently auto-resolves anything left over from a previous day, with no
+   bubble), so every refreshState() call REPLACES this queue outright
+   rather than appending to it — otherwise a bubble that's just sitting
+   there unclaimed would get piled into the queue again on every single
+   refresh and stack up duplicates. */
+function queueFennBubbles(list) {
+  S.fennQueue = list || [];
 }
 
 function nav(screen, params = {}) {
@@ -141,16 +157,24 @@ function typewrite(el, text, speed = 14) {
 
 function showCeremony(rewards, title) {
   SFX.fanfare();
+  const STAT_NAMES = { str: 'Strength', end: 'Endurance', con: 'Constitution', spr: 'Spirit' };
   const lines = [];
   lines.push(`<div class="reward-line" style="color:var(--purple)">+${rewards.xp} XP</div>`);
   lines.push(`<div class="reward-line gold" style="color:var(--gold-bright)">&#9670; +${rewards.gold} gold</div>`);
   lines.push(`<div class="reward-line" style="color:var(--green)">+${rewards.vigor} vigor</div>`);
   const sg = Object.entries(rewards.stat_gains || {});
-  if (sg.length) lines.push(`<div class="reward-line" style="color:var(--blue)">${sg.map(([k, v]) => `${k.toUpperCase()} +${v}`).join(' &nbsp; ')}</div>`);
+  if (sg.length) lines.push(`<div class="reward-line" style="color:var(--blue)">${sg.map(([k, v]) => `+${v} ${STAT_NAMES[k] || k.toUpperCase()}`).join(' &nbsp; ')}</div>`);
   if (rewards.token) lines.push(`<div class="reward-line" style="color:var(--blue)">&#9678; A brass token for the Krankwerk!</div>`);
   if (rewards.item) lines.push(`<div class="reward-line r-${rewards.item.rarity}" style="display:flex;align-items:center;justify-content:center;gap:8px">${spriteTag(rewards.item.sprite, 28)} ${esc(rewards.item.name)}</div>`);
-  if (rewards.streak > 1) lines.push(`<div class="reward-line" style="color:#e07030">&#9650; ${rewards.streak}-DAY STREAK${rewards.streak_bonus ? ' — CON +1!' : ''}</div>`);
-  if (rewards.levels) lines.push(`<div class="reward-line levelup">&#9733; LEVEL UP! You are now level ${rewards.level} &#9733;</div>`);
+  if (rewards.streak > 1) lines.push(`<div class="reward-line" style="color:#e07030">&#9650; ${rewards.streak}-DAY STREAK${rewards.streak_bonus ? ' — +1 Constitution!' : ''}</div>`);
+  // track the level-up line's own index so its SFX plays exactly when IT
+  // appears, not just whenever the sequence happens to end (the buddy line
+  // below, when present, is always last and would otherwise steal the cue)
+  let levelupIndex = -1;
+  if (rewards.levels) {
+    levelupIndex = lines.length;
+    lines.push(`<div class="reward-line levelup">&#9733; LEVEL UP! You are now level ${rewards.level} &#9733;</div>`);
+  }
   if (S.state && S.state.buddy) {
     const b = S.state.buddy;
     lines.push(`<div class="reward-line" style="display:flex;align-items:center;justify-content:center;gap:8px">
@@ -164,16 +188,24 @@ function showCeremony(rewards, title) {
     <div style="font-size:24px;color:var(--gold-bright);margin-bottom:10px">${esc(title)}</div>
     <div class="muted" style="margin-bottom:8px">${esc(rewards.note || '')}</div>
     <div id="cere-lines"></div>
-    <div style="margin-top:16px"><button class="btn big" onclick="this.closest('.overlay').remove()">GLORY!</button></div>
+    <div style="margin-top:16px"><button id="cere-glory" class="btn big" disabled>revealing...</button></div>
   </div>`;
   document.body.appendChild(ov);
   const box = ov.querySelector('#cere-lines');
+  const glory = ov.querySelector('#cere-glory');
+  // the GLORY button stays disabled until every line — especially a LEVEL UP
+  // banner, which can land well after the first beat — has had its moment
   lines.forEach((html, i) => {
     setTimeout(() => {
       box.insertAdjacentHTML('beforeend', html);
       hydrateSprites(box);
       SFX.coin();
-      if (rewards.levels && i === lines.length - 1) SFX.levelup();
+      if (i === levelupIndex) SFX.levelup();
+      if (i === lines.length - 1) {
+        glory.disabled = false;
+        glory.textContent = 'GLORY!';
+        glory.onclick = () => ov.remove();
+      }
     }, 350 + i * 380);
   });
 }
@@ -215,7 +247,10 @@ function render() {
   // leaving the pen: forget the arrangement, so the herd has "moved around" by the next visit
   if (typeof RANCH !== 'undefined' && S.screen !== 'ranch') RANCH.saved = null;
   const fn = SCREENS[S.screen] || SCREENS.town;
-  Promise.resolve(fn()).then(() => hydrateSprites()).catch(e => console.error(e));
+  Promise.resolve(fn()).then(() => {
+    hydrateSprites();
+    if (S.screen === 'town') showFennBubbleIfQueued();
+  }).catch(e => console.error(e));
 }
 
 /* ---------- appearance editor (opens from your header sprite) ---------- */

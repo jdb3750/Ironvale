@@ -21,6 +21,7 @@ def _sync_one_profile(slug, path):
         if s["intervals_athlete_id"] and s["intervals_api_key"]:
             intervals.sync()
             game.auto_complete_ready()
+            game.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
         raid.apply_damage(slug)  # this week's uncounted deeds strike the siege
     finally:
         db.reset_profile(token)
@@ -167,6 +168,7 @@ def state():
         "xp_to_next": game.xp_to_next(game.get_char()["level"]),
         "buddy": monsters.get_buddy(),
         "needs_login": False,
+        "unguided_pending": game.unguided_pending(),
     }
 
 
@@ -255,8 +257,15 @@ def sync(request: Request):
     new = intervals.sync()
     # synced activities auto-complete matching quests — return ceremonies for the UI
     completed = game.auto_complete_ready()
+    game.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
     raid_damage = raid.apply_damage(request.cookies.get("iv_profile"))
     return {"new_activities": new, "completed": completed, "raid_damage": raid_damage}
+
+
+@app.post("/api/unguided/claim")
+async def unguided_claim(request: Request):
+    body = await request.json()
+    return game.claim_unguided_bonus(body.get("activity_id"))
 
 
 # ---------------- the siege ----------------
@@ -504,6 +513,14 @@ async def dev_action(request: Request):
         db.q("DELETE FROM activities WHERE source='dev'")
         db.commit()
         game.invalidate_offers()
+    elif act == "unguided_run":
+        import random as _r
+        mins = _r.randint(18, 32)
+        intervals.add_manual_activity({
+            "type": "Run", "minutes": mins, "km": round(mins / 6, 1),
+            "name": "dev unguided run", "source": "intervals.icu",
+        })
+        game.grant_unguided_run_bonus()
     else:
         raise ValueError("Unknown dev incantation.")
     db.log_event(game.now_iso(), "dev", f"Dev mode: {act}.")
