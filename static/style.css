@@ -388,6 +388,56 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 }
 .bld .plate small { color: var(--dim); display: block; font-size: 12px; }
 
+/* ---- Fenn's unguided-run speech bubble: pops out of the waystone (#bld-fenn)
+   over whatever else is on screen. Anchored via the .bld's own
+   position:relative — no new positioning context needed. Comic-bubble tail
+   done with a two-layer border triangle (outer gold, inner panel-color) so
+   it reads as a notch pointing down at Fenn's roof, matching the .dialog
+   box's gold/black styling used in his own greeting screen. */
+.fenn-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 50;
+  width: 220px;
+  max-width: 88vw;
+  margin-bottom: 16px;
+  background: var(--panel);
+  border: 2px solid var(--gold-bright);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+  padding: 10px 10px 12px;
+  cursor: pointer;
+  /* scale (fbpop) and translate (fbfloat) are independent CSS properties, so
+     these two animations compose cleanly instead of fighting over `transform`. */
+  animation: fbpop 0.3s ease-out forwards, fbfloat 2.6s ease-in-out 0.3s infinite;
+}
+.fenn-bubble::after,
+.fenn-bubble::before {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  border: 10px solid transparent;
+}
+.fenn-bubble::after { border-top-color: var(--gold-bright); margin-left: -10px; }
+.fenn-bubble::before { border-top-color: var(--panel); margin-left: -8px; border-width: 8px; margin-top: -1px; }
+.fenn-bubble .fb-line {
+  font-style: italic; color: var(--ink); font-size: 15px; line-height: 1.35;
+  text-align: center; margin-bottom: 8px;
+}
+.fenn-bubble .fb-rewards {
+  display: flex; justify-content: center; gap: 8px; font-size: 14px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.fenn-bubble .fb-rewards .g { color: var(--gold-bright); }
+.fenn-bubble button { width: 100%; }
+@keyframes fbpop {
+  from { scale: 0.4; opacity: 0; }
+  to { scale: 1; opacity: 1; }
+}
+@keyframes fbfloat {
+  0%, 100% { translate: -50% 0; }
+  50% { translate: -50% -4px; }
+}
+
 /* ---- calendar ---- */
 .calgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .calgrid .dow { text-align: center; color: var(--dim); font-size: 14px; text-transform: uppercase; }
@@ -789,4 +839,5 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   .topbar .btn.small { min-width: 0; }
   .bld canvas { width: 84px !important; height: 70px !important; }
   .calday { min-height: 44px; }
+  .fenn-bubble { width: 180px; font-size: 13px; }
 }

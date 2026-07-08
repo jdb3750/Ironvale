@@ -5,6 +5,7 @@ const S = {
   params: {},
   exercises: [],
   hist: [],           // back stack: [{screen, params}]
+  fennQueue: [],       // unguided-run bonuses awaiting their speech-bubble moment
 };
 
 const $app = () => document.getElementById('app');
@@ -27,7 +28,18 @@ async function api(path, opts = {}) {
 
 async function refreshState() {
   S.state = await api('/state');
+  queueFennBubbles(S.state.unguided_pending);
   return S.state;
+}
+
+/* Old Fenn pays a bonus for runs done with no quest accepted — a speech
+   bubble pops out of his abode on the town screen next time it renders
+   (see render() below and showFennBubbleIfQueued in screens.js). The reward
+   is already granted server-side; this queue only gates when the player
+   *sees* it, so it survives across screens/sessions until claimed. */
+function queueFennBubbles(list) {
+  if (!list || !list.length) return;
+  S.fennQueue = (S.fennQueue || []).concat(list);
 }
 
 function nav(screen, params = {}) {
@@ -215,7 +227,10 @@ function render() {
   // leaving the pen: forget the arrangement, so the herd has "moved around" by the next visit
   if (typeof RANCH !== 'undefined' && S.screen !== 'ranch') RANCH.saved = null;
   const fn = SCREENS[S.screen] || SCREENS.town;
-  Promise.resolve(fn()).then(() => hydrateSprites()).catch(e => console.error(e));
+  Promise.resolve(fn()).then(() => {
+    hydrateSprites();
+    if (S.screen === 'town') showFennBubbleIfQueued();
+  }).catch(e => console.error(e));
 }
 
 /* ---------- appearance editor (opens from your header sprite) ---------- */

@@ -73,6 +73,15 @@ const GIVER_ROLES = {
   mobility: 'Quests of Stillness',
 };
 
+/* Fenn's quip when his speech bubble pops out of the waystone for an
+   unguided-run bonus — the fuller "note" line lives server-side in
+   game.UNGUIDED_RUN_NOTES and shows in the ceremony that follows. */
+const FENN_BUBBLE_LINES = [
+  'Psst. I saw that run. You didn\u2019t even ask me first.',
+  'Ran off without a word to me, did you? Rude. Here \u2014 take this anyway.',
+  'The road tattled on you. Good thing I don\u2019t hold grudges as long as I hold coin.',
+];
+
 const CAT_LABELS = {
   run: 'run', ride: 'ride', climb: 'climb', strength: 'lift',
   mobility: 'mobility', walk: 'walk/hike', swim: 'swim', other: 'other',
@@ -113,8 +122,8 @@ SCREENS.town = async function () {
   try { siege = await api('/raid'); } catch (e) { /* the walls hold without us */ }
   const activeBy = {};
   st.active_quests.forEach(q => activeBy[q.giver] = q);
-  const bld = (sprite, name, sub, target, badge = false, px = 120) => `
-    <div class="bld" onclick="${target}">
+  const bld = (sprite, name, sub, target, badge = false, px = 120, id = '') => `
+    <div class="bld"${id ? ` id="${id}"` : ''} onclick="${target}">
       ${badge ? '<span class="bang">!</span>' : ''}
       ${spriteTag(sprite, px)}
       <span class="plate">${name}<small>${sub}</small></span>
@@ -142,7 +151,7 @@ SCREENS.town = async function () {
     </div>` : ''}
     <div class="town-scene">
       <div class="trow">
-        ${bld('bld_waystone', esc(g.running.name), GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running)}
+        ${bld('bld_waystone', esc(g.running.name), GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
         ${bld('bld_forge', esc(g.kettlebell.name), GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell)}
         ${bld('bld_keep', esc(g.strength.name), GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength)}
         ${bld('bld_willow', esc(g.mobility.name), GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility)}
@@ -161,6 +170,37 @@ SCREENS.town = async function () {
       </div>
     </div>
   `);
+};
+
+/* ---- Fenn's unguided-run bubble: pops out of the waystone (bld-fenn) with
+   a reward already granted server-side. One at a time; claiming it opens
+   the same ceremony a quest turn-in would, then checks the queue again in
+   case a second one is waiting. See queueFennBubbles/render() in app.js for
+   how S.fennQueue gets filled. ---- */
+function showFennBubbleIfQueued() {
+  if (!S.fennQueue || !S.fennQueue.length) return;
+  if (document.querySelector('.fenn-bubble')) return;
+  const anchor = document.getElementById('bld-fenn');
+  if (!anchor) return;
+  const b = S.fennQueue[0];
+  anchor.insertAdjacentHTML('beforeend', `
+    <div class="fenn-bubble" onclick="event.stopPropagation();G.claimFennBubble()">
+      <div class="fb-line">&ldquo;${esc(pickLine(FENN_BUBBLE_LINES))}&rdquo;</div>
+      <div class="fb-rewards">
+        <span style="color:var(--purple)">+${b.rewards.xp} XP</span>
+        <span class="g">&#9670; +${b.rewards.gold}</span>
+        <span style="color:var(--green)">+${b.rewards.vigor} vigor</span>
+      </div>
+      <button class="btn small green">FENN LEFT THIS FOR YOU</button>
+    </div>`);
+  SFX.coin();
+}
+
+G.claimFennBubble = () => {
+  const b = S.fennQueue.shift();
+  document.querySelectorAll('.fenn-bubble').forEach(x => x.remove());
+  if (b) showCeremony(b.rewards, `An Unguided Run \u2014 ${b.minutes} min`);
+  showFennBubbleIfQueued();
 };
 
 /* ---- the siege banner: a small breathing preview by default; expands into a
@@ -1239,6 +1279,7 @@ SCREENS.settings = function () {
         <button class="btn small" style="min-width:0" onclick="G.dev('packs')">+3 monster packs</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('hats')">hat sampler</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('seed')">seed 60d of fake training</button>
+        <button class="btn small" style="min-width:0" onclick="G.dev('unguided_run')">seed an unguided run (Fenn's bubble)</button>
         <button class="btn small danger" style="min-width:0" onclick="G.dev('wipe_dev')">wipe fake training</button>
       </div>` : ''}
     </div>

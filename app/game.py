@@ -660,6 +660,107 @@ def claim_deed(kind, minutes, note=""):
     }
 
 
+# ---------------- unguided runs (no quest accepted, Fenn pays anyway) ----------------
+
+MIN_UNGUIDED_MINUTES = 8
+
+UNGUIDED_RUN_NOTES = [
+    "Fenn saw you out there, oath or no oath, and paid you anyway.",
+    "No quest was sworn for this one. The road told him regardless.",
+    "You ran without asking. Fenn noticed. Fenn always notices.",
+]
+
+
+def grant_unguided_run_bonus():
+    """Old Fenn quietly rewards a run that arrived with no accepted running
+    quest to catch it — same payout math as one of his moderate-intensity
+    quests. Only looks at TODAY's activities actually synced from
+    intervals.icu (so a first-time 400-day history import never floods this,
+    and manual/honor/sworn entries — which already have their own reward
+    path — never double-dip), skips entirely while a running quest is
+    active, and dedupes per activity id per day (kv key baked with the date,
+    same idiom as offer caching) so repeated sync ticks never double-pay.
+    Queues a bubble payload for the frontend — surfaced either by the sync
+    response's next /api/state, or on next boot if the background sync loop
+    is what found it (see pop_unguided_pending)."""
+    if db.q("SELECT 1 FROM quests WHERE giver='running' AND status='active'").fetchone():
+        return []
+    t = today()
+    seen_key = f"unguided_bonus_seen:{t}"
+    seen = set(db.kv_get(seen_key, []))
+    ph = ",".join("?" * len(RUN_TYPES))
+    rows = db.q(
+        f"SELECT * FROM activities WHERE type IN ({ph}) AND start >= ? AND source='intervals.icu' "
+        "AND id NOT IN (SELECT activity_id FROM quests WHERE activity_id IS NOT NULL) "
+        "ORDER BY start ASC",
+        (*RUN_TYPES, t),
+    ).fetchall()
+    granted = []
+    rng = random.Random()
+    for r in rows:
+        if r["id"] in seen:
+            continue
+        seen.add(r["id"])
+        minutes = (r["moving_time"] or 0) / 60
+        if minutes < MIN_UNGUIDED_MINUTES:
+            continue  # too short to count as a real run; still marked seen above
+        c = get_char()
+        xp = int(minutes * 1.35 * 2.2)  # priced as a "moderate" quest, per _price_offer
+        gold = int(xp * 0.45) + rng.randint(1, 12)
+        vigor = 2
+        token = rng.random() < 0.3
+        drop = "monster_pack" if rng.random() < 0.06 else None
+        gains = {"end": 1}
+        streak_bonus = _update_streak(c)
+        if streak_bonus:
+            gains["con"] = gains.get("con", 0) + 1
+        for k, v in gains.items():
+            c["stats"][k] = min(99, c["stats"][k] + v)
+        levels = apply_xp(c, xp)
+        c["gold"] += gold
+        c["vigor"] = min(10, c["vigor"] + vigor)
+        if token:
+            c["tokens"] += 1
+        if drop:
+            db.inv_add(drop)
+        save_char(c)
+        rewards = {
+            "xp": xp, "gold": gold, "vigor": vigor, "token": token,
+            "item": items.get(drop) if drop else None,
+            "stat_gains": gains, "levels": levels, "level": c["level"],
+            "streak": c["streak"]["count"], "streak_bonus": streak_bonus,
+            "note": rng.choice(UNGUIDED_RUN_NOTES),
+        }
+        db.log_event(
+            now_iso(), "unguided_run",
+            f"Fenn rewarded an unguided run ({round(minutes)} min) — +{xp} XP, +{gold} gold"
+            + (f", LEVEL UP to {c['level']}!" if levels else ""),
+        )
+        bubble = {
+            "activity_id": r["id"],
+            "activity_name": r["name"] or "a run",
+            "minutes": round(minutes),
+            "rewards": rewards,
+        }
+        pending = db.kv_get("unguided_bonus_pending", [])
+        pending.append(bubble)
+        db.kv_set("unguided_bonus_pending", pending)
+        granted.append(bubble)
+    db.kv_set(seen_key, list(seen))
+    return granted
+
+
+def pop_unguided_pending():
+    """Drain and return the queued unguided-run bubbles (called from /api/state
+    so the frontend picks them up whether the grant happened just now via
+    /api/sync, or earlier via the background sync loop while the app was
+    closed)."""
+    pending = db.kv_get("unguided_bonus_pending", [])
+    if pending:
+        db.kv_set("unguided_bonus_pending", [])
+    return pending
+
+
 # ---------------- economy ----------------
 
 def buy(item_id):
