@@ -172,35 +172,46 @@ SCREENS.town = async function () {
   `);
 };
 
-/* ---- Fenn's unguided-run bubble: pops out of the waystone (bld-fenn) with
-   a reward already granted server-side. One at a time; claiming it opens
-   the same ceremony a quest turn-in would, then checks the queue again in
-   case a second one is waiting. See queueFennBubbles/render() in app.js for
-   how S.fennQueue gets filled. ---- */
+/* ---- Fenn's unguided-run bubble: pops out of the waystone (bld-fenn). The
+   reward is NOT granted until this is actually tapped — see G.claimFennBubble,
+   which hits /api/unguided/claim. S.fennQueue is a straight mirror of the
+   server's current unclaimed-today list (see queueFennBubbles in app.js), so
+   we reconcile against its head rather than blindly inserting: if a bubble
+   is already showing but no longer matches (claimed elsewhere, or quietly
+   auto-resolved by the server after a day passed), swap it out. ---- */
 function showFennBubbleIfQueued() {
-  if (!S.fennQueue || !S.fennQueue.length) return;
-  if (document.querySelector('.fenn-bubble')) return;
+  const next = S.fennQueue && S.fennQueue[0];
+  const shown = document.querySelector('.fenn-bubble-wrap');
+  if (shown) {
+    if (next && shown.dataset.activityId === String(next.activity_id)) return; // already correct
+    shown.remove();
+  }
+  if (!next) return;
   const anchor = document.getElementById('bld-fenn');
   if (!anchor) return;
-  const b = S.fennQueue[0];
   anchor.insertAdjacentHTML('beforeend', `
-    <div class="fenn-bubble" onclick="event.stopPropagation();G.claimFennBubble()">
-      <div class="fb-line">&ldquo;${esc(pickLine(FENN_BUBBLE_LINES))}&rdquo;</div>
-      <div class="fb-rewards">
-        <span style="color:var(--purple)">+${b.rewards.xp} XP</span>
-        <span class="g">&#9670; +${b.rewards.gold}</span>
-        <span style="color:var(--green)">+${b.rewards.vigor} vigor</span>
+    <div class="fenn-bubble-wrap" data-activity-id="${esc(next.activity_id)}">
+      <div class="fenn-bubble" onclick="event.stopPropagation();G.claimFennBubble()">
+        <div class="fb-line">&ldquo;${esc(pickLine(FENN_BUBBLE_LINES))}&rdquo;</div>
+        <div class="fb-rewards">
+          <span style="color:var(--purple)">+${next.xp} XP</span>
+          <span class="g">&#9670; +${next.gold}</span>
+          <span style="color:var(--green)">+${next.vigor} vigor</span>
+        </div>
+        <button class="btn small green">FENN LEFT THIS FOR YOU</button>
       </div>
-      <button class="btn small green">FENN LEFT THIS FOR YOU</button>
     </div>`);
   SFX.coin();
 }
 
-G.claimFennBubble = () => {
-  const b = S.fennQueue.shift();
-  document.querySelectorAll('.fenn-bubble').forEach(x => x.remove());
-  if (b) showCeremony(b.rewards, `An Unguided Run \u2014 ${b.minutes} min`);
-  showFennBubbleIfQueued();
+G.claimFennBubble = async () => {
+  const b = S.fennQueue && S.fennQueue[0];
+  if (!b) return;
+  document.querySelectorAll('.fenn-bubble-wrap').forEach(x => x.remove());
+  const rewards = await api('/unguided/claim', { method: 'POST', body: { activity_id: b.activity_id } });
+  await refreshState();
+  render();
+  showCeremony(rewards, `An Unguided Run \u2014 ${b.minutes} min`);
 };
 
 /* ---- the siege banner: a small breathing preview by default; expands into a

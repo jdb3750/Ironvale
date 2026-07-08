@@ -342,7 +342,15 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 .ceremony h2 { font-family: 'PressStart', monospace; font-size: 18px; color: var(--gold-bright); text-shadow: 2px 2px 0 #3a2c10; margin: 8px 0 14px; }
 .ceremony .reward-line { font-size: 23px; margin: 6px 0; opacity: 0; animation: popin 0.3s forwards; }
 @keyframes popin { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
-.ceremony .levelup { color: var(--gold-bright); font-size: 28px; animation: pulse 0.7s infinite alternate; }
+.ceremony .levelup {
+  color: var(--gold-bright); font-size: 28px;
+  /* .reward-line's popin (opacity 0->1 + scale) must run too, or this line
+     never becomes visible — `animation` is a single property, so listing
+     only `pulse` here was silently replacing popin instead of adding to it.
+     Both run together since they animate different properties (transform/
+     opacity vs. text-shadow), so there's no fight between them. */
+  animation: popin 0.3s forwards, pulse 0.7s infinite alternate;
+}
 @keyframes pulse { from { text-shadow: 0 0 4px var(--gold); } to { text-shadow: 0 0 18px var(--gold-bright); } }
 .youdied { font-family: 'PressStart', monospace; font-size: 26px; color: var(--red); text-shadow: 0 0 20px #800; }
 
@@ -389,28 +397,36 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 .bld .plate small { color: var(--dim); display: block; font-size: 12px; }
 
 /* ---- Fenn's unguided-run speech bubble: pops out of the waystone (#bld-fenn)
-   over whatever else is on screen. Anchored via the .bld's own
-   position:relative — no new positioning context needed. Comic-bubble tail
-   done with a two-layer border triangle (outer gold, inner panel-color) so
-   it reads as a notch pointing down at Fenn's roof, matching the .dialog
-   box's gold/black styling used in his own greeting screen. */
-.fenn-bubble {
+   over whatever else is on screen. Split into a positioning shell
+   (.fenn-bubble-wrap) and the visible card (.fenn-bubble) so exactly ONE
+   animated `transform` ever touches each element — the wrap's centering
+   transform is static/never animated (its own float-bob animates
+   `margin-bottom` instead, a plain layout property), and the card's own
+   pop-in animates `transform: scale()` alone. Splitting it this way avoids
+   two animations ever fighting over the same `transform` property (which
+   doesn't compose — the last-declared one simply wins) and avoids relying
+   on the newer standalone translate/scale CSS properties, which had
+   inconsistent enough support to show up as a visible "wrong spot, then
+   jumps to the right spot" flash. */
+.fenn-bubble-wrap {
   position: absolute;
   bottom: 100%;
   left: 50%;
-  translate: -50% 0;
+  transform: translateX(-50%);
   z-index: 50;
   width: 220px;
   max-width: 88vw;
   margin-bottom: 16px;
+  animation: fbfloat 2.6s ease-in-out 0.3s infinite;
+}
+.fenn-bubble {
+  position: relative;
   background: var(--panel);
   border: 2px solid var(--gold-bright);
   box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
   padding: 10px 10px 12px;
   cursor: pointer;
-  /* scale (fbpop) and translate (fbfloat) are independent CSS properties, so
-     these two animations compose cleanly instead of fighting over `transform`. */
-  animation: fbpop 0.3s ease-out forwards, fbfloat 2.6s ease-in-out 0.3s infinite;
+  animation: fbpop 0.3s ease-out forwards;
 }
 .fenn-bubble::after,
 .fenn-bubble::before {
@@ -430,12 +446,12 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 .fenn-bubble .fb-rewards .g { color: var(--gold-bright); }
 .fenn-bubble button { width: 100%; }
 @keyframes fbpop {
-  from { scale: 0.4; opacity: 0; }
-  to { scale: 1; opacity: 1; }
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 @keyframes fbfloat {
-  0%, 100% { translate: -50% 0; }
-  50% { translate: -50% -4px; }
+  0%, 100% { margin-bottom: 16px; }
+  50% { margin-bottom: 20px; }
 }
 
 /* ---- calendar ---- */
@@ -839,5 +855,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   .topbar .btn.small { min-width: 0; }
   .bld canvas { width: 84px !important; height: 70px !important; }
   .calday { min-height: 44px; }
-  .fenn-bubble { width: 180px; font-size: 13px; }
+  .fenn-bubble-wrap { width: 180px; }
+  .fenn-bubble { font-size: 13px; }
 }

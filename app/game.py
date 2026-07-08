@@ -672,19 +672,25 @@ UNGUIDED_RUN_NOTES = [
 
 
 def grant_unguided_run_bonus():
-    """Old Fenn quietly rewards a run that arrived with no accepted running
-    quest to catch it — same payout math as one of his moderate-intensity
-    quests. Only looks at TODAY's activities actually synced from
-    intervals.icu (so a first-time 400-day history import never floods this,
-    and manual/honor/sworn entries — which already have their own reward
-    path — never double-dip), skips entirely while a running quest is
-    active, and dedupes per activity id per day (kv key baked with the date,
-    same idiom as offer caching) so repeated sync ticks never double-pay.
-    Queues a bubble payload for the frontend — surfaced either by the sync
-    response's next /api/state, or on next boot if the background sync loop
-    is what found it (see pop_unguided_pending)."""
+    """Old Fenn notices a run that arrived with no accepted running quest to
+    catch it, and queues it as an unclaimed candidate — same payout math as
+    one of his moderate-intensity quests, but NOT actually applied to the
+    character yet. The reward only lands when the player taps his speech
+    bubble (see claim_unguided_bonus); if a full calendar day passes
+    unclaimed, it's paid out silently instead, with no bubble at all (see
+    _sweep_stale_unguided_candidates) — the whole point of the bubble was
+    the same-day moment, so there's nothing to show once that's passed.
+
+    Only looks at TODAY's activities actually synced from intervals.icu (so
+    a first-time 400-day history import never floods this, and
+    manual/honor/sworn entries — which already have their own reward path —
+    never double-dip), skips entirely while a running quest is active, and
+    dedupes per activity id per day (kv key baked with the date, same idiom
+    as offer caching) so repeated sync ticks never queue the same run
+    twice."""
+    _sweep_stale_unguided_candidates()
     if db.q("SELECT 1 FROM quests WHERE giver='running' AND status='active'").fetchone():
-        return []
+        return
     t = today()
     seen_key = f"unguided_bonus_seen:{t}"
     seen = set(db.kv_get(seen_key, []))
@@ -695,70 +701,105 @@ def grant_unguided_run_bonus():
         "ORDER BY start ASC",
         (*RUN_TYPES, t),
     ).fetchall()
-    granted = []
     rng = random.Random()
+    candidates = db.kv_get("unguided_bonus_candidates", [])
+    dirty = False
     for r in rows:
         if r["id"] in seen:
             continue
         seen.add(r["id"])
+        dirty = True
         minutes = (r["moving_time"] or 0) / 60
         if minutes < MIN_UNGUIDED_MINUTES:
             continue  # too short to count as a real run; still marked seen above
-        c = get_char()
         xp = int(minutes * 1.35 * 2.2)  # priced as a "moderate" quest, per _price_offer
-        gold = int(xp * 0.45) + rng.randint(1, 12)
-        vigor = 2
-        token = rng.random() < 0.3
-        drop = "monster_pack" if rng.random() < 0.06 else None
-        gains = {"end": 1}
-        streak_bonus = _update_streak(c)
-        if streak_bonus:
-            gains["con"] = gains.get("con", 0) + 1
-        for k, v in gains.items():
-            c["stats"][k] = min(99, c["stats"][k] + v)
-        levels = apply_xp(c, xp)
-        c["gold"] += gold
-        c["vigor"] = min(10, c["vigor"] + vigor)
-        if token:
-            c["tokens"] += 1
-        if drop:
-            db.inv_add(drop)
-        save_char(c)
-        rewards = {
-            "xp": xp, "gold": gold, "vigor": vigor, "token": token,
-            "item": items.get(drop) if drop else None,
-            "stat_gains": gains, "levels": levels, "level": c["level"],
-            "streak": c["streak"]["count"], "streak_bonus": streak_bonus,
-            "note": rng.choice(UNGUIDED_RUN_NOTES),
-        }
-        db.log_event(
-            now_iso(), "unguided_run",
-            f"Fenn rewarded an unguided run ({round(minutes)} min) — +{xp} XP, +{gold} gold"
-            + (f", LEVEL UP to {c['level']}!" if levels else ""),
-        )
-        bubble = {
+        candidates.append({
             "activity_id": r["id"],
             "activity_name": r["name"] or "a run",
             "minutes": round(minutes),
-            "rewards": rewards,
-        }
-        pending = db.kv_get("unguided_bonus_pending", [])
-        pending.append(bubble)
-        db.kv_set("unguided_bonus_pending", pending)
-        granted.append(bubble)
-    db.kv_set(seen_key, list(seen))
-    return granted
+            "date": t,
+            "xp": xp,
+            "gold": int(xp * 0.45) + rng.randint(1, 12),
+            "vigor": 2,
+            "token": rng.random() < 0.3,
+            "drop": "monster_pack" if rng.random() < 0.06 else None,
+            "stat_gains": {"end": 1},
+            "note": rng.choice(UNGUIDED_RUN_NOTES),
+        })
+    if dirty:
+        db.kv_set(seen_key, list(seen))
+        db.kv_set("unguided_bonus_candidates", candidates)
 
 
-def pop_unguided_pending():
-    """Drain and return the queued unguided-run bubbles (called from /api/state
-    so the frontend picks them up whether the grant happened just now via
-    /api/sync, or earlier via the background sync loop while the app was
-    closed)."""
-    pending = db.kv_get("unguided_bonus_pending", [])
-    if pending:
-        db.kv_set("unguided_bonus_pending", [])
-    return pending
+def _apply_unguided_bonus(cand):
+    """Actually mutate the character for a queued candidate — used both by a
+    real click (claim_unguided_bonus) and by the silent day-passed sweep.
+    Streak/level math reads the CURRENT character state at apply time (not
+    whatever it was back when the run was first detected), since other
+    things may have happened to the character in between."""
+    c = get_char()
+    gains = dict(cand["stat_gains"])
+    streak_bonus = _update_streak(c)
+    if streak_bonus:
+        gains["con"] = gains.get("con", 0) + 1
+    for k, v in gains.items():
+        c["stats"][k] = min(99, c["stats"][k] + v)
+    levels = apply_xp(c, cand["xp"])
+    c["gold"] += cand["gold"]
+    c["vigor"] = min(10, c["vigor"] + cand["vigor"])
+    if cand["token"]:
+        c["tokens"] += 1
+    if cand["drop"]:
+        db.inv_add(cand["drop"])
+    save_char(c)
+    rewards = {
+        "xp": cand["xp"], "gold": cand["gold"], "vigor": cand["vigor"], "token": cand["token"],
+        "item": items.get(cand["drop"]) if cand["drop"] else None,
+        "stat_gains": gains, "levels": levels, "level": c["level"],
+        "streak": c["streak"]["count"], "streak_bonus": streak_bonus,
+        "note": cand["note"],
+    }
+    db.log_event(
+        now_iso(), "unguided_run",
+        f"Fenn rewarded an unguided run ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
+        + (f", LEVEL UP to {c['level']}!" if levels else ""),
+    )
+    return rewards
+
+
+def _sweep_stale_unguided_candidates():
+    """A candidate dated before today means a full day passed with nobody
+    tapping the bubble — Fenn just pays quietly, with no bubble at all
+    (there's no "same-day surprise" left to show)."""
+    t = today()
+    cands = db.kv_get("unguided_bonus_candidates", [])
+    fresh = [c for c in cands if c["date"] == t]
+    stale = [c for c in cands if c["date"] != t]
+    for cand in stale:
+        _apply_unguided_bonus(cand)
+    if stale:
+        db.kv_set("unguided_bonus_candidates", fresh)
+
+
+def unguided_pending():
+    """Read-only peek at today's still-unclaimed bubbles — never mutates the
+    character; claiming is an explicit action (claim_unguided_bonus)."""
+    _sweep_stale_unguided_candidates()
+    return db.kv_get("unguided_bonus_candidates", [])
+
+
+def claim_unguided_bonus(activity_id=None):
+    """The player tapped Fenn's bubble — grant the reward now. Claims the
+    given activity_id if provided, else the oldest still-pending one."""
+    cands = db.kv_get("unguided_bonus_candidates", [])
+    if not cands:
+        raise ValueError("Fenn has nothing more to give you today.")
+    idx = 0
+    if activity_id:
+        idx = next((i for i, c in enumerate(cands) if c["activity_id"] == activity_id), 0)
+    cand = cands.pop(idx)
+    db.kv_set("unguided_bonus_candidates", cands)
+    return _apply_unguided_bonus(cand)
 
 
 # ---------------- economy ----------------
