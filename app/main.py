@@ -344,8 +344,8 @@ def exercise_list():
 # ---------------- stats / calendar / amendments ----------------
 
 @app.get("/api/stats")
-def stats():
-    return game.stats_payload()
+def stats(wellness_days: int = 180):
+    return game.stats_payload(wellness_days)
 
 
 @app.get("/api/calendar")

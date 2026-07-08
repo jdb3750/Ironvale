@@ -82,6 +82,11 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* intervals.icu always reports bodyweight in kg regardless of the athlete's
+   own display prefs there — convert to the player's chosen weight_unit at
+   display time only; storage stays kg (single source of truth). */
+function kgToLb(kg) { return kg * 2.2046226218; }
+
 /* ---------- shared chrome ---------- */
 
 function header() {
