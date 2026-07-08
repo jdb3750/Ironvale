@@ -27,7 +27,11 @@ anything.
 
 ## Git workflow
 
-The repo lives at `~/Code/iron-vale` on branch `main`. `.gitignore` already
+The repo lives at `~/Code/iron-vale` on branch `main`, remote `origin` at
+`git@codeberg.org:bonez/Ironvale.git` (Codeberg, SSH — **not GitHub, not
+HTTPS**). `main` tracks `origin/main`. Push with plain `git push`/
+`git push -u origin <branch>`; SSH auth is already configured (Joe's key is
+on the Codeberg account), no credential prompt needed. `.gitignore` already
 excludes `data/` (the live save + credentials), `.venv/`, `__pycache__/`,
 `*.pyc`, `.aider*`, `.DS_Store`. **Verify `git status` never lists anything
 under `data/` before committing — those files contain Joe's real intervals.icu
@@ -59,14 +63,13 @@ git switch -c feat/<thing>            # branch off main
 # ...edit, then verify on port 8322 with a scratch DATA_DIR (never 8321)...
 git add -A                            # confirm `git status` excludes data/
 git commit -m "<imperative subject>"  # body explains why + migrations
-# ...when Joe says so: git push -u origin feat/<thing>  (no remote yet — ask first)
+# ...when Joe says so: git push -u origin feat/<thing>
 ```
 
-There is **no remote and no first commit yet** — the repo is initialized but
-empty. When Joe asks to start committing, the first commit should be the whole
-current tree (minus `data/`). Stray non-project files seen in the tree
-(`hello_world.py`, `CODEX_CACHE.md`) are cruft from other tools — confirm with
-Joe before committing or deleting them.
+If you ever find a stray non-project file in the tree (past example:
+`hello_world.py`, `CODEX_CACHE.md` — leftover cruft from another tool, since
+deleted), confirm with Joe before committing or deleting it rather than
+assuming it's yours to remove.
 
 ## Architecture map
 

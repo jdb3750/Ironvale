@@ -623,7 +623,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .siege-banner.won { border-color: #3e6234; background: linear-gradient(180deg, #101c10, #0c120c); }
 .siege-banner .sg-hp { width: 100%; height: 22px; }
 .siege-banner .sg-hp span { font-size: 16px; line-height: 20px; }
-.siege-banner .sg-boss { flex-shrink: 0; cursor: pointer; }
+.siege-banner .sg-boss { flex-shrink: 0; }
 .siege-banner .sg-boss.breathing { animation: siegebreathe 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
 @keyframes siegebreathe {
   0%, 100% { transform: scaleY(1) scaleX(1); }
@@ -640,23 +640,113 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .siege-banner.collapsed .sg-mini-name { font-size: 15px; letter-spacing: 1px; margin-bottom: 3px; }
 .siege-banner.collapsed .sg-hp { height: 14px; }
 .siege-banner.collapsed .sg-hp span { font-size: 13px; line-height: 12px; }
-.siege-banner.collapsed .sg-expand { color: var(--dim); font-size: 18px; flex-shrink: 0; }
 
-/* expanded: a D&D-style monster stat card */
-.siege-banner.expanded { padding: 12px 14px; }
-.sg-card-head { display: flex; gap: 12px; align-items: flex-start; }
-.sg-card-head .sg-boss { align-self: center; }
-.sg-card-title { flex: 1; min-width: 0; }
-.sg-card-title .sg-name { font-size: 24px; letter-spacing: 1px; }
+/* expanded: a dramatic monster stat card — boss + card info up top, war party
+   below. Plain flex-wrap, not grid: boss-col and content sit side by side on
+   the first line; the divider and war-party blocks each force a fresh line
+   via flex-basis:100%, so they span the full card width underneath the pair.
+   The boss column's right border is the vertical divider — since it's a flex
+   sibling of content only (not the whole card), that border naturally spans
+   just their shared row height and stops there. */
+.siege-banner.expanded {
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  row-gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #4a2828, 6px 6px 0 rgba(0,0,0,0.55);
+}
+.siege-banner.expanded.won { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #3e6234, 6px 6px 0 rgba(0,0,0,0.55); }
+.siege-banner.expanded:hover { border-color: #a84028; }
+.siege-banner.expanded.won:hover { border-color: #4e8244; }
+
+/* boss column: sized to its content, stretched to match content's height by
+   the flex row's default cross-axis alignment — that's what makes the right
+   border read as a clean vertical divider alongside the content card. */
+.siege-banner.expanded .sg-boss-col {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 140px; padding-right: 14px;
+  border-right: 2px solid #4a2828;
+}
+/* no border/box around the boss sprite itself — just breathing room + a soft glow */
+.siege-banner.expanded .sg-boss-frame {
+  padding: 10px;
+  background: radial-gradient(circle at 50% 40%, rgba(120,40,28,0.30), transparent 70%);
+}
+.siege-banner.expanded.won .sg-boss-frame {
+  background: radial-gradient(circle at 50% 40%, rgba(60,110,52,0.22), transparent 70%);
+}
+
+/* right-side content card: the stat block, fills the rest of the top row.
+   min-width:0 (not a fixed value) so it keeps sharing a row with the boss
+   column on narrow phones — its own text wraps instead of the row breaking. */
+.siege-banner.expanded .sg-content {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  padding: 12px 14px 14px;
+  background:
+    radial-gradient(circle at 16% 40%, rgba(120,40,28,0.30), transparent 55%),
+    linear-gradient(180deg, rgba(34,16,16,0.55), rgba(16,10,10,0.12));
+  border: 1px solid #3a1818;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5);
+  cursor: auto;
+}
+.siege-banner.expanded.won .sg-content {
+  background:
+    radial-gradient(circle at 16% 40%, rgba(60,110,52,0.22), transparent 55%),
+    linear-gradient(180deg, rgba(18,30,18,0.55), rgba(10,16,10,0.12));
+  border-color: #243a20;
+}
+.siege-banner.expanded .sg-content button { cursor: pointer; }
+.sg-card-title .sg-name { font-size: 26px; letter-spacing: 2px; }
 .sg-epithet { color: var(--dim); font-size: 16px; font-style: italic; margin-top: -2px; }
-.sg-meta { font-size: 13px; color: var(--dim); letter-spacing: 1px; margin-top: 4px; }
-.sg-collapse { background: none; border: none; color: var(--dim); font-size: 16px; cursor: pointer; font-family: inherit; padding: 2px 4px; }
-.sg-collapse:hover { color: var(--gold-bright); }
-.sg-desc { font-size: 15px; line-height: 1.5; margin: 10px auto; max-width: min(86%, 440px); padding: 8px 14px; border-left: 3px solid #6a2828; background: rgba(0,0,0,0.25); color: #c8bcb0; font-style: italic; text-align: center; }
-.sg-statline { font-size: 16px; text-align: center; margin: 4px 0; }
-.sg-trophy { font-size: 14px; letter-spacing: 1px; text-align: center; margin: 6px 0; color: var(--dim); }
+.sg-meta {
+  font-size: 12px; color: var(--dim); letter-spacing: 2px;
+  margin-top: 6px; padding-top: 5px;
+  border-top: 1px solid #3a2020;
+}
+.sg-desc {
+  font-size: 15px; line-height: 1.5;
+  margin: 12px auto; max-width: min(86%, 440px);
+  padding: 10px 14px;
+  border-left: 3px solid #6a2828; border-right: 3px solid #6a2828;
+  background: rgba(0,0,0,0.3);
+  color: #c8bcb0; font-style: italic; text-align: center;
+}
+.sg-statline { font-size: 16px; text-align: center; margin: 6px 0 4px; }
+.sg-trophy {
+  font-size: 13px; letter-spacing: 2px; text-align: center;
+  margin: 8px 0 2px; padding: 6px 4px;
+  color: var(--dim);
+  border-top: 1px solid #3a2020; border-bottom: 1px solid #3a2020;
+}
 .sg-trophy canvas { vertical-align: middle; }
-.sg-board-title { font-size: 15px; letter-spacing: 1px; color: var(--gold-bright); margin: 10px 0 4px; border-top: 1px solid #4a2828; padding-top: 8px; }
+
+/* full-width divider below the boss+content pair, above the war party.
+   flex-basis:100% forces it onto its own fresh flex line. */
+.sg-divider { flex: 0 0 100%; display: flex; align-items: center; gap: 10px; margin: 12px 4px 8px; }
+.sg-divider::before, .sg-divider::after {
+  content: ''; flex: 1; height: 0;
+  border-top: 2px solid #4a2828; border-bottom: 1px solid #2a1414;
+}
+.sg-divider span {
+  color: #8a3838; font-size: 13px; letter-spacing: 6px;
+  text-shadow: 1px 1px 0 #000;
+}
+.siege-banner.expanded.won .sg-divider span { color: #4e8244; }
+.siege-banner.expanded.won .sg-divider::before,
+.siege-banner.expanded.won .sg-divider::after { border-top-color: #345030; border-bottom-color: #1a2818; }
+
+/* war party roster, full width beneath the boss+content pair */
+.siege-banner.expanded .sg-warparty { flex: 0 0 100%; cursor: auto; padding: 0 2px 4px; }
+.siege-banner.expanded .sg-warparty .sg-leader-row,
+.siege-banner.expanded .sg-warparty .sg-blows { cursor: pointer; }
+.sg-board-title {
+  font-size: 15px; letter-spacing: 2px; color: var(--gold-bright);
+  margin: 0 0 6px; padding-bottom: 4px;
+  border-bottom: 1px solid #4a2828;
+}
 .sg-board { display: flex; flex-direction: column; gap: 2px; }
 .sg-leader-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; cursor: pointer; background: var(--panel2); }
 .sg-leader-row:hover { background: #241618; }

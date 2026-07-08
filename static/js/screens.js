@@ -180,7 +180,6 @@ function siegeBannerHtml(siege) {
         <div class="sg-mini-name"><span class="r-legendary">${esc(siege.name)}</span> <span class="muted">${esc(siege.epithet)}</span></div>
         ${siege.defeated ? '<div class="sg-sub" style="color:var(--green)">FELLED — the town holds &middot; tap for spoils</div>' : hpBar}
       </div>
-      <div class="sg-expand">&#9662;</div>
     </div>`;
   }
 
@@ -197,35 +196,41 @@ function siegeBannerHtml(siege) {
         `<div class="sg-blow"><span class="sg-blow-dmg">+${b.dmg}</span> ${esc(b.label)} <span class="muted">${b.ts.slice(5, 16).replace('T', ' ')}</span></div>`
       ).join('') || '<div class="muted" style="font-size:14px">no blows recorded</div>';
       return `<div class="sg-leader ${open ? 'open' : ''}">
-        <div class="sg-leader-row" onclick="G.siegeLeader('${esc(x.name).replace(/'/g, '')}')">
+        <div class="sg-leader-row" onclick="event.stopPropagation();G.siegeLeader('${esc(x.name).replace(/'/g, '')}')">
           <span class="sg-rank">${i + 1}</span>
           <span class="sg-leader-name">${esc(x.name)}${x.you ? ' <span class="muted">(you)</span>' : ''}</span>
           <span class="sg-leader-dmg">${x.damage.toLocaleString()}</span>
           <span class="sg-leader-caret">${open ? '&#9662;' : '&#9656;'}</span>
         </div>
-        ${open ? `<div class="sg-blows">${blows}</div>` : ''}
+        ${open ? `<div class="sg-blows" onclick="event.stopPropagation()">${blows}</div>` : ''}
       </div>`;
     }).join('')
     : '<div class="muted center" style="padding:6px">no blows struck yet — be the first to draw its ire</div>';
 
-  return `<div class="siege-banner expanded ${siege.defeated ? 'won' : ''}">
-    <div class="sg-card-head">
-      <div class="sg-boss breathing" title="collapse" onclick="G.siegeToggle()">${bossTag(siege.dna, 124)}</div>
+  return `<div class="siege-banner expanded ${siege.defeated ? 'won' : ''}" onclick="G.siegeToggle()" title="collapse the siege">
+    <div class="sg-boss-col">
+      <div class="sg-boss-frame">
+        <div class="sg-boss breathing">${bossTag(siege.dna, 124)}</div>
+      </div>
+    </div>
+    <div class="sg-content">
       <div class="sg-card-title">
         <div class="sg-name r-legendary">${esc(siege.name)}</div>
         <div class="sg-epithet">${esc(siege.epithet)}</div>
         <div class="sg-meta">SIEGE &middot; Week ${siege.week_num} &middot; began ${esc(siege.started)}</div>
       </div>
-      <button class="sg-collapse" title="collapse" onclick="G.siegeToggle()">&#9652;</button>
+      <div class="sg-desc">${esc(siege.description)}</div>
+      <div class="sg-statline">${statLine}</div>
+      <div class="sg-trophy">TROPHY FOR ALL WHO FELL IT: <span class="r-legendary">${spriteTag((S.itemsCatalog[siege.trophy] || {}).sprite || 'hat_horns', 20)} ${esc(trophyName)}</span></div>
+      ${siege.defeated && !siege.claimed ? `<div class="center" style="margin:8px 0"><button class="btn green" onclick="event.stopPropagation();G.raidClaim()">CLAIM YOUR SPOILS</button></div>` : ''}
+      ${siege.defeated && siege.claimed ? '<div class="sg-sub muted center" style="margin:6px 0">spoils claimed &#10004; &middot; a new horror comes Monday</div>' : ''}
     </div>
-    <div class="sg-desc">${esc(siege.description)}</div>
-    <div class="sg-statline">${statLine}</div>
-    <div class="sg-trophy">TROPHY FOR ALL WHO FELL IT: <span class="r-legendary">${spriteTag((S.itemsCatalog[siege.trophy] || {}).sprite || 'hat_horns', 20)} ${esc(trophyName)}</span></div>
-    ${siege.defeated && !siege.claimed ? `<div class="center" style="margin:8px 0"><button class="btn green" onclick="G.raidClaim()">CLAIM YOUR SPOILS</button></div>` : ''}
-    ${siege.defeated && siege.claimed ? '<div class="sg-sub muted center" style="margin:6px 0">spoils claimed &#10004; &middot; a new horror comes Monday</div>' : ''}
-    <div class="sg-board-title">THE WAR PARTY <span class="muted" style="font-size:13px">— tap a name for their blows</span></div>
-    <div class="sg-board">${board}</div>
-    <div class="muted" style="font-size:13px;margin-top:6px">1 active minute = 10 damage &middot; every adventurer's workouts count</div>
+    <div class="sg-divider"><span>&#9670; &#9670; &#9670;</span></div>
+    <div class="sg-warparty">
+      <div class="sg-board-title">THE WAR PARTY <span class="muted" style="font-size:13px">&mdash; tap a name for their blows</span></div>
+      <div class="sg-board">${board}</div>
+      <div class="muted" style="font-size:13px;margin-top:6px">1 active minute = 10 damage &middot; every adventurer's workouts count</div>
+    </div>
   </div>`;
 }
 
