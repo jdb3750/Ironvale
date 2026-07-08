@@ -839,8 +839,12 @@ def crank(use_token):
 # ---------------- stats & chronicle ----------------
 
 def wellness_series(days=180):
-    cutoff = (now() - timedelta(days=days)).date().isoformat()
-    rows = db.q("SELECT * FROM wellness WHERE date >= ? ORDER BY date", (cutoff,)).fetchall()
+    """days<=0 means "all time" — no cutoff at all."""
+    if days and days > 0:
+        cutoff = (now() - timedelta(days=days)).date().isoformat()
+        rows = db.q("SELECT * FROM wellness WHERE date >= ? ORDER BY date", (cutoff,)).fetchall()
+    else:
+        rows = db.q("SELECT * FROM wellness ORDER BY date").fetchall()
     return [dict(r) for r in rows]
 
 
@@ -959,7 +963,7 @@ def day_payload(dstr):
     return {"date": dstr, "activities": acts, "sets": sets_, "quests": quests}
 
 
-def stats_payload():
+def stats_payload(wellness_days=180):
     c = get_char()
     weeks = []
     for i in range(11, -1, -1):
@@ -994,7 +998,7 @@ def stats_payload():
         "prs": [dict(r) for r in prs],
         "recent_activities": [dict(r) | {"category": category(r["type"])} for r in recent],
         "run_summary": {k: v for k, v in run_history().items() if k != "runs"},
-        "wellness": wellness_series(),
+        "wellness": wellness_series(wellness_days),
         "insights": insights(),
     }
 

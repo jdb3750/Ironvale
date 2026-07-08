@@ -729,9 +729,10 @@ G.esDelete = async (id) => {
 
 let statsTab = 'body';
 let calState = null;
+let vitalsRange = 90; // days shown in the Vitals charts; 0 = all time
 
 SCREENS.stats = async function () {
-  const d = await api('/stats');
+  const d = await api('/stats?wellness_days=' + vitalsRange);
   const chron = statsTab === 'chronicle' ? (await api('/chronicle')).events : [];
   const c = d.character;
   const wu = S.state.settings.weight_unit;
@@ -760,6 +761,7 @@ SCREENS.stats = async function () {
     </div>`;
   } else if (statsTab === 'vitals') {
     const w = d.wellness;
+    const wtConv = (kg) => wu === 'lb' ? kgToLb(kg) : kg;
     const latest = (f) => { for (let i = w.length - 1; i >= 0; i--) if (w[i][f] != null) return w[i][f]; return null; };
     const chart = (id, label, f, color, fmt) => {
       const has = w.some(r => r[f] != null);
@@ -780,14 +782,21 @@ SCREENS.stats = async function () {
         <div class="sleep-stat"><span class="muted">7-NIGHT AVG</span><span class="sleep-big">${avgSleep.toFixed(1)}h</span></div>
         <div class="sleep-stat"><span class="muted">THE VERDICT</span><span>${sleepVerdict(avgSleep)}</span></div>
       </div>` : '';
+    const rangeBtn = (val, label) =>
+      `<button class="btn small ${vitalsRange === val ? 'active' : ''}" style="min-width:0" onclick="SFX.click();vitalsRange=${val};render()">${label}</button>`;
+    const rangeLabel = vitalsRange ? `last ${vitalsRange} days` : 'all time';
 
     body = `<div class="win"><span class="win-title">Vitals (from intervals.icu)</span>
+      <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+        ${rangeBtn(30, '30d')}${rangeBtn(90, '90d')}${rangeBtn(180, '180d')}${rangeBtn(365, '1y')}${rangeBtn(0, 'All')}
+      </div>
+      <div class="muted" style="font-size:14px;margin-bottom:8px">showing ${rangeLabel} &middot; ${w.length} day(s) with readings</div>
       ${w.length === 0 ? '<div class="muted">No wellness data yet. Link intervals.icu in Settings and send the ravens.</div>' : ''}
       ${chart('ch-hrv', 'HRV', 'hrv', 'var(--green)', v => v.toFixed(0) + ' ms')}
       ${chart('ch-rhr', 'Resting heart rate', 'resting_hr', 'var(--red)', v => v.toFixed(0) + ' bpm')}
       ${chart('ch-vo2', 'VO2max', 'vo2max', 'var(--blue)', v => v.toFixed(1))}
       ${chart('ch-ctl', 'Fitness (CTL)', 'ctl', 'var(--gold-bright)', v => v.toFixed(0))}
-      ${chart('ch-wt', 'Bodyweight', 'weight', 'var(--purple)', v => v.toFixed(1))}
+      ${chart('ch-wt', 'Bodyweight', 'weight', 'var(--purple)', v => wtConv(v).toFixed(1) + wu)}
     </div>
     ${sleepVals.length ? `<div class="win"><span class="win-title">The Hall of Rest</span>
       ${sleepPanel}
@@ -868,7 +877,7 @@ SCREENS.stats = async function () {
     drawLine('ch-rhr', pts('resting_hr'), '#c85050');
     drawLine('ch-vo2', pts('vo2max'), '#6aa0c8');
     drawLine('ch-ctl', pts('ctl'), '#f0d080');
-    drawLine('ch-wt', pts('weight'), '#a06ac8');
+    drawLine('ch-wt', pts('weight').map(v => wu === 'lb' ? kgToLb(v) : v), '#a06ac8');
     drawLine('ch-sleep', pts('sleep_secs').map(s => s / 3600), '#6aa0c8');
   }
 };
