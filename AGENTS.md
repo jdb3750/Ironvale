@@ -241,9 +241,40 @@ exactly this to find Pip/relics).
   Don't bother adding `SFX.click()` to new handlers just for tap feedback —
   it's redundant. Do still add distinct sounds (accept/coin/error/fanfare)
   for outcomes that deserve more than a neutral blip.
+  **Caveat**: the `[onclick]` selector only matches *inline HTML attributes*
+  (`onclick="fn()"`), not JS-property-set handlers (`el.onclick = fn`). If
+  you wire a click handler from JavaScript, the delegated sound won't fire;
+  either use an inline attribute or call `SFX.click()` yourself.
 - When testing multi-step canvas animations (Colosseum, Ranch) via the
   preview eval tool, reload the page between test runs rather than
   re-clicking the same trigger across separate eval calls — overlapping
   runs share module-level state (e.g. `COL.animating`) and will look broken
   when they're actually just colliding with a previous test's leftover
   in-flight animation.
+- **CSS `animation` does not compose across selectors.** If two rules match
+  the same element and both set `animation`, the later declaration wins
+  outright — it doesn't merge the keyframe lists. Example: `.reward-line`
+  had `animation: popin` (opacity 0→1), but `.levelup` on the same element
+  set `animation: pulse` (text-shadow only). Result: the element never left
+  opacity 0 and was functionally invisible. Fix: list both in one
+  declaration (`.levelup { animation: popin ..., pulse ...; }`), or split
+  animations across a wrapper/inner element so they never share a property.
+- **Avoid the standalone `translate`/`scale` CSS properties** (i.e. not
+  inside `transform`). They're newer and have inconsistent-enough browser
+  support to cause visible "wrong position, then snaps to correct" flashes.
+  Use `transform: translateX(-50%) scale(0.4)` instead of the standalone
+  `translate`/`scale` properties. If you need two independent animations
+  that both touch `transform`, split them into a wrapper + inner element
+  (each animates its own `transform` solo) rather than fighting over one
+  element's single `transform` stack.
+- **Backend `.py` changes need a uvicorn restart.** Static JS/CSS/HTML are
+  served fresh from disk on every request (so they update instantly), but
+  Python modules are loaded once at startup. When testing the full stack
+  against a running port-8322 server, restart uvicorn after any `.py` edit.
+- **TestClient + profile DB routing**: the contextvar that `db.set_profile()`
+  sets is scoped to the current asyncio task. A top-level
+  `db.set_profile(path)` in a test script doesn't carry into TestClient
+  requests (which run in their own tasks). For direct DB manipulation in
+  tests, use `db.set_profile(db.DB_PATH)` (which resolves to the same
+  `ironvale.db` that the middleware routes to for the "main" profile) rather
+  than hardcoding a custom filename.
