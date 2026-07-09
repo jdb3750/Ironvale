@@ -36,6 +36,9 @@ This file holds only the always-true rules and quick-reference tables.
    whenever you change any JS/CSS file.** Browsers cache aggressively; a
    middleware sends `Cache-Control: no-cache` but the version bump is the
    guarantee.
+5. **Never assume any profile — including `main` — is PINless, and never guess
+   or brute-force a PIN.** If an authenticated flow needs exercising and the
+   PIN isn't known, use read-only/unauthenticated endpoints or ask the human.
 
 ## Git workflow
 
