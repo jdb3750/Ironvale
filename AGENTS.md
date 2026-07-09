@@ -71,6 +71,25 @@ Golden rules:
 7. **After committing app code, redeploy**: restart uvicorn on 8321 so the
    running game picks it up.
 
+### Versioning
+
+Semantic versioning `MAJOR.MINOR.PATCH`. The single source of truth is the
+root `VERSION` file; the running app reads it at startup and shows it in the
+footer, so it must always reflect what's actually deployed live.
+
+- **MAJOR**: save-data-format-breaking changes requiring a migration, or a
+  fundamental rewrite of a core system.
+- **MINOR**: new features/content (quest types, screens, mechanics, givers,
+  etc.) — backward compatible.
+- **PATCH**: bug fixes, balance/tuning tweaks, copy corrections, refactors
+  with no user-visible behavior change.
+- **Docs/chore only** (editing `AGENTS.md`, restructuring skills): no bump.
+
+Bump `VERSION` in the SAME commit as the change it corresponds to — never a
+separate "bump version" commit (same spirit as the `?v=N` rule). Tagging is
+recommended but not mandatory: `git tag vX.Y.Z` on the bumping commit, for
+easy reference. (The repo has zero tags today; start the habit.)
+
 See skill `iron-vale-ops` for the exact redeploy/restart procedure and for opening PRs.
 
 If you ever find a stray non-project file in the tree (past example:

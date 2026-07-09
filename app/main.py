@@ -13,6 +13,15 @@ app = FastAPI(title="Iron Vale")
 
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL_SECONDS", "900"))  # 15 min
 
+# App version shown in the footer; read once at startup from the root
+# VERSION file (the single source of truth — see AGENTS.md "Versioning").
+APP_VERSION = ""
+try:
+    with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "VERSION")) as _f:
+        APP_VERSION = _f.read().strip()
+except OSError:
+    pass
+
 
 def _sync_one_profile(slug, path):
     token = db.set_profile(path)
@@ -172,6 +181,7 @@ def state():
         "needs_login": False,
         "unguided_pending": game.unguided_pending(),
         "writ_notices": game.writ_notices_pending(),
+        "version": APP_VERSION,
     }
 
 

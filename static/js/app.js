@@ -137,6 +137,7 @@ function footer() {
     <div class="muted" style="font-size:16px">
       ${st.last_sync ? 'ravens last flew ' + esc(st.last_sync.slice(0, 16).replace('T', ' ')) + ' &middot; they fly every 15 min' : 'no sync yet — link intervals.icu in Settings'}
     </div>
+    ${st.version ? `<div class="muted" style="font-size:14px;margin-top:4px">v${esc(st.version)}</div>` : ''}
   </div>`;
 }
 
