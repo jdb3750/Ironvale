@@ -52,6 +52,9 @@ def sync(days=None):
     for a in _get(f"/athlete/{athlete}/activities", {"oldest": oldest, "newest": newest}, athlete, key):
         aid = str(a.get("id"))
         exists = db.q("SELECT 1 FROM activities WHERE id=?", (aid,)).fetchone()
+        # Garmin's ClimbTime custom field excludes rest/belay time that moving_time/elapsed_time include.
+        mt = a.get("ClimbTime") if a.get("type") == "RockClimbing" else None
+        mt = mt or a.get("moving_time")
         db.q(
             "INSERT INTO activities (id, source, start, type, name, moving_time, distance, load, avg_hr) "
             "VALUES (?,?,?,?,?,?,?,?,?) "
@@ -62,7 +65,7 @@ def sync(days=None):
                 a.get("start_date_local") or a.get("start_date") or "",
                 a.get("type") or "Workout",
                 a.get("name"),
-                a.get("moving_time"),
+                mt,
                 a.get("distance"),
                 a.get("icu_training_load"),
                 a.get("average_heartrate"),
