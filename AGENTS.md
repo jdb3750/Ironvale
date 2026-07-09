@@ -54,7 +54,9 @@ Golden rules:
 6. **End AI-authored commits** with a trailer:
    `Co-Authored-By: <model> <noreply@anthropic.com>`.
 7. **After committing app code, redeploy**: restart uvicorn on 8321
-   (`kill $(lsof -ti :8321)` then relaunch) so the running game picks it up.
+   (`kill $(lsof -iTCP:8321 -sTCP:LISTEN -t)` then relaunch) so the running
+   game picks it up. Filter to the LISTENING socket — bare `lsof -ti :8321`
+   can list unrelated processes (see the lsof gotcha below).
 
 Typical loop:
 
@@ -81,7 +83,9 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
                 it per profile. Never open sqlite yourself; use db.q()/kv_*.
                 Schema (executescript) + try/except ALTER migrations live in conn().
   profiles.py   Adventurer roster: data/profiles.json maps slug -> db file + PIN
-                hash. 4-digit PIN required on create; legacy "main" may be pinless.
+                hash. 4-digit PIN required on create; legacy "main" may be pinless
+                — but NEVER assume any profile (main included) is pinless, and
+                never guess/brute-force a PIN (see gotcha below).
   game.py       Quest engine: offer generation (cached per giver per day in kv
                 "offers:<giver>:<date>"), accept/complete/abandon, rewards, streaks,
                 activity categorization (CATEGORIES), muscle recency, wellness
@@ -271,6 +275,13 @@ exactly this to find Pip/relics).
   served fresh from disk on every request (so they update instantly), but
   Python modules are loaded once at startup. When testing the full stack
   against a running port-8322 server, restart uvicorn after any `.py` edit.
+- **`lsof -ti :<port>` can return multiple pids**, including unrelated
+  processes that merely hold a stale/closed socket referencing the port
+  (observed in a real session: an unrelated helper showed up alongside the
+  actual uvicorn listener). `kill $(lsof -ti :8321)` blindly kills all of
+  them and can take down the wrong process. Filter to the real listener:
+  `lsof -iTCP:8321 -sTCP:LISTEN -t` (same for 8322 when restarting the test
+  server).
 - **TestClient + profile DB routing**: the contextvar that `db.set_profile()`
   sets is scoped to the current asyncio task. A top-level
   `db.set_profile(path)` in a test script doesn't carry into TestClient
@@ -278,6 +289,13 @@ exactly this to find Pip/relics).
   tests, use `db.set_profile(db.DB_PATH)` (which resolves to the same
   `ironvale.db` that the middleware routes to for the "main" profile) rather
   than hardcoding a custom filename.
+- **Never assume a profile is pinless — and never guess PINs.** Even `main`
+  may carry a PIN now (the "legacy main may be pinless" note is a
+  possibility, not a promise). If you need to exercise a live authenticated
+  flow and don't have the PIN, either stick to read-only/unauthenticated
+  endpoints (note: with only one profile, unauthenticated requests
+  default-route to `main`'s DB) or ask Joe for the PIN. Brute-forcing or
+  guessing is never acceptable.
 - **Wellness table has no per-row source tag.** The `wellness` table is a
   simple date-keyed ledger — `INSERT OR REPLACE` (or `ON CONFLICT(date) DO
   UPDATE`) with no guard. Dev mode's "seed 60d of fake training" silently
@@ -297,3 +315,27 @@ exactly this to find Pip/relics).
   tab are driven by synced wellness data, which is always metric no matter
   what. If the player sets `weight_unit=lb`, you must convert on the
   frontend — storage stays kg (single source of truth from the API).
+- **intervals.icu: single-activity fetch needs the GLOBAL endpoint.**
+  `GET /api/v1/activity/{id}` works; the obvious
+  `/athlete/{athlete_id}/activities/{activity_id}` does NOT — intervals.icu
+  silently ignores the trailing activity-id segment and returns the
+  athlete's full activity list instead of erroring or filtering.
+- **intervals.icu: custom fields are FLAT top-level keys** on the activity
+  JSON object (e.g. Garmin-synced `ClimbTime`), NOT nested under
+  `icu_custom_fields`/`custom_fields`/any wrapper.
+- **intervals.icu: the list endpoint is NOT a trimmed summary.** The
+  `/athlete/{athlete}/activities` route the regular sync already uses
+  returns the SAME full rich payload per activity as the single-activity
+  endpoint (~180 keys, all custom fields included). Reading a new custom
+  field into the sync path never needs extra per-activity API calls — it's
+  already in the payload `sync()` receives.
+- **Raid damage dedup has no self-heal.** The per-activity-id set in
+  `data/raid.json` "counted" records only THAT an activity was counted, not
+  the field values used (e.g. `moving_time`). If an activity's duration is
+  corrected after the fact (re-sync with different data, manual DB edit),
+  previously-applied raid damage does NOT recompute — it stays wrong until
+  someone notices and hand-edits `data/raid.json`. There is currently no
+  endpoint/tooling for reversing or adjusting already-applied raid damage;
+  it requires a careful manual JSON edit under the same care as any other
+  live-data mutation (per CRITICAL SAFETY RULES: additive, log to
+  `db.log_event`, tell Joe exactly what changed).
