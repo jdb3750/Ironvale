@@ -29,6 +29,7 @@ async function api(path, opts = {}) {
 async function refreshState() {
   S.state = await api('/state');
   queueFennBubbles(S.state.unguided_pending);
+  S.writQueue = S.state.writ_notices || [];   // willow bubbles: same replace-not-append rule
   return S.state;
 }
 
@@ -254,7 +255,7 @@ function render() {
   const fn = SCREENS[S.screen] || SCREENS.town;
   Promise.resolve(fn()).then(() => {
     hydrateSprites();
-    if (S.screen === 'town') showFennBubbleIfQueued();
+    if (S.screen === 'town') { showFennBubbleIfQueued(); showWillowBubbleIfQueued(); }
   }).catch(e => console.error(e));
 }
 

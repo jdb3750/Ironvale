@@ -445,6 +445,21 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 }
 .fenn-bubble .fb-rewards .g { color: var(--gold-bright); }
 .fenn-bubble button { width: 100%; }
+
+/* willow variant: Elowen's writ notices reuse the bubble mechanics wholesale,
+   recolored to her green */
+.fenn-bubble.willow { border-color: var(--green); }
+.fenn-bubble.willow::after { border-top-color: var(--green); }
+
+/* ---- the rest writ: offer/sworn card + omens block ---- */
+.chip.rest { border-color: var(--green); color: var(--green); }
+.offer.writ { border-color: #2e4a3a; background: linear-gradient(180deg, rgba(18,30,24,0.5), rgba(10,16,12,0.15)); }
+.omens {
+  margin: 8px auto; padding: 8px 12px; max-width: 440px;
+  border-left: 3px solid var(--green); background: rgba(0,0,0,0.28);
+}
+.omens-title { font-size: 12px; letter-spacing: 2px; color: var(--green); margin-bottom: 4px; }
+.omen-line { font-size: 15px; font-style: italic; color: #b8c8b8; line-height: 1.45; }
 @keyframes fbpop {
   from { transform: scale(0.4); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
