@@ -154,7 +154,7 @@ SCREENS.town = async function () {
         ${bld('bld_waystone', esc(g.running.name), GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
         ${bld('bld_forge', esc(g.kettlebell.name), GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell)}
         ${bld('bld_keep', esc(g.strength.name), GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength)}
-        ${bld('bld_willow', esc(g.mobility.name), GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility)}
+        ${bld('bld_willow', esc(g.mobility.name), GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility, 120, 'bld-elowen')}
       </div>
       <div class="road-h"></div>
       <div class="trow">
@@ -212,6 +212,61 @@ G.claimFennBubble = async () => {
   await refreshState();
   render();
   showCeremony(rewards, `An Unguided Run \u2014 ${b.minutes} min`);
+};
+
+/* ---- The willow's writ bubble: Elowen sends word when a Rest Writ resolved
+   overnight (kept or broken). Unlike Fenn's bubble, the rewards were ALREADY
+   applied at resolution (the streak stitch can't wait for a tap) \u2014 the bubble
+   is purely the moment of telling you. Same queue-mirror discipline as
+   Fenn's: S.writQueue is replaced wholesale on every refreshState. ---- */
+function showWillowBubbleIfQueued() {
+  const next = S.writQueue && S.writQueue[0];
+  const shown = document.querySelector('.willow-bubble-wrap');
+  if (shown) {
+    if (next && shown.dataset.ts === String(next.ts)) return;
+    shown.remove();
+  }
+  if (!next) return;
+  const anchor = document.getElementById('bld-elowen');
+  if (!anchor) return;
+  const kept = next.type === 'kept';
+  anchor.insertAdjacentHTML('beforeend', `
+    <div class="fenn-bubble-wrap willow-bubble-wrap" data-ts="${esc(next.ts)}">
+      <div class="fenn-bubble willow" onclick="event.stopPropagation();G.ackWillowBubble()">
+        <div class="fb-line">&ldquo;${kept ? 'The writ is kept. Rise rested \u2014 the Vale noticed.' : 'The iron called, and you answered. The willow does not scold.'}&rdquo;</div>
+        ${kept ? `<div class="fb-rewards">
+          <span style="color:var(--purple)">+${next.rewards.xp} XP</span>
+          <span class="g">&#9670; +${next.rewards.gold}</span>
+          <span style="color:#e07030">streak kept &middot; ${next.rewards.streak}</span>
+        </div>` : ''}
+        <button class="btn small ${kept ? 'green' : ''}">${kept ? 'WORD FROM THE WILLOW' : 'THE WRIT SLIPPED AWAY'}</button>
+      </div>
+    </div>`);
+  SFX.coin();
+}
+
+G.ackWillowBubble = async () => {
+  const b = S.writQueue && S.writQueue[0];
+  if (!b) return;
+  document.querySelectorAll('.willow-bubble-wrap').forEach(x => x.remove());
+  const n = await api('/writ/ack', { method: 'POST', body: { ts: b.ts } });
+  await refreshState();
+  render();
+  if (n.type === 'kept') {
+    showCeremony(n.rewards, 'The Rest Writ \u2014 Kept');
+  } else {
+    SFX.accept();
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `<div class="win center" style="max-width:380px">
+      <span class="win-title">The Writ Slipped Away</span>
+      <p style="margin:10px 0">${esc(n.detail || 'Training')} broke the stillness. The willow bends; it does not break \u2014 and neither, apparently, do you.</p>
+      <p class="muted" style="font-size:16px">No penalty. The omens will be read again tomorrow.</p>
+      <button class="btn" onclick="this.closest('.overlay').remove()">ONWARD</button>
+    </div>`;
+    document.body.appendChild(ov);
+  }
 };
 
 /* ---- the siege banner: a small breathing preview by default; expands into a
@@ -367,30 +422,43 @@ SCREENS.giver = async function () {
 
   const rewardsLine = (o) => `<div class="o-rewards">reward: <b>+${o.xp} XP</b> &middot; <span class="g">&#9670;${o.gold}+</span> &middot; +${o.vigor} vigor${o.bonus_vigor ? ' (+1 bonus)' : ''}</div>`;
 
+  // the omens Elowen read — shown on a rest-writ offer and on the sworn writ
+  const omensBlock = (d) => (d.reasons && d.reasons.length) ? `
+    <div class="omens">
+      <div class="omens-title">THE OMENS</div>
+      ${d.reasons.map(r => `<div class="omen-line">&#9656; ${esc(r)}</div>`).join('')}
+    </div>` : '';
+
   const offerCard = (o) => {
     const routine = o.routine ? `<div class="o-struct">${o.routine.map(r =>
       `&#9656; ${esc(r.exercise)} — ${r.sets}&times;${r.reps}${r.unit === 'seconds' ? 's' : r.unit === 'steps' ? ' steps' : ''}${r.suggest_weight ? ` @ ${r.suggest_weight}` : ''}`
     ).join('<br>')}</div>` : '';
-    return `<div class="offer">
+    const isWrit = o.kind === 'rest';
+    return `<div class="offer ${isWrit ? 'writ' : ''}">
       <div><span class="o-title">${esc(o.title)}</span>
         ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
-        <span class="chip ${o.intensity}">${o.intensity}</span>
+        ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${o.intensity}">${o.intensity}</span>`}
         ${o.target_minutes ? `<span class="o-kind">~${o.target_minutes} min</span>` : ''}</div>
       <div class="muted" style="font-size:18px">&ldquo;${esc(o.blurb)}&rdquo;</div>
+      ${isWrit ? omensBlock(o) : ''}
       <div class="o-struct">${esc(o.structure)}</div>
       ${routine}
       ${o.focus ? `<div style="margin:4px 0">${bodyMapTag(o.focus, 78)}</div>` : ''}
       ${rewardsLine(o)}
-      <button class="btn green" onclick="G.accept('${key}',${o.offer_id})">ACCEPT QUEST</button>
+      ${isWrit ? '<div class="o-rewards" style="color:var(--green)">and the streak keeps itself tonight — rest counts</div>' : ''}
+      <button class="btn green" onclick="G.accept('${key}',${o.offer_id})">${isWrit ? 'SWEAR THE WRIT' : 'ACCEPT QUEST'}</button>
     </div>`;
   };
 
   let body;
   if (data.active) {
     const q = data.active;
-    body = `<div class="win"><span class="win-title">Your Sworn Quest</span>
-      <div class="offer">
-        <div><span class="o-title">${esc(q.title)}</span> <span class="chip ${q.details.intensity}">${q.details.intensity}</span></div>
+    const isWrit = q.kind === 'rest';
+    body = `<div class="win"><span class="win-title">${isWrit ? 'Your Sworn Writ' : 'Your Sworn Quest'}</span>
+      <div class="offer ${isWrit ? 'writ' : ''}">
+        <div><span class="o-title">${esc(q.title)}</span>
+          ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${q.details.intensity}">${q.details.intensity}</span>`}</div>
+        ${isWrit ? omensBlock(q.details) : ''}
         <div class="o-struct">${esc(q.details.structure)}</div>
         ${q.details.routine ? `<div class="o-struct">${q.details.routine.map(r =>
           `&#9656; ${esc(r.exercise)} — ${r.sets}&times;${r.reps}${r.suggest_weight ? ` @ ${r.suggest_weight}` : ''}`).join('<br>')}</div>` : ''}
@@ -399,10 +467,11 @@ SCREENS.giver = async function () {
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${isLiftGiver ? `<button class="btn" onclick="nav('logger',{quest:${q.id}})">OPEN TRAINING LOG</button>` : ''}
           ${q.giver === 'running' ? `<button class="btn" onclick="G.syncThenBack('${key}')">SYNC RUNS</button>` : ''}
-          ${q.completable
-            ? `<button class="btn green" onclick="G.complete(${q.id}, false)">TURN IN QUEST</button>`
-            : `<button class="btn" onclick="G.completeHonor(${q.id})">COMPLETE ON HONOR</button>`}
-          <button class="btn danger small" style="min-width:0" onclick="G.abandon(${q.id}, '${key}')">abandon</button>
+          ${isWrit ? ''
+            : q.completable
+              ? `<button class="btn green" onclick="G.complete(${q.id}, false)">TURN IN QUEST</button>`
+              : `<button class="btn" onclick="G.completeHonor(${q.id})">COMPLETE ON HONOR</button>`}
+          <button class="btn danger small" style="min-width:0" onclick="G.abandon(${q.id}, '${key}')">${isWrit ? 'set the writ aside' : 'abandon'}</button>
         </div>
       </div>
     </div>`;
@@ -1300,6 +1369,7 @@ SCREENS.settings = function () {
         <button class="btn small" style="min-width:0" onclick="G.dev('hats')">hat sampler</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('seed')">seed 60d of fake training</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('unguided_run')">seed an unguided run (Fenn's bubble)</button>
+        <button class="btn small" style="min-width:0" onclick="G.dev('bad_recovery')">seed bad recovery (Elowen's writ — fresh profile only)</button>
         <button class="btn small danger" style="min-width:0" onclick="G.dev('wipe_dev')">wipe fake training</button>
       </div>` : ''}
     </div>

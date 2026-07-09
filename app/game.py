@@ -388,6 +388,199 @@ def _price_offer(o, minutes, intensity):
     o["vigor"] = 3 if intensity == "hard" else 2
 
 
+# ---------------- the rest writ ----------------
+# When the wellness omens say the body is losing, Sage Elowen issues a writ
+# to REST. It is sworn like any quest but completes itself: at dawn the next
+# day, if no hard training was logged during the writ's day, it resolves as
+# kept — rewards land AND the rested day is stitched into the streak, so the
+# streak never pressures training through exhaustion. A hard workout during
+# the writ breaks it quietly (no penalty; the willow does not scold).
+
+REST_WRIT_TITLE = "The Rest Writ"
+
+REST_WRIT_BLURBS = [
+    "The willow has read your omens and writes plainly: rest.",
+    "Elowen presses a sealed writ into your hand. It weighs nothing, and everything.",
+    "Some quests are carried. This one is set down.",
+    "The strongest oath is sometimes stillness.",
+]
+
+# what counts as breaking a rest writ: a real training session, not a stroll.
+# walks / hikes / yoga / mobility never break it — they're encouraged.
+WRIT_HARD_CATEGORIES = ("run", "ride", "climb", "strength", "swim", "other")
+WRIT_HARD_MIN_SECONDS = 15 * 60
+WRIT_HARD_MIN_SETS = 6
+
+
+def rest_writ_signal():
+    """Read the omens. Returns a list of in-world reason strings when recovery
+    data says today should be a rest day, else None.
+
+    Fires on any ONE strong signal or TWO weak ones:
+      HRV week-avg vs prior baseline:  strong <= -8%,  weak <= -5%
+      RHR week-avg vs prior baseline:  strong >= +4bpm, weak >= +2.5bpm
+      sleep: last night < 5h (strong); 7-night avg < 6h (strong) / < 6.5h (weak)
+
+    Requires a wellness reading within the last 2 days — no writ without
+    fresh evidence (stale data must never spawn writs forever)."""
+    rows = db.q(
+        "SELECT * FROM wellness WHERE date >= ? ORDER BY date",
+        ((now() - timedelta(days=60)).date().isoformat(),),
+    ).fetchall()
+    if not rows:
+        return None
+    if rows[-1]["date"] < (now().date() - timedelta(days=2)).isoformat():
+        return None
+
+    week, before = rows[-7:], rows[:-7]
+
+    def vals(field, src):
+        return [r[field] for r in src if r[field] is not None]
+
+    def avg(v):
+        return sum(v) / len(v) if v else None
+
+    strong, weak, reasons = 0, 0, []
+
+    hrv_w, hrv_b = avg(vals("hrv", week)), avg(vals("hrv", before))
+    if hrv_w and hrv_b:
+        delta = (hrv_w - hrv_b) / hrv_b * 100
+        if delta <= -8:
+            strong += 1
+            reasons.append(f"your heart's rhythm sits {abs(delta):.0f}% beneath its usual song")
+        elif delta <= -5:
+            weak += 1
+            reasons.append(f"your heart's rhythm runs {abs(delta):.0f}% quiet")
+
+    rhr_w, rhr_b = avg(vals("resting_hr", week)), avg(vals("resting_hr", before))
+    if rhr_w and rhr_b:
+        d = rhr_w - rhr_b
+        if d >= 4:
+            strong += 1
+            reasons.append(f"your resting pulse runs {d:.0f} beats hot")
+        elif d >= 2.5:
+            weak += 1
+            reasons.append(f"your resting pulse is {d:.1f} beats above its wont")
+
+    last_sleep = vals("sleep_secs", rows[-1:])
+    sleep_w = avg(vals("sleep_secs", week))
+    if last_sleep and last_sleep[0] < 5 * 3600:
+        strong += 1
+        reasons.append(f"last night gave you only {last_sleep[0]/3600:.1f} hours of sleep")
+    elif sleep_w and sleep_w < 6.0 * 3600:
+        strong += 1
+        reasons.append(f"sleep has averaged {sleep_w/3600:.1f} hours this week")
+    elif sleep_w and sleep_w < 6.5 * 3600:
+        weak += 1
+        reasons.append(f"sleep has run thin this week ({sleep_w/3600:.1f}h a night)")
+
+    if strong >= 1 or weak >= 2:
+        return reasons
+    return None
+
+
+def rest_writ_offer():
+    """Elowen's leading offer when the omens call for rest, else None.
+    At most one writ per calendar day, in ANY status — an abandoned or broken
+    writ means the player chose to train; the willow does not nag."""
+    if db.q(
+        "SELECT 1 FROM quests WHERE kind='rest' AND accepted_at LIKE ? LIMIT 1",
+        (today() + "%",),
+    ).fetchone():
+        return None
+    reasons = rest_writ_signal()
+    if not reasons:
+        return None
+    rng = random.Random(f"writ:{today()}")
+    return {
+        "kind": "rest", "giver": "mobility",
+        "title": REST_WRIT_TITLE,
+        "intensity": "low",
+        "writ_day": today(),
+        "reasons": reasons,
+        "blurb": rng.choice(REST_WRIT_BLURBS),
+        "structure": "From acceptance until dawn: no hard training. Walks, stretches and sleep are the whole of the quest.",
+        "xp": 45, "gold": 20, "vigor": 2, "bonus_vigor": 1,
+    }
+
+
+def _writ_hard_activity(quest):
+    """The activity (or set-logging session) that breaks this writ, if any —
+    a hard-category activity of >=15 min, or >=6 logged lift sets, started
+    within the writ window (acceptance -> end of the writ's calendar day).
+    Returns something with name/type keys, or None."""
+    writ_day = quest["details"].get("writ_day") or quest["accepted_at"][:10]
+    end = writ_day + "T23:59:59"
+    rows = db.q(
+        "SELECT * FROM activities WHERE start >= ? AND start <= ?",
+        (quest["accepted_at"], end),
+    ).fetchall()
+    for r in rows:
+        if category(r["type"]) in WRIT_HARD_CATEGORIES and (r["moving_time"] or 0) >= WRIT_HARD_MIN_SECONDS:
+            return r
+    n = db.q(
+        "SELECT COUNT(*) AS n FROM lift_sets WHERE ts >= ? AND ts <= ?",
+        (quest["accepted_at"], end),
+    ).fetchone()["n"]
+    if n >= WRIT_HARD_MIN_SETS:
+        return {"name": f"{n} sets at the iron", "type": "WeightTraining"}
+    return None
+
+
+def resolve_rest_writs():
+    """Resolve active rest writs. Called from /api/state, /api/sync and the
+    background loop — never from a user 'turn in' action.
+
+    Same-day: a hard workout breaks the writ immediately (status 'broken',
+    gentle notice, no penalty). The morning after: the writ completes as
+    kept — rewards apply HERE, at resolution, including the streak stitch
+    for the rested day (never deferred to bubble-tap time, so no completion
+    on the new day can race the streak math)."""
+    for q_ in active_quests():
+        if q_["kind"] != "rest":
+            continue
+        writ_day = q_["details"].get("writ_day") or q_["accepted_at"][:10]
+        hard = _writ_hard_activity(q_)
+        if hard:
+            db.q("UPDATE quests SET status='broken', completed_at=? WHERE id=?", (now_iso(), q_["id"]))
+            db.commit()
+            what = hard["name"] or hard["type"]
+            db.log_event(now_iso(), "writ", f"The Rest Writ slipped away — {what} broke the stillness.")
+            _queue_writ_notice({"type": "broken", "ts": now_iso(), "title": q_["title"], "detail": what})
+        elif today() > writ_day:
+            rewards = complete_quest(q_["id"], _writ=True)
+            _queue_writ_notice({"type": "kept", "ts": now_iso(), "title": q_["title"], "rewards": rewards})
+
+
+def _queue_writ_notice(n):
+    lst = db.kv_get("writ_notices", [])
+    lst.append(n)
+    db.kv_set("writ_notices", lst[-10:])
+
+
+def writ_notices_pending():
+    """Read-only peek at unseen willow-bubble notices. Rewards were already
+    applied at resolution, so sweeping stale notices (>3 days unseen) loses
+    nothing but the moment."""
+    lst = db.kv_get("writ_notices", [])
+    cutoff = (now() - timedelta(days=3)).isoformat()
+    fresh = [n for n in lst if n["ts"] >= cutoff]
+    if len(fresh) != len(lst):
+        db.kv_set("writ_notices", fresh)
+    return fresh
+
+
+def ack_writ_notice(ts=None):
+    """The player tapped the willow's bubble — pop and return that notice."""
+    lst = db.kv_get("writ_notices", [])
+    if not lst:
+        raise ValueError("The willow has nothing more for you.")
+    idx = next((i for i, n in enumerate(lst) if n["ts"] == ts), 0) if ts else 0
+    n = lst.pop(idx)
+    db.kv_set("writ_notices", lst)
+    return n
+
+
 def get_offers(giver, reroll=False):
     key = f"offers:{giver}:{today()}"
     bump_key = f"offerbump:{giver}:{today()}"
@@ -417,6 +610,12 @@ def get_offers(giver, reroll=False):
         if po:
             po["offer_id"] = 99
             return [po] + cached[:2]
+    # a rest writ leads Elowen's offers (built fresh — the omens change with each sync)
+    if giver == "mobility":
+        ro = rest_writ_offer()
+        if ro:
+            ro["offer_id"] = 98
+            return [ro] + cached[:2]
     return cached
 
 
@@ -471,6 +670,8 @@ def find_matching_activity(quest):
     """
     g = quest["giver"]
     details = quest["details"]
+    if quest["kind"] == "rest":
+        return None  # a rest writ is KEPT, not fulfilled — a yoga session must never "complete" it
     if g == "running":
         types = RUN_TYPES
         need_s = details.get("target_minutes", 20) * 60 * 0.7
@@ -503,6 +704,12 @@ def lift_progress(quest):
 def quest_completable(quest):
     """Returns (auto_ok, progress_note, activity_row_or_none)."""
     g = quest["giver"]
+    if quest["kind"] == "rest":
+        if _writ_hard_activity(quest):
+            return False, "The iron called and you answered — the writ will slip away quietly.", None
+        if today() > quest["details"].get("writ_day", quest["accepted_at"][:10]):
+            return False, "Dawn has come. The writ resolves itself — the willow will send word.", None
+        return False, "The writ holds until dawn. Gentle walks and stretches are permitted — encouraged, even.", None
     act = find_matching_activity(quest)
     if act:
         return True, f"Matched: {act['name'] or act['type']} ({round((act['moving_time'] or 0)/60)} min)", act
@@ -537,30 +744,44 @@ def invalidate_offers():
     db.commit()
 
 
-def _update_streak(c):
-    """Bump the daily streak; returns True on a 5-day milestone."""
+def _update_streak(c, effective=None):
+    """Bump the daily streak; returns True on a 5-day milestone.
+
+    `effective` backdates the credit (ISO date). Rest writs resolve the
+    morning AFTER the rested day but must stitch THAT day into the streak —
+    otherwise resting would read as a broken streak, which is the exact
+    thing the writ exists to prevent. Never rewinds: if a later day is
+    already credited, the stitch is a no-op."""
     streak = c["streak"]
-    t = today()
-    if streak["last"] == t:
-        pass
-    elif streak["last"] == (now().date() - timedelta(days=1)).isoformat():
+    t = effective or today()
+    last = streak["last"]
+    if last == t or (last and last > t):
+        pass  # that day (or a later one) is already credited
+    elif last == (datetime.fromisoformat(t).date() - timedelta(days=1)).isoformat():
         streak["count"] += 1
     else:
         streak["count"] = 1
-    streak["last"] = t
+    streak["last"] = max(last, t) if last else t
     streak["best"] = max(streak.get("best", 0), streak["count"])
     return streak["count"] > 0 and streak["count"] % 5 == 0
 
 
-def complete_quest(quest_id, honor=False):
+def complete_quest(quest_id, honor=False, _writ=False):
     import json
     row = db.q("SELECT * FROM quests WHERE id=? AND status='active'", (quest_id,)).fetchone()
     if not row:
         raise ValueError("No such active quest.")
     quest = _quest_row(row)
-    auto_ok, note, act = quest_completable(quest)
-    if not auto_ok and not honor:
-        raise ValueError(note)
+    if quest["kind"] == "rest":
+        # a writ keeps itself — only resolve_rest_writs() may complete it,
+        # and honor completion would mean swearing the night ended early
+        if not _writ:
+            raise ValueError("A writ is not turned in — it keeps itself until dawn.")
+        auto_ok, note, act = True, "The writ was kept. Dawn found you rested.", None
+    else:
+        auto_ok, note, act = quest_completable(quest)
+        if not auto_ok and not honor:
+            raise ValueError(note)
 
     details = quest["details"]
     # honor completions still enter the historical record as a typed activity
@@ -591,7 +812,9 @@ def complete_quest(quest_id, honor=False):
     elif g == "mobility":
         gains["spr"] = 1
 
-    streak_bonus = _update_streak(c)
+    # a kept writ credits the RESTED day (yesterday), not the resolution day
+    streak_effective = details.get("writ_day") if quest["kind"] == "rest" else None
+    streak_bonus = _update_streak(c, effective=streak_effective)
     streak = c["streak"]
     if streak_bonus:
         gains["con"] = gains.get("con", 0) + 1

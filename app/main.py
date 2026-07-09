@@ -22,6 +22,7 @@ def _sync_one_profile(slug, path):
             intervals.sync()
             game.auto_complete_ready()
             game.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
+        game.resolve_rest_writs()  # dawn check runs even without intervals creds
         raid.apply_damage(slug)  # this week's uncounted deeds strike the siege
     finally:
         db.reset_profile(token)
@@ -150,6 +151,7 @@ async def login(request: Request):
 @app.get("/api/state")
 def state():
     s = game.get_settings()
+    game.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
     actives = []
     for q_ in game.active_quests():
         ok, note, _ = game.quest_completable(q_)
@@ -169,6 +171,7 @@ def state():
         "buddy": monsters.get_buddy(),
         "needs_login": False,
         "unguided_pending": game.unguided_pending(),
+        "writ_notices": game.writ_notices_pending(),
     }
 
 
@@ -258,6 +261,7 @@ def sync(request: Request):
     # synced activities auto-complete matching quests — return ceremonies for the UI
     completed = game.auto_complete_ready()
     game.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
+    game.resolve_rest_writs()  # a freshly-synced hard workout may break an active writ
     raid_damage = raid.apply_damage(request.cookies.get("iv_profile"))
     return {"new_activities": new, "completed": completed, "raid_damage": raid_damage}
 
@@ -266,6 +270,12 @@ def sync(request: Request):
 async def unguided_claim(request: Request):
     body = await request.json()
     return game.claim_unguided_bonus(body.get("activity_id"))
+
+
+@app.post("/api/writ/ack")
+async def writ_ack(request: Request):
+    body = await request.json()
+    return game.ack_writ_notice(body.get("ts"))
 
 
 # ---------------- the siege ----------------
@@ -503,12 +513,33 @@ async def dev_action(request: Request):
         base_hrv, base_rhr = rng.uniform(55, 85), rng.uniform(48, 60)
         for i in range(90):
             day = (game.now() - _td(days=i)).date().isoformat()
-            db.q("INSERT OR REPLACE INTO wellness (date, hrv, resting_hr, vo2max, weight, sleep_secs, ctl, atl, readiness) VALUES (?,?,?,?,?,?,?,?,?)",
+            # OR IGNORE: seeding only ever fills EMPTY dates. A real synced
+            # wellness row must never be overwritten by dev data — this
+            # exact overwrite corrupted ~59 days of live data once.
+            db.q("INSERT OR IGNORE INTO wellness (date, hrv, resting_hr, vo2max, weight, sleep_secs, ctl, atl, readiness) VALUES (?,?,?,?,?,?,?,?,?)",
                  (day, base_hrv + rng.uniform(-8, 8), base_rhr + rng.uniform(-3, 3),
                   44 + rng.uniform(-1, 1) + (90 - i) * 0.01, 78 + rng.uniform(-1, 1),
                   rng.uniform(6, 8.5) * 3600, 40 + (90 - i) * 0.15, 40 + rng.uniform(-8, 8), None))
         db.commit()
         game.invalidate_offers()
+    elif act == "bad_recovery":
+        # Seed a wellness picture that trips the Rest Writ: ~5 weeks of a
+        # healthy baseline, then a rough last week (HRV down, RHR up, short
+        # sleep). OR IGNORE like "seed": only fills empty dates, so it's for
+        # FRESH scratch profiles — it will no-op wherever real data exists.
+        import random as _r
+        from datetime import timedelta as _td
+        rng = _r.Random()
+        for i in range(42):
+            day = (game.now() - _td(days=i)).date().isoformat()
+            rough = i < 7
+            hrv = rng.uniform(58, 64) if rough else rng.uniform(72, 80)
+            rhr = rng.uniform(57, 60) if rough else rng.uniform(50, 53)
+            sleep = rng.uniform(5.0, 5.8) if rough else rng.uniform(7.0, 8.0)
+            db.q("INSERT OR IGNORE INTO wellness (date, hrv, resting_hr, vo2max, weight, sleep_secs, ctl, atl, readiness) VALUES (?,?,?,?,?,?,?,?,?)",
+                 (day, hrv, rhr, 44.0, 78.0, sleep * 3600, 45.0, 50.0, None))
+        db.commit()
+        game.invalidate_offers()  # Elowen re-reads the omens
     elif act == "wipe_dev":
         db.q("DELETE FROM activities WHERE source='dev'")
         db.commit()
