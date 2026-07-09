@@ -77,6 +77,10 @@ Semantic versioning `MAJOR.MINOR.PATCH`. The single source of truth is the
 root `VERSION` file; the running app reads it at startup and shows it in the
 footer, so it must always reflect what's actually deployed live.
 
+Currently pre-1.0 (initial development) — per semver, MAJOR stays `0` and
+breaking changes may land via a MINOR bump until the project reaches a stable
+`1.0.0`.
+
 - **MAJOR**: save-data-format-breaking changes requiring a migration, or a
   fundamental rewrite of a core system.
 - **MINOR**: new features/content (quest types, screens, mechanics, givers,
