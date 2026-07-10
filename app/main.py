@@ -181,6 +181,7 @@ def state():
         "needs_login": False,
         "unguided_pending": game.unguided_pending(),
         "writ_notices": game.writ_notices_pending(),
+        "almanac_unread": game.almanac_unread(),
         "version": APP_VERSION,
     }
 
@@ -298,6 +299,17 @@ def road_state():
 @app.get("/api/tapestry")
 def tapestry():
     return game.tapestry_payload()
+
+
+@app.get("/api/almanac")
+def almanac(month: str = None):
+    return game.almanac_payload(month)
+
+
+@app.post("/api/almanac/seen")
+def almanac_seen():
+    game.almanac_mark_seen()
+    return {"ok": True}
 
 
 @app.post("/api/road/claim")
@@ -571,6 +583,8 @@ async def dev_action(request: Request):
         db.q("DELETE FROM activities WHERE source='dev'")
         db.commit()
         game.invalidate_offers()
+    elif act == "almanac_bang":
+        db.kv_del("almanac_seen")
     elif act == "unguided_run":
         import random as _r
         mins = _r.randint(18, 32)

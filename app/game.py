@@ -1186,6 +1186,176 @@ def day_payload(dstr):
     return {"date": dstr, "activities": acts, "sets": sets_, "quests": quests}
 
 
+# ---------------- Maud's Almanac ----------------
+
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
+               "August", "September", "October", "November", "December"]
+
+ALMANAC_CAT_PROSE = {
+    "run": "the road took the most of you — mile upon honest mile",
+    "ride": "the wheel carried you farthest this moon",
+    "climb": "the stone claimed you — up and up, knuckles first",
+    "strength": "the iron rang loudest in your ledger",
+    "mobility": "the willow bent you gently, and you let it",
+    "walk": "you went the old way — on foot, unhurried",
+    "swim": "the water had you more than the land did",
+    "other": "your labors defied my usual categories, which I resent",
+}
+
+
+def _month_range(mstr):
+    from datetime import date as _date
+    y, m = int(mstr[:4]), int(mstr[5:7])
+    return _date(y, m, 1), _date(y + (m == 12), m % 12 + 1, 1)
+
+
+def almanac_months():
+    """Months holding any recorded labor, oldest first, excluding the current
+    (still-unfinished) month. These are the published editions."""
+    cur = now().strftime("%Y-%m")
+    months = {r["m"] for r in db.q(
+        "SELECT DISTINCT substr(start,1,7) AS m FROM activities").fetchall()}
+    months |= {r["m"] for r in db.q(
+        "SELECT DISTINCT substr(ts,1,7) AS m FROM lift_sets").fetchall()}
+    return sorted(m for m in months if m < cur)
+
+
+def _month_facts(mstr):
+    start, end = _month_range(mstr)
+    cat_secs, day_cats = {}, {}
+    km_foot = km_wheel = 0.0
+    for a in db.q("SELECT start, type, moving_time, distance FROM activities "
+                  "WHERE start >= ? AND start < ?",
+                  (start.isoformat(), end.isoformat())).fetchall():
+        cat = category(a["type"])
+        secs = a["moving_time"] or 0
+        cat_secs[cat] = cat_secs.get(cat, 0) + secs
+        day_cats.setdefault(a["start"][:10], set()).add(cat)
+        km = (a["distance"] or 0) / 1000
+        if cat in ("run", "walk"):
+            km_foot += km
+        elif cat == "ride":
+            km_wheel += km
+    sets = tonnage = 0
+    for r in db.q("SELECT ts, weight, reps FROM lift_sets WHERE ts >= ? AND ts < ?",
+                  (start.isoformat(), end.isoformat())).fetchall():
+        sets += 1
+        tonnage += (r["weight"] or 0) * (r["reps"] or 0)
+        day_cats.setdefault(r["ts"][:10], set()).add("strength")
+        cat_secs["strength"] = cat_secs.get("strength", 0) + 180
+    quests = honors = 0
+    for r in db.q("SELECT honor FROM quests WHERE status='done' "
+                  "AND completed_at >= ? AND completed_at < ?",
+                  (start.isoformat(), end.isoformat())).fetchall():
+        quests += 1
+        honors += 1 if r["honor"] else 0
+    days_in_month = (end - start).days
+    best = run_ = 0
+    cur = start
+    while cur < end:
+        run_ = run_ + 1 if cur.isoformat() in day_cats else 0
+        best = max(best, run_)
+        cur += timedelta(days=1)
+    return {
+        "cat_secs": cat_secs, "days_active": len(day_cats),
+        "days_in_month": days_in_month, "best_thread": best,
+        "km_foot": round(km_foot, 1), "km_wheel": round(km_wheel, 1),
+        "sets": sets, "tonnage": round(tonnage),
+        "quests": quests, "honors": honors,
+        "total_min": round(sum(cat_secs.values()) / 60),
+    }
+
+
+def _maud_prose(mstr, f, prev):
+    rng = random.Random(f"almanac:{mstr}")
+    month_name = MONTH_NAMES[int(mstr[5:7]) - 1]
+    p = []
+    ratio = f["days_active"] / f["days_in_month"]
+    if f["days_active"] == 0:
+        p.append(rng.choice([
+            f"Of {month_name} the archive holds only blank pages. I filed them anyway. Hoo.",
+            f"{month_name} passed without a single deed reaching my desk. The dust and I kept each other company.",
+        ]))
+        p.append("A month of stillness is not a verdict — but the next page is already open.")
+        return p
+    verdict = (
+        "a relentless month — scarcely a page without ink" if ratio >= 0.8 else
+        "a sturdy month, well-bound" if ratio >= 0.6 else
+        "a fair month, though the margins show some rest" if ratio >= 0.4 else
+        "a thin volume, this one — more white than ink" if ratio >= 0.2 else
+        "a sparse record, held together by a few bright pages")
+    p.append(rng.choice([
+        f"So closes {month_name}: {f['days_active']} of its {f['days_in_month']} days bear your mark. I call it {verdict}.",
+        f"The {month_name} edition is bound. {f['days_active']} days of {f['days_in_month']} carry ink — {verdict}.",
+    ]))
+    if f["cat_secs"]:
+        top = max(f["cat_secs"], key=f["cat_secs"].get)
+        p.append(f"Chief among your labors: {ALMANAC_CAT_PROSE.get(top, ALMANAC_CAT_PROSE['other'])}. "
+                 f"Some {round(f['cat_secs'][top] / 60)} minutes of it, by my count, "
+                 f"of {f['total_min']} in all.")
+    if f["km_foot"] or f["km_wheel"]:
+        bits = []
+        if f["km_foot"]:
+            bits.append(f"{f['km_foot']} km under your own feet")
+        if f["km_wheel"]:
+            bits.append(f"{f['km_wheel']} km by wheel")
+        p.append(f"Ground covered: {' and '.join(bits)}. The Long Road remembers every step, even when you don't.")
+    if f["sets"]:
+        p.append(f"The iron ledger shows {f['sets']} sets — roughly {f['tonnage']:,} kg hoisted against the world's preference that it stay put.")
+    if f["best_thread"] >= 3:
+        p.append(f"Your longest unbroken thread ran {f['best_thread']} days. " + rng.choice([
+            "Threads like that are how tapestries happen.",
+            "I have seen guild charters with less consistency.",
+            "The loom approves, and so, grudgingly, do I.",
+        ]))
+    if prev and prev["total_min"]:
+        delta = f["total_min"] - prev["total_min"]
+        if delta > prev["total_min"] * 0.1:
+            p.append(f"Against the prior moon you rose: {abs(delta)} minutes more labor. The trend is noted and archived.")
+        elif delta < -prev["total_min"] * 0.1:
+            p.append(f"A quieter month than the last — {abs(delta)} minutes fewer. Sometimes the body writes 'rest' where the will writes 'more'. Both are entries.")
+        else:
+            p.append("Held steady against the prior moon, near enough. Consistency files itself.")
+    p.append(rng.choice([
+        "Filed, shelved, and sealed. The next edition is already gathering.",
+        "So the record stands. Come argue with it in the Hall if you must. Hoo.",
+        "The archive keeps what the memory drops. Onward.",
+    ]))
+    return p
+
+
+def almanac_payload(month=None):
+    months = almanac_months()
+    if not months:
+        return {"months": [], "month": None, "latest": None}
+    if month not in months:
+        month = months[-1]
+    idx = months.index(month)
+    facts = _month_facts(month)
+    prev = _month_facts(months[idx - 1]) if idx > 0 else None
+    top_cats = sorted(facts["cat_secs"].items(), key=lambda kv: -kv[1])[:3]
+    return {
+        "months": months, "month": month, "latest": months[-1],
+        "label": f"{MONTH_NAMES[int(month[5:7]) - 1]} {month[:4]}",
+        "narration": _maud_prose(month, facts, prev),
+        "figures": {**{k: v for k, v in facts.items() if k != "cat_secs"},
+                    "top_cats": [[c, round(s / 60)] for c, s in top_cats]},
+    }
+
+
+def almanac_unread():
+    """True when the newest edition hasn't been opened yet — lights the
+    Hall's badge in town on the first visit after a month closes."""
+    months = almanac_months()
+    return bool(months) and db.kv_get("almanac_seen") != months[-1]
+
+
+def almanac_mark_seen():
+    months = almanac_months()
+    if months:
+        db.kv_set("almanac_seen", months[-1])
+
+
 def tapestry_payload():
     """The Tapestry: a year of days, one stitch each, colored by the day's
     dominant labor. 53 week-columns (Monday-first) ending on the current

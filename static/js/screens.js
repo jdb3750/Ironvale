@@ -159,7 +159,8 @@ SCREENS.town = async function () {
       <div class="road-h"></div>
       <div class="trow">
         ${bld('bld_ledger', 'The Ledger House', 'Wick: confess & amend', `nav('scrivener')`)}
-        ${bld('bld_hall', 'Hall of Records', 'stats, vitals & the Curator', `nav('stats')`)}
+        ${bld('bld_hall', 'Hall of Records', 'stats, vitals & the Curator',
+          st.almanac_unread ? `statsTab='almanac';nav('stats')` : `nav('stats')`, !!st.almanac_unread)}
         ${bld('krank', 'The Krankwerk', 'hats for the herd', `nav('krank')`)}
       </div>
       <div class="road-h"></div>
@@ -799,6 +800,7 @@ G.esDelete = async (id) => {
 let statsTab = 'body';
 let calState = null;
 let vitalsRange = 90; // days shown in the Vitals charts; 0 = all time
+let almMonth = null;  // Almanac edition being read; null = latest published
 
 SCREENS.stats = async function () {
   const d = await api('/stats?wellness_days=' + vitalsRange);
@@ -806,8 +808,8 @@ SCREENS.stats = async function () {
   const c = d.character;
   const wu = S.state.settings.weight_unit;
 
-  const tabBtn = (id, label) =>
-    `<button class="btn small ${statsTab === id ? 'active' : ''}" style="min-width:0" onclick="SFX.click();statsTab='${id}';render()">${label}</button>`;
+  const tabBtn = (id, label, glow = false) =>
+    `<button class="btn small ${statsTab === id ? 'active' : ''} ${glow ? 'tab-glow' : ''}" style="min-width:0" onclick="SFX.click();statsTab='${id}';render()">${label}${glow ? '<span class="tab-glow-dot"></span>' : ''}</button>`;
 
   let body = '';
   if (statsTab === 'body') {
@@ -949,6 +951,51 @@ SCREENS.stats = async function () {
     body = tapWin + await calendarBody();
   } else if (statsTab === 'compendium') {
     body = compendiumBody();
+  } else if (statsTab === 'almanac') {
+    // plain fetch, not api(): a stale live backend (static JS updates from
+    // disk instantly, .py needs a restart) must show a bare shelf, not error
+    let alm = null;
+    try {
+      const rr = await fetch('/api/almanac' + (almMonth ? '?month=' + almMonth : ''));
+      if (rr.ok) alm = await rr.json();
+    } catch (e) { /* backend predates the almanac */ }
+    if (alm && alm.month && alm.month === alm.latest && S.state.almanac_unread) {
+      S.state.almanac_unread = false; // douse the Hall's badge without a refetch
+      fetch('/api/almanac/seen', { method: 'POST' }).catch(() => {});
+    }
+    if (!alm || !alm.months.length) {
+      body = `<div class="win"><span class="win-title">The Vale Almanac</span>
+        <div class="muted center" style="padding:14px 8px">The shelf is bare — Maud binds an edition only once a month closes with deeds in it.</div>
+      </div>`;
+    } else {
+      const f = alm.figures;
+      const idx = alm.months.indexOf(alm.month);
+      const navBtn = (m, label) => m
+        ? `<button class="btn small" style="min-width:0" onclick="SFX.click();almMonth='${m}';render()">${label}</button>`
+        : `<span style="width:70px"></span>`;
+      const ton = wu === 'lb' ? Math.round(kgToLb(f.tonnage)) : f.tonnage;
+      const row = (label, val, show) => show ? `<tr><td>${label}</td><td>${val}</td></tr>` : '';
+      body = `<div class="win almanac-page">
+        <div class="alm-head">The Vale Almanac<span>${alm.label} edition &middot; as bound by the Curator</span></div>
+        ${alm.narration.map(p => `<div class="alm-p">${esc(p)}</div>`).join('')}
+        <table class="rpg" style="margin-top:12px">
+          ${row('Days with deeds', `${f.days_active} of ${f.days_in_month}`, true)}
+          ${row('Longest thread', `${f.best_thread} day${f.best_thread === 1 ? '' : 's'}`, f.best_thread > 0)}
+          ${row('Hours of labor', (f.total_min / 60).toFixed(1), f.total_min > 0)}
+          ${row('On foot', f.km_foot + ' km', f.km_foot > 0)}
+          ${row('By wheel', f.km_wheel + ' km', f.km_wheel > 0)}
+          ${row('The iron', `${f.sets} sets &middot; ${ton.toLocaleString()} ${wu} moved`, f.sets > 0)}
+          ${row('Quests fulfilled', f.quests + (f.honors ? ` (${f.honors} with honor)` : ''), f.quests > 0)}
+          ${row('Chief disciplines', f.top_cats.map(([ct, mn]) => `${CAT_LABELS[ct] || ct} ${mn}m`).join(' &middot; '), f.top_cats.length > 0)}
+        </table>
+        <div class="alm-sign">&mdash; Maud, Curator of the Hall</div>
+        <div class="alm-nav">
+          ${navBtn(alm.months[idx - 1], '&laquo; older')}
+          <span class="muted" style="font-size:15px">edition ${idx + 1} of ${alm.months.length}</span>
+          ${navBtn(alm.months[idx + 1], 'newer &raquo;')}
+        </div>
+      </div>`;
+    }
   } else {
     body = `<div class="win"><span class="win-title">The Chronicle</span>
       <div class="chron">${chron.map(e => `<div class="ev"><span class="ts">${e.ts.slice(5, 16).replace('T', ' ')}</span> ${esc(e.text)}</div>`).join('') || '<span class="muted">history not yet written</span>'}</div>
@@ -966,10 +1013,12 @@ SCREENS.stats = async function () {
         </div>
       </div>
     </div>
-    <div class="tabs">${tabBtn('body', 'Body')}${tabBtn('vitals', 'Vitals')}${tabBtn('deeds', 'The Road')}${tabBtn('iron', 'The Iron')}${tabBtn('calendar', 'Calendar')}${tabBtn('compendium', 'Compendium')}${tabBtn('chronicle', 'Chronicle')}</div>
+    <div class="tabs">${tabBtn('body', 'Body')}${tabBtn('vitals', 'Vitals')}${tabBtn('deeds', 'The Road')}${tabBtn('iron', 'The Iron')}${tabBtn('calendar', 'Calendar')}${tabBtn('compendium', 'Compendium')}${tabBtn('almanac', 'Almanac', !!S.state.almanac_unread)}${tabBtn('chronicle', 'Chronicle')}</div>
     ${body}
   `);
-  typewrite(document.getElementById('curator-dlg'), 'The full readings, hot from the archive. Hoo.', 14, npcPortraitEl());
+  typewrite(document.getElementById('curator-dlg'), statsTab === 'almanac'
+    ? 'My monthly editions. I bind one each time a moon closes. Mind the ink.'
+    : 'The full readings, hot from the archive. Hoo.', 14, npcPortraitEl());
   if (statsTab === 'deeds') {
     drawBars('ch-run', d.weeks.map(w => w.run_min), '#7ab55c');
     drawRoadMap(S.roadState);
@@ -1625,6 +1674,7 @@ SCREENS.settings = function () {
         <button class="btn small" style="min-width:0" onclick="G.dev('hats')">hat sampler</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('seed')">seed 60d of fake training</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('unguided_run')">seed an unguided run (Fenn's bubble)</button>
+        <button class="btn small" style="min-width:0" onclick="G.dev('almanac_bang')">relight the Hall's almanac badge</button>
         <button class="btn small" style="min-width:0" onclick="G.dev('bad_recovery')">seed bad recovery (Elowen's writ — fresh profile only)</button>
         <button class="btn small danger" style="min-width:0" onclick="G.dev('wipe_dev')">wipe fake training</button>
       </div>` : ''}
