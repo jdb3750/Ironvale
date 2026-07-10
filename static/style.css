@@ -187,7 +187,7 @@ h1, h2, h3 { font-weight: normal; }
 .loc canvas { image-rendering: pixelated; display: block; margin: 0 auto 6px; }
 .loc .loc-name { color: var(--gold-bright); font-size: 21px; }
 .loc .loc-sub { color: var(--dim); font-size: 17px; }
-.loc .bang {
+.loc .bang, .bld .bang {
   position: absolute; top: 4px; right: 8px;
   color: var(--gold-bright); font-size: 26px;
   animation: bob 1s infinite alternate;
@@ -256,6 +256,21 @@ label { color: var(--dim); font-size: 18px; text-transform: uppercase; letter-sp
 /* ---- stats ---- */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 4px; }
 .tabs .btn.active { background: var(--gold); color: var(--bg); }
+.tabs .btn.tab-glow {
+  position: relative;
+  border-color: var(--gold-bright);
+  animation: tab-glow-pulse 1.4s ease-in-out infinite;
+}
+.tab-glow-dot {
+  position: absolute; top: -5px; right: -5px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 4px 1px var(--gold-bright);
+}
+@keyframes tab-glow-pulse {
+  0%, 100% { box-shadow: 0 0 2px 0 rgba(240,208,128,0.3); }
+  50% { box-shadow: 0 0 10px 3px rgba(240,208,128,0.7); }
+}
 .statbar { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
 .statbar .sb-label { width: 52px; color: var(--gold-bright); }
 .statbar .sb-track { flex: 1; height: 14px; background: #000; border: 1px solid #4a3d20; }
@@ -711,6 +726,29 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   font-size: 15px; color: var(--dim); margin-top: 8px;
 }
 .tap-legend .cdot { margin-right: 4px; }
+
+/* ---- Maud's almanac (monthly edition, Hall of Records) ---- */
+.almanac-page {
+  border: 2px solid #6a5a30;
+  box-shadow: inset 0 0 0 2px #14141f, inset 0 0 0 4px #3a3450;
+  background: linear-gradient(#16141f, #1a1724);
+  padding: 14px 16px;
+}
+.alm-head {
+  text-align: center; color: var(--gold-bright);
+  font-size: 26px; letter-spacing: 2px;
+  border-bottom: 2px solid #6a5a30; padding-bottom: 8px; margin-bottom: 10px;
+}
+.alm-head span { display: block; font-size: 15px; letter-spacing: 0; color: var(--dim); margin-top: 4px; }
+.alm-p { font-size: 18px; line-height: 1.45; margin: 9px 0; color: #d6d0c2; }
+.alm-sign { text-align: right; color: var(--gold); font-size: 16px; margin-top: 10px; }
+.almanac-page table.rpg { table-layout: fixed; }
+.almanac-page table.rpg td:first-child { width: 52%; text-align: right; padding-right: 16px; }
+.almanac-page table.rpg td:last-child { text-align: left; }
+.alm-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 1px solid #3a3450; margin-top: 10px; padding-top: 8px;
+}
 
 /* ---- sleep panel (Hall of Rest, Vitals tab) ---- */
 .sleep-panel { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
