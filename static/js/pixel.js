@@ -471,6 +471,67 @@ Object.assign(SPRITES, {
     '.sSSSSSSSSSSSSSSSSSSSSs.', '.sSSSSSSSSSSSSSSSSSSSSs.', '..gggggggggggggggggggg..',
     '.gggggggggggggggggggggg.', '........................', '........................',
   ]},
+  /* ---- Long Road landmarks (12x12 waypoint miniatures) ---- */
+  road_gate: { p: { s: '#8a8a98', S: '#b8b8c8', k: '#1a1a24' }, r: [
+    '............', '.SSSSSSSSSS.', '.SssssssssS.', '.Ss......sS.', '.Ss......sS.', '.Ss......sS.',
+    '.Ss..kk..sS.', '.Ss..kk..sS.', '.Ss..kk..sS.', '.Ss..kk..sS.', '.ss..kk..ss.', '............',
+  ]},
+  road_field: { p: { y: '#c8a850', Y: '#e0c878', g: '#4a5a2a' }, r: [
+    '............', '..Y..Y..Y...', '..y..y..y...', '.YyY.y.YyY..', '..y.YyY.y...', '..y..y..y...',
+    '..y..y..y...', '.yYy.y.yYy..', '..y..y..y...', '..y..y..y...', 'gggggggggggg', '............',
+  ]},
+  road_ford: { p: { w: '#4a7a9a', W: '#7ab0d0', s: '#8a7050' }, r: [
+    '............', '............', '............', '.ssssssssss.', 's..s....s..s', 's..s....s..s',
+    'WwWwWwWwWwWw', 'wWwWwWwWwWwW', 'WwWwWwWwWwWw', 'wWwWwWwWwWwW', '............', '............',
+  ]},
+  road_forest: { p: { g: '#1e3a1e', G: '#2e5230', t: '#3a2a1a' }, r: [
+    '.....G......', '....GGG.....', '.G..GGG..G..', 'GGG.GgG.GGG.', 'GgG.GGG.GgG.', 'GGGGGgGGGGG.',
+    'GgGGGGGGGgG.', '.t...t...t..', '.t...t...t..', '.t...t...t..', '............', '............',
+  ]},
+  road_salt: { p: { w: '#d8d8d0', k: '#8a8a80' }, r: [
+    '............', '............', '............', '............', '............', 'wwwwwwwwwwww',
+    'w..k....k..w', 'wwwwk.kwwwww', 'w.k..w...k.w', 'wwwwwwkwwwww', 'w...k...k..w', '............',
+  ]},
+  road_pass: { p: { m: '#5a5a6a', M: '#8a8a9a', w: '#e8e8f0' }, r: [
+    '.....w......', '....wMw...w.', '....MMM..wMw', '...MMmM..MMM', '..MMmmM.MMmM', '.MMmmmMMMmmM',
+    'MMmmmmMMmmmM', 'MmmmmmmMmmmm', '............', '............', '............', '............',
+  ]},
+  road_lake: { p: { b: '#3a6a9a', B: '#6aa0d0', m: '#e8e8d8' }, r: [
+    '............', '.......m....', '......mm....', '............', '...BBBBBB...', '..BbBBBBbB..',
+    '.BbbBmmBbbB.', '.BbbBmmBbbB.', '..BbbbbbbB..', '...BBBBBB...', '............', '............',
+  ]},
+  road_steppe: { p: { g: '#7a7a4a', G: '#9a9a5a', w: '#b8b8a8' }, r: [
+    '............', '............', '..w....w....', '.w..ww...w..', '............', '.g.G..g..G..',
+    'gG.g.Gg.gG..', 'gg.G.gg.Gg..', '.g.g..g..g..', 'gggggggggggg', '............', '............',
+  ]},
+  road_sunken: { p: { s: '#5a6a6a', S: '#7a8a8a', w: '#3a5a5a' }, r: [
+    '..S.........', '..SS....S...', '..sS...SS...', '..sS...Ss...', '.SsS...sS...', '.ssS..SsS...',
+    'wwwwwwwwwwww', 'wSswwwwssww.', 'wwwwswwwwww.', 'wwwwwwwwwww.', '............', '............',
+  ]},
+  road_peaks: { p: { m: '#6a5a7a', M: '#9a8ab8', w: '#f0f0f8' }, r: [
+    '..w......w..', '..Mw....wM..', '.MMM....MMM.', '.MmMM..MMmM.', 'MMmmM..MmmMM', 'MmmmMMMMmmmM',
+    'mmmmMmmMmmmm', '............', '............', '............', '............', '............',
+  ]},
+  road_lighthouse: { p: { r: '#a83028', w: '#e8e0d0', y: '#f0d060', k: '#2a2a34' }, r: [
+    'y....y....y.', '.y..yyy..y..', '....kyk.....', '....www.....', '....rrr.....', '....www.....',
+    '....rrr.....', '....www.....', '....rrr.....', '...wwwww....', '...kkkkk....', '............',
+  ]},
+  road_gardens: { p: { s: '#8a8a98', g: '#4a8a4a', G: '#6ab060', p: '#c878a8' }, r: [
+    '.ssssssssss.', '.s.g..g..gs.', '.sgGg.Gg.Gs.', '.s.G.gG..gs.', '.s.pG.G.pGs.', '.s.G..pG.Gs.',
+    '.s........s.', '.s........s.', '.ss......ss.', '............', '............', '............',
+  ]},
+  road_teeth: { p: { w: '#d8d8e0', W: '#f0f0f8', k: '#4a4a58' }, r: [
+    '.W...W...W..', '.Ww.WWw.wW..', '.Ww.WwW.wW..', 'WWw.WwW.wWW.', 'WwWkWwWkWwW.', 'WwWkWwWkWwW.',
+    'wwWkwwWkwwW.', '............', '............', '............', '............', '............',
+  ]},
+  road_edge: { p: { s: '#8a7050', k: '#0a0a12', v: '#4a3a6a' }, r: [
+    '............', '............', '............', 'ssssss......', 'sssssss.....', 'sssssss.s...',
+    '......s..s..', '.......v....', '....v.......', '..v......v..', '............', '............',
+  ]},
+  road_cairn: { p: { s: '#7a7a88', S: '#a8a8b8' }, r: [
+    '............', '............', '....SS......', '...sSSs.....', '....Ss......', '...SssS.....',
+    '..sSSsss....', '...ssSs.....', '..SsssSS....', '.sSSssssS...', '............', '............',
+  ]},
 });
 
 /* ---- customizable hero: skin / hair style / hair color / shirt / pants ---- */

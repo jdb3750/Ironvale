@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, db, dungeon, exercises, game, intervals, items, monsters, profiles, programs, raid
+from . import colosseum, db, dungeon, exercises, game, intervals, items, monsters, profiles, programs, raid, road
 
 app = FastAPI(title="Iron Vale")
 
@@ -286,6 +286,18 @@ async def unguided_claim(request: Request):
 async def writ_ack(request: Request):
     body = await request.json()
     return game.ack_writ_notice(body.get("ts"))
+
+
+# ---------------- the long road ----------------
+
+@app.get("/api/road")
+def road_state():
+    return road.state()
+
+
+@app.post("/api/road/claim")
+def road_claim():
+    return road.claim_next()
 
 
 # ---------------- the siege ----------------

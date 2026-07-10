@@ -874,7 +874,24 @@ SCREENS.stats = async function () {
     </div>` : ''}`;
   } else if (statsTab === 'deeds') {
     const rs = d.run_summary;
-    body = `<div class="win"><span class="win-title">The Road (12 weeks)</span>
+    // plain fetch, no api(): a stale backend (frontend updates from disk
+    // instantly, .py only on restart) must degrade to "no map", not an error
+    let road = null;
+    try { const rr = await fetch('/api/road'); if (rr.ok) road = await rr.json(); } catch (e) { /* backend predates the road */ }
+    S.roadState = road;   // kept for click hit-testing + claims
+    body = `${road ? `<div class="win"><span class="win-title">The Long Road</span>
+      <div class="muted" style="font-size:16px;margin-bottom:6px">every kilometer you have ever covered, walked by a small and stubborn pilgrim</div>
+      <div class="road-scroll" id="road-scroll"><canvas id="road-map" height="214"></canvas></div>
+      <div class="road-caption">
+        <b style="color:var(--gold-bright)">${road.total_km} km</b> from the Vale Gate
+        ${road.km_to_next != null ? ` &middot; ${road.km_to_next} km to the next landmark` : ''}
+        <br><span class="muted" style="font-size:14px">${road.breakdown.run} run &middot; ${road.breakdown.walk} walked &middot; ${road.breakdown.swim} swum &middot; ${road.breakdown.ride} ridden (counts &frac14;) &middot; tap a landmark for its story</span>
+      </div>
+      ${road.unclaimed > 0 ? `<div class="center" style="margin-top:8px">
+        <button class="btn green" onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
+      </div>` : ''}
+    </div>` : ''}
+    <div class="win"><span class="win-title">The Road (12 weeks)</span>
       <canvas class="chart" id="ch-run" width="440" height="120"></canvas>
       <div class="muted" style="font-size:16px">weekly run minutes</div>
       <hr class="rule">
@@ -937,7 +954,10 @@ SCREENS.stats = async function () {
     ${body}
   `);
   typewrite(document.getElementById('curator-dlg'), 'The full readings, hot from the archive. Hoo.', 14, npcPortraitEl());
-  if (statsTab === 'deeds') drawBars('ch-run', d.weeks.map(w => w.run_min), '#7ab55c');
+  if (statsTab === 'deeds') {
+    drawBars('ch-run', d.weeks.map(w => w.run_min), '#7ab55c');
+    drawRoadMap(S.roadState);
+  }
   if (statsTab === 'iron') drawBars('ch-ton', d.weeks.map(w => w.tonnage), '#c85050');
   if (statsTab === 'vitals') {
     const w = d.wellness;
@@ -1070,6 +1090,162 @@ G.strikeDay = async (dstr, n) => {
   toast('The session is struck from the record.');
   document.querySelectorAll('.overlay').forEach(o => o.remove());
   render();
+};
+
+/* ---- The Long Road map: a side-scrolling pixel pilgrimage. Landmarks sit at
+   FIXED 140px intervals regardless of their real km gaps (10 km between the
+   first pair, 250 km between cairns past the map's edge) — the pilgrim
+   interpolates between the two landmarks bracketing the real total, which
+   keeps the map dense and readable instead of mostly empty road. ---- */
+
+const ROAD_SPACING = 140, ROAD_MARGIN = 70, ROAD_BASE = 150;
+
+function roadLandmarkX(i) { return ROAD_MARGIN + i * ROAD_SPACING; }
+
+function drawRoadMap(road) {
+  const cv = document.getElementById('road-map');
+  if (!cv || !road) return;
+  const marks = road.landmarks;
+  const W = ROAD_MARGIN * 2 + (marks.length - 1) * ROAD_SPACING;
+  const H = 214;   // ROAD_BASE(150) + km-label baseline(40) + wobble(4) + a little breathing room
+  cv.width = W;
+  cv.height = H;   // keep the canvas's real pixel size in lockstep with H, not just the HTML attribute
+  cv.style.width = W + 'px';
+  const ctx = cv.getContext('2d');
+
+  // sky: each segment tints a little further from home
+  for (let i = 0; i < marks.length; i++) {
+    const x0 = i === 0 ? 0 : roadLandmarkX(i) - ROAD_SPACING / 2;
+    const x1 = i === marks.length - 1 ? W : roadLandmarkX(i) + ROAD_SPACING / 2;
+    const hue = (215 + i * 11) % 360;
+    ctx.fillStyle = `hsl(${hue}, 22%, 9%)`;
+    ctx.fillRect(x0, 0, x1 - x0, H);
+    ctx.fillStyle = `hsl(${hue}, 26%, 13%)`;
+    ctx.fillRect(x0, H - 70, x1 - x0, 70);
+  }
+  // stars, seeded so they don't shimmer between renders
+  const rnd = mulberry32(0x50AD);
+  ctx.fillStyle = 'rgba(232,232,240,0.5)';
+  for (let i = 0; i < W / 14; i++) ctx.fillRect(rnd() * W, rnd() * 90, 2, 2);
+
+  // the road itself: a gently wavering line with a dashed centre
+  ctx.fillStyle = '#3a3040';
+  for (let x = 0; x < W; x += 4) {
+    const wob = Math.sin(x / 90) * 4;
+    ctx.fillRect(x, ROAD_BASE + wob, 4, 12);
+  }
+  ctx.fillStyle = '#5a4d30';
+  for (let x = 0; x < W; x += 18) {
+    const wob = Math.sin(x / 90) * 4;
+    ctx.fillRect(x, ROAD_BASE + 5 + wob, 8, 2);
+  }
+
+  // landmarks: reached ones lit + named, the future in silhouette
+  marks.forEach((m, i) => {
+    const x = roadLandmarkX(i);
+    const wob = Math.sin(x / 90) * 4;
+    ctx.globalAlpha = m.reached ? 1 : 0.3;
+    const spr = SPRITES[m.icon];
+    if (spr) {
+      const s = 3;
+      spr.r.forEach((row, ry) => [...row].forEach((ch, rx) => {
+        const col = spr.p[ch];
+        if (!col) return;
+        ctx.fillStyle = col;
+        ctx.fillRect(x - 18 + rx * s, ROAD_BASE - 40 + ry * s + wob, s, s);
+      }));
+    }
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = m.reached ? (m.claimed ? '#c9a24b' : '#f0d080') : '#55506a';
+    ctx.fillText(m.reached ? m.name : '???', x, ROAD_BASE + 28 + wob);
+    ctx.fillStyle = '#776f8e';
+    ctx.font = '11px monospace';
+    ctx.fillText(m.km + ' km', x, ROAD_BASE + 40 + wob);
+    if (m.reached && !m.claimed) {
+      ctx.fillStyle = '#7ab55c';
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText('!', x + 20, ROAD_BASE - 38 + wob);
+    }
+    ctx.textAlign = 'left';
+  });
+
+  // the pilgrim: your own hero, mid-stride between the bracketing landmarks
+  let px = roadLandmarkX(0);
+  const km = road.total_km;
+  for (let i = 0; i < marks.length - 1; i++) {
+    if (km >= marks[i].km && km < marks[i + 1].km) {
+      const frac = (km - marks[i].km) / (marks[i + 1].km - marks[i].km);
+      px = roadLandmarkX(i) + frac * ROAD_SPACING;
+      break;
+    }
+    if (km >= marks[marks.length - 1].km) px = roadLandmarkX(marks.length - 1);
+  }
+  const pwob = Math.sin(px / 90) * 4;
+  drawHero(cv.getContext('2d'), (S.state.character.appearance || {}), 2, px - 12, ROAD_BASE - 26 + pwob);
+  ctx.fillStyle = '#f0d080';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOU', px, ROAD_BASE - 32 + pwob);
+  ctx.textAlign = 'left';
+
+  // scroll the viewport to the pilgrim
+  const wrap = document.getElementById('road-scroll');
+  if (wrap) wrap.scrollLeft = Math.max(0, px - wrap.clientWidth / 2);
+
+  // tap a reached landmark for its lore card
+  cv.onclick = (e) => {
+    const rect = cv.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) * (cv.width / rect.width);
+    let best = null, bestD = 55;
+    marks.forEach((m, i) => {
+      const d = Math.abs(cx - roadLandmarkX(i));
+      if (d < bestD && m.reached) { best = m; bestD = d; }
+    });
+    if (best) G.roadLore(best.key);
+  };
+}
+
+G.roadLore = (key) => {
+  const m = (S.roadState?.landmarks || []).find(x => x.key === key);
+  if (!m || !m.reached) return;
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `<div class="win center road-card" style="max-width:400px">
+    <span class="win-title">${esc(m.name)}</span>
+    <div style="display:flex;justify-content:center;margin:10px 0">${spriteTag(m.icon, 72)}</div>
+    <div class="muted" style="font-size:14px;letter-spacing:2px">KILOMETER ${m.km}</div>
+    <p class="road-lore">${esc(m.lore)}</p>
+    <button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">walk on</button>
+  </div>`;
+  document.body.appendChild(ov);
+  hydrateSprites(ov);
+};
+
+G.roadClaim = async () => {
+  let r;
+  try {
+    r = await api('/road/claim', { method: 'POST' });
+  } catch (e) { return; }
+  await refreshState();
+  SFX.fanfare();
+  const more = (S.roadState?.unclaimed || 1) - 1;
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<div class="win ceremony road-card">
+    <h2>YOU REACH ${esc(r.landmark).toUpperCase()}</h2>
+    <div class="muted" style="font-size:14px;letter-spacing:2px;margin:4px 0">KILOMETER ${r.km} OF THE LONG ROAD</div>
+    <p class="road-lore">${esc(r.lore)}</p>
+    <div class="reward-line" style="color:var(--gold-bright)">&#9670; +${r.reward.gold} gold</div>
+    <div class="reward-line" style="color:var(--blue)">&#9678; +${r.reward.tokens} brass token</div>
+    ${r.reward.pack ? '<div class="reward-line">+ a Monster Pack, left by an earlier traveler</div>' : ''}
+    <div style="margin-top:14px">
+      <button class="btn big" onclick="this.closest('.overlay').remove();render()">${more > 0 ? 'PRESS ON' : 'WALK ON'}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
 };
 
 function drawBars(id, vals, color) {

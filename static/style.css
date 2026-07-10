@@ -686,6 +686,19 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .prog-card.active { border-color: var(--gold-bright); }
 .prog-card .p-name { color: var(--gold-bright); font-size: 22px; }
 
+/* ---- the long road (lifetime pilgrimage map, The Road tab) ---- */
+.road-scroll {
+  overflow-x: auto; overflow-y: hidden;
+  border: 2px solid #3a3450; background: #0c0c14;
+  scrollbar-width: thin;
+}
+.road-scroll canvas { display: block; image-rendering: pixelated; cursor: pointer; }
+.road-caption { text-align: center; font-size: 17px; margin-top: 8px; }
+.road-card .road-lore {
+  font-style: italic; color: #c8bcb0; line-height: 1.55;
+  margin: 10px auto; max-width: 340px; font-size: 17px;
+}
+
 /* ---- sleep panel (Hall of Rest, Vitals tab) ---- */
 .sleep-panel { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
 .sleep-stat {

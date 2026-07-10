@@ -115,6 +115,7 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   intervals.py  intervals.icu sync (basic auth): activities + wellness.
   monsters.py   Menagerie: DNA-seeded procedural monsters, packs, hats, buddy, capture.
   raid.py       The Siege: ONE weekly boss shared by ALL profiles (state in data/raid.json).
+  road.py       The Long Road: lifetime km -> pilgrimage landmarks (kv "road_claimed").
   colosseum.py  Betting mini-games (fight/race/pageant) vs. ephemeral rivals.
   items.py      Item catalog: dungeon gear/consumables/trinkets + Krankwerk cosmetics + packs.
   exercises.py  Exercise catalog with muscle groups + "how" form cues.
