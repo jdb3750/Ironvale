@@ -930,7 +930,23 @@ SCREENS.stats = async function () {
       </table>
     </div>`;
   } else if (statsTab === 'calendar') {
-    body = await calendarBody();
+    // plain fetch, not api(): a stale live backend (static JS updates from
+    // disk instantly, .py needs a restart) must skip the weave, not error
+    let tap = null;
+    try { const rr = await fetch('/api/tapestry'); if (rr.ok) tap = await rr.json(); } catch (e) { /* backend predates the weave */ }
+    S.tapestry = tap;
+    const tapWin = tap ? `<div class="win"><span class="win-title">The Tapestry</span>
+      <div class="muted" style="font-size:16px;margin-bottom:6px">a year of days, one stitch each, colored by the day's longest labor</div>
+      <div class="tapestry-scroll" id="tapestry-scroll"><canvas id="tapestry-cv"></canvas></div>
+      <div class="tap-legend">${Object.entries(CAT_LABELS).map(([k, v]) =>
+        `<span><span class="cdot cat-${k}"></span>${v}</span>`).join('')}</div>
+      <div class="road-caption" style="font-size:16px">
+        <b style="color:var(--gold-bright)">${tap.woven}</b> day${tap.woven === 1 ? '' : 's'} woven this past year
+        &middot; longest unbroken thread: <b style="color:var(--gold-bright)">${tap.best_stretch}</b> day${tap.best_stretch === 1 ? '' : 's'}
+        <br><span class="muted" style="font-size:14px">tap a stitch to inspect that day</span>
+      </div>
+    </div>` : '';
+    body = tapWin + await calendarBody();
   } else if (statsTab === 'compendium') {
     body = compendiumBody();
   } else {
@@ -958,6 +974,7 @@ SCREENS.stats = async function () {
     drawBars('ch-run', d.weeks.map(w => w.run_min), '#7ab55c');
     drawRoadMap(S.roadState);
   }
+  if (statsTab === 'calendar') drawTapestry(S.tapestry);
   if (statsTab === 'iron') drawBars('ch-ton', d.weeks.map(w => w.tonnage), '#c85050');
   if (statsTab === 'vitals') {
     const w = d.wellness;
@@ -1091,6 +1108,69 @@ G.strikeDay = async (dstr, n) => {
   document.querySelectorAll('.overlay').forEach(o => o.remove());
   render();
 };
+
+/* ---- The Tapestry: a year of days as a woven grid, GitHub-graph style but
+   in the Vale's cloth. Columns are Monday-first weeks (the backend aligns
+   the start date to a Monday, so index % 7 IS the weekday); each stitch is
+   colored by that day's dominant activity category, using the same palette
+   as the calendar's .cat-* dots so the two read as one system. ---- */
+
+const TAP_COLORS = {
+  run: '#7ab55c', ride: '#6aa0c8', climb: '#e07030', strength: '#c85050',
+  mobility: '#a06ac8', walk: '#5cb5a5', swim: '#4a90d0', other: '#9a9aa8',
+};
+const TAP_CELL = 12, TAP_GAP = 2, TAP_TOP = 18, TAP_LEFT = 26;
+const TAP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function drawTapestry(tap) {
+  const cv = document.getElementById('tapestry-cv');
+  if (!cv || !tap) return;
+  const days = tap.days;
+  const weeks = Math.ceil(days.length / 7);
+  const step = TAP_CELL + TAP_GAP;
+  cv.width = TAP_LEFT + weeks * step + 6;
+  cv.height = TAP_TOP + 7 * step + 6;
+  cv.style.width = cv.width + 'px';
+  cv.style.height = cv.height + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#0c0c14';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+
+  ctx.font = '11px monospace';
+  // weekday hints down the left
+  ctx.fillStyle = '#55506a';
+  [['M', 0], ['W', 2], ['F', 4]].forEach(([ch, row]) =>
+    ctx.fillText(ch, 8, TAP_TOP + row * step + TAP_CELL - 2));
+
+  days.forEach((d, i) => {
+    const col = Math.floor(i / 7), row = i % 7;
+    const x = TAP_LEFT + col * step, y = TAP_TOP + row * step;
+    // month label above the column containing each month's 1st
+    if (d.date.slice(8) === '01') {
+      ctx.fillStyle = '#776f8e';
+      ctx.fillText(TAP_MONTHS[parseInt(d.date.slice(5, 7), 10) - 1], x, TAP_TOP - 6);
+    }
+    ctx.fillStyle = d.cat ? TAP_COLORS[d.cat] : '#191928';
+    ctx.fillRect(x, y, TAP_CELL, TAP_CELL);
+    if (i === days.length - 1) {   // today gets a gold border stitch
+      ctx.strokeStyle = '#f0d080';
+      ctx.strokeRect(x + 0.5, y + 0.5, TAP_CELL - 1, TAP_CELL - 1);
+    }
+  });
+
+  // newest stitches in view first
+  const wrap = document.getElementById('tapestry-scroll');
+  if (wrap) wrap.scrollLeft = cv.width;
+
+  cv.onclick = (e) => {
+    const rect = cv.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    const col = Math.floor((cx - TAP_LEFT) / step), row = Math.floor((cy - TAP_TOP) / step);
+    if (col < 0 || row < 0 || row > 6) return;
+    const idx = col * 7 + row;
+    if (idx >= 0 && idx < days.length) G.dayDetail(days[idx].date);
+  };
+}
 
 /* ---- The Long Road map: a side-scrolling pixel pilgrimage. Landmarks sit at
    FIXED 140px intervals regardless of their real km gaps (10 km between the
