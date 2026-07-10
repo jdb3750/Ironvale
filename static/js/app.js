@@ -148,15 +148,23 @@ function shell(inner) {
 /* ---------- typewriter dialog ---------- */
 
 let twTimer = null;
-function typewrite(el, text, speed = 14) {
+function typewrite(el, text, speed = 14, portraitEl = null) {
   clearInterval(twTimer);
-  let i = 0;
+  let i = 0, tick = 0;
   el.classList.add('cursor-blink');
   el.textContent = '';
+  setPortraitMouth(portraitEl, false);
   twTimer = setInterval(() => {
     i += 2;
+    tick++;
     el.textContent = text.slice(0, i);
-    if (i >= text.length) { clearInterval(twTimer); }
+    // flap roughly every ~130ms (independent of the reveal rate) — reads as
+    // talking rather than nervous twitching; always ends mouth-closed
+    setPortraitMouth(portraitEl, Math.floor(tick / 9) % 2 === 0);
+    if (i >= text.length) {
+      clearInterval(twTimer);
+      setPortraitMouth(portraitEl, false);
+    }
   }, speed);
 }
 

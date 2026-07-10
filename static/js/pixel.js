@@ -812,6 +812,46 @@ function spriteTag(key, px) {
   return `<canvas data-sprite="${key}" width="${w * scale}" height="${h * scale}" style="width:${w * scale}px;height:${h * scale}px;image-rendering:pixelated"></canvas>`;
 }
 
+/* ---- hand-drawn portrait art (32x32 PNGs, served from static/art/) ----
+   Talking-portrait pipeline: each entry has a mouth-closed and mouth-open
+   frame; typewrite() flaps between them while a line is being typed. This
+   is purely ADDITIVE — an NPC with no entry here transparently falls back
+   to their existing char-map SPRITES entry via spriteTag, so drawing one
+   NPC's art never requires touching any other NPC's rendering. Source
+   Pixelorama projects (.pxo) live in assets/<npc>/; only the PNG exports
+   are copied into static/art/<npc>/ for the browser to fetch. */
+const PORTRAIT_ART = {
+  fenn:      { closed: 'art/old_fenn/fenn_portrait.png', open: 'art/old_fenn/fenn_portrait_open_mouth.png', size: 32 },
+  grunhilda: { closed: 'art/grunhilda/grunhilda_portrait.png', open: 'art/grunhilda/grunhilda_portrait_open_mouth.png', size: 32 },
+  bram:      { closed: 'art/ser_bram/ser_bram_portrait.png', open: 'art/ser_bram/ser_bram_portrait_open_mouth.png', size: 32 },
+};
+
+function portraitTag(key, px) {
+  const art = PORTRAIT_ART[key];
+  if (!art) return spriteTag(key, px);  // no hand-drawn art yet — char-map fallback
+  const scale = Math.max(1, Math.round(px / art.size));
+  const size = art.size * scale;
+  return `<img class="portrait-art" data-portrait="${key}" data-mouth="closed" alt=""
+    src="/static/${art.closed}" width="${size}" height="${size}"
+    style="width:${size}px;height:${size}px;image-rendering:pixelated">`;
+}
+
+/* the one portrait rendered on the current screen, if it has hand-drawn art
+   (screens render at most one npc-head at a time, so a plain query suffices) */
+function npcPortraitEl() {
+  return document.querySelector('img[data-portrait]');
+}
+
+function setPortraitMouth(el, open) {
+  if (!el) return;
+  const art = PORTRAIT_ART[el.dataset.portrait];
+  if (!art) return;
+  const want = open ? 'open' : 'closed';
+  if (el.dataset.mouth === want) return;
+  el.dataset.mouth = want;
+  el.src = `/static/${art[want]}`;
+}
+
 function hydrateSprites(root) {
   (root || document).querySelectorAll('canvas[data-sprite]').forEach(c => drawSprite(c, c.dataset.sprite));
   (root || document).querySelectorAll('canvas[data-bodymap]').forEach(c =>

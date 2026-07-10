@@ -488,13 +488,13 @@ SCREENS.giver = async function () {
   $app().innerHTML = shell(`
     <div class="win">
       <div class="npc-head">
-        ${spriteTag(g.sprite, 128)}
+        ${portraitTag(g.sprite, 128)}
         <div class="dialog"><div class="npc-name">${esc(g.name)} ${esc(g.title)}</div><div id="dlg"></div></div>
       </div>
     </div>
     ${body}
   `);
-  typewrite(document.getElementById('dlg'), line);
+  typewrite(document.getElementById('dlg'), line, 14, npcPortraitEl());
 };
 
 G.accept = async (giver, offerId) => {
@@ -925,7 +925,7 @@ SCREENS.stats = async function () {
   $app().innerHTML = shell(`
     <div class="win tight">
       <div class="curator-box">
-        ${spriteTag('maud', 96)}
+        ${portraitTag('maud', 96)}
         <div style="flex:1">
           <div class="npc-name" style="color:var(--gold-bright)">Maud, Curator of the Hall <span class="muted" style="font-size:15px">(an owl, somehow)</span></div>
           <div id="curator-dlg" style="min-height:24px;font-size:19px"></div>
@@ -936,7 +936,7 @@ SCREENS.stats = async function () {
     <div class="tabs">${tabBtn('body', 'Body')}${tabBtn('vitals', 'Vitals')}${tabBtn('deeds', 'The Road')}${tabBtn('iron', 'The Iron')}${tabBtn('calendar', 'Calendar')}${tabBtn('compendium', 'Compendium')}${tabBtn('chronicle', 'Chronicle')}</div>
     ${body}
   `);
-  typewrite(document.getElementById('curator-dlg'), 'The full readings, hot from the archive. Hoo.');
+  typewrite(document.getElementById('curator-dlg'), 'The full readings, hot from the archive. Hoo.', 14, npcPortraitEl());
   if (statsTab === 'deeds') drawBars('ch-run', d.weeks.map(w => w.run_min), '#7ab55c');
   if (statsTab === 'iron') drawBars('ch-ton', d.weeks.map(w => w.tonnage), '#c85050');
   if (statsTab === 'vitals') {
@@ -1133,7 +1133,7 @@ SCREENS.scrivener = async function () {
   $app().innerHTML = shell(`
     <div class="win">
       <div class="npc-head">
-        ${spriteTag('wick', 128)}
+        ${portraitTag('wick', 128)}
         <div class="dialog"><div class="npc-name">Wick the Scrivener</div><div id="dlg"></div></div>
       </div>
     </div>
@@ -1163,7 +1163,7 @@ SCREENS.scrivener = async function () {
       <div class="muted" style="font-size:16px;margin-top:6px">older entries: Hall of Records &rarr; Calendar &rarr; tap a day</div>
     </div>
   `);
-  typewrite(document.getElementById('dlg'), line);
+  typewrite(document.getElementById('dlg'), line, 14, npcPortraitEl());
 };
 
 G.claim = async () => {
