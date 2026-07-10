@@ -295,6 +295,11 @@ def road_state():
     return road.state()
 
 
+@app.get("/api/tapestry")
+def tapestry():
+    return game.tapestry_payload()
+
+
 @app.post("/api/road/claim")
 def road_claim():
     return road.claim_next()

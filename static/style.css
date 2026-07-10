@@ -699,6 +699,19 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   margin: 10px auto; max-width: 340px; font-size: 17px;
 }
 
+/* ---- the tapestry (year weave, Calendar tab) ---- */
+.tapestry-scroll {
+  overflow-x: auto; overflow-y: hidden;
+  border: 2px solid #3a3450; background: #0c0c14;
+  scrollbar-width: thin;
+}
+.tapestry-scroll canvas { display: block; cursor: pointer; }
+.tap-legend {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  font-size: 15px; color: var(--dim); margin-top: 8px;
+}
+.tap-legend .cdot { margin-right: 4px; }
+
 /* ---- sleep panel (Hall of Rest, Vitals tab) ---- */
 .sleep-panel { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
 .sleep-stat {

@@ -1186,6 +1186,44 @@ def day_payload(dstr):
     return {"date": dstr, "activities": acts, "sets": sets_, "quests": quests}
 
 
+def tapestry_payload():
+    """The Tapestry: a year of days, one stitch each, colored by the day's
+    dominant labor. 53 week-columns (Monday-first) ending on the current
+    week, so the newest stitch is always today.
+
+    A day's color is the activity category with the most active seconds that
+    day; logged lift sets count as ~3 minutes of 'strength' each, so a
+    gym-only day (no synced activity) still weaves a red stitch."""
+    end = now().date()
+    week_monday = end - timedelta(days=end.weekday())
+    start = week_monday - timedelta(weeks=52)
+    per_day = {}
+    for a in db.q(
+        "SELECT start, type, moving_time FROM activities WHERE start >= ?",
+        (start.isoformat(),),
+    ).fetchall():
+        rec = per_day.setdefault(a["start"][:10], {})
+        cat = category(a["type"])
+        rec[cat] = rec.get(cat, 0) + (a["moving_time"] or 0)
+    for r in db.q("SELECT ts FROM lift_sets WHERE ts >= ?", (start.isoformat(),)).fetchall():
+        rec = per_day.setdefault(r["ts"][:10], {})
+        rec["strength"] = rec.get("strength", 0) + 180
+    days = []
+    cur = start
+    while cur <= end:
+        dstr = cur.isoformat()
+        rec = per_day.get(dstr)
+        cat = max(rec, key=rec.get) if rec else None
+        days.append({"date": dstr, "cat": cat, "mins": round(sum(rec.values()) / 60) if rec else 0})
+        cur += timedelta(days=1)
+    woven = sum(1 for d in days if d["cat"])
+    best = run = 0
+    for d in days:
+        run = run + 1 if d["cat"] else 0
+        best = max(best, run)
+    return {"start": start.isoformat(), "days": days, "woven": woven, "best_stretch": best}
+
+
 def stats_payload(wellness_days=180):
     c = get_char()
     weeks = []
