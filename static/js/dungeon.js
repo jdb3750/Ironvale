@@ -15,7 +15,7 @@ SCREENS.undercroft = async function () {
   $app().innerHTML = shell(`
     <div class="win">
       <div class="npc-head">
-        ${spriteTag('hesk', 128)}
+        ${portraitTag('hesk', 128)}
         <div class="dialog"><div class="npc-name">Warden Hesk, Keeper of the Undercroft</div><div id="dlg"></div></div>
       </div>
     </div>
@@ -41,7 +41,8 @@ SCREENS.undercroft = async function () {
     </div>
   `);
   typewrite(document.getElementById('dlg'),
-    'Empty pockets, full heart — that is how you enter. The dark provides the rest, at its own prices.');
+    'Empty pockets, full heart — that is how you enter. The dark provides the rest, at its own prices.',
+    14, npcPortraitEl());
 };
 
 G.enterDungeon = async () => {
@@ -115,7 +116,7 @@ function renderDungeon(st, stats) {
     const stock = st.shop_stock || [];
     pipPanel = `<div class="pip-panel">
       <div class="npc-head" style="align-items:center;gap:10px">
-        ${spriteTag('pip', 64)}
+        ${portraitTag('pip', 64)}
         <div><span class="npc-name" style="color:var(--gold-bright)">Pip, somehow, down here</span><br>
         <span class="muted" style="font-size:17px">"Every floor, friend. Loot gold only — cave rules." (&#9670;${st.loot_gold} looted)</span></div>
       </div>
