@@ -1211,15 +1211,21 @@ def npc_notices():
             f"The road's gone quiet without you, {g} days now. It's not going anywhere, whenever you are.",
         ])
 
-    # Grunhilda — the bell
-    row = db.q("SELECT COUNT(*) AS n, MAX(ts) AS t FROM lift_sets WHERE ts >= ?",
-               ((now() - timedelta(days=2)).isoformat(),)).fetchone()
+    # One 14-day fetch feeds both iron-givers: Grunhilda's recent-set count
+    # and Bram's heaviest pull come from the same rows.
+    fortnight = [dict(r) for r in db.q(
+        "SELECT ts, exercise, weight FROM lift_sets WHERE ts >= ?",
+        ((now() - timedelta(days=14)).isoformat(),)).fetchall()]
+    two_days_ago = (now() - timedelta(days=2)).isoformat()
+    recent_sets = sum(1 for r in fortnight if r["ts"] >= two_days_ago)
     last_set = db.q("SELECT MAX(ts) AS t FROM lift_sets").fetchone()["t"]
     sg = gap_days(last_set[:10]) if last_set else None
-    if row["n"] > 0 and roll():
+
+    # Grunhilda — the bell
+    if recent_sets > 0 and roll():
         out["kettlebell"] = rng.choice([
-            f"{row['n']} sets rang out of you these past days. Grandmother heard every one.",
-            f"The forge counted {row['n']} sets off you lately, {name}. It hums when it's pleased.",
+            f"{recent_sets} sets rang out of you these past days. Grandmother heard every one.",
+            f"The forge counted {recent_sets} sets off you lately, {name}. It hums when it's pleased.",
         ])
     elif sg is not None and sg >= 10 and roll():
         out["kettlebell"] = rng.choice([
@@ -1228,11 +1234,10 @@ def npc_notices():
         ])
 
     # Ser Bram — the heaviest recent pull
-    heavy = db.q("SELECT exercise, MAX(weight) AS w FROM lift_sets WHERE ts >= ?",
-                 ((now() - timedelta(days=14)).isoformat(),)).fetchone()
-    if heavy and heavy["w"] and roll():
+    heavy = max(fortnight, key=lambda r: r["weight"] or 0, default=None)
+    if heavy and heavy["weight"] and roll():
         wu = get_settings().get("weight_unit", "kg")
-        w = round(heavy["w"] * 2.2046226218) if wu == "lb" else round(heavy["w"])
+        w = round(heavy["weight"] * 2.2046226218) if wu == "lb" else round(heavy["weight"])
         out["strength"] = rng.choice([
             f"Word in the keep is a {w}{wu} {heavy['exercise'].lower()} this fortnight. A knight notices such things.",
             f"That {w}{wu} {heavy['exercise'].lower()} did not go unwitnessed, {name}. The plates talk amongst themselves.",
