@@ -36,6 +36,64 @@ BOSSES = [
     ("The Hollow King", "boss3"),
 ]
 
+# Floor themes: one biome per 3-floor band, matching the boss cadence so each
+# theme culminates in its own boss fight, then cycles. Purely cosmetic —
+# names, flavor text, and an accent color; no numbers change.
+THEMES = [
+    {"key": "catacombs", "name": "The Catacombs", "accent": "#b8a888",
+     "adj": ["Crypt", "Barrow", "Bone-Dust"],
+     "enter": "Dry bones and dead prayers. The Catacombs do not mind visitors; they mind leavers.",
+     "empties": [
+         "Niches of the politely dead. None of them stir. Probably.",
+         "A prayer is scratched here in a dead tongue. It rhymes with 'lift'.",
+         "Bone dust settles in your bootprints, tidying up after you.",
+     ]},
+    {"key": "fungal", "name": "The Fungal Deep", "accent": "#7ab55c",
+     "adj": ["Sporeback", "Glowcap", "Mold-Slick"],
+     "enter": "The walls breathe here. Glowcaps light the way — for whom, it is not said.",
+     "empties": [
+         "A chamber of soft blue light. The mushrooms lean toward you, listening.",
+         "Spores drift like slow snow. You try not to think about your lungs.",
+         "Something vast and fungal exhales, far below. The floor rises slightly.",
+     ]},
+    {"key": "drowned", "name": "The Drowned Halls", "accent": "#6aa0c8",
+     "adj": ["Barnacled", "Tide-Worn", "Silt-Heavy"],
+     "enter": "Water to the ankle, cold as debt. Somewhere, a bell rings under the flood.",
+     "empties": [
+         "Ankle-deep water, black as ink. Your reflection lags a half-second behind.",
+         "Fish with too many eyes watch from a flooded stair.",
+         "High-water marks on the wall, each one higher than the last. Hm.",
+     ]},
+    {"key": "ashen", "name": "The Ashen Foundry", "accent": "#e07030",
+     "adj": ["Cinder", "Slag-Crusted", "Smolder"],
+     "enter": "Dead forges, warm walls. Whatever worked these fires never clocked out.",
+     "empties": [
+         "A cold anvil the size of an ox. The hammer beside it is worse.",
+         "Slag glitters in the walls like a night sky that fell on hard times.",
+         "The air tastes of iron and overtime.",
+     ]},
+    {"key": "roots", "name": "The Roots of the World", "accent": "#a06ac8",
+     "adj": ["Gnarled", "Loam-Dark", "Deep-Root"],
+     "enter": "Roots thick as towers. You are under everything now, including your own history.",
+     "empties": [
+         "A root the width of a road pulses, once, like a slow heart.",
+         "Loam and old starlight. The dark here is older than the stone above it.",
+         "Something far above creaks — the world, shifting its weight on you.",
+     ]},
+]
+
+
+def theme_for(floor):
+    return THEMES[((floor - 1) // 3) % len(THEMES)]
+
+
+def theme_payload(d):
+    """The bits the frontend needs, or None when not below."""
+    if not d:
+        return None
+    t = theme_for(d["floor"])
+    return {"key": t["key"], "name": t["name"], "accent": t["accent"]}
+
 GEAR_TIERS = {
     "weapon": ["sword_rusty", "sword_soldier", "warhammer", "runeblade"],
     "armor": ["vest_padded", "chain_shirt", "plate", "dragonscale"],
@@ -149,6 +207,8 @@ def _monster_for(floor, rng, boss=False):
     pool = [m for m in MONSTERS if m[0] <= floor]
     _, name, sprite, hp, atk, deff, gold = rng.choice(pool[-4:] if len(pool) > 4 else pool)
     hp = hp + floor * 2 + rng.randint(0, 3)
+    if rng.random() < 0.6:  # the biome rubs off on its residents
+        name = f"{rng.choice(theme_for(floor)['adj'])} {name}"
     return {"name": name, "sprite": sprite, "hp": hp, "max_hp": hp,
             "atk": atk + floor // 2, "def": deff, "gold": gold + floor * 2, "boss": False}
 
@@ -180,7 +240,8 @@ def enter():
         "loot_gold": 0,
         "combat": None,
         "seed": rng.randint(0, 2**31),
-        "log": [f"Floor {floor}. You carry nothing but your training. The dark provides — at a price."],
+        "log": [f"Floor {floor} — {theme_for(floor)['name']}. {theme_for(floor)['enter']}",
+                "You carry nothing but your training. The dark provides — at a price."],
     }
     d["hp"] = base_stats()["max_hp"]
     d.update(_gen_floor(floor, random.Random(d["seed"])))
@@ -385,11 +446,9 @@ def action(payload):
             elif t == "stairs":
                 d["log"].append("Stairs spiral down into deeper dark.")
             else:
-                d["log"].append(rng.choice([
-                    "Dust. Silence. Old bones that are not yours. Yet.",
+                d["log"].append(rng.choice(theme_for(d["floor"])["empties"] + [
                     "An empty chamber. Something scuttles away.",
                     "Scratched into the wall: 'SHOULD HAVE STRETCHED'.",
-                    "Nothing here but the smell of deep earth.",
                 ]))
                 cell["cleared"] = True
         elif cell["type"] == "merchant":
@@ -533,7 +592,10 @@ def action(payload):
         for tid in d["trinkets"]:
             heal += items.TRINKETS.get(tid, {}).get("effect", {}).get("moss", 0)
         d["hp"] = min(ps["max_hp"], d["hp"] + heal)
-        d["log"] = [f"Floor {d['floor']}. The air grows colder. (+{heal} HP)"]
+        t = theme_for(d["floor"])
+        crossed = (d["floor"] - 1) % 3 == 0  # first floor of a new biome
+        d["log"] = [f"Floor {d['floor']} — {t['name']}. " +
+                    (t["enter"] if crossed else "The air grows colder.") + f" (+{heal} HP)"]
 
     elif act == "retire":
         cell = _cell(d, d["px"], d["py"])

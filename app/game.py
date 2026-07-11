@@ -1150,6 +1150,218 @@ def insights():
     return out
 
 
+# ---------------- NPCs who've noticed ----------------
+
+def _last_activity(cats):
+    """(date-str, distance-km, minutes) of the most recent activity in the
+    given categories, or (None, 0, 0)."""
+    types = [t for c in cats for t in CATEGORIES[c]]
+    ph = ",".join("?" * len(types))
+    row = db.q(f"SELECT start, distance, moving_time FROM activities "
+               f"WHERE type IN ({ph}) ORDER BY start DESC LIMIT 1", types).fetchone()
+    if not row:
+        return None, 0, 0
+    return row["start"][:10], (row["distance"] or 0) / 1000, round((row["moving_time"] or 0) / 60)
+
+
+def _count_since(cats, days):
+    types = [t for c in cats for t in CATEGORIES[c]]
+    ph = ",".join("?" * len(types))
+    since = (now() - timedelta(days=days)).isoformat()
+    return db.q(f"SELECT COUNT(*) AS n FROM activities WHERE type IN ({ph}) AND start >= ?",
+                types + [since]).fetchone()["n"]
+
+
+NOTICE_CHANCE = 0.3  # a small chance a giver remarks at all, per giver per day
+
+
+def npc_notices():
+    """One line per quest-giver that proves they've been paying attention to
+    your actual training — spoken instead of a canned greeting when there is
+    something worth remarking on. Seeded per day so a giver doesn't change
+    their mind between taps. Deliberately not on every visit and never
+    scolding: a small chance to remark, softly, same as a friend would."""
+    rng = random.Random(f"notice:{today()}")
+    name = get_char()["name"]
+    out = {}
+
+    def gap_days(dstr):
+        return (now().date() - datetime.fromisoformat(dstr).date()).days if dstr else None
+
+    def roll():
+        return rng.random() < NOTICE_CHANCE
+
+    # Old Fenn — the road
+    d, km, mins = _last_activity(["run"])
+    g = gap_days(d)
+    week_runs = _count_since(["run"], 7)
+    if g is not None and g <= 1 and km >= 1 and roll():
+        out["running"] = rng.choice([
+            f"Still dusty from those {km:.1f} kilometers, I see. The milestones were just talking about it.",
+            f"{km:.1f} kilometers, {'today' if g == 0 else 'yesterday'}. The road speaks well of you, {name} — and roads are poor liars.",
+        ])
+    elif week_runs >= 4 and roll():
+        out["running"] = rng.choice([
+            f"{week_runs} runs inside a week. The crows can barely keep up their reports.",
+            f"{week_runs} runs this week, {name} — even the hills have stopped betting against you.",
+        ])
+    elif g is not None and g >= 10 and roll():
+        out["running"] = rng.choice([
+            f"Haven't seen your boots on the road in {g} days, {name}. No hurry — it'll be there.",
+            f"The road's gone quiet without you, {g} days now. It's not going anywhere, whenever you are.",
+        ])
+
+    # Grunhilda — the bell
+    row = db.q("SELECT COUNT(*) AS n, MAX(ts) AS t FROM lift_sets WHERE ts >= ?",
+               ((now() - timedelta(days=2)).isoformat(),)).fetchone()
+    last_set = db.q("SELECT MAX(ts) AS t FROM lift_sets").fetchone()["t"]
+    sg = gap_days(last_set[:10]) if last_set else None
+    if row["n"] > 0 and roll():
+        out["kettlebell"] = rng.choice([
+            f"{row['n']} sets rang out of you these past days. Grandmother heard every one.",
+            f"The forge counted {row['n']} sets off you lately, {name}. It hums when it's pleased.",
+        ])
+    elif sg is not None and sg >= 10 and roll():
+        out["kettlebell"] = rng.choice([
+            f"The bells have missed your grip these {sg} days, {name}. They'll ring whenever you're ready.",
+            f"It's been {sg} days since the iron sang. No judgment here — just saying I noticed.",
+        ])
+
+    # Ser Bram — the heaviest recent pull
+    heavy = db.q("SELECT exercise, MAX(weight) AS w FROM lift_sets WHERE ts >= ?",
+                 ((now() - timedelta(days=14)).isoformat(),)).fetchone()
+    if heavy and heavy["w"] and roll():
+        wu = get_settings().get("weight_unit", "kg")
+        w = round(heavy["w"] * 2.2046226218) if wu == "lb" else round(heavy["w"])
+        out["strength"] = rng.choice([
+            f"Word in the keep is a {w}{wu} {heavy['exercise'].lower()} this fortnight. A knight notices such things.",
+            f"That {w}{wu} {heavy['exercise'].lower()} did not go unwitnessed, {name}. The plates talk amongst themselves.",
+        ])
+    elif sg is not None and sg >= 14 and roll():
+        out["strength"] = rng.choice([
+            f"It's been a fortnight and more since the plates felt your hands, {name}. They'll keep, however long.",
+            f"{sg} days since that bar moved. Rest is allowed to be rest — just come say hello sometime.",
+        ])
+
+    # Sage Elowen — stillness
+    d, _, mins = _last_activity(["mobility"])
+    g = gap_days(d)
+    if g is not None and g <= 2 and mins and roll():
+        out["mobility"] = rng.choice([
+            f"I felt those {mins} minutes of stillness from across the square. The willow is still nodding.",
+            f"{mins} quiet minutes, {'today' if g == 0 else 'not long ago'}, {name}. Your joints speak more kindly of you already.",
+        ])
+    elif g is not None and g >= 10 and roll():
+        out["mobility"] = rng.choice([
+            f"The cushion still holds your shape, {name}, {g} days on. Come sit whenever the world allows it.",
+            f"It's been {g} quiet days since we last sat together. No scolding — just glad to see you when you come.",
+        ])
+
+    return out
+
+
+# ---------------- the Mantel (keepsakes) ----------------
+
+def _cumulative_km_date(cats, threshold):
+    """Date the lifetime km in these categories crossed the threshold, else None."""
+    types = [t for c in cats for t in CATEGORIES[c]]
+    ph = ",".join("?" * len(types))
+    total = 0.0
+    for r in db.q(f"SELECT start, distance FROM activities WHERE type IN ({ph}) "
+                  f"AND distance IS NOT NULL ORDER BY start", types).fetchall():
+        total += (r["distance"] or 0) / 1000
+        if total >= threshold:
+            return r["start"][:10]
+    return None
+
+
+def _nth_activity_date(cats, n):
+    types = [t for c in cats for t in CATEGORIES[c]]
+    ph = ",".join("?" * len(types))
+    row = db.q(f"SELECT start FROM activities WHERE type IN ({ph}) "
+               f"ORDER BY start LIMIT 1 OFFSET ?", types + [n - 1]).fetchone()
+    return row["start"][:10] if row else None
+
+
+def keepsakes():
+    """Objects the years leave on the shelf. Only what has actually been
+    earned exists — the unearned are not listed, teased, or silhouetted;
+    this is furniture, not a checklist."""
+    c = get_char()
+    out = []
+
+    def add(sprite, name, lore, date):
+        out.append({"sprite": sprite, "name": name, "lore": lore, "date": date})
+
+    row = db.q("SELECT MIN(completed_at) AS t FROM quests WHERE status='done'").fetchone()
+    if row["t"]:
+        add("ks_quill", "The First Page",
+            "The quill Wick lent you to sign your first completed quest. He never asked for it back. He counts it, though.",
+            row["t"][:10])
+
+    d = _cumulative_km_date(["run", "walk"], 100)
+    if d:
+        add("ks_boot", "A Worn Boot-Sole",
+            "One hundred kilometers under your own feet wore this through. The cobbler framed it instead of mending it.",
+            d)
+
+    d = _cumulative_km_date(["ride"], 250)
+    if d:
+        add("ks_spoke", "A Bent Spoke-Pin",
+            "Two hundred and fifty kilometers by wheel. This pin gave its life somewhere around the two-hundredth.",
+            d)
+
+    d = _nth_activity_date(["climb"], 25)
+    if d:
+        add("ks_chalk", "A Spent Chalk Nub",
+            "Twenty-five times up the stone. This is all that remains of the first bag of chalk. The stone remembers your hands now.",
+            d)
+
+    d = _nth_activity_date(["mobility"], 25)
+    if d:
+        add("ks_leaf", "A Pressed Willow Leaf",
+            "Twenty-five sittings in the quiet. Elowen pressed this leaf the day of the twenty-fifth and said nothing, in her way.",
+            d)
+
+    row = db.q("SELECT ts FROM lift_sets ORDER BY ts LIMIT 1 OFFSET 499").fetchone()
+    if row:
+        add("ks_nail", "An Iron Splinter",
+            "Five hundred sets. This splinter worked loose from the forge floor around the four-hundredth and Grunhilda insisted you keep it.",
+            row["ts"][:10])
+
+    row = db.q("SELECT completed_at FROM quests WHERE status='done' AND honor=1 "
+               "ORDER BY completed_at LIMIT 1 OFFSET 9").fetchone()
+    if row:
+        add("ks_seal", "Wick's Wax Seal",
+            "Ten quests sworn and kept on your honor alone. Wick pressed this seal himself. His hand shook slightly, which for Wick is weeping.",
+            row["completed_at"][:10])
+
+    best = max(c["streak"].get("best") or 0, c["streak"].get("count") or 0)
+    if best >= 30:
+        add("ks_candle", "Candle of the Unbroken",
+            f"Thirty days without dropping the thread — your longest ran {best}. It is never lit. That would rather miss the point.",
+            None)
+
+    if (c.get("deepest_floor") or 0) >= 4:
+        add("ks_tooth", "The Gatekeeper's Knuckle",
+            "Taken from the first great horror you felled on the Undercroft stairs. It still twitches toward the couch when the light is low.",
+            None)
+
+    row = db.q("SELECT MIN(ts) AS t FROM ledger WHERE kind='death'").fetchone()
+    if row["t"]:
+        add("ks_receipt", "The Warden's Receipt",
+            "Issued upon your first death below. One (1) adventurer, returned used. Hesk says keeping it is good luck. Hesk is lying.",
+            row["t"][:10])
+
+    row = db.q("SELECT MIN(born) AS t FROM monsters").fetchone()
+    if row["t"]:
+        add("ks_shell", "A Speckled Eggshell",
+            "From the first strange creature that chose your menagerie over the dark. It kept the shell tidy. They always do.",
+            row["t"][:10])
+
+    return out
+
+
 def calendar_payload(year, month):
     from datetime import date as _date
     start = _date(year, month, 1)

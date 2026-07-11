@@ -10,7 +10,7 @@ let dlogHistory = [];
 
 SCREENS.undercroft = async function () {
   const d = await api('/dungeon');
-  if (d.state) { renderDungeon(d.state, d.stats); return; }
+  if (d.state) { renderDungeon(d.state, d.stats, d.theme); return; }
 
   $app().innerHTML = shell(`
     <div class="win">
@@ -50,7 +50,7 @@ G.enterDungeon = async () => {
   SFX.stairs();
   await refreshState();
   dlogHistory = r.state.log.slice();
-  renderDungeon(r.state, r.stats);
+  renderDungeon(r.state, r.stats, r.theme);
 };
 
 function gearLine(st) {
@@ -64,7 +64,7 @@ function gearLine(st) {
   return parts.length ? parts.join(' &middot; ') : '<span class="muted">bare-handed, as you arrived</span>';
 }
 
-function renderDungeon(st, stats) {
+function renderDungeon(st, stats, theme) {
   const hpPct = Math.max(0, Math.round(100 * st.hp / stats.max_hp));
   let grid = '';
   for (let y = 0; y < 6; y++) {
@@ -158,7 +158,7 @@ function renderDungeon(st, stats) {
   $app().innerHTML = header() + `
     <div class="win tight">
       <div class="dstats">
-        <span>FLOOR <b style="color:var(--gold-bright)">${st.floor}</b>${st.boss_floor ? ' <span style="color:var(--red)">&#9733;</span>' : ''}</span>
+        <span>FLOOR <b style="color:var(--gold-bright)">${st.floor}</b>${st.boss_floor ? ' <span style="color:var(--red)">&#9733;</span>' : ''}${theme ? ` <span style="color:${theme.accent}">— ${esc(theme.name).toUpperCase()}</span>` : ''}</span>
         <span>ATK ${stats.atk + (st.buff_atk || 0)}</span><span>DEF ${stats.def + (st.buff_def || 0)}</span>
         <span style="color:var(--gold-bright)">&#9670;${st.loot_gold} looted</span>
       </div>
@@ -298,7 +298,7 @@ G.dact = async (body) => {
     document.body.appendChild(ov);
     return;
   }
-  renderDungeon(r.state, r.stats);
+  renderDungeon(r.state, r.stats, r.theme);
 };
 
 G.dRetire = () => {
