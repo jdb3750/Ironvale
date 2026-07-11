@@ -7,6 +7,7 @@ const CELL_SPRITES = {
 };
 
 let dlogHistory = [];
+RESETS.push(() => { dlogHistory = []; });
 
 SCREENS.undercroft = async function () {
   const d = await api('/dungeon');
@@ -205,9 +206,6 @@ G.dGear = async () => {
   const d = (await api('/dungeon')).state;
   if (!d) return;
   const cat = S.itemsCatalog || {};
-  const ov = document.createElement('div');
-  ov.className = 'overlay';
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const gearRows = ['weapon', 'armor', 'charm'].map(s => {
     const iid = d.gear[s];
     const it = iid ? cat[iid] : null;
@@ -219,13 +217,11 @@ G.dGear = async () => {
     return `<div class="shop-row"><span class="icon">${spriteTag(t.sprite, 26)}</span>
       <span class="grow"><span class="s-name">${esc(t.name)}</span><br><span class="s-desc">${esc(t.desc)}</span></span></div>`;
   }).join('');
-  ov.innerHTML = `<div class="win"><span class="win-title">This Run's Findings</span>
+  showModal(`<div class="win"><span class="win-title">This Run's Findings</span>
     ${gearRows}${tkRows || ''}
     <div class="muted center" style="font-size:16px;margin-top:6px">none of it leaves the Undercroft</div>
     <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">close</button></div>
-  </div>`;
-  document.body.appendChild(ov);
-  hydrateSprites(ov);
+  </div>`);
 };
 
 G.dact = async (body) => {
@@ -240,18 +236,13 @@ G.dact = async (body) => {
   if (r.captured) {
     setTimeout(() => {
       SFX.reveal(r.captured.rarity);
-      const ov = document.createElement('div');
-      ov.className = 'overlay';
-      ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-      ov.innerHTML = `<div class="win mon-card gacha-card">
+      showModal(`<div class="win mon-card gacha-card">
         <div class="muted">it stops fighting. it looks up at you.</div>
         <div style="display:flex;justify-content:center;margin:10px 0">${monsterTag(r.captured.dna, r.captured.rarity, 100)}</div>
         <div class="r-${r.captured.rarity}" style="font-size:26px">${esc(r.captured.name)}</div>
         <div class="muted" style="font-size:16px">${esc(r.captured.personality)} &middot; joins your menagerie</div>
         <button class="btn big" style="margin-top:10px" onclick="this.closest('.overlay').remove()">WELCOME, STRANGE ONE</button>
-      </div>`;
-      document.body.appendChild(ov);
-      hydrateSprites(ov);
+      </div>`);
     }, 500);
   }
 
@@ -268,9 +259,7 @@ G.dact = async (body) => {
     SFX.death();
     await refreshState();
     const dd = r.death;
-    const ov = document.createElement('div');
-    ov.className = 'overlay';
-    ov.innerHTML = `<div class="win ceremony">
+    showModal(`<div class="win ceremony">
       <div class="youdied">YOU DIED</div>
       <p class="muted" style="margin:12px 0">on floor ${dd.floor} of the Undercroft</p>
       <div style="text-align:left;font-size:19px">
@@ -280,22 +269,18 @@ G.dact = async (body) => {
       </div>
       <p class="muted" style="margin-top:10px">Sweat buys another descent. The Undercroft will wait.</p>
       <button class="btn big" onclick="this.closest('.overlay').remove();nav('town')">RETURN TO TOWN</button>
-    </div>`;
-    document.body.appendChild(ov);
+    </div>`, { backdropClose: false });
     return;
   }
   if (r.retired) {
     SFX.fanfare();
     await refreshState();
-    const ov = document.createElement('div');
-    ov.className = 'overlay';
-    ov.innerHTML = `<div class="win ceremony">
+    showModal(`<div class="win ceremony">
       <h2>SAFE RETURN</h2>
       <div class="reward-line" style="animation-delay:0.2s;color:var(--gold-bright)">&#9670; +${r.banked_gold ?? 0} gold banked</div>
       <p class="muted" style="margin-top:8px">The gear stayed below, as it must. Next descent starts at floor ${r.floor}.</p>
       <button class="btn big" onclick="this.closest('.overlay').remove();nav('town')">TO TOWN</button>
-    </div>`;
-    document.body.appendChild(ov);
+    </div>`, { backdropClose: false });
     return;
   }
   renderDungeon(r.state, r.stats, r.theme);
@@ -312,10 +297,7 @@ G.dItems = async () => {
   if (!d) return;
   const cat = S.itemsCatalog || {};
   const entries = Object.entries(d.items || {});
-  const ov = document.createElement('div');
-  ov.className = 'overlay';
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  ov.innerHTML = `<div class="win"><span class="win-title">Use Item</span>
+  showModal(`<div class="win"><span class="win-title">Use Item</span>
     ${entries.length ? entries.map(([iid, qty]) => {
       const it = cat[iid] || { name: iid, sprite: 'rock', desc: '' };
       return `<div class="shop-row">
@@ -325,9 +307,7 @@ G.dItems = async () => {
     </div>`;
     }).join('') : '<p class="muted">Empty pockets. Pip trades on every floor; chests hide the rest.</p>'}
     <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">close</button></div>
-  </div>`;
-  document.body.appendChild(ov);
-  hydrateSprites(ov);
+  </div>`);
 };
 
 /* keyboard controls */
