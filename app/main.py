@@ -161,12 +161,13 @@ async def login(request: Request):
 def state():
     s = game.get_settings()
     game.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
+    c = game.get_char()  # read once, after writ resolution (which can mutate it)
     actives = []
     for q_ in game.active_quests():
         ok, note, _ = game.quest_completable(q_)
         actives.append({**q_, "completable": ok, "progress_note": note})
     return {
-        "character": game.get_char(),
+        "character": c,
         "settings": {**s, "intervals_api_key": bool(s["intervals_api_key"])},
         "givers": game.GIVERS,
         "ambition_levels": game.AMBITION,
@@ -176,7 +177,7 @@ def state():
         "resume_floor": db.kv_get("resume_floor", 1),
         "last_sync": db.kv_get("last_sync"),
         "combat_stats": dungeon.player_stats(),
-        "xp_to_next": game.xp_to_next(game.get_char()["level"]),
+        "xp_to_next": game.xp_to_next(c["level"]),
         "buddy": monsters.get_buddy(),
         "needs_login": False,
         "unguided_pending": game.unguided_pending(),

@@ -101,6 +101,11 @@ CREATE TABLE IF NOT EXISTS wellness (
     atl REAL,
     readiness REAL
 );
+CREATE INDEX IF NOT EXISTS idx_quests_status_accepted ON quests(status, accepted_at);
+CREATE INDEX IF NOT EXISTS idx_activities_type_start ON activities(type, start);
+CREATE INDEX IF NOT EXISTS idx_activities_start ON activities(start);
+CREATE INDEX IF NOT EXISTS idx_lift_sets_ts ON lift_sets(ts);
+CREATE INDEX IF NOT EXISTS idx_ledger_kind_ts ON ledger(kind, ts);
 """
 
 
