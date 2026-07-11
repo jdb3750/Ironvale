@@ -1004,10 +1004,10 @@ SCREENS.stats = async function () {
 
   $app().innerHTML = shell(`
     <div class="win tight">
-      <div class="curator-box">
-        ${portraitTag('maud', 96)}
-        <div style="flex:1">
-          <div class="npc-name" style="color:var(--gold-bright)">Maud, Curator of the Hall <span class="muted" style="font-size:15px">(an owl, somehow)</span></div>
+      <div class="npc-head">
+        ${portraitTag('maud', 128)}
+        <div class="dialog">
+          <div class="npc-name">Maud, Curator of the Hall <span class="muted" style="font-size:15px">(an owl, somehow)</span></div>
           <div id="curator-dlg" style="min-height:24px;font-size:19px"></div>
           <div style="margin-top:6px">${d.insights.map(([lv, txt]) => `<div class="insight ${lv}" style="font-size:18px;margin:5px 0">${esc(txt)}</div>`).join('')}</div>
         </div>
