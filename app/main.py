@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, db, dungeon, exercises, game, intervals, items, monsters, profiles, programs, raid, road
+from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, monsters, profiles, programs, quests, raid, records, road
 
 app = FastAPI(title="Iron Vale")
 
@@ -29,9 +29,9 @@ def _sync_one_profile(slug, path):
         s = game.get_settings()
         if s["intervals_athlete_id"] and s["intervals_api_key"]:
             intervals.sync()
-            game.auto_complete_ready()
-            game.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
-        game.resolve_rest_writs()  # dawn check runs even without intervals creds
+            quests.auto_complete_ready()
+            quests.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
+        quests.resolve_rest_writs()  # dawn check runs even without intervals creds
         raid.apply_damage(slug)  # this week's uncounted deeds strike the siege
     finally:
         db.reset_profile(token)
@@ -160,11 +160,11 @@ async def login(request: Request):
 @app.get("/api/state")
 def state():
     s = game.get_settings()
-    game.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
+    quests.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
     c = game.get_char()  # read once, after writ resolution (which can mutate it)
     actives = []
-    for q_ in game.active_quests():
-        ok, note, _ = game.quest_completable(q_)
+    for q_ in quests.active_quests():
+        ok, note, _ = quests.quest_completable(q_)
         actives.append({**q_, "completable": ok, "progress_note": note})
     return {
         "character": c,
@@ -180,10 +180,10 @@ def state():
         "xp_to_next": game.xp_to_next(c["level"]),
         "buddy": monsters.get_buddy(),
         "needs_login": False,
-        "unguided_pending": game.unguided_pending(),
-        "writ_notices": game.writ_notices_pending(),
-        "almanac_unread": game.almanac_unread(),
-        "npc_notices": game.npc_notices(),
+        "unguided_pending": quests.unguided_pending(),
+        "writ_notices": quests.writ_notices_pending(),
+        "almanac_unread": records.almanac_unread(),
+        "npc_notices": records.npc_notices(),
         "version": APP_VERSION,
     }
 
@@ -230,10 +230,10 @@ def offers(giver: str, reroll: bool = False):
             raise ValueError("A reroll costs 10 gold.")
         c["gold"] -= 10
         game.save_char(c)
-    out = game.get_offers(giver, reroll=reroll)
-    active = next((q for q in game.active_quests() if q["giver"] == giver), None)
+    out = quests.get_offers(giver, reroll=reroll)
+    active = next((q for q in quests.active_quests() if q["giver"] == giver), None)
     if active:
-        ok, note, _ = game.quest_completable(active)
+        ok, note, _ = quests.quest_completable(active)
         active = {**active, "completable": ok, "progress_note": note}
     return {"offers": out, "active": active}
 
@@ -241,20 +241,20 @@ def offers(giver: str, reroll: bool = False):
 @app.post("/api/quests/accept")
 async def accept(request: Request):
     body = await request.json()
-    qid = game.accept_offer(body["giver"], body["offer_id"])
+    qid = quests.accept_offer(body["giver"], body["offer_id"])
     return {"quest_id": qid}
 
 
 @app.post("/api/quests/{quest_id}/complete")
 async def complete(quest_id: int, request: Request):
     body = await request.json()
-    rewards = game.complete_quest(quest_id, honor=bool(body.get("honor")))
+    rewards = quests.complete_quest(quest_id, honor=bool(body.get("honor")))
     return {"rewards": rewards, "character": game.get_char()}
 
 
 @app.post("/api/quests/{quest_id}/abandon")
 def abandon(quest_id: int):
-    game.abandon_quest(quest_id)
+    quests.abandon_quest(quest_id)
     return {"ok": True}
 
 
@@ -263,7 +263,7 @@ def quest_log():
     rows = db.q(
         "SELECT * FROM quests WHERE status != 'active' ORDER BY id DESC LIMIT 50"
     ).fetchall()
-    return {"quests": [game._quest_row(r) for r in rows]}
+    return {"quests": [quests._quest_row(r) for r in rows]}
 
 
 # ---------------- training data ----------------
@@ -272,9 +272,9 @@ def quest_log():
 def sync(request: Request):
     new = intervals.sync()
     # synced activities auto-complete matching quests — return ceremonies for the UI
-    completed = game.auto_complete_ready()
-    game.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
-    game.resolve_rest_writs()  # a freshly-synced hard workout may break an active writ
+    completed = quests.auto_complete_ready()
+    quests.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
+    quests.resolve_rest_writs()  # a freshly-synced hard workout may break an active writ
     raid_damage = raid.apply_damage(request.cookies.get("iv_profile"))
     return {"new_activities": new, "completed": completed, "raid_damage": raid_damage}
 
@@ -282,13 +282,13 @@ def sync(request: Request):
 @app.post("/api/unguided/claim")
 async def unguided_claim(request: Request):
     body = await request.json()
-    return game.claim_unguided_bonus(body.get("activity_id"))
+    return quests.claim_unguided_bonus(body.get("activity_id"))
 
 
 @app.post("/api/writ/ack")
 async def writ_ack(request: Request):
     body = await request.json()
-    return game.ack_writ_notice(body.get("ts"))
+    return quests.ack_writ_notice(body.get("ts"))
 
 
 # ---------------- the long road ----------------
@@ -300,23 +300,23 @@ def road_state():
 
 @app.get("/api/tapestry")
 def tapestry():
-    return game.tapestry_payload()
+    return records.tapestry_payload()
 
 
 @app.get("/api/almanac")
 def almanac(month: str = None):
-    return game.almanac_payload(month)
+    return records.almanac_payload(month)
 
 
 @app.post("/api/almanac/seen")
 def almanac_seen():
-    game.almanac_mark_seen()
+    records.almanac_mark_seen()
     return {"ok": True}
 
 
 @app.get("/api/keepsakes")
 def keepsakes():
-    return {"keepsakes": game.keepsakes()}
+    return {"keepsakes": records.keepsakes()}
 
 
 @app.post("/api/road/claim")
@@ -401,19 +401,19 @@ def exercise_list():
 
 @app.get("/api/stats")
 def stats(wellness_days: int = 180):
-    return game.stats_payload(wellness_days)
+    return records.stats_payload(wellness_days)
 
 
 @app.get("/api/calendar")
 def calendar(year: int, month: int):
     if not (1 <= month <= 12 and 2000 <= year <= 2100):
         raise ValueError("The calendar does not stretch that far.")
-    return game.calendar_payload(year, month)
+    return records.calendar_payload(year, month)
 
 
 @app.get("/api/day/{dstr}")
 def day_detail(dstr: str):
-    return game.day_payload(dstr)
+    return records.day_payload(dstr)
 
 
 @app.delete("/api/activities/{aid}")
@@ -567,7 +567,7 @@ async def dev_action(request: Request):
                   44 + rng.uniform(-1, 1) + (90 - i) * 0.01, 78 + rng.uniform(-1, 1),
                   rng.uniform(6, 8.5) * 3600, 40 + (90 - i) * 0.15, 40 + rng.uniform(-8, 8), None))
         db.commit()
-        game.invalidate_offers()
+        quests.invalidate_offers()
     elif act == "bad_recovery":
         # Seed a wellness picture that trips the Rest Writ: ~5 weeks of a
         # healthy baseline, then a rough last week (HRV down, RHR up, short
@@ -585,11 +585,11 @@ async def dev_action(request: Request):
             db.q("INSERT OR IGNORE INTO wellness (date, hrv, resting_hr, vo2max, weight, sleep_secs, ctl, atl, readiness) VALUES (?,?,?,?,?,?,?,?,?)",
                  (day, hrv, rhr, 44.0, 78.0, sleep * 3600, 45.0, 50.0, None))
         db.commit()
-        game.invalidate_offers()  # Elowen re-reads the omens
+        quests.invalidate_offers()  # Elowen re-reads the omens
     elif act == "wipe_dev":
         db.q("DELETE FROM activities WHERE source='dev'")
         db.commit()
-        game.invalidate_offers()
+        quests.invalidate_offers()
     elif act == "almanac_bang":
         db.kv_del("almanac_seen")
     elif act == "unguided_run":
@@ -599,7 +599,7 @@ async def dev_action(request: Request):
             "type": "Run", "minutes": mins, "km": round(mins / 6, 1),
             "name": "dev unguided run", "source": "intervals.icu",
         })
-        game.grant_unguided_run_bonus()
+        quests.grant_unguided_run_bonus()
     else:
         raise ValueError("Unknown dev incantation.")
     db.log_event(game.now_iso(), "dev", f"Dev mode: {act}.")
@@ -609,7 +609,7 @@ async def dev_action(request: Request):
 @app.post("/api/claim")
 async def claim(request: Request):
     body = await request.json()
-    rewards = game.claim_deed(body.get("kind"), body.get("minutes", 30), body.get("note", ""))
+    rewards = quests.claim_deed(body.get("kind"), body.get("minutes", 30), body.get("note", ""))
     return {"rewards": rewards, "character": game.get_char()}
 
 
@@ -650,7 +650,7 @@ def routine_delete(rid: str):
 
 @app.get("/api/chronicle")
 def chronicle():
-    return {"events": game.chronicle()}
+    return {"events": records.chronicle()}
 
 
 # ---------------- economy ----------------
@@ -658,7 +658,7 @@ def chronicle():
 @app.post("/api/gacha")
 async def gacha(request: Request):
     body = await request.json()
-    it = game.crank(use_token=bool(body.get("use_token")))
+    it = economy.crank(use_token=bool(body.get("use_token")))
     return {"item": it, "character": game.get_char(), "cost_gold": items.GACHA_COST_GOLD}
 
 
