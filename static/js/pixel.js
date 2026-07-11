@@ -882,9 +882,12 @@ function spriteTag(key, px) {
    Pixelorama projects (.pxo) live in assets/<npc>/; only the PNG exports
    are copied into static/art/<npc>/ for the browser to fetch. */
 const PORTRAIT_ART = {
-  fenn:      { closed: 'art/old_fenn/fenn_portrait.png', open: 'art/old_fenn/fenn_portrait_open_mouth.png', size: 32 },
+  fenn:      { closed: 'art/old_fenn/old_fenn_portrait.png', open: 'art/old_fenn/old_fenn_portrait_open_mouth.png', size: 32 },
   grunhilda: { closed: 'art/grunhilda/grunhilda_portrait.png', open: 'art/grunhilda/grunhilda_portrait_open_mouth.png', size: 32 },
   bram:      { closed: 'art/ser_bram/ser_bram_portrait.png', open: 'art/ser_bram/ser_bram_portrait_open_mouth.png', size: 32 },
+  elowen:    { closed: 'art/sage_elowen/sage_elowen_portrait.png', open: 'art/sage_elowen/sage_elowen_portrait_open_mouth.png', size: 32 },
+  maud:      { closed: 'art/maud/maud_portrait.png', open: 'art/maud/maud_portrait_open_mouth.png', size: 32 },
+  wick:      { closed: 'art/wick/wick_portrait.png', open: 'art/wick/wick_portrait_open_mouth.png', size: 32 },
 };
 
 function portraitTag(key, px) {
