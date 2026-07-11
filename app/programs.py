@@ -5,7 +5,7 @@ the program's next session, with linear-progression weight suggestions.
 """
 import uuid
 
-from . import db, exercises, game
+from . import db, exercises, game, quests
 
 # inc: weight added per completed session that included the lift
 PROGRAMS = {
@@ -174,5 +174,5 @@ def build_program_offer(giver):
         "routine": routine, "structure": f"The doctrine: {label}. Do the work as written.",
         "blurb": blurb, "total_sets": total_sets,
     }
-    game._price_offer(o, minutes=total_sets * 3, intensity="hard")
+    quests._price_offer(o, minutes=total_sets * 3, intensity="hard")
     return o

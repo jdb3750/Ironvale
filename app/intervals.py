@@ -104,7 +104,8 @@ def sync(days=None):
     db.kv_set("last_sync", game.now_iso())
     if new:
         db.log_event(game.now_iso(), "sync", f"The ravens returned: {new} new deed(s) from intervals.icu.")
-        game.invalidate_offers()  # fresh data should reshape today's quests
+        from . import quests  # lazy: quests imports this module for claim activities
+        quests.invalidate_offers()  # fresh data should reshape today's quests
     return new
 
 
