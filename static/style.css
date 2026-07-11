@@ -688,10 +688,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pack-card.r-rare { border-color: var(--rarity-rare); }
 .pack-card.r-uncommon { border-color: var(--rarity-uncommon); }
 
-/* ---- curator ---- */
-.curator-box { display: flex; gap: 12px; align-items: flex-start; }
-.curator-box canvas { image-rendering: pixelated; flex-shrink: 0; border: 2px solid #4a3d20; background: #000; }
-
 /* ---- pip cave shop ---- */
 .pip-panel { border: 2px solid #6a4e2c; background: #171310; padding: 10px 12px; margin: 10px 0; }
 
