@@ -418,7 +418,7 @@ SCREENS.giver = async function () {
   const data = await api(`/offers/${key}`);
   let line;
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
-  else line = congratLine(key) || pickLine(GREETINGS[key]);
+  else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
   const isLiftGiver = ['kettlebell', 'strength'].includes(key);
 
   const rewardsLine = (o) => `<div class="o-rewards">reward: <b>+${o.xp} XP</b> &middot; <span class="g">&#9670;${o.gold}+</span> &middot; +${o.vigor} vigor${o.bonus_vigor ? ' (+1 bonus)' : ''}</div>`;
@@ -817,6 +817,16 @@ SCREENS.stats = async function () {
       <span class="sb-label">${label}</span>
       <span class="sb-track"><span class="sb-fill" style="display:block;width:${Math.min(100, val * 2)}%;background:${color}"></span></span>
       <span class="sb-val">${val}</span></div>`;
+    // plain fetch, not api(): a stale live backend must show no shelf, not error
+    let ks = null;
+    try { const rr = await fetch('/api/keepsakes'); if (rr.ok) ks = (await rr.json()).keepsakes; } catch (e) { /* backend predates the mantel */ }
+    S.keepsakes = ks;
+    const mantelWin = ks ? `<div class="win"><span class="win-title">The Mantel</span>
+      <div class="muted" style="font-size:16px;margin-bottom:6px">what the years leave on the shelf${ks.length ? ' — tap a keepsake' : ''}</div>
+      ${ks.length ? `<div class="mantel">${ks.map((k, i) =>
+        `<div class="ks" onclick="G.keepsake(${i})">${spriteTag(k.sprite, 48)}</div>`).join('')}</div>`
+    : '<div class="mantel mantel-empty"><span class="muted">bare wood, for now. it is patient.</span></div>'}
+    </div>` : '';
     body = `<div class="win"><span class="win-title">${esc(c.name)}, Level ${c.level}</span>
       ${sb('STR', c.stats.str, 'var(--red)')}
       ${sb('END', c.stats.end, 'var(--green)')}
@@ -829,7 +839,7 @@ SCREENS.stats = async function () {
         <tr><td>Deepest floor survived</td><td>${c.deepest_floor || '—'}</td></tr>
         <tr><td>Deaths in the Undercroft</td><td>${c.deaths}</td></tr>
       </table>
-    </div>`;
+    </div>` + mantelWin;
   } else if (statsTab === 'vitals') {
     const w = d.wellness;
     const wtConv = (kg) => wu === 'lb' ? kgToLb(kg) : kg;
@@ -1348,6 +1358,23 @@ G.roadLore = (key) => {
     <div class="muted" style="font-size:14px;letter-spacing:2px">KILOMETER ${m.km}</div>
     <p class="road-lore">${esc(m.lore)}</p>
     <button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">walk on</button>
+  </div>`;
+  document.body.appendChild(ov);
+  hydrateSprites(ov);
+};
+
+G.keepsake = (i) => {
+  const k = (S.keepsakes || [])[i];
+  if (!k) return;
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `<div class="win center road-card" style="max-width:400px">
+    <span class="win-title">${esc(k.name)}</span>
+    <div style="display:flex;justify-content:center;margin:10px 0">${spriteTag(k.sprite, 72)}</div>
+    <div class="muted" style="font-size:14px;letter-spacing:2px">${k.date ? 'KEPT SINCE ' + k.date : 'FROM A DAY THE LEDGER DOES NOT NAME'}</div>
+    <p class="road-lore">${esc(k.lore)}</p>
+    <button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">back on the shelf</button>
   </div>`;
   document.body.appendChild(ov);
   hydrateSprites(ov);

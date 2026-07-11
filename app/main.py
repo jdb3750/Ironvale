@@ -182,6 +182,7 @@ def state():
         "unguided_pending": game.unguided_pending(),
         "writ_notices": game.writ_notices_pending(),
         "almanac_unread": game.almanac_unread(),
+        "npc_notices": game.npc_notices(),
         "version": APP_VERSION,
     }
 
@@ -310,6 +311,11 @@ def almanac(month: str = None):
 def almanac_seen():
     game.almanac_mark_seen()
     return {"ok": True}
+
+
+@app.get("/api/keepsakes")
+def keepsakes():
+    return {"keepsakes": game.keepsakes()}
 
 
 @app.post("/api/road/claim")
@@ -669,7 +675,9 @@ def inventory():
 
 @app.get("/api/dungeon")
 def dungeon_state():
-    return {"state": dungeon.get_state(), "stats": dungeon.player_stats(),
+    d = dungeon.get_state()
+    return {"state": d, "stats": dungeon.player_stats(),
+            "theme": dungeon.theme_payload(d),
             "resume_floor": db.kv_get("resume_floor", 1),
             "enter_cost": dungeon.ENTER_COST, "vigor": game.get_char()["vigor"]}
 
@@ -677,7 +685,7 @@ def dungeon_state():
 @app.post("/api/dungeon/enter")
 def dungeon_enter():
     d = dungeon.enter()
-    return {"state": d, "stats": dungeon.player_stats()}
+    return {"state": d, "stats": dungeon.player_stats(), "theme": dungeon.theme_payload(d)}
 
 
 @app.post("/api/dungeon/action")
@@ -686,6 +694,7 @@ async def dungeon_action(request: Request):
     result = dungeon.action(body)
     result["stats"] = dungeon.player_stats()
     result["character"] = game.get_char()
+    result["theme"] = dungeon.theme_payload(result.get("state"))
     return result
 
 

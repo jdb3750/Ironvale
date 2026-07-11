@@ -688,6 +688,20 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pack-card.r-rare { border-color: var(--rarity-rare); }
 .pack-card.r-uncommon { border-color: var(--rarity-uncommon); }
 
+/* ---- the mantel (keepsake shelf, Body tab) ---- */
+.mantel {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
+  padding: 14px 12px 0; background: #171310; border: 2px solid #4a3d20;
+}
+.mantel .ks {
+  cursor: pointer; padding: 2px 4px 6px;
+  border-bottom: 5px solid #5a4426;
+  -webkit-tap-highlight-color: transparent;
+}
+.mantel .ks:hover canvas { filter: brightness(1.35); }
+.mantel .ks canvas { display: block; }
+.mantel.mantel-empty { padding: 14px 12px; border-bottom: 7px solid #5a4426; justify-content: center; }
+
 /* ---- pip cave shop ---- */
 .pip-panel { border: 2px solid #6a4e2c; background: #171310; padding: 10px 12px; margin: 10px 0; }
 
