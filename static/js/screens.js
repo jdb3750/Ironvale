@@ -1005,7 +1005,7 @@ SCREENS.stats = async function () {
   $app().innerHTML = shell(`
     <div class="win tight">
       <div class="curator-box">
-        ${portraitTag('maud', 96)}
+        ${portraitTag('maud', 128)}
         <div style="flex:1">
           <div class="npc-name" style="color:var(--gold-bright)">Maud, Curator of the Hall <span class="muted" style="font-size:15px">(an owl, somehow)</span></div>
           <div id="curator-dlg" style="min-height:24px;font-size:19px"></div>
