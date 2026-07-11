@@ -1,4 +1,5 @@
-/* Iron Vale core: state store, API, router, shared UI. Screens live in screens.js / dungeon.js. */
+/* Iron Vale core: state store, API, router, shared UI. Screens live in the
+   per-screen files (town.js, giver.js, hall.js, misc.js, dungeon.js, ...). */
 const S = {
   state: null,        // /api/state payload
   screen: 'town',
@@ -7,6 +8,11 @@ const S = {
   hist: [],           // back stack: [{screen, params}]
   fennQueue: [],       // unguided-run bonuses awaiting their speech-bubble moment
 };
+
+/* Screen files register a closure here to zero their module-level state
+   (open tabs, half-built routines, dungeon log...) — boot() runs them all,
+   so switching adventurers never leaks one profile's UI state into the next. */
+const RESETS = [];
 
 const $app = () => document.getElementById('app');
 
@@ -35,7 +41,7 @@ async function refreshState() {
 
 /* Old Fenn pays a bonus for runs done with no quest accepted, but only once
    his speech bubble is actually tapped (see render() below and
-   showFennBubbleIfQueued/G.claimFennBubble in screens.js) — the reward is
+   showFennBubbleIfQueued/G.claimFennBubble in town.js) — the reward is
    NOT applied server-side until that click (/api/unguided/claim). The
    server is the source of truth for what's still unclaimed today (it also
    silently auto-resolves anything left over from a previous day, with no
@@ -430,6 +436,7 @@ document.addEventListener('click', (e) => {
 });
 
 async function boot() {
+  RESETS.forEach(r => r());
   let prof;
   try {
     prof = await api('/profiles');
