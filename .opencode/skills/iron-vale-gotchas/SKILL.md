@@ -35,14 +35,14 @@ non-obvious way. Check the relevant group before touching that area.
   G.showCreate for the pattern). `confirm()` for yes/no is fine and used
   throughout; it's specifically the text-input `prompt()` that's banned.
 - Buttons get sound for free: a single delegated `document` click listener
-  (in app.js) plays `SFX.click()` for any `button` or `[onclick]` element.
+  (in app.js) plays `SFX.click()` for every `button` element and any element
+  with an inline `[onclick]` attribute.
   Don't bother adding `SFX.click()` to new handlers just for tap feedback —
   it's redundant. Do still add distinct sounds (accept/coin/error/fanfare)
   for outcomes that deserve more than a neutral blip.
-  **Caveat**: the `[onclick]` selector only matches *inline HTML attributes*
-  (`onclick="fn()"`), not JS-property-set handlers (`el.onclick = fn`). If
-  you wire a click handler from JavaScript, the delegated sound won't fire;
-  either use an inline attribute or call `SFX.click()` yourself.
+  **Caveat**: a JS-wired button still matches the `button` selector. A
+  JS-wired non-button element has no inline `[onclick]` attribute, so it needs
+  an explicit neutral `SFX.click()` when tap feedback is appropriate.
 
 ## Ranch simulation
 
@@ -104,18 +104,14 @@ non-obvious way. Check the relevant group before touching that area.
 
 ## intervals.icu & wellness data
 
-- **Wellness table has no per-row source tag.** The `wellness` table is a
-  simple date-keyed ledger — `INSERT OR REPLACE` (or `ON CONFLICT(date) DO
-  UPDATE`) with no guard. Dev mode's "seed 60d of fake training" silently
-  overwrites any real `wellness` rows that share a date, and the "wipe fake
-  training" dev action only clears `activities WHERE source='dev'` — it
-  never touches the `wellness` table at all. If a profile has real intervals
-  data and someone ever hits "seed" in dev mode, the wellness window is
-  corrupted with no self-healing path (ordinary rolling syncs only go back
-  30 days). Fingerprinting trick for post-hoc detection: dev-seed writes raw
-  `random.uniform()` floats with long decimal tails (e.g. `77.0544878621`);
-  real intervals.icu data is always cleanly rounded (e.g. `78.743`). Search
-  for >6-digit fractional parts to find contaminated rows.
+- **Wellness table has no per-row source tag, so dev writes are guarded.**
+  Both "seed 60d of fake training" and "bad recovery" use `INSERT OR IGNORE`:
+  they fill empty dates only and never overwrite existing wellness rows.
+  "Wipe fake training" removes only `activities WHERE source='dev'`; it does
+  not remove wellness added by either dev action. Real intervals.icu sync is
+  intentionally authoritative and uses `ON CONFLICT(date) DO UPDATE` to
+  overwrite matching dates. Keep this distinction intact: the dev guard was
+  added after replacement-style seeding once corrupted live wellness data.
 - **intervals.icu always reports weight in kg** regardless of the athlete's
   display preference there. The `weight_unit` setting in Iron Vale
   (`kg`/`lb`) is a lift-weight display label (manually-entered, so it

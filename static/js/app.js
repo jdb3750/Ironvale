@@ -123,6 +123,7 @@ function header() {
         <span class="xpbar"><div style="width:${pct}%"></div></span>
       </div>
       <div class="hc-row hc-res">
+        ${st.count > 0 ? `<span class="stat streak streak-mini" title="${streakTip}">${spriteTag('icon_flame', 15)} ${st.count}</span>` : ''}
         <span class="stat">${spriteTag('icon_coin', 15)} ${c.gold}</span>
         <span class="stat">${spriteTag('icon_token', 15)} ${c.tokens}</span>
         <span class="stat vigor">${vig}</span>
@@ -234,6 +235,7 @@ function showCeremony(rewards, title) {
 /* ---------- login ---------- */
 
 function renderLogin() {
+  $app().classList.add('booting');
   $app().innerHTML = `
     <div style="max-width:380px;margin:80px auto">
       <div class="win center">
@@ -267,6 +269,7 @@ function render() {
   if (window.__stopRanch) { window.__stopRanch(); window.__stopRanch = null; }
   // leaving the pen: forget the arrangement, so the herd has "moved around" by the next visit
   if (typeof RANCH !== 'undefined' && S.screen !== 'ranch') RANCH.saved = null;
+  $app().classList.remove('booting');
   const fn = SCREENS[S.screen] || SCREENS.town;
   Promise.resolve(fn()).then(() => {
     hydrateSprites();
@@ -329,6 +332,7 @@ G.apStep = (key, dir, count) => {
 const PICKER = { profiles: [], open: null, creating: false };
 
 function renderProfilePicker(profs) {
+  $app().classList.add('booting');
   if (profs) PICKER.profiles = profs;
   const card = (p) => {
     const open = PICKER.open === p.slug;

@@ -86,7 +86,7 @@ Strength**, **StrongLifts 5x5**, **Simple & Sinister**, and Dan John's **Armor
 Building Complex** are built in, or forge your own routine in the Doctrines
 screen. A sworn doctrine's next session leads that giver's daily offers, with
 linear-progression weight suggestions (+2.5 per completed session, +5 for
-deadlift). The Exercise Compendium in the Training Yard shows front/back body
+deadlift). The Exercise Compendium in the Hall of Records shows front/back body
 maps of the muscle groups every exercise targets — synced climbing credits
 back, arms and core in the muscle ledger too.
 
@@ -107,10 +107,11 @@ for them.
 ## Playing with friends
 
 One Iron Vale can host the whole party. The first visit shows a **"WHO GOES
-THERE?"** roster — each player creates their own adventurer (optionally locked
-with a PIN) and gets a completely separate save: their own character,
-appearance, quests, intervals.icu link, monsters, and streaks. Auto-sync runs
-for every profile. Switch adventurers anytime from Settings.
+THERE?"** roster — each newly created adventurer requires exactly a four-digit
+PIN and gets a completely separate save: their own character, appearance,
+quests, intervals.icu link, monsters, and streaks. An automatically adopted
+legacy `main` profile may remain PINless. Auto-sync runs for every profile.
+Switch adventurers anytime from Settings.
 
 To let friends reach your instance:
 
@@ -153,8 +154,8 @@ sync.
 
 ## Tech
 
-- **Backend**: FastAPI + SQLite (stdlib `sqlite3`), ~5 small modules
-  (`game.py` quest engine, `dungeon.py` roguelike engine, `intervals.py` sync).
+- **Backend**: FastAPI + SQLite (stdlib `sqlite3`), split into focused domain
+  modules for quests, programs, dungeons, sync, monsters, raids, and more.
 - **Frontend**: vanilla JS single-page app, hand-drawn pixel sprites rendered to
   canvas, WebAudio chiptune SFX, CRT scanline CSS. No framework, no bundler.
 

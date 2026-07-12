@@ -109,7 +109,10 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   db.py         SQLite layer; one DB file per profile, routed via contextvar —
                 use db.q()/kv_*, never open sqlite directly.
   profiles.py   Adventurer roster: data/profiles.json maps slug -> db file + PIN hash.
-  game.py       Quest engine: offer generation, accept/complete/abandon, rewards, streaks.
+  game.py       Shared core: character/settings, time, activity categories, training history.
+  quests.py     Adaptive offers, quest lifecycle, Rest Writ, unguided bonuses, Wick claims.
+  records.py    Hall read side: stats, wellness, calendar, keepsakes, almanac, chronicle.
+  economy.py    Town shop purchases and the Krankwerk gacha.
   programs.py   Doctrines (Starting Strength etc.) + custom routines; linear progression.
   dungeon.py    Roguelike engine, Binding-of-Isaac rules: run-scoped gear/items/trinkets.
   intervals.py  intervals.icu sync (basic auth): activities + wellness.
@@ -123,11 +126,16 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
 static/                  Frontend (script tags, load order matters — see index.html)
   js/pixel.js   SPRITES: hand-authored char-map pixel sprites (p=palette, r=rows).
   js/audio.js   WebAudio synth SFX (SFX.click/coin/fanfare/squeak/...). No files.
-  js/app.js     S (global state), api(), nav()/G.back(), render(), shell().
-  js/screens.js Town screens as SCREENS.<name> functions.
+  js/app.js     Core state/API/router/shell, profile UI, boot, delegated click SFX.
+  js/ui.js      SCREENS registry, shared helpers, and modal builder.
+  js/charts.js  Shared canvas chart primitives for Hall views.
+  js/town.js    Town hub, Fenn/willow bubbles, and Siege banner.
+  js/giver.js   Giver/dialogue, quest, doctrine, logger, and Scrivener screens.
+  js/hall.js    Hall stats, calendar, Tapestry, Road, Mantel, Compendium, Almanac.
+  js/misc.js    Krankwerk and settings/dev screens.
   js/ranch.js   Menagerie simulation (RAF loop): wander/graze/sleep/fetch, drag creatures.
-  js/dungeon.js Undercroft UI: gate, crawler map, combat, Pip shop, relic panel.
   js/colosseum.js The Colosseum: bet UI + three canvas mini-animations (fight/race/pageant).
+  js/dungeon.js Undercroft UI: gate, crawler map, combat, Pip shop, relic panel.
   style.css     All styling. CRT scanlines, .win/.win-title bordered panels, pixel buttons.
   index.html    Script/style tags with ?v=N cache-buster. BUMP N ON EVERY CHANGE.
 ```
@@ -145,11 +153,19 @@ For deeper behavior of any specific module, load skill `iron-vale-architecture`.
   **NEVER interpolate user-visible strings (quest titles, monster names) into
   onclick attributes** — HTML entities decode before JS parses, so apostrophes
   ("The Courier's Route") break the handler. Pass ids; look data up in state.
+- **DB writes**: `db.q()` executes but does NOT auto-commit — call `db.commit()`
+  after any INSERT/UPDATE/DELETE or the write is invisible to other connections
+  (TestClient serves requests on another thread with its own connection, so
+  un-committed test seeds silently vanish). `db.kv_set`/`kv_del`/`inv_add`
+  commit internally.
 - **Sprites**: add to SPRITES in pixel.js (palette chars + row strings), render
   with `spriteTag(key, px)`, then ensure `hydrateSprites(container)` runs.
   Monsters/heroes use data-attrs and are hydrated the same way.
-- **SFX**: call `SFX.something()` on every interactive click/success/failure.
-  Add new synths in audio.js.
+- **SFX**: `app.js` delegates neutral `SFX.click()` feedback for every enabled
+  `button` element and any element with an inline `[onclick]` attribute. Keep
+  distinct outcome sounds such as accept/coin/error/fanfare explicit. A
+  JS-wired non-button element needs an explicit neutral `SFX.click()`. Add new
+  synths in audio.js.
 - **Voice**: all copy is in-world (ravens = sync, "strike from the record" =
   delete, prorated pay = 7 coins in 10). Keep it. No emojis anywhere — pixel
   sprites only.
@@ -187,6 +203,12 @@ Test backend against a scratch `DATA_DIR` with TestClient (select a profile
 cookie first); test frontend on port 8322 with a scratch `DATA_DIR` launch
 config (`iron-vale-test`). See skill `iron-vale-ops` for the full recipe and
 TestClient/profile-routing gotchas.
+
+**Regression net**: `.venv/bin/python tests/smoke.py` — 76 checks over every
+read endpoint plus the quest/dungeon/gacha/scrivener lifecycles on a throwaway
+scratch DB. Run it before AND after any refactor that moves code; identical
+green is the acceptance bar. It must never point at the live `data/` dir (it
+builds its own scratch and deletes it).
 
 ## Gotchas
 

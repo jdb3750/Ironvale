@@ -1,9 +1,10 @@
 """Adventurer profiles: one save file per player, arcade-cabinet style.
 
-The index lives in data/profiles.json. Each entry maps a slug to a DB file
-and an optional 4+ digit PIN (hashed — this is a keep-your-sibling-out lock,
-not bank security). The pre-profiles save (ironvale.db) is adopted as the
-first profile automatically.
+The index lives in data/profiles.json. Each entry maps a slug to a DB file.
+New profiles require a PIN of exactly four digits (hashed — this is a
+keep-your-sibling-out lock, not bank security), while an adopted legacy main
+profile can remain PINless. The pre-profiles save (ironvale.db) is adopted as
+the first profile automatically.
 """
 import hashlib
 import json
