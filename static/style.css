@@ -28,7 +28,12 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { background: var(--bg); }
+html {
+  background: var(--bg);
+  /* reserve the scrollbar gutter at all times so hopping from a short screen
+     (town) to a tall one doesn't shove the centered layout sideways */
+  scrollbar-gutter: stable;
+}
 body {
   font-family: 'VT323', 'Courier New', monospace;
   font-size: 20px;
