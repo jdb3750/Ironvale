@@ -108,9 +108,13 @@ be silently normalized during unrelated work.
 ### Container And Responsive Rules
 
 - Main content is centered in `#app` at a maximum width of **880px**.
-- Desktop app padding is `10px 10px 80px`; at the sole global breakpoint it
-  becomes `6px 6px 60px`.
-- The mobile breakpoint is exactly **`max-width: 560px`**.
+- Desktop app padding is `10px 10px 80px`; at `max-width: 560px` it becomes
+  `6px 6px 60px`.
+- The header condenses progressively: the full streak box becomes a compact
+  resource-line indicator at `max-width: 900px`, then the brand and character
+  rows center and hide the tagline/xp bar at `max-width: 719px`.
+- Hall navigation uses four paired columns above `860px`, two columns at or
+  below `860px`, and tighter button spacing/font size at `max-width: 359px`.
 - Layouts use flex and grid locally rather than a global column system.
 - Reusable groups wrap when space runs out. Pixel-art canvases use
   `image-rendering: pixelated`.
@@ -181,47 +185,26 @@ be silently normalized during unrelated work.
 ### Hall Grouped Navigation
 
 - **Structure:** `.hall-nav` contains four `.hall-nav-group` columns. Each group
-  has a `.hall-nav-label` and a two-column `.hall-nav-buttons` grid of shared
-  `.btn.small` destinations. The adjacent `.hall-curator` window contains the
-  horizontal `.hall-curator-row`, a `.hall-curator-portrait` rendered at
-  exactly `72px` square, flexible `.hall-curator-dialog`, optional
-  `.hall-insights`, and native `.hall-insight-more` disclosure. The portrait
-  class narrowly overrides `portraitTag()`'s inline `64px` width and height
-  with `!important`; no other portrait is affected.
-- **Layout:** the four navigation groups are equal-width desktop columns and
-  become two equal columns at `max-width: 560px`. Paired destination tracks use
-  `minmax(0, 1fr)`. Mobile destinations are at least `44px` tall and keep each
-  destination name on one line; Hall-only type tightens to `13px`, then `11px`
-  below `360px`, so labels do not break inside words or widen their group.
-  The curator remains a compact horizontal row at every width, overriding the
-  generic mobile `.npc-head` stack only for `.npc-head.hall-curator-row`.
-  Below `360px`, Maud's full typed reading yields to a concise contextual form
-  of the same reading: Almanac keeps Almanac-specific copy, while every other
-  destination keeps the archive reading. The primary insight remains visible,
-  and additional observations remain reachable through the native details
-  disclosure. Hall-scoped type, margins, and disclosure spacing tighten to keep
-  the selected content visible by `568px` at a `320px` viewport without removing
-  content or functionality. Her identity, exact `72px` portrait, all eight Hall
-  destinations, single-line labels, and `44px` mobile targets remain present.
-  During Hall renders, `#app.hall-screen` corrects the loading-only inline
-  `padding-top: 120px` to the Hall shell's top padding: `12px` on desktop and
-  `6px` at `max-width: 560px`. Only the top edge is overridden, so the existing
-  horizontal and bottom app padding remain unchanged; every non-Hall render
-  removes the class.
-- **Appearance:** group labels use muted text and tokenized gold rules. Buttons,
-  portrait, dialogue, and insight status retain the existing pixel components
-  and semantic token colors. Hall spacing follows the `4px` rhythm and all
-  surfaces retain square corners.
-- **States:** destination default, hover, active, disabled, and unread states
-  continue to use `.btn`, `.btn:disabled`, and Hall-scoped
-  `.hall-nav .btn.active` / `.hall-nav .btn.tab-glow` rules equivalent to the
-  shared tab states. Active destinations fill gold with inverted text; unread
-  destinations establish positioning for the dot and use the bright-gold
-  pulsing border. Hall destination buttons and the insight summary add a
-  visible bright-gold `:focus-visible` outline. The disclosure summary is
-  bright gold and its supporting observations remain muted; absent insights
-  emit no insight block. Loading and navigation error states remain
-  caller-owned.
+  contains a two-column `.hall-nav-buttons` grid of shared `.btn.small`
+  destinations: Body/Vitals, The Road/The Iron, Calendar/Chronicle, and
+  Compendium/Almanac. The navigation sits below Maud's standard `.npc-head`
+  and `.dialog` block, so the Hall follows the same portrait and dialogue
+  structure as the other NPC screens.
+- **Layout:** groups are equal-width desktop columns and become two columns at
+  `max-width: 860px`. Buttons fill their tracks, use one-line labels, and keep
+  at least `44px` of height on small screens. Hall navigation uses `13px`
+  buttons at `max-width: 560px` and `11px` buttons below `360px` to preserve
+  readable targets without horizontal overflow.
+- **Appearance:** grouped buttons reuse the shared pixel-button surface and
+  the Hall keeps the same square windows, gold borders, and semantic status
+  colors as the rest of the interface. Maud renders at the standard `128px`
+  portrait size and receives a distinct in-world reading for each destination.
+- **States:** destination default, hover, active, focus, and unread states use
+  the shared `.btn` contract plus `.hall-nav .btn.active`,
+  `.hall-nav .btn:focus-visible`, and `.hall-nav .btn.tab-glow`. The Almanac
+  unread state adds a bright-gold pulsing border and dot. Empty data states are
+  rendered by each Hall destination; stale optional endpoints degrade to the
+  available base view.
 
 ## 6. Motion & Interaction
 

@@ -48,6 +48,9 @@ def get(path, **expect):
 client.get("/api/state")  # first touch creates the schema
 NOW = game.now()
 
+for path in ("/docs", "/redoc", "/openapi.json"):
+    ok(f"GET {path} disabled", client.get(path).status_code == 404)
+
 
 def iso(days_ago, hour=7):
     return (NOW - timedelta(days=days_ago)).replace(

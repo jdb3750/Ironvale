@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, monsters, profiles, programs, quests, raid, records, road
 
-app = FastAPI(title="Iron Vale")
+app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
 
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL_SECONDS", "900"))  # 15 min
 
