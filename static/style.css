@@ -51,6 +51,9 @@ body::after {
 }
 
 #app { max-width: 880px; margin: 0 auto; padding: 10px 10px 80px; }
+/* the boot placeholder + gate screens (login, roster) sit lower; real screens
+   reclaim the space the moment they render */
+#app.booting { padding-top: 120px; }
 
 h1, h2, h3 { font-weight: normal; }
 .pixel-title {
@@ -124,6 +127,7 @@ h1, h2, h3 { font-weight: normal; }
 .hdr-char .stat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hdr-char .vigor { color: var(--green); font-size: 14px; letter-spacing: 1px; }
 .hdr-char .streak { color: #e07030; }
+.hdr-char .stat.streak-mini { display: none; }
 
 /* streak lives in the header center now (was a town banner) */
 .hdr-streak {
@@ -137,6 +141,23 @@ h1, h2, h3 { font-weight: normal; }
 .hdr-streak.cold { border-color: #3a3038; }
 .hdr-streak.cold canvas { animation: none; opacity: 0.4; }
 .hdr-streak.cold .hs-count { color: var(--dim); }
+/* below ~900px the full box would wrap the header onto a second row —
+   swap it for the compact flame in the resource line instead */
+@media (max-width: 900px) {
+  .hdr-streak { display: none; }
+  .hdr-char .stat.streak-mini { display: inline-flex; }
+}
+@media (max-width: 719px) {
+  /* condensed header: centered brand, one centered stat line */
+  .hdr { flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; }
+  .hdr-brand { text-align: center; }
+  .hdr-brand .muted { display: none; }
+  .hdr-char { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 8px; text-align: center; }
+  .hdr-char .hc-row { justify-content: center; flex-wrap: nowrap; font-size: 15px; gap: 6px; }
+  .hdr-char .hc-res { margin-top: 0; gap: 8px; }
+  .hdr-char .hero-btn canvas, .hdr-char .buddy-chip canvas { width: 28px; height: 28px; }
+  .hdr .xpbar { display: none; }
+}
 
 /* ---- footer: nav + housekeeping on every page ---- */
 .footer {
@@ -255,11 +276,42 @@ label { color: var(--dim); font-size: 18px; text-transform: uppercase; letter-sp
 
 /* ---- stats ---- */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 4px; }
-.tabs .btn.active { background: var(--gold); color: var(--bg); }
-.tabs .btn.tab-glow {
+.tabs .btn.active, .hall-nav .btn.active { background: var(--gold); color: var(--bg); }
+.tabs .btn.tab-glow, .hall-nav .btn.tab-glow {
   position: relative;
   border-color: var(--gold-bright);
   animation: tab-glow-pulse 1.4s ease-in-out infinite;
+}
+
+
+.hall-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 4px 12px;
+  min-width: 0;
+}
+.hall-nav-group { min-width: 0; }
+.hall-nav-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+.hall-nav-buttons .btn {
+  width: 100%;
+  min-width: 0;
+  padding: 4px;
+  font-size: 15px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+@media (max-width: 860px) {
+  .hall-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.hall-nav .btn:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
 }
 .tab-glow-dot {
   position: absolute; top: -5px; right: -5px;
@@ -939,6 +991,15 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   #app { padding: 6px 6px 60px; }
   .town-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .npc-head { flex-direction: column; align-items: center; }
+  .hall-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hall-nav-buttons .btn {
+    min-height: 44px;
+    padding: 2px;
+    font-size: 13px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
   .dpad { grid-template-columns: repeat(3, 76px); }
   .topbar .game-title { font-size: 18px; }
   .topbar .btn.small { min-width: 0; }
@@ -946,4 +1007,12 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   .calday { min-height: 44px; }
   .fenn-bubble-wrap { width: 180px; }
   .fenn-bubble { font-size: 13px; }
+}
+
+@media (max-width: 359px) {
+  .hall-nav {
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .hall-nav-buttons .btn { font-size: 11px; }
 }

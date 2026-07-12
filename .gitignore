@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .aider*
 .DS_Store
+.omo/
+test-results/

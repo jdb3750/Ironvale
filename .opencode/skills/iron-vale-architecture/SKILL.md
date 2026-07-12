@@ -1,6 +1,6 @@
 ---
 name: iron-vale-architecture
-description: Deep reference for how Iron Vale's backend modules (game.py, dungeon.py, raid.py, colosseum.py, monsters.py, intervals.py, programs.py, items.py, exercises.py) and frontend systems (pixel.js, ranch.js, dungeon.js, colosseum.js, screens.js, app.js) actually work internally. Use before modifying or needing to understand any specific subsystem's mechanics (dungeon runs, raid boss math, colosseum sims, monster/ranch simulation, sprite rendering, quest offer generation, etc.) beyond the one-line summary in AGENTS.md.
+description: Deep reference for how Iron Vale's backend modules (game.py, quests.py, records.py, economy.py, dungeon.py, raid.py, colosseum.py, monsters.py, intervals.py, programs.py, items.py, exercises.py) and split frontend systems actually work internally. Use before modifying or needing to understand any specific subsystem's mechanics (dungeon runs, raid boss math, colosseum sims, monster/ranch simulation, sprite rendering, quest offer generation, etc.) beyond the one-line summary in AGENTS.md.
 ---
 
 # Iron Vale — architecture deep reference
@@ -23,10 +23,18 @@ app/
                  hash. 4-digit PIN required on create; legacy "main" may be pinless
                  — but NEVER assume any profile (main included) is pinless, and
                  never guess/brute-force a PIN (see iron-vale-gotchas).
-  game.py        Quest engine: offer generation (cached per giver per day in kv
-                 "offers:<giver>:<date>"), accept/complete/abandon, rewards, streaks,
-                 activity categorization (CATEGORIES), muscle recency, wellness
-                 insights, calendar payloads, Wick claims, auto_complete_ready().
+  game.py        Shared core: character/settings persistence, time helpers, activity
+                 categories, XP, ambition, muscle recency, and training history.
+  quests.py      Adaptive offers (cached per giver/day), accept/match/complete/
+                 abandon, rewards and streaks, Rest Writ, unguided-run bonuses,
+                 Wick claims, and auto_complete_ready().
+  records.py     Hall read side: stats, insights, wellness, calendar/day payloads,
+                 tapestry, almanac, keepsakes, chronicle, and NPC notices. Reads
+                 and narrates the save; does not mutate characters or quests.
+  economy.py     Town shop purchases and the Krankwerk gacha.
+                 Dependency rule: quests/records/economy import the shared game
+                 core; game.py must not import those focused modules, keeping the
+                 backend graph acyclic.
   programs.py    Doctrines (Starting Strength etc.) + custom routines; linear
                  progression suggestions; build_program_offer leads daily offers.
   dungeon.py     Roguelike engine, Binding-of-Isaac rules: run-scoped gear/items/
@@ -75,19 +83,26 @@ static/
   js/audio.js    WebAudio synth SFX (SFX.click/coin/fanfare/squeak/...). No files.
   js/app.js      S (global state), api(), nav()/G.back() (history stack S.hist),
                  render(), shell() = header() + content + footer(), showCeremony(),
-                 profile picker, appearance editor overlay, boot().
-  js/screens.js  Town screens as SCREENS.<name> functions; giver dialogs
-                 (GREETINGS/REACTIONS/CONGRATS), quest flows, Hall of Records tabs,
-                 calendar, Wick, Krankwerk lever, settings + dev panel.
+                 profile picker, appearance editor overlay, boot(), and delegated
+                 neutral click SFX for enabled buttons and inline [onclick].
+  js/ui.js       SCREENS registry, shared helpers, and showModal(), the common
+                 overlay builder used by screen modules.
+  js/charts.js   Generic canvas chart primitives shared by Hall views.
+  js/town.js     Town hub screen, Fenn and willow bubbles, and Siege banner.
+  js/giver.js    Giver dialogs (GREETINGS/REACTIONS/CONGRATS), quest flows,
+                 doctrines and routines, training logger, and Wick the Scrivener.
+  js/hall.js     Hall stats and vitals, calendar/day detail, Tapestry, Long Road,
+                 Mantel, Exercise Compendium, and Almanac.
+  js/misc.js     Krankwerk lever and settings + dev panel.
   js/ranch.js    Menagerie simulation (RAF loop): wander/graze/sleep/fetch states,
                  drag creatures (freak-out), in-pen hat panel with drag-drop +
                  ground hats that creatures fetch, magnifying-glass lens (monLens),
                  pack ripping. RANCH.saved preserves positions across re-renders;
                  app.js render() nulls it when leaving the screen (intentional:
                  herd "moves around" between visits).
-  js/dungeon.js  Undercroft UI: gate, crawler map, combat, Pip shop, relic panel.
   js/colosseum.js The Colosseum: bet UI + three canvas mini-animations (fight/
                  race/pageant) that dramatize a result already decided server-side.
+  js/dungeon.js  Undercroft UI: gate, crawler map, combat, Pip shop, relic panel.
   style.css      All styling. CRT scanlines, .win/.win-title bordered panels,
                  pixel buttons. Overlay titles are un-absoluted via
                  `.overlay .win > .win-title` (don't regress this).

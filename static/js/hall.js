@@ -11,7 +11,24 @@ let statsTab = 'body';
 let calState = null;
 let vitalsRange = 90; // days shown in the Vitals charts; 0 = all time
 let almMonth = null;  // Almanac edition being read; null = latest published
-RESETS.push(() => { statsTab = 'body'; calState = null; vitalsRange = 90; almMonth = null; COMP.open = {}; });
+let hallDaySets = new Map();
+let hallDayActivities = new Map();
+// tab pairs render as spaced clusters (related views stay adjacent)
+const HALL_GROUPS = [
+  { tabs: [['body', 'Body'], ['vitals', 'Vitals']] },
+  { tabs: [['deeds', 'The Road'], ['iron', 'The Iron']] },
+  { tabs: [['calendar', 'Calendar'], ['chronicle', 'Chronicle']] },
+  { tabs: [['compendium', 'Compendium'], ['almanac', 'Almanac']] },
+];
+RESETS.push(() => {
+  statsTab = 'body';
+  calState = null;
+  vitalsRange = 90;
+  almMonth = null;
+  hallDaySets = new Map();
+  hallDayActivities = new Map();
+  COMP.open = {};
+});
 
 SCREENS.stats = async function () {
   const d = await api('/stats?wellness_days=' + vitalsRange);
@@ -20,7 +37,22 @@ SCREENS.stats = async function () {
   const wu = S.state.settings.weight_unit;
 
   const tabBtn = (id, label, glow = false) =>
-    `<button class="btn small ${statsTab === id ? 'active' : ''} ${glow ? 'tab-glow' : ''}" style="min-width:0" onclick="SFX.click();statsTab='${id}';render()">${label}${glow ? '<span class="tab-glow-dot"></span>' : ''}</button>`;
+    `<button class="btn small ${statsTab === id ? 'active' : ''} ${glow ? 'tab-glow' : ''}" style="min-width:0" onclick="statsTab='${id}';render()">${label}${glow ? '<span class="tab-glow-dot"></span>' : ''}</button>`;
+  const hallNav = `<div class="hall-nav">${HALL_GROUPS.map(group => `
+    <div class="hall-nav-group">
+      <div class="hall-nav-buttons">${group.tabs.map(([id, label]) => tabBtn(id, label, id === 'almanac' && !!S.state.almanac_unread)).join('')}</div>
+    </div>`).join('')}</div>`;
+  // Maud has something to say about every room of her Hall
+  const CURATOR_LINES = {
+    body: 'The shape of you, in numbers. The numbers speak well of you today. Hoo.',
+    vitals: 'Heartbeats, breath, and sleep — the body keeps its own chronicle. I merely file it.',
+    deeds: 'Every kilometer, reported by the crows. They exaggerate nothing; I checked.',
+    iron: 'The heavy ledger. Mind your fingers — some of these numbers bite.',
+    calendar: 'A year of days, pressed flat between two covers. Tap one; they like being remembered.',
+    compendium: 'The Compendium of Honest Labor. Do read the how before you swing the what.',
+    almanac: 'My monthly editions. I bind one each time a moon closes. Mind the ink.',
+    chronicle: 'Everything that ever happened, in the order it happened. My finest filing.',
+  };
 
   let body = '';
   if (statsTab === 'body') {
@@ -38,7 +70,10 @@ SCREENS.stats = async function () {
         `<div class="ks" onclick="G.keepsake(${i})">${spriteTag(k.sprite, 48)}</div>`).join('')}</div>`
     : '<div class="mantel mantel-empty"><span class="muted">bare wood, for now. it is patient.</span></div>'}
     </div>` : '';
-    body = `<div class="win"><span class="win-title">${esc(c.name)}, Level ${c.level}</span>
+    const notesWin = d.insights.length ? `<div class="win"><span class="win-title">The Curator's Notes</span>
+      ${d.insights.map(([lv, txt]) => `<div class="insight ${lv}" style="font-size:18px;margin:5px 0">${esc(txt)}</div>`).join('')}
+    </div>` : '';
+    body = notesWin + `<div class="win"><span class="win-title">${esc(c.name)}, Level ${c.level}</span>
       ${sb('STR', c.stats.str, 'var(--red)')}
       ${sb('END', c.stats.end, 'var(--green)')}
       ${sb('CON', c.stats.con, 'var(--gold)')}
@@ -75,7 +110,7 @@ SCREENS.stats = async function () {
         <div class="sleep-stat"><span class="muted">THE VERDICT</span><span>${sleepVerdict(avgSleep)}</span></div>
       </div>` : '';
     const rangeBtn = (val, label) =>
-      `<button class="btn small ${vitalsRange === val ? 'active' : ''}" style="min-width:0" onclick="SFX.click();vitalsRange=${val};render()">${label}</button>`;
+      `<button class="btn small ${vitalsRange === val ? 'active' : ''}" style="min-width:0" onclick="vitalsRange=${val};render()">${label}</button>`;
     const rangeLabel = vitalsRange ? `last ${vitalsRange} days` : 'all time';
 
     body = `<div class="win"><span class="win-title">Vitals (from intervals.icu)</span>
@@ -192,7 +227,7 @@ SCREENS.stats = async function () {
       const f = alm.figures;
       const idx = alm.months.indexOf(alm.month);
       const navBtn = (m, label) => m
-        ? `<button class="btn small" style="min-width:0" onclick="SFX.click();almMonth='${m}';render()">${label}</button>`
+        ? `<button class="btn small" style="min-width:0" onclick="almMonth='${m}';render()">${label}</button>`
         : `<span style="width:70px"></span>`;
       const ton = wu === 'lb' ? Math.round(kgToLb(f.tonnage)) : f.tonnage;
       const row = (label, val, show) => show ? `<tr><td>${label}</td><td>${val}</td></tr>` : '';
@@ -230,16 +265,14 @@ SCREENS.stats = async function () {
         <div class="dialog">
           <div class="npc-name">Maud, Curator of the Hall <span class="muted" style="font-size:15px">(an owl, somehow)</span></div>
           <div id="curator-dlg" style="min-height:24px;font-size:19px"></div>
-          <div style="margin-top:6px">${d.insights.map(([lv, txt]) => `<div class="insight ${lv}" style="font-size:18px;margin:5px 0">${esc(txt)}</div>`).join('')}</div>
         </div>
       </div>
     </div>
-    <div class="tabs">${tabBtn('body', 'Body')}${tabBtn('vitals', 'Vitals')}${tabBtn('deeds', 'The Road')}${tabBtn('iron', 'The Iron')}${tabBtn('calendar', 'Calendar')}${tabBtn('compendium', 'Compendium')}${tabBtn('almanac', 'Almanac', !!S.state.almanac_unread)}${tabBtn('chronicle', 'Chronicle')}</div>
+    ${hallNav}
     ${body}
   `);
-  typewrite(document.getElementById('curator-dlg'), statsTab === 'almanac'
-    ? 'My monthly editions. I bind one each time a moon closes. Mind the ink.'
-    : 'The full readings, hot from the archive. Hoo.', 14, npcPortraitEl());
+  typewrite(document.getElementById('curator-dlg'),
+    CURATOR_LINES[statsTab] || CURATOR_LINES.body, 14, npcPortraitEl());
   if (statsTab === 'deeds') {
     drawBars('ch-run', d.weeks.map(w => w.run_min), '#7ab55c');
     drawRoadMap(S.roadState);
@@ -266,7 +299,7 @@ function compendiumBody() {
   S.exercises.forEach(e => (byEquip[e.equipment] = byEquip[e.equipment] || []).push(e));
   const section = (eq, label) => byEquip[eq] ? `
     <div class="win"><span class="win-title">${label}</span>
-      ${byEquip[eq].map(e => `<div class="shop-row" style="cursor:pointer" onclick="COMP.open['${esc(e.name)}']=!COMP.open['${esc(e.name)}'];render()">
+      ${byEquip[eq].map(e => `<div class="shop-row" style="cursor:pointer" onclick="G.compToggle(${S.exercises.indexOf(e)})">
         <span class="grow"><span class="s-name">${esc(e.name)}</span><br>
           <span class="s-desc">targets: ${e.groups.join(', ')}</span>
           ${COMP.open[e.name] ? `<div class="muted" style="font-size:17px;border-left:2px solid var(--gold);padding-left:8px;margin-top:6px">${esc(e.how || '')}</div>` : ''}</span>
@@ -280,6 +313,13 @@ function compendiumBody() {
     ${section('dumbbell', 'The Dumbbells')}
     ${section('bodyweight', 'The Body Itself')}`;
 }
+
+G.compToggle = (index) => {
+  const exercise = S.exercises[index];
+  if (!exercise) return;
+  COMP.open[exercise.name] = !COMP.open[exercise.name];
+  render();
+};
 
 /* ---- real month calendar ---- */
 
@@ -328,7 +368,6 @@ async function calendarBody() {
 }
 
 G.calNav = (dir) => {
-  SFX.click();
   calState.m += dir;
   if (calState.m < 1) { calState.m = 12; calState.y--; }
   if (calState.m > 12) { calState.m = 1; calState.y++; }
@@ -338,16 +377,18 @@ G.calNav = (dir) => {
 G.dayDetail = async (dstr) => {
   const d = await api(`/day/${dstr}`);
   const wu = S.state.settings.weight_unit;
-  const acts = d.activities.map(a => `<div class="shop-row">
+  hallDaySets = new Map(d.sets.map(s => [s.id, s]));
+  hallDayActivities = new Map(d.activities.map((activity, index) => [index, activity.id]));
+  const acts = d.activities.map((a, index) => `<div class="shop-row">
     <span class="cdot cat-${a.category}"></span>
     <span class="grow"><span class="s-name">${esc(a.name || a.type)}</span><br>
       <span class="s-desc">${a.minutes ? a.minutes + ' min' : ''} ${a.distance ? '&middot; ' + (a.distance / 1000).toFixed(1) + 'km' : ''} &middot; ${esc(a.source)}</span></span>
-    <button class="btn small danger" style="min-width:0" onclick="G.strikeActivity('${a.id}')">strike</button>
+    <button class="btn small danger" style="min-width:0" onclick="G.strikeHallActivity(${index})">strike</button>
   </div>`).join('');
   const sets = d.sets.map(s => `<div class="shop-row">
     <span class="cdot cat-strength"></span>
     <span class="grow"><span class="s-name">${esc(s.exercise)}</span> <span class="s-desc">${s.weight}${wu} &times; ${s.reps}</span></span>
-    <button class="btn small" style="min-width:0" onclick="G.editSet(${s.id},'${esc(s.exercise)}',${s.weight},${s.reps})">fix</button>
+    <button class="btn small" style="min-width:0" onclick="G.editHallSet(${s.id})">fix</button>
   </div>`).join('');
   const quests = d.quests.map(q => `<div class="shop-row"><span style="color:var(--gold-bright)">&#9733;</span>
     <span class="grow"><span class="s-name">${esc(q.title)}</span></span></div>`).join('');
@@ -357,6 +398,17 @@ G.dayDetail = async (dstr) => {
     ${!acts && !sets && !quests ? '<p class="muted">A day of rest. The ledger holds nothing against you.</p>' : ''}
     <div class="center" style="margin-top:10px"><button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">close</button></div>
   </div>`);
+};
+
+G.editHallSet = (id) => {
+  const set = hallDaySets.get(id);
+  if (!set) return;
+  G.editSet(set.id, set.exercise, set.weight, set.reps);
+};
+
+G.strikeHallActivity = (index) => {
+  if (!hallDayActivities.has(index)) return;
+  G.strikeActivity(hallDayActivities.get(index));
 };
 
 G.strikeActivity = async (id) => {
