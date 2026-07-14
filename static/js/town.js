@@ -276,7 +276,7 @@ function siegeBannerHtml(siege) {
       <div class="sg-desc">${esc(siege.description)}</div>
       <div class="sg-statline">${statLine}</div>
       <div class="sg-trophy">TROPHY FOR ALL WHO FELL IT: <span class="r-legendary">${spriteTag((S.itemsCatalog[siege.trophy] || {}).sprite || 'hat_horns', 20)} ${esc(trophyName)}</span></div>
-      ${siege.defeated && !siege.claimed ? `<div class="center" style="margin:8px 0"><button class="btn green" onclick="event.stopPropagation();G.raidClaim()">CLAIM YOUR SPOILS</button></div>` : ''}
+      ${siege.defeated && !siege.claimed ? `<div class="center" style="margin:8px 0"><button class="btn wide green" onclick="event.stopPropagation();G.raidClaim()">CLAIM YOUR SPOILS</button></div>` : ''}
       ${siege.defeated && siege.claimed ? '<div class="sg-sub muted center" style="margin:6px 0">spoils claimed &#10004; &middot; a new horror comes Monday</div>' : ''}
     </div>
     <div class="sg-divider"><span>&#9670; &#9670; &#9670;</span></div>

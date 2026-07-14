@@ -150,7 +150,7 @@ function renderDungeon(st, stats, theme) {
         <div class="r-${it.rarity}" style="font-size:24px">${esc(it.name)}</div>
         <div class="muted" style="font-size:17px">${esc(it.desc)}${replacing}</div>
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
-          <button class="btn green" onclick="G.dact({action:'take_relic'})">TAKE IT</button>
+          <button class="btn wide green" onclick="G.dact({action:'take_relic'})">TAKE IT</button>
         </div>
       </div>
     </div>`;

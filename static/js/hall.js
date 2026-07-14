@@ -146,7 +146,7 @@ SCREENS.stats = async function () {
         <br><span class="muted" style="font-size:14px">${road.breakdown.run} run &middot; ${road.breakdown.walk} walked &middot; ${road.breakdown.swim} swum &middot; ${road.breakdown.ride} ridden (counts &frac14;) &middot; tap a landmark for its story</span>
       </div>
       ${road.unclaimed > 0 ? `<div class="center" style="margin-top:8px">
-        <button class="btn green" onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
+        <button class="btn wide green" onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
       </div>` : ''}
     </div>` : ''}
     <div class="win"><span class="win-title">The Road (12 weeks)</span>

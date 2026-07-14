@@ -302,7 +302,7 @@ SCREENS.doctrines = async function () {
       <div id="rb-list" class="loglist">${RB.exercises.map((e, i) =>
         `<div><b>${esc(e.exercise)}</b> ${e.sets}&times;${e.reps}
          <button class="btn small danger" style="min-width:0;padding:0 8px" onclick="G.rbRemove(${i})">x</button></div>`).join('')}</div>
-      <button class="btn green" style="margin-top:8px" onclick="G.rbSave('${giver}')">FORGE ROUTINE</button>
+      <button class="btn wide green" style="margin-top:8px" onclick="G.rbSave('${giver}')">FORGE ROUTINE</button>
     </div>
   `);
 };
@@ -394,7 +394,7 @@ SCREENS.logger = async function () {
       <div class="muted">${esc(quest.details.structure)}</div>
       ${quest.details.routine.map(exRow).join('')}
       <div class="center" style="margin-top:8px">
-        <button class="btn green" onclick="nav('giver',{giver:'${quest.giver}'})">DONE — SEE ${esc(S.state.givers[quest.giver].name).toUpperCase()}</button>
+        <button class="btn wide green" onclick="nav('giver',{giver:'${quest.giver}'})">DONE — SEE ${esc(S.state.givers[quest.giver].name).toUpperCase()}</button>
       </div>
     </div>
     <div class="win"><span class="win-title">Today's Iron (${todays.length} sets)</span>
@@ -534,4 +534,3 @@ G.claim = async () => {
   render();
   showCeremony(r.rewards, 'A Deed Sworn');
 };
-

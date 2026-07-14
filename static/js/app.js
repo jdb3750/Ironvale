@@ -369,7 +369,7 @@ function renderProfilePicker(profs) {
           <div class="formrow"><label>name</label><input type="text" id="np-name" maxlength="24" placeholder="e.g. Robin"></div>
           <div class="formrow"><label>4-digit pin</label><input type="password" inputmode="numeric" maxlength="4" id="np-pin" class="pin-input" placeholder="&#8226;&#8226;&#8226;&#8226;"
             onkeydown="if(event.key==='Enter')G.createProfile()"></div>
-          <div class="center"><button class="btn green" onclick="G.createProfile()">BEGIN THE LEGEND</button></div>
+          <div class="center"><button class="btn wide green" onclick="G.createProfile()">BEGIN THE LEGEND</button></div>
         </div>` : ''}
         <div class="muted" style="font-size:15px;margin-top:14px">this device remembers you until you switch adventurers</div>
       </div>

@@ -16,7 +16,7 @@ SCREENS.colosseum = async function () {
         <span class="win-title">The Colosseum</span>
         <p class="muted" style="margin-top:8px">The crowd murmurs, but there is no champion to cheer for.</p>
         <p>Name a buddy in the Menagerie first — the Colosseum needs someone to bet on.</p>
-        <button class="btn" onclick="nav('ranch')">TO THE MENAGERIE</button>
+        <button class="btn wide" onclick="nav('ranch')">TO THE MENAGERIE</button>
       </div>
     `);
     return;

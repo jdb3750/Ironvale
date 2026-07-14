@@ -27,7 +27,7 @@ SCREENS.ranch = async function () {
       <div class="muted center" style="font-size:16px;margin-top:4px">tap a creature to meet it &middot; drag one to relocate it (they hate this)
         &middot; drag a hat onto a head, or drop it on the grass and see who claims it</div>
       <div class="center" style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn green" onclick="G.ripPack()">RIP A PACK ${RANCH.packs > 0 ? `(${RANCH.packs} owned)` : `(${spriteTag('icon_coin', 14)}${d.pack_cost})`}</button>
+        <button class="btn wide green" onclick="G.ripPack()">RIP A PACK ${RANCH.packs > 0 ? `(${RANCH.packs} owned)` : `(${spriteTag('icon_coin', 14)}${d.pack_cost})`}</button>
       </div>
       <div class="muted center" style="font-size:15px;margin-top:6px">now dropping: <span class="r-uncommon">${esc(d.series)}</span>
         &middot; ${d.series_days_left === 1 ? 'ends today' : `ends in ${d.series_days_left} days`} — limited monthly run</div>

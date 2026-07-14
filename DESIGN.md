@@ -143,7 +143,9 @@ be silently normalized during unrelated work.
 ### Pixel Button (`.btn`)
 
 - **Structure:** text control with shared `.btn`; variants are `.small`,
-  `.big`, `.danger`, and `.green`.
+  `.wide`, `.big`, `.danger`, and `.green`. `.wide` fills its containing
+  panel without changing the standard control size; `.big` is both larger and
+  full-width.
 - **Appearance:** `VT323`, uppercase, `--panel2` fill, gold border and text,
   and a hard offset shadow.
 - **States:** default uses the base appearance; hover fills gold and inverts

@@ -169,12 +169,12 @@ SCREENS.settings = function () {
         Athlete ID and API key: intervals.icu &rarr; Settings &rarr; Developer.</div>
       <div class="formrow"><label>athlete id (e.g. i12345)</label><input type="text" id="set-aid" value="${esc(s.intervals_athlete_id)}"></div>
       <div class="formrow"><label>api key ${s.intervals_api_key ? '(saved — leave blank to keep)' : ''}</label><input type="password" id="set-key" placeholder="${s.intervals_api_key ? '••••••••' : ''}"></div>
-      <button class="btn" onclick="G.saveSettings(true)">SAVE &amp; SEND RAVENS</button>
+      <button class="btn wide" onclick="G.saveSettings(true)">SAVE &amp; SEND RAVENS</button>
     </div>
     <div class="win"><span class="win-title">Units</span>
       <div class="formrow"><label>weights</label>
         <select id="set-wu"><option ${s.weight_unit === 'kg' ? 'selected' : ''}>kg</option><option ${s.weight_unit === 'lb' ? 'selected' : ''}>lb</option></select></div>
-      <button class="btn" onclick="G.saveSettings(false)">SAVE</button>
+      <button class="btn wide" onclick="G.saveSettings(false)">SAVE</button>
     </div>
     <div class="win"><span class="win-title">Dev Mode</span>
       <div class="muted" style="font-size:17px;margin-bottom:6px">for testing features without living an entire second life</div>
