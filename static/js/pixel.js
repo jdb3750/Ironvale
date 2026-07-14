@@ -126,7 +126,7 @@ const SPRITES = {
       '................',
     ],
   },
-  krank: { // the Krankwerk — brass gumball contraption
+  crank: { // the Crankwerk — brass gumball contraption
     p: { b: '#8a6a28', B: '#c9a24b', G: '#22303a', r: '#c04040', u: '#6aa0c8', y: '#e0c060', k: '#14141e' },
     r: [
       '................',
@@ -421,6 +421,17 @@ Object.assign(SPRITES, {
   icon_coin:  { p: { g: '#c9a24b', G: '#f0d080', k: '#6b5426' }, r: ['..gggg..', '.gGGGGg.', 'gGGkkGGg', 'gGkGGkGg', 'gGkGGkGg', 'gGGkkGGg', '.gGGGGg.', '..gggg..'] },
   icon_token: { p: { b: '#4a7a9a', B: '#7ab0d0', k: '#2a4a5e' }, r: ['..bbbb..', '.bBBBBb.', 'bBkkkkBb', 'bBkBBkBb', 'bBkBBkBb', 'bBkkkkBb', '.bBBBBb.', '..bbbb..'] },
   icon_flame: { p: { r: '#e05020', o: '#f08030', y: '#f8d060', w: '#fff8d0' }, r: ['....r.....', '...rr..r..', '..rrr.rr..', '.rrorrrr..', '.rooorrr..', 'rrooyoorr.', 'rooyyyoor.', 'royywyyor.', '.royyyyor.', '..rooor...'] },
+
+  /* ---- dev-mode time-of-day toggle ---- */
+  icon_tod_sun: { p: { o: '#e08020', y: '#ffd860' }, r: [
+    '..y..y..', '........', '.oyyyyo.', 'yoyyyyoy', 'yoyyyyoy', '.oyyyyo.', '........', '..y..y..',
+  ]},
+  icon_tod_sunset: { p: { o: '#e08020', y: '#ffd860', k: '#3a2818' }, r: [
+    '........', '..oooo..', '.oyyyyo.', 'oyyyyyyo', 'kkkkkkkk', '.o.oo.o.', '..o..o..', '........',
+  ]},
+  icon_tod_moon: { p: { w: '#9fb8d8', W: '#e0ecf8' }, r: [
+    '...ww...', '..wWWw..', '.wWW.W..', '.wWW..w.', '.wWW..w.', '.wWW.W..', '..wWWw..', '...ww...',
+  ]},
   pack: { p: { p: '#7a4a9a', P: '#9a62c0', y: '#e0c060', k: '#2a1a3a', w: '#e8e0d0', z: '#5a3a7a' }, r: [
     'zzzzzzzzzzzz', 'zpppppppppzz', 'pPPPPPPPPPPp', 'pPyPPPPPPyPp', 'pPPPPPPPPPPp',
     'pPPkkkkkkPPp', 'pPPkwwwwkPPp', 'pPPkwkkwkPPp', 'pPPkwkkwkPPp', 'pPPkwwwwkPPp',
@@ -924,16 +935,37 @@ function spriteTag(key, px) {
    frame; typewrite() flaps between them while a line is being typed. This
    is purely ADDITIVE — an NPC with no entry here transparently falls back
    to their existing char-map SPRITES entry via spriteTag, so drawing one
-   NPC's art never requires touching any other NPC's rendering. Source
-   Pixelorama projects (.pxo) live in assets/<npc>/; only the PNG exports
-   are copied into static/art/<npc>/ for the browser to fetch. */
+   NPC's art never requires touching any other NPC's rendering.
+
+   Art file convention (applies to portraits, building art below, and the
+   town tiles): static/art/ splits into three buckets —
+     npcs/<subject>/  a character: portrait[_open_mouth].png, and if they
+                       have a house, <subject>_house_<variant>.png (a
+                       "house" is wherever that NPC resides, even when the
+                       in-game building label doesn't use their name — e.g.
+                       Wick's is "The Ledger House", Hesk's the Undercroft)
+     poi/<subject>/    a resident-less landmark: <subject>_<variant>.png,
+                       no _house_ infix since it isn't one (Crankwerk,
+                       Menagerie, Colosseum)
+     town/             environment tiles, not a "subject" at all
+   Every PNG is named <stem>[_<variant>].png with day/sunset/night (when
+   applicable) always a trailing suffix — never a prefix — so one
+   subject's whole file family sorts together. No dimensions in filenames
+   (they drift when art is redrawn at a new resolution; the code is the
+   source of truth for scale). Everything else — Pixelorama/Aseprite
+   sources (.pxo/.aseprite), palette swatches, character templates,
+   superseded drafts — lives in assets/<subject>/ instead, mirroring the
+   same subject folders, and is never served. */
 const PORTRAIT_ART = {
-  fenn:      { closed: 'art/old_fenn/old_fenn_portrait.png', open: 'art/old_fenn/old_fenn_portrait_open_mouth.png', size: 32 },
-  grunhilda: { closed: 'art/grunhilda/grunhilda_portrait.png', open: 'art/grunhilda/grunhilda_portrait_open_mouth.png', size: 32 },
-  bram:      { closed: 'art/ser_bram/ser_bram_portrait.png', open: 'art/ser_bram/ser_bram_portrait_open_mouth.png', size: 32 },
-  elowen:    { closed: 'art/sage_elowen/sage_elowen_portrait.png', open: 'art/sage_elowen/sage_elowen_portrait_open_mouth.png', size: 32 },
-  maud:      { closed: 'art/maud/maud_portrait.png', open: 'art/maud/maud_portrait_open_mouth.png', size: 32 },
-  wick:      { closed: 'art/wick/wick_portrait.png', open: 'art/wick/wick_portrait_open_mouth.png', size: 32 },
+  fenn:      { closed: 'art/npcs/old_fenn/old_fenn_portrait.png', open: 'art/npcs/old_fenn/old_fenn_portrait_open_mouth.png', size: 32 },
+  grunhilda: { closed: 'art/npcs/grunhilda/grunhilda_portrait.png', open: 'art/npcs/grunhilda/grunhilda_portrait_open_mouth.png', size: 32 },
+  bram:      { closed: 'art/npcs/ser_bram/ser_bram_portrait.png', open: 'art/npcs/ser_bram/ser_bram_portrait_open_mouth.png', size: 32 },
+  elowen:    { closed: 'art/npcs/sage_elowen/sage_elowen_portrait.png', open: 'art/npcs/sage_elowen/sage_elowen_portrait_open_mouth.png', size: 32 },
+  maud:      { closed: 'art/npcs/maud/maud_portrait.png', open: 'art/npcs/maud/maud_portrait_open_mouth.png', size: 32 },
+  wick:      { closed: 'art/npcs/wick/wick_portrait.png', open: 'art/npcs/wick/wick_portrait_open_mouth.png', size: 32 },
+  // no open-mouth frame yet — both point at the same still so a mid-typewrite
+  // mouth-flap can't 404; swap `open` in once a second frame exists.
+  hesk:      { closed: 'art/npcs/hesk/hesk_portrait.png', open: 'art/npcs/hesk/hesk_portrait.png', size: 32 },
 };
 
 function portraitTag(key, px) {
@@ -944,6 +976,64 @@ function portraitTag(key, px) {
   return `<img class="portrait-art" data-portrait="${key}" data-mouth="closed" alt=""
     src="/static/${art.closed}" width="${size}" height="${size}"
     style="width:${size}px;height:${size}px;image-rendering:pixelated">`;
+}
+
+/* ---- hand-drawn building art (served from static/art/) ----
+   Same additive-fallback pattern as portraits: a building with no entry
+   here (or no variant for the current time-of-day) transparently falls
+   back to its char-map SPRITES entry via spriteTag() in bld(). Rendered
+   at a FIXED 3x scale to match the sky/ground tiles' pixel density (see
+   .town-scene in style.css) — the px argument callers pass to bld() only
+   sizes the char-map fallback, never real art, so drawing one building
+   never requires recalculating anyone else's placement math. day is
+   required per entry; sunset/night are optional and fall back to day
+   until drawn. */
+/* House-art naming convention: static/art/<folder>/<folder>_house_day.png,
+   <folder>_house_sunset.png, <folder>_house_night.png — all 40x34. Variant
+   is always a trailing suffix (matching <folder>_portrait[_open_mouth].png
+   above) so one subject's whole file family sorts together instead of
+   scattering across day/night/sunset-prefixed neighbors. */
+/* bucket = 'npcs' (an NPC's house — subject folder holds portrait + house_*)
+   or 'poi' (a resident-less landmark — subject folder holds only day/sunset/
+   night, no _house_ infix since it isn't one). */
+function buildingArt(bucket, subject, asset, w = 40, h = 34) {
+  const stem = asset ? `${subject}_${asset}` : subject;
+  return {
+    day: `art/${bucket}/${subject}/${stem}_day.png`,
+    sunset: `art/${bucket}/${subject}/${stem}_sunset.png`,
+    night: `art/${bucket}/${subject}/${stem}_night.png`,
+    w, h,
+  };
+}
+const houseArt = (subject, w, h) => buildingArt('npcs', subject, 'house', w, h);
+const poiArt = (subject, w, h) => buildingArt('poi', subject, null, w, h);
+
+const BUILDING_ART = {
+  bld_waystone: houseArt('old_fenn'),
+  bld_forge: houseArt('grunhilda'),
+  bld_keep: houseArt('ser_bram'),
+  bld_willow: houseArt('sage_elowen'),
+  bld_ledger: houseArt('wick'),
+  bld_hall: houseArt('maud'),
+  bld_gate: houseArt('hesk'),
+  crank: poiArt('crankwerk'),
+  bld_colosseum: poiArt('colosseum'),
+  bld_ranch: poiArt('menagerie'),
+};
+
+function buildingTag(key, tod) {
+  const art = BUILDING_ART[key];
+  const src = art && (art[tod] || art.day);
+  if (!src) return null;
+  const w = art.w * 3, h = art.h * 3;
+  // houseArt() always guesses all three variant paths from the naming
+  // convention, whether those files exist yet or not (day usually lands
+  // before sunset/night) — onerror swaps to the day art instead of
+  // showing a broken image if a guessed variant 404s.
+  const dayFallback = `/static/${art.day}`;
+  return `<img class="bld-art" src="/static/${src}" width="${w}" height="${h}"
+    style="width:${w}px;height:${h}px;image-rendering:pixelated" alt=""
+    onerror="if(this.src!=='${dayFallback}'){this.onerror=null;this.src='${dayFallback}';}">`;
 }
 
 /* the one portrait rendered on the current screen, if it has hand-drawn art

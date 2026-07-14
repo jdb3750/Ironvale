@@ -1,31 +1,31 @@
-/* The Krankwerk gacha machine and the Settings scroll. */
-/* ================= KRANKWERK (pull the lever!) ================= */
+/* The Crankwerk gacha machine and the Settings scroll. */
+/* ================= CRANKWERK (pull the lever!) ================= */
 
-let krankPay = null;
-RESETS.push(() => { krankPay = null; });
+let crankPay = null;
+RESETS.push(() => { crankPay = null; });
 
-SCREENS.krank = function () {
+SCREENS.crank = function () {
   const c = S.state.character;
-  if (krankPay === null) krankPay = c.tokens > 0 ? 'token' : 'gold';
-  if (krankPay === 'token' && c.tokens < 1) krankPay = 'gold';
-  const canPay = krankPay === 'token' ? c.tokens >= 1 : c.gold >= 35;
+  if (crankPay === null) crankPay = c.tokens > 0 ? 'token' : 'gold';
+  if (crankPay === 'token' && c.tokens < 1) crankPay = 'gold';
+  const canPay = crankPay === 'token' ? c.tokens >= 1 : c.gold >= 35;
   $app().innerHTML = shell(`
-    <div class="win krank">
-      <div class="pixel-title" style="font-size:20px;margin-bottom:8px">THE KRANKWERK</div>
+    <div class="win crank">
+      <div class="pixel-title" style="font-size:20px;margin-bottom:8px">THE CRANKWERK</div>
       <div class="muted">It vends delights for the Menagerie: hats, finery, whole packs of creatures.<br>
         <b style="color:var(--gold-bright)">Grip the lever. Pull it all the way down.</b></div>
-      <div class="krank-stage">
-        <div class="krank-machine" id="krank-m" style="margin:14px 0">${spriteTag('krank', 176)}<div class="capsule" id="krank-cap"></div></div>
+      <div class="crank-stage">
+        <div class="crank-machine" id="crank-m" style="margin:14px 0">${spriteTag('crank', 176)}<div class="capsule" id="crank-cap"></div></div>
         <div class="lever snap" id="lever">
           <div class="track"></div>
           <div class="knob" id="lever-knob">PULL</div>
         </div>
       </div>
-      <div class="krank-pay" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn small ${krankPay === 'token' ? 'pay-active' : ''}" style="min-width:0" ${c.tokens < 1 ? 'disabled' : ''}
-          onclick="krankPay='token';render()">${spriteTag('icon_token', 14)} TOKEN (${c.tokens})</button>
-        <button class="btn small ${krankPay === 'gold' ? 'pay-active' : ''}" style="min-width:0" ${c.gold < 35 ? 'disabled' : ''}
-          onclick="krankPay='gold';render()">${spriteTag('icon_coin', 14)} 35 GOLD</button>
+      <div class="crank-pay" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn small ${crankPay === 'token' ? 'pay-active' : ''}" style="min-width:0" ${c.tokens < 1 ? 'disabled' : ''}
+          onclick="crankPay='token';render()">${spriteTag('icon_token', 14)} TOKEN (${c.tokens})</button>
+        <button class="btn small ${crankPay === 'gold' ? 'pay-active' : ''}" style="min-width:0" ${c.gold < 35 ? 'disabled' : ''}
+          onclick="crankPay='gold';render()">${spriteTag('icon_coin', 14)} 35 GOLD</button>
       </div>
       ${!canPay ? '<div class="muted" style="margin-top:6px">the machine wants a token or 35 gold</div>' : ''}
       <div class="muted" style="margin-top:10px;font-size:17px">
@@ -65,7 +65,7 @@ function initLever(enabled) {
     if (prog >= 0.92) {
       fired = true;
       setKnob(1);
-      G.crank(krankPay === 'token');
+      G.crank(crankPay === 'token');
     } else {
       prog = 0; setKnob(0);
     }
@@ -91,16 +91,16 @@ function sparkleBurst(x, y, color, n = 14) {
 }
 
 G.crank = async (useToken) => {
-  const m = document.getElementById('krank-m');
+  const m = document.getElementById('crank-m');
   let r;
   try {
     r = await api('/gacha', { method: 'POST', body: { use_token: useToken } });
   } catch (e) { render(); return; }
 
-  m.classList.add('krank-shake');
+  m.classList.add('crank-shake');
   SFX.crank();
   setTimeout(() => {
-    const cap = document.getElementById('krank-cap');
+    const cap = document.getElementById('crank-cap');
     if (cap) cap.classList.add('drop');
     SFX.coin();
   }, 900);

@@ -194,12 +194,6 @@ h1, h2, h3 { font-weight: normal; }
 .hpbar > div { height: 100%; background: linear-gradient(0deg, #8c2020, #c85050); transition: width 0.25s; }
 .hpbar span { position: absolute; inset: 0; text-align: center; font-size: 15px; line-height: 14px; color: #fff; text-shadow: 1px 1px 0 #000; }
 
-/* ---- town grid ---- */
-.town-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
 .loc {
   background: var(--panel);
   border: 2px solid #5a4a26;
@@ -370,12 +364,10 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 .equip-slot { flex: 1; min-width: 120px; border: 2px dashed #4a3d20; padding: 8px; text-align: center; }
 .equip-slot .slot-label { color: var(--dim); font-size: 15px; text-transform: uppercase; }
 
-/* ---- krankwerk ---- */
-.krank { text-align: center; }
-.krank-machine { display: inline-block; position: relative; }
-.krank-machine canvas { image-rendering: pixelated; }
-.krank-crank { transition: transform 0.5s cubic-bezier(0.5, 0, 0.5, 1.5); transform-origin: center; display: inline-block; }
-.cranking .krank-crank { transform: rotate(90deg); }
+/* ---- crankwerk ---- */
+.crank { text-align: center; }
+.crank-machine { display: inline-block; position: relative; }
+.crank-machine canvas { image-rendering: pixelated; }
 
 /* ---- dungeon ---- */
 .dmap { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-width: 420px; margin: 0 auto; }
@@ -440,27 +432,82 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 
 /* ---- town scene ---- */
+/* Sky + ground: Joe's hand-drawn tiles, both scaled 3x so their native
+   pixels stay the same size as each other (matching zoom = a clean seam
+   at the horizon) while reading finer than the 5x buildings on top
+   (background = depth). Sky is 96x64 native -> 288x192 display; ground is
+   64x64 native -> 192x192 display (ground art was redrawn from 32x32 to
+   64x64 to read less busy — keep this in sync with the source file's
+   actual canvas size, not just its filename). Sky repeats along the top
+   edge only — its mountain-ridge silhouette IS the horizon; ground tiles
+   fill everything below it. background-color is the no-image fallback.
+   Time-of-day tracks the player's real wall clock (town.js currentTOD());
+   dev mode can pin it to a specific state via G.cycleTOD() to preview
+   art. .tod-day/.tod-sunset/.tod-night each just swap which pair of
+   tiles loads — no other behavior differs between them. */
 .town-scene {
+  position: relative;
   border: 2px solid #4a3d20;
-  background:
-    radial-gradient(1px 1px at 12% 18%, #d8cfa8 50%, transparent 51%),
-    radial-gradient(1px 1px at 38% 8%, #d8cfa8 50%, transparent 51%),
-    radial-gradient(1px 1px at 67% 14%, #8a8fa5 50%, transparent 51%),
-    radial-gradient(1px 1px at 88% 22%, #d8cfa8 50%, transparent 51%),
-    radial-gradient(2px 2px at 78% 6%, #f0d080 50%, transparent 51%),
-    linear-gradient(#10101f 0%, #161628 40%, #232f20 41%, #2a3a26 100%);
-  padding: 18px 6px 10px;
+  background-color: #1e2a1c;
+  background-repeat: repeat-x, repeat;
+  background-position: top left, top left;
+  background-size: 288px 192px, 192px 192px;
+  image-rendering: pixelated;
+  /* top padding puts the first row's buildings right at the sky/ground
+     seam. Base calc: 192px sky height - 100px building sprite height =
+     92px; corrected +10.5px (3.5 native art pixels x 3x scale) per
+     measured offset against the actual ridge line. */
+  padding: 100.5px 6px 10px;
   margin: 10px 4px;
 }
+.town-scene.tod-day {
+  background-image:
+    url('/static/art/town/sky_mountains_day.png'),
+    url('/static/art/town/ground_day.png');
+}
+.town-scene.tod-sunset {
+  background-image:
+    url('/static/art/town/sky_mountains_sunset.png'),
+    url('/static/art/town/ground_sunset.png');
+}
+.town-scene.tod-night {
+  background-image:
+    url('/static/art/town/sky_mountains_night.png'),
+    url('/static/art/town/ground_night.png');
+}
+.tod-toggle {
+  position: absolute; top: 4px; left: 4px; z-index: 5;
+  display: flex; padding: 3px;
+  background: rgba(10,10,18,0.6); border: 1px solid rgba(240,208,128,0.5);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.tod-toggle:hover { background: rgba(10,10,18,0.85); border-color: var(--gold-bright); }
 .town-scene .trow { display: flex; justify-content: space-evenly; align-items: flex-end; flex-wrap: wrap; }
+/* Below 480px a natural flex-wrap breaks unevenly (3+1, 2+1) as buildings
+   run out of room one at a time. Switch to a deterministic 2-column grid
+   instead: even-count rows become clean pairs; an odd trailing building
+   spans both columns and centers underneath the pair above it. */
+@media (max-width: 480px) {
+  .town-scene .trow {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    justify-items: center;
+    align-items: end;
+    gap: 20px 4px;
+  }
+  .town-scene .trow > .bld:nth-child(odd):last-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}
 .road-h {
   height: 22px; margin: 4px 10px;
   background: repeating-linear-gradient(90deg, #4a3a24 0 14px, #423320 14px 28px);
   border-top: 2px solid #2c2214; border-bottom: 2px solid #2c2214;
 }
 .bld { text-align: center; cursor: pointer; padding: 2px 4px; position: relative; -webkit-tap-highlight-color: transparent; }
-.bld canvas { display: block; margin: 0 auto; }
-.bld:hover canvas { filter: brightness(1.3); }
+.bld canvas, .bld .bld-art { display: block; margin: 0 auto; }
+.bld:hover canvas, .bld:hover .bld-art { filter: brightness(1.3); }
 .bld .plate {
   font-size: 15px; line-height: 1.1; color: var(--gold-bright);
   background: rgba(8,8,14,0.8); border: 1px solid #4a3d20;
@@ -567,7 +614,7 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 .insight.good { border-color: var(--green); }
 .insight.warn { border-color: var(--red); }
 
-/* ---- krankwerk juice ---- */
+/* ---- crankwerk juice ---- */
 @keyframes kshake {
   0%, 100% { transform: translate(0,0) rotate(0); }
   20% { transform: translate(-4px,1px) rotate(-2deg); }
@@ -575,7 +622,7 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
   60% { transform: translate(-3px,2px) rotate(-1.5deg); }
   80% { transform: translate(3px,-2px) rotate(1.5deg); }
 }
-.krank-shake { animation: kshake 0.4s linear 3; }
+.crank-shake { animation: kshake 0.4s linear 3; }
 .capsule {
   width: 26px; height: 26px; border-radius: 50%;
   background: linear-gradient(180deg, #e8e0d0 0 50%, #c04040 50% 100%);
@@ -618,8 +665,8 @@ body.megashake #app { animation: bodyshake 0.35s linear 2; }
 
 @keyframes flamewob { from { transform: scale(1); } to { transform: scale(1.12) translateY(-1px); } }
 
-/* ---- krankwerk lever ---- */
-.krank-stage { display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* ---- crankwerk lever ---- */
+.crank-stage { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .lever { width: 74px; height: 190px; position: relative; touch-action: none; cursor: grab; user-select: none; }
 .lever:active { cursor: grabbing; }
 .lever .track { position: absolute; left: 32px; top: 8px; width: 10px; height: 168px; background: #14141e; border: 2px solid #4a3d20; }
@@ -632,7 +679,7 @@ body.megashake #app { animation: bodyshake 0.35s linear 2; }
   color: #fff; font-size: 14px; letter-spacing: 1px;
 }
 .lever.snap .knob { transition: top 0.25s cubic-bezier(.3,1.6,.6,1); }
-.krank-pay .btn.pay-active { background: var(--gold); color: var(--bg); }
+.crank-pay .btn.pay-active { background: var(--gold); color: var(--bg); }
 
 /* ---- monster ranch ---- */
 .ranch-box { position: relative; }
@@ -994,7 +1041,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 @media (max-width: 560px) {
   body { font-size: 19px; }
   #app { padding: 6px 6px 60px; }
-  .town-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .npc-head { flex-direction: column; align-items: center; }
   .hall-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hall-nav-buttons .btn {
@@ -1008,7 +1054,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   .dpad { grid-template-columns: repeat(3, 76px); }
   .topbar .game-title { font-size: 18px; }
   .topbar .btn.small { min-width: 0; }
-  .bld canvas { width: 84px !important; height: 70px !important; }
   .calday { min-height: 44px; }
   .fenn-bubble-wrap { width: 180px; }
   .fenn-bubble { font-size: 13px; }

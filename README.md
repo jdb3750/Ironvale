@@ -16,7 +16,7 @@ Your real workouts are the quests. Your sweat is the XP.*
 3. **Turn in the quest** for XP, gold, Vigor, stat gains (STR/END/CON/SPR), brass
    tokens, and item drops — with a proper fanfare.
 4. **Spend it**: buy gear and potions at **Pip's Provisions**, or feed a token to
-   **the Krankwerk** (a quarter-crank gumball machine) for a random item, up to
+   **the Crankwerk** (a quarter-crank gumball machine) for a random item, up to
    legendary rarity.
 5. **Descend into the Undercroft** — a roguelike dungeon crawler. Entry costs
    **Vigor, which only comes from completed workouts**. Fight monsters, loot
@@ -66,7 +66,7 @@ personality ("suspicious of birds", "convinced it is a dog"). Get them by
 **subduing** Undercroft dwellers in combat; bosses yield rares. The herd
 wanders the pen Chao-garden style: grazing, sleeping, flirting. Tap one to
 meet it, **grab and drag one to relocate it** (they hate this and will tell
-you), set one free when the pen gets political. The **Krankwerk** vends
+you), set one free when the pen gets political. The **Crankwerk** vends
 hats and pen decorations — select a hat from the hat box, tap a monster,
 and it wears it forever.
 
