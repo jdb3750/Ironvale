@@ -34,7 +34,7 @@ SCREENS.ranch = async function () {
     </div>
     ${d.monsters.length ? `<div class="win"><span class="win-title">The Herd</span>
       <div class="mon-grid">${d.monsters.map(m => `
-        <div class="mon-tile ${m.boss ? 'boss' : ''}" data-mid="${m.id}" onclick="G.monLens(${m.id})">
+        <div class="mon-tile ${m.boss ? 'boss' : 'r-' + m.rarity}" data-mid="${m.id}" onclick="G.monLens(${m.id})">
           <div style="display:flex;justify-content:center">${critterTag(m, 48)}</div>
           <div class="mn r-${m.rarity}">${esc(m.name)}${S.state.buddy && S.state.buddy.id === m.id ? ' <span style="color:#e05070">&#9829;</span>' : ''}</div>
         </div>`).join('')}</div>

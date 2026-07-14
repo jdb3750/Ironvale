@@ -719,8 +719,12 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .mon-card { text-align: center; }
 .mon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .mon-tile { border: 2px solid #3a3450; background: var(--panel2); padding: 6px 4px; text-align: center; cursor: pointer; }
-.mon-tile:hover { border-color: var(--gold); }
 .mon-tile .mn { font-size: 16px; }
+.mon-tile.r-common { border-color: var(--rarity-common); }
+.mon-tile.r-uncommon { border-color: var(--rarity-uncommon); }
+.mon-tile.r-rare { border-color: var(--rarity-rare); }
+.mon-tile.r-legendary { border-color: var(--rarity-legendary); box-shadow: 0 0 10px rgba(224,160,48,0.35); }
+.mon-tile:hover { border-color: var(--gold); }
 
 /* ---- in-pen hat interface ---- */
 .pen-ui { position: absolute; top: 8px; right: 8px; text-align: right; }
