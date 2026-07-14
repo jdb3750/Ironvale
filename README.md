@@ -142,6 +142,23 @@ beyond your LAN):
 APP_PASSWORD=somesecret docker compose up -d --build
 ```
 
+If you do not want to clone the project first, build directly from the remote
+`main` branch and keep saves in a named Docker volume:
+
+```sh
+docker build -t ironvale 'https://codeberg.org/bonez/Ironvale.git#main'
+docker run -d \
+  --name ironvale \
+  --restart unless-stopped \
+  -p 8321:8321 \
+  -v ironvale-data:/data \
+  -e APP_PASSWORD="${APP_PASSWORD:-}" \
+  ironvale
+```
+
+Rebuild the image and recreate the container when you want to pull a newer
+version from `main`.
+
 ### Bare Python
 
 ```sh
