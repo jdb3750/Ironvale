@@ -133,7 +133,8 @@ static/                  Frontend (script tags, load order matters — see index
   js/town.js    Town hub, live time-of-day scene, Fenn/willow bubbles, and Siege banner.
   js/giver.js   Giver/dialogue, quest, doctrine, logger, and Scrivener screens.
   js/hall.js    Hall stats, calendar, Tapestry, Road, Mantel, Compendium, Almanac.
-  js/misc.js    Crankwerk and settings/dev screens.
+  js/misc.js    Crankwerk and settings screens.
+  js/dev-console.js Dev-mode command console and tab completion.
   js/ranch.js   Menagerie simulation (RAF loop): wander/graze/sleep/fetch, drag creatures.
   js/colosseum.js The Colosseum: bet UI + three canvas mini-animations (fight/race/pageant).
   js/dungeon.js Undercroft UI: gate, crawler map, combat, Pip shop, relic panel.

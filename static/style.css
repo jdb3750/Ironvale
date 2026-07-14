@@ -427,6 +427,36 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 }
 .toast.err { border-color: var(--red); color: var(--red); }
 
+.dev-console {
+  max-width: 620px !important;
+  background: #09090f;
+  border-color: var(--green);
+}
+.dev-console > .win-title { color: var(--green); }
+.dev-console-output {
+  min-height: 220px; max-height: 48vh; overflow-y: auto;
+  background: #000; border: 2px solid #3a3450; padding: 10px;
+  font-size: 18px; line-height: 1.25; text-align: left;
+}
+.dev-console-line { white-space: pre-wrap; overflow-wrap: anywhere; }
+.dev-console-line.title { color: var(--green); }
+.dev-console-line.muted { color: var(--dim); }
+.dev-console-line.command { color: var(--gold-bright); }
+.dev-console-line.success { color: var(--green); }
+.dev-console-line.error { color: var(--red); }
+.dev-console-prompt {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
+  color: var(--green); font-size: 22px;
+}
+.dev-console-prompt input {
+  width: auto; min-width: 0; flex: 1; color: var(--green); border-color: var(--green);
+}
+.dev-console-suggestions {
+  min-height: 24px; margin-top: 5px; color: var(--blue);
+  font-size: 17px; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.dev-console-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+
 .backrow { margin: 6px 4px; }
 .muted { color: var(--dim); }
 .center { text-align: center; }

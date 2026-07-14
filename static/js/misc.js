@@ -180,18 +180,7 @@ SCREENS.settings = function () {
       <div class="muted" style="font-size:17px;margin-bottom:6px">for testing features without living an entire second life</div>
       <button class="btn ${s.dev_mode ? 'danger' : ''}" onclick="G.toggleDev(${s.dev_mode ? 'false' : 'true'})">
         ${s.dev_mode ? 'DISABLE DEV MODE' : 'ENABLE DEV MODE'}</button>
-      ${s.dev_mode ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-        <button class="btn small" style="min-width:0" onclick="G.dev('gold')">+1000 gold</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('tokens')">+10 tokens</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('vigor')">fill vigor</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('packs')">+3 monster packs</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('hats')">hat sampler</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('seed')">seed 60d of fake training</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('unguided_run')">seed an unguided run (Fenn's bubble)</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('almanac_bang')">relight the Hall's almanac badge</button>
-        <button class="btn small" style="min-width:0" onclick="G.dev('bad_recovery')">seed bad recovery (Elowen's writ — fresh profile only)</button>
-        <button class="btn small danger" style="min-width:0" onclick="G.dev('wipe_dev')">wipe fake training</button>
-      </div>` : ''}
+      ${s.dev_mode ? '<button class="btn wide" style="margin-top:10px" onclick="G.openDevConsole()">OPEN DEV CONSOLE</button>' : ''}
     </div>
   `);
 };
@@ -238,9 +227,7 @@ G.toggleDev = async (on) => {
 };
 
 G.dev = async (action) => {
-  await api('/dev', { method: 'POST', body: { action } });
-  await refreshState();
-  SFX.coin();
+  await applyDevAction(action);
   toast('Done: ' + action);
   render();
 };
