@@ -497,16 +497,18 @@ def almanac_payload(month=None):
     months = almanac_months()
     if not months:
         return {"months": [], "month": None, "latest": None}
-    if month not in months:
-        month = months[-1]
-    idx = months.index(month)
-    facts = _month_facts(month)
+    if month is None or month not in months:
+        selected_month = months[-1]
+    else:
+        selected_month = month
+    idx = months.index(selected_month)
+    facts = _month_facts(selected_month)
     prev = _month_facts(months[idx - 1]) if idx > 0 else None
     top_cats = sorted(facts["cat_secs"].items(), key=lambda kv: -kv[1])[:3]
     return {
-        "months": months, "month": month, "latest": months[-1],
-        "label": f"{MONTH_NAMES[int(month[5:7]) - 1]} {month[:4]}",
-        "narration": _maud_prose(month, facts, prev),
+        "months": months, "month": selected_month, "latest": months[-1],
+        "label": f"{MONTH_NAMES[int(selected_month[5:7]) - 1]} {selected_month[:4]}",
+        "narration": _maud_prose(selected_month, facts, prev),
         "figures": {**{k: v for k, v in facts.items() if k != "cat_secs"},
                     "top_cats": [[c, round(s / 60)] for c, s in top_cats]},
     }

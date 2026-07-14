@@ -1,0 +1,7 @@
+{
+  "pythonVersion": "3.9",
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["app"],
+  "exclude": [".venv", "data"]
+}

@@ -32,7 +32,7 @@ def crank(use_token):
     save_char(c)
     item_id = items.gacha_roll(random.Random())
     db.inv_add(item_id)
-    it = items.get(item_id)
+    it = items.require_item(item_id)
     db.log_event(now_iso(), "gacha", f"The Crankwerk dispensed: {it['name']} ({it['rarity']}).")
     return it
 

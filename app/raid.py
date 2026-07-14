@@ -258,7 +258,7 @@ def claim(slug):
     game.save_char(c)
     db.inv_add(trophy)
     db.inv_add("monster_pack")
-    it = items.get(trophy)
+    it = items.require_item(trophy)
     db.log_event(game.now_iso(), "siege",
                  f"Spoils of the siege claimed: {it['name']}, a monster pack, and 2 brass tokens.")
     captured = None

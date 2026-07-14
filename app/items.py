@@ -89,6 +89,13 @@ def trinket(tid):
     return dict(id=tid, **t) if t else None
 
 
+def require_trinket(tid):
+    result = trinket(tid)
+    if result is None:
+        raise ValueError(f"Unknown trinket ID: {tid}")
+    return result
+
+
 def shop_stock():
     return [
         dict(id=k, **v)
@@ -111,3 +118,10 @@ def gacha_roll(rng: random.Random):
 def get(item_id):
     it = ITEMS.get(item_id)
     return dict(id=item_id, **it) if it else None
+
+
+def require_item(item_id):
+    result = get(item_id)
+    if result is None:
+        raise ValueError(f"Unknown item ID: {item_id}")
+    return result

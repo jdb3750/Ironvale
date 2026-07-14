@@ -341,7 +341,7 @@ def _on_kill(d, ps, rng, result):
     if rng.random() < droll:
         drop = rng.choice(CONSUMABLES)
         _run_item_add(d, drop)
-        d["log"].append(f"It was carrying: {items.get(drop)['name']}!")
+        d["log"].append(f"It was carrying: {items.require_item(drop)['name']}!")
     cap_chance = BOSS_CAPTURE_CHANCE if m["boss"] else MONSTER_CAPTURE_CHANCE + ps["luck"] * LUCK_CAPTURE_BONUS
     if rng.random() < cap_chance:
         mon = menagerie.capture(m["name"], d["floor"], boss=m["boss"])
@@ -417,12 +417,13 @@ def action(payload):
                 if r2 < 0.25:
                     drop = rng.choice(CONSUMABLES)
                     _run_item_add(d, drop)
-                    d["log"].append(f"Beneath the coins: {items.get(drop)['name']}!")
+                    d["log"].append(f"Beneath the coins: {items.require_item(drop)['name']}!")
                 elif r2 < 0.33 and len(d["trinkets"]) < 8:
                     tid = rng.choice([t_ for t_ in items.TRINKETS if t_ not in d["trinkets"]] or list(items.TRINKETS))
                     if tid not in d["trinkets"]:
                         d["trinkets"].append(tid)
-                        d["log"].append(f"A trinket glints: {items.trinket(tid)['name']} — {items.trinket(tid)['desc']}")
+                        trinket = items.require_trinket(tid)
+                        d["log"].append(f"A trinket glints: {trinket['name']} — {trinket['desc']}")
                 cell["cleared"] = True
             elif t == "trap":
                 dodge = rng.randint(1, 100) <= 25 + ps["luck"] * 3
@@ -541,21 +542,21 @@ def action(payload):
         d["loot_gold"] -= entry["price"]
         stock.remove(entry)
         if entry["kind"] == "trinket":
-            t = items.trinket(entry["id"])
+            t = items.require_trinket(entry["id"])
             if entry["id"] in d["trinkets"]:
                 d["loot_gold"] += entry["price"]
                 raise ValueError("You already carry that trinket.")
             d["trinkets"].append(entry["id"])
             d["log"].append(f"Bought {t['name']}. {t['desc']}")
         elif entry["kind"] == "gear":
-            it = items.get(entry["id"])
+            it = items.require_item(entry["id"])
             slot = it["type"]
             old = d["gear"].get(slot)
             d["gear"][slot] = entry["id"]
-            d["log"].append(f"Bought {it['name']}." + (f" Your {items.get(old)['name']} clatters to the floor, spent." if old else ""))
+            d["log"].append(f"Bought {it['name']}." + (f" Your {items.require_item(old)['name']} clatters to the floor, spent." if old else ""))
         else:
             _run_item_add(d, entry["id"])
-            d["log"].append(f"Bought {items.get(entry['id'])['name']}. Pip tips his cap.")
+            d["log"].append(f"Bought {items.require_item(entry['id'])['name']}. Pip tips his cap.")
 
     elif act == "take_relic":
         cell = _cell(d, d["px"], d["py"])
@@ -563,12 +564,12 @@ def action(payload):
             raise ValueError("No pedestal here, or it stands empty.")
         r = d["relic"]
         if r["kind"] == "gear":
-            it = items.get(r["id"])
+            it = items.require_item(r["id"])
             old = d["gear"].get(r["slot"])
             d["gear"][r["slot"]] = r["id"]
-            d["log"].append(f"You take the {it['name']} from the pedestal." + (f" The {items.get(old)['name']} crumbles to rust." if old else ""))
+            d["log"].append(f"You take the {it['name']} from the pedestal." + (f" The {items.require_item(old)['name']} crumbles to rust." if old else ""))
         else:
-            t = items.trinket(r["id"])
+            t = items.require_trinket(r["id"])
             if r["id"] not in d["trinkets"]:
                 d["trinkets"].append(r["id"])
             d["log"].append(f"You take the {t['name']}. {t['desc']}")

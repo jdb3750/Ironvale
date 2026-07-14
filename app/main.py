@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import os
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -305,7 +306,7 @@ def tapestry():
 
 
 @app.get("/api/almanac")
-def almanac(month: str = None):
+def almanac(month: Optional[str] = None):
     return records.almanac_payload(month)
 
 
@@ -665,7 +666,7 @@ async def gacha(request: Request):
 
 def _inventory():
     inv = db.inv_all()
-    return [{**items.get(iid), "qty": qty} for iid, qty in sorted(inv.items())]
+    return [{**items.require_item(iid), "qty": qty} for iid, qty in sorted(inv.items())]
 
 
 @app.get("/api/inventory")
