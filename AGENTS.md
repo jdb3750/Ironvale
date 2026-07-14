@@ -71,6 +71,26 @@ Golden rules:
 7. **After committing app code, redeploy**: restart uvicorn on 8321 so the
    running game picks it up.
 
+### Branch and release tag policy
+
+Use short-lived, purpose-prefixed branches for non-trivial work:
+
+- `feat/<scope>` - new player-facing behavior or content.
+- `fix/<scope>` - bug fixes and issue-sized corrections.
+- `refactor/<scope>` - structure-only changes with no intended behavior change.
+- `perf/<scope>` - performance or hot-path work.
+- `chore/<scope>` - docs, tooling, and repository maintenance.
+- `hotfix/<scope>` - urgent production corrections.
+
+Branch from `main`, keep the name specific to the work, merge only after
+verification, then delete the local and remote branch. Do not use issue numbers
+as the only name; `fix/menagerie-rarity` is useful, while `fix/40` is not.
+
+Release tags are annotated SemVer milestones, not tags for every commit or
+branch. Tag the exact verified `main` commit after deployment, and keep the tag
+equal to the root `VERSION` value: `v0.13.8`, `v0.14.0`, `v1.0.0`. Push release
+tags explicitly to `origin`; never move or reuse an existing release tag.
+
 ### Versioning
 
 Semantic versioning `MAJOR.MINOR.PATCH`. The single source of truth is the
