@@ -82,6 +82,12 @@ def all_monsters():
 
 
 def ensure_starter():
+    # Fast path: this runs on every /api/state poll to lazily backfill old
+    # saves, so once a profile has claimed its starter AND still has a buddy
+    # there is nothing to do — skip the lock, the monsters scan, and (the real
+    # cost) the redundant kv write. Only fall through when something's missing.
+    if db.kv_get("starter_claimed", False) and get_buddy():
+        return None
     with _starter_lock:
         existing = db.q(
             "SELECT * FROM monsters WHERE source=? ORDER BY id LIMIT 1", (STARTER_SOURCE,)

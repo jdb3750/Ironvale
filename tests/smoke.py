@@ -152,6 +152,22 @@ quests.claim_unguided_bonus("smoke-free-other")
 day = client.get("/api/day/" + free_climb[:10]).json()
 ok("unguided title appears as calendar quest", any(q_["title"] == climb["title"] for q_ in day["quests"]))
 
+# never pay twice: an activity linked to a completed quest must not also pay an
+# unguided bonus. Re-queue the just-claimed climb (now quest-linked) and confirm
+# both payout paths refuse it.
+gold_before = game.get_char()["gold"]
+db.kv_set("unguided_bonus_candidates", [{
+    "activity_id": "smoke-free-climb", "activity_name": "a climb", "activity_type": "RockClimbing",
+    "category": "climb", "title": "dupe", "minutes": 30, "date": iso(0)[:10],
+    "xp": 99, "gold": 99, "vigor": 2, "token": False, "drop": None,
+    "note": "n", "stat_gains": {"str": 1},
+}])
+dupe = client.post("/api/unguided/claim", json={"activity_id": "smoke-free-climb"})
+ok("double unguided claim refused", dupe.status_code == 400)
+ok("refused claim paid nothing", game.get_char()["gold"] == gold_before)
+quests._sweep_stale_unguided_candidates()  # stale-payout path must also refuse
+ok("double unguided sweep paid nothing", game.get_char()["gold"] == gold_before)
+
 # ---- dungeon: enter -> move -> retire --------------------------------------
 print("dungeon lifecycle:")
 c = game.get_char()
