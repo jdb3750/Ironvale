@@ -763,6 +763,29 @@ def grant_unguided_run_bonus():
         db.kv_set("unguided_bonus_candidates", candidates)
 
 
+def _record_unguided_completion(cand, rewards, completed_at):
+    import json
+
+    if db.q("SELECT 1 FROM quests WHERE kind='unguided_run' AND activity_id=?",
+            (cand["activity_id"],)).fetchone():
+        return
+    activity = db.q("SELECT start FROM activities WHERE id=?", (cand["activity_id"],)).fetchone()
+    accepted_at = activity["start"] if activity else completed_at
+    title = f"Unguided Run — {cand['activity_name'] or 'the road'}"
+    details = {
+        "unguided": True,
+        "activity_id": cand["activity_id"],
+        "target_minutes": cand["minutes"],
+    }
+    db.q(
+        "INSERT INTO quests (giver, kind, title, details, status, accepted_at, completed_at, "
+        "honor, activity_id, rewards) VALUES (?,?,?,?, 'done', ?, ?, 0, ?, ?)",
+        ("running", "unguided_run", title, json.dumps(details), accepted_at,
+         completed_at, cand["activity_id"], json.dumps(rewards)),
+    )
+    db.commit()
+
+
 def _apply_unguided_bonus(cand):
     """Actually mutate the character for a queued candidate — used both by a
     real click (claim_unguided_bonus) and by the silent day-passed sweep.
@@ -791,8 +814,10 @@ def _apply_unguided_bonus(cand):
         "streak": c["streak"]["count"], "streak_bonus": streak_bonus,
         "note": cand["note"],
     }
+    completed_at = now_iso()
+    _record_unguided_completion(cand, rewards, completed_at)
     db.log_event(
-        now_iso(), "unguided_run",
+        completed_at, "unguided_run",
         f"Fenn rewarded an unguided run ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
         + (f", LEVEL UP to {c['level']}!" if levels else ""),
     )
@@ -832,5 +857,4 @@ def claim_unguided_bonus(activity_id=None):
     cand = cands.pop(idx)
     db.kv_set("unguided_bonus_candidates", cands)
     return _apply_unguided_bonus(cand)
-
 

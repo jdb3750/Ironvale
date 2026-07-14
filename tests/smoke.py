@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, game  # noqa: E402
+from app import db, game, quests  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -130,6 +130,19 @@ r = client.post(f"/api/quests/{q[0]['id']}/complete", json={})
 ok("complete quest", r.status_code == 200 and "rewards" in r.json())
 ok("xp granted", client.get("/api/state").json()["character"]["xp"] > 0)
 
+free_run = (game.now() + timedelta(minutes=2)).isoformat(timespec="seconds")
+db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+     "VALUES ('smoke-free-run', 'intervals.icu', ?, 'Run', 'unplanned run', 1800, 7000)",
+     (free_run,))
+db.commit()
+quests.grant_unguided_run_bonus()
+pending = quests.unguided_pending()
+ok("unguided run queued", any(c["activity_id"] == "smoke-free-run" for c in pending))
+rewards = quests.claim_unguided_bonus("smoke-free-run")
+ok("unguided reward claimed", rewards["xp"] > 0)
+day = client.get("/api/day/" + free_run[:10]).json()
+ok("unguided run appears as calendar quest", any(q_["title"].startswith("Unguided Run") for q_ in day["quests"]))
+
 # ---- dungeon: enter -> move -> retire --------------------------------------
 print("dungeon lifecycle:")
 c = game.get_char()
@@ -139,6 +152,7 @@ r = client.post("/api/dungeon/enter")
 ok("dungeon enter", r.status_code == 200 and r.json()["theme"]["key"])
 d = r.json()["state"]
 moved = False
+dr = None
 for dr, (dx, dy) in {"n": (0, -1), "s": (0, 1), "e": (1, 0), "w": (-1, 0)}.items():
     if f"{d['px'] + dx},{d['py'] + dy}" in d["cells"]:
         r = client.post("/api/dungeon/action", json={"action": "move", "dir": dr})
@@ -151,6 +165,8 @@ if state_now and not state_now.get("combat"):
     here = state_now["cells"][f"{state_now['px']},{state_now['py']}"]
     if here["type"] not in ("entrance", "stairs"):
         # step back to the entrance cell we came from
+        if dr is None:
+            raise AssertionError("SMOKE FAIL: dungeon return direction")
         back = {"n": "s", "s": "n", "e": "w", "w": "e"}[dr]
         client.post("/api/dungeon/action", json={"action": "move", "dir": back})
     r = client.post("/api/dungeon/action", json={"action": "retire"})
