@@ -16,6 +16,9 @@ from . import db, items, game
 
 SIZE = 6
 ENTER_COST = 2
+MONSTER_CAPTURE_CHANCE = 0.05
+BOSS_CAPTURE_CHANCE = 0.20
+LUCK_CAPTURE_BONUS = 0.008
 
 MONSTERS = [
     # (min_floor, name, sprite, hp, atk, def, gold)
@@ -339,7 +342,7 @@ def _on_kill(d, ps, rng, result):
         drop = rng.choice(CONSUMABLES)
         _run_item_add(d, drop)
         d["log"].append(f"It was carrying: {items.get(drop)['name']}!")
-    cap_chance = 0.5 if m["boss"] else 0.14 + ps["luck"] * 0.015
+    cap_chance = BOSS_CAPTURE_CHANCE if m["boss"] else MONSTER_CAPTURE_CHANCE + ps["luck"] * LUCK_CAPTURE_BONUS
     if rng.random() < cap_chance:
         mon = menagerie.capture(m["name"], d["floor"], boss=m["boss"])
         d["log"].append(f"It yields rather than dies! '{mon['name']}' ({mon['rarity']}, {mon['personality']}) joins your menagerie.")

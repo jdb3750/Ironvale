@@ -99,10 +99,11 @@ def create(name, pin=None):
     # christen the new save with the profile's name
     token = db.set_profile(os.path.join(db.DATA_DIR, entry["file"]))
     try:
-        from . import game
+        from . import game, monsters
         c = game.get_char()
         c["name"] = name
         game.save_char(c)
+        monsters.ensure_starter()
     finally:
         db.reset_profile(token)
     return entry

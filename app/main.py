@@ -162,6 +162,7 @@ def state():
     s = game.get_settings()
     quests.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
     c = game.get_char()  # read once, after writ resolution (which can mutate it)
+    monsters.ensure_starter()
     actives = []
     for q_ in quests.active_quests():
         ok, note, _ = quests.quest_completable(q_)

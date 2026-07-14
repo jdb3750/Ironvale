@@ -28,7 +28,7 @@ ITEMS = {
     "clover":        {"name": "Lucky Clover",      "sprite": "clover", "type": "charm", "rarity": "uncommon",  "price": 80,  "luck": 4, "desc": "+4 LCK. Traps miss, crits land."},
     "second_wind":   {"name": "Amulet of Second Wind", "sprite": "amulet", "type": "charm", "rarity": "legendary", "price": None, "revive": True, "desc": "Cheat death once, then it shatters. Crankwerk only."},
     # ---- packs ----
-    "monster_pack":  {"name": "Monster Pack",      "sprite": "pack", "type": "pack", "rarity": "uncommon", "price": 100, "desc": "Five procedurally questionable creatures. Rip it open at the ranch."},
+    "monster_pack":  {"name": "Monster Pack",      "sprite": "pack", "type": "pack", "rarity": "uncommon", "price": 500, "desc": "Three procedurally questionable creatures. Rip it open at the ranch."},
     # ---- menagerie hats (Crankwerk cosmetics — droppable onto monsters) ----
     "hat_cone":    {"name": "Party Cone",        "sprite": "hat_cone",   "type": "hat", "rarity": "common",    "price": None, "desc": "A festive little cone. Mandatory fun."},
     "hat_bow":     {"name": "Crimson Bow",       "sprite": "hat_bow",    "type": "hat", "rarity": "common",    "price": None, "desc": "Ties the whole creature together."},

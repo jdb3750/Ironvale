@@ -7,11 +7,14 @@ are, frankly, upsetting. Sources: ripped packs, and creatures subdued in the
 Undercroft.
 """
 import random
+import threading
 
 from . import db, game
 
-PACK_COST = 100
+PACK_COST = 500
 PACK_SIZE = 3
+STARTER_SOURCE = "starter"
+_starter_lock = threading.Lock()
 
 RARITIES = [("common", 60), ("uncommon", 25), ("rare", 12), ("legendary", 3)]
 
@@ -78,6 +81,26 @@ def all_monsters():
     return [dict(r) for r in db.q("SELECT * FROM monsters ORDER BY id").fetchall()]
 
 
+def ensure_starter():
+    with _starter_lock:
+        existing = db.q(
+            "SELECT * FROM monsters WHERE source=? ORDER BY id LIMIT 1", (STARTER_SOURCE,)
+        ).fetchone()
+        if existing:
+            db.kv_set("starter_claimed", True)
+            if not get_buddy():
+                db.kv_set("buddy_id", existing["id"])
+            return dict(existing)
+        if db.kv_get("starter_claimed", False):
+            return None
+        starter = _gen(random.Random(), STARTER_SOURCE, rarity="common")
+        db.kv_set("starter_claimed", True)
+        if not get_buddy():
+            db.kv_set("buddy_id", starter["id"])
+        db.log_event(game.now_iso(), "menagerie", f"{starter['name']} was your first creature. It is small, strange, and yours.")
+        return starter
+
+
 SERIES_ADJ = ["Velvet", "Damp", "Hollow", "Gilded", "Whispering", "Feral", "Sunken",
               "Umbral", "Wandering", "Peculiar", "Mossy", "Thunderous", "Bashful",
               "Forgotten", "Iridescent", "Crumbling", "Midnight", "Wobbling"]
@@ -114,7 +137,7 @@ def current_series():
 
 
 def rip_pack():
-    """Consume a pack item if carried, else pay gold. Returns 3 fresh horrors
+    """Consume a pack item if carried, else pay gold. Returns three fresh horrors
     from this calendar month's series — a limited run that rotates monthly."""
     c = game.get_char()
     if db.inv_remove("monster_pack"):
