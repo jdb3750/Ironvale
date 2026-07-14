@@ -264,7 +264,6 @@ function animateRace(r, onDone) {
       const wi = r.winner;
       ctx.fillStyle = '#f0d060'; ctx.font = 'bold 16px monospace';
       ctx.fillText('WINNER', ticks[total - 1][wi] - 8, laneH * wi + laneH / 2 - 30);
-      SFX.fanfare();
       setTimeout(onDone, 700);
     }
   };
@@ -335,7 +334,6 @@ function animatePageant(r, onDone) {
     if (t < 1 || kisses.length || !crowned) {
       if (t >= 1 && !crowned) {
         crowned = true;
-        SFX.fanfare();
         setTimeout(onDone, 900);
       }
       if (crowned) {
