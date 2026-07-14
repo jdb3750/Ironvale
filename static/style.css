@@ -895,7 +895,8 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 
 /* collapsed (default): the beast breathing + a slim health bar, so the town shows */
 .siege-banner.collapsed { display: flex; align-items: center; gap: 10px; padding: 6px 12px; cursor: pointer; }
-.siege-banner.collapsed:hover { border-color: #a84028; }
+.siege-banner.collapsed:not(.won):hover { border-color: #a84028; }
+.siege-banner.collapsed.won:hover { border-color: #4e8244; }
 .siege-banner.collapsed .sg-mini { flex: 1; min-width: 0; }
 .siege-banner.collapsed .sg-mini-name { font-size: 15px; letter-spacing: 1px; margin-bottom: 3px; }
 .siege-banner.collapsed .sg-hp { height: 14px; }
@@ -918,7 +919,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #4a2828, 6px 6px 0 rgba(0,0,0,0.55);
 }
 .siege-banner.expanded.won { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #3e6234, 6px 6px 0 rgba(0,0,0,0.55); }
-.siege-banner.expanded:hover { border-color: #a84028; }
+.siege-banner.expanded:not(.won):hover { border-color: #a84028; }
 .siege-banner.expanded.won:hover { border-color: #4e8244; }
 
 /* boss column: sized to its content, stretched to match content's height by
@@ -983,6 +984,14 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 }
 .sg-trophy canvas { vertical-align: middle; }
 
+.siege-banner.expanded.won .sg-boss-col { border-right-color: #345030; }
+.siege-banner.expanded.won .sg-meta,
+.siege-banner.expanded.won .sg-trophy { border-color: #243a20; }
+.siege-banner.expanded.won .sg-desc {
+  border-left-color: #345030;
+  border-right-color: #345030;
+}
+
 /* full-width divider below the boss+content pair, above the war party.
    flex-basis:100% forces it onto its own fresh flex line. */
 .sg-divider { flex: 0 0 100%; display: flex; align-items: center; gap: 10px; margin: 12px 4px 8px; }
@@ -1007,6 +1016,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   margin: 0 0 6px; padding-bottom: 4px;
   border-bottom: 1px solid #4a2828;
 }
+.siege-banner.expanded.won .sg-board-title { border-bottom-color: #345030; }
 .sg-board { display: flex; flex-direction: column; gap: 2px; }
 .sg-leader-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; cursor: pointer; background: var(--panel2); }
 .sg-leader-row:hover { background: #241618; }
