@@ -116,10 +116,14 @@ be silently normalized during unrelated work.
 - Hall navigation uses four paired columns above `860px`, two columns at or
   below `860px`, and tighter button spacing/font size at `max-width: 359px`.
 - Layouts use flex and grid locally rather than a global column system.
-- Reusable groups wrap when space runs out. Pixel-art canvases use
-  `image-rendering: pixelated`.
-- The mobile rules reduce type slightly, tighten the app shell, use a two-column
-  town grid, and stack the generic NPC row vertically.
+- Reusable groups wrap when space runs out. Pixel-art canvases and served PNG
+  art use `image-rendering: pixelated`.
+- The Town is a layered scene: repeating sky and ground tiles sit behind fixed
+  3x building art, with the same building row structure preserved on mobile.
+  Below `480px`, rows use a deterministic two-column grid and center an odd
+  trailing building.
+- The mobile rules reduce type slightly, tighten the app shell, and stack the
+  generic NPC row vertically.
 
 ## 5. Components
 
@@ -153,15 +157,29 @@ be silently normalized during unrelated work.
 
 ### NPC Portrait And Dialogue (`.npc-head`, `.dialog`)
 
-- **Structure:** a flex `.npc-head` containing a pixelated portrait canvas and
-  a flexible `.dialog`; `.npc-name` labels the speaker. `.cursor-blink` adds
-  the typewriter cursor.
+- **Structure:** a flex `.npc-head` containing a pixelated portrait image (with
+  a char-map canvas fallback) and a flexible `.dialog`; `.npc-name` labels the
+  speaker. `.cursor-blink` adds the typewriter cursor. Portrait files are
+  declared in `static/js/art.js` under `static/art/npcs/`.
 - **Appearance:** portrait and black dialogue field use hard borders; the
   speaker name and cursor use bright gold.
 - **States:** default dialogue has a `64px` minimum height, which also preserves
   an empty or not-yet-typed state. Typing adds the blinking cursor. There are no
   hover, active, focus, disabled, loading, or error states on the container.
 - **Responsive:** the generic row stacks and centers below `560px`.
+
+### Town Scene (`.town-scene`, `.bld`)
+
+- **Structure:** `.town-scene` layers the three time-of-day sky/ground tile
+  pairs behind three `.trow` groups of clickable `.bld` locations. PNG
+  portraits, houses, landmarks, and town tiles are mapped by `static/js/art.js`;
+  char-map sprites remain the fallback for unmapped buildings.
+- **States:** the scene follows the local wall clock at 06:00, 18:00, and
+  20:00 boundaries. Dev mode can pin day, sunset, or night and return to auto.
+  When auto is active, Town schedules one refresh for the next boundary rather
+  than polling.
+- **Responsive:** below `480px`, each row becomes two columns and an odd final
+  location spans the row and centers beneath its neighbors.
 
 ### Tabs (`.tabs`, `.tabs .btn`)
 
@@ -221,6 +239,7 @@ component-specific rather than tokenized:
 | Level-up pulse | `0.7s` alternate | Sustains ceremonial emphasis after reveal |
 | HP width | `0.25s` transition | Shows combat health change |
 | Flash wipe / card reveal | `0.5s` | Marks a gacha reveal transition |
+| Town time-of-day refresh | one-shot at `06:00`, `18:00`, or `20:00` | Keeps the scene aligned with the local clock |
 
 Most motion uses `transform`, `opacity`, or visual effects; the HP bar
 transitions width as an existing exception. The stylesheet does not currently

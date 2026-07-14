@@ -125,11 +125,12 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
 
 static/                  Frontend (script tags, load order matters — see index.html)
   js/pixel.js   SPRITES: hand-authored char-map pixel sprites (p=palette, r=rows).
+  js/art.js     Served PNG art manifests: NPC portraits, building art, and town tiles.
   js/audio.js   WebAudio synth SFX (SFX.click/coin/fanfare/squeak/...). No files.
   js/app.js     Core state/API/router/shell, profile UI, boot, delegated click SFX.
   js/ui.js      SCREENS registry, shared helpers, and modal builder.
   js/charts.js  Shared canvas chart primitives for Hall views.
-  js/town.js    Town hub, Fenn/willow bubbles, and Siege banner.
+  js/town.js    Town hub, live time-of-day scene, Fenn/willow bubbles, and Siege banner.
   js/giver.js   Giver/dialogue, quest, doctrine, logger, and Scrivener screens.
   js/hall.js    Hall stats, calendar, Tapestry, Road, Mantel, Compendium, Almanac.
   js/misc.js    Crankwerk and settings/dev screens.
@@ -161,6 +162,9 @@ For deeper behavior of any specific module, load skill `iron-vale-architecture`.
 - **Sprites**: add to SPRITES in pixel.js (palette chars + row strings), render
   with `spriteTag(key, px)`, then ensure `hydrateSprites(container)` runs.
   Monsters/heroes use data-attrs and are hydrated the same way.
+- **Hand-drawn art**: add served PNG mappings in `static/js/art.js`, following
+  `static/art/npcs/`, `static/art/poi/`, and `static/art/town/` conventions.
+  Keep source files and palettes under `assets/`; use `image-rendering: pixelated`.
 - **SFX**: `app.js` delegates neutral `SFX.click()` feedback for every enabled
   `button` element and any element with an inline `[onclick]` attribute. Keep
   distinct outcome sounds such as accept/coin/error/fanfare explicit. A

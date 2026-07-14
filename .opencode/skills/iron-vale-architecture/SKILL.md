@@ -80,6 +80,8 @@ static/
                  drawMonster (DNA -> creature, mulberry32 PRNG), body maps.
                  hydrateSprites() draws every canvas[data-sprite|data-hero|
                  data-monster|data-bodymap] — call it after injecting HTML.
+  js/art.js      Served PNG manifests for NPC portraits, building art, and town
+                 tiles. portraitTag()/buildingTag() fall back to char-map art.
   js/audio.js    WebAudio synth SFX (SFX.click/coin/fanfare/squeak/...). No files.
   js/app.js      S (global state), api(), nav()/G.back() (history stack S.hist),
                  render(), shell() = header() + content + footer(), showCeremony(),
@@ -88,7 +90,8 @@ static/
   js/ui.js       SCREENS registry, shared helpers, and showModal(), the common
                  overlay builder used by screen modules.
   js/charts.js   Generic canvas chart primitives shared by Hall views.
-  js/town.js     Town hub screen, Fenn and willow bubbles, and Siege banner.
+  js/town.js     Town hub screen, live time-of-day scene, Fenn and willow bubbles,
+                 and Siege banner.
   js/giver.js    Giver dialogs (GREETINGS/REACTIONS/CONGRATS), quest flows,
                  doctrines and routines, training logger, and Wick the Scrivener.
   js/hall.js     Hall stats and vitals, calendar/day detail, Tapestry, Long Road,

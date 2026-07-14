@@ -25,8 +25,34 @@ function currentTOD() {
   return 'night';
 }
 
+const TOD_BOUNDARIES = [6, 18, 20];
+let todTimer = null;
+
+function nextTODBoundaryDelay(now = new Date()) {
+  const hour = now.getHours();
+  const nextHour = TOD_BOUNDARIES.find(h => h > hour) ?? 6;
+  const next = new Date(now);
+  if (nextHour <= hour) next.setDate(next.getDate() + 1);
+  next.setHours(nextHour, 0, 0, 250);
+  return Math.max(1000, next.getTime() - now.getTime());
+}
+
+function scheduleTODRefresh() {
+  clearTimeout(todTimer);
+  todTimer = null;
+  if (S.screen !== 'town' || devTOD !== null) return;
+  todTimer = setTimeout(() => {
+    todTimer = null;
+    if (S.screen === 'town' && devTOD === null) render();
+  }, nextTODBoundaryDelay());
+}
+
 let devTOD = null;  // null = auto (follows currentTOD())
-RESETS.push(() => { devTOD = null; });
+RESETS.push(() => {
+  devTOD = null;
+  clearTimeout(todTimer);
+  todTimer = null;
+});
 
 G.cycleTOD = () => {
   devTOD = TOD_ORDER[(TOD_ORDER.indexOf(devTOD) + 1) % TOD_ORDER.length];
@@ -38,9 +64,9 @@ G.cycleTOD = () => {
 SCREENS.town = async function () {
   const st = S.state;
   const c = st.character;
-  const effectiveTOD = devTOD || currentTOD();
   let siege = null;
   try { siege = await api('/raid'); } catch (e) { /* the walls hold without us */ }
+  const effectiveTOD = devTOD || currentTOD();
   const activeBy = {};
   st.active_quests.forEach(q => activeBy[q.giver] = q);
   const bld = (sprite, name, sub, target, badge = false, px = 120, id = '') => `
@@ -94,6 +120,7 @@ SCREENS.town = async function () {
       </div>
     </div>
   `);
+  scheduleTODRefresh();
 };
 
 /* ---- Fenn's unguided-run bubble: pops out of the waystone (bld-fenn). The
@@ -325,4 +352,3 @@ G.syncNow = async () => {
     toast(`${r.new_activities} new deed(s) returned.`);
   }
 };
-

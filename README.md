@@ -133,8 +133,10 @@ docker compose up -d --build
 # open http://localhost:8321
 ```
 
-Game state persists in `./data` (a single SQLite file). To require a password
-(recommended if exposed beyond your LAN):
+Game state persists in `./data`: one SQLite save per adventurer profile,
+`profiles.json` for the roster, and shared `raid.json` for the weekly Siege.
+Back up the whole directory. To require a password (recommended if exposed
+beyond your LAN):
 
 ```sh
 APP_PASSWORD=somesecret docker compose up -d --build
