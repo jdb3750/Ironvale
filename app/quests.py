@@ -788,9 +788,8 @@ def grant_unguided_run_bonus():
 def _record_unguided_completion(cand, rewards, completed_at):
     import json
 
-    if db.q("SELECT 1 FROM quests WHERE kind IN ('unguided_run', 'unguided_activity') AND activity_id=?",
-            (cand["activity_id"],)).fetchone():
-        return
+    # No dedup guard needed here: _apply_unguided_bonus already refuses to pay
+    # (and thus never reaches this) when the activity is linked to any quest.
     activity = db.q("SELECT start FROM activities WHERE id=?", (cand["activity_id"],)).fetchone()
     accepted_at = activity["start"] if activity else completed_at
     title = _unguided_completion_title(cand)
@@ -810,12 +809,28 @@ def _record_unguided_completion(cand, rewards, completed_at):
     db.commit()
 
 
+def _activity_already_rewarded(activity_id):
+    """True if this activity is linked to any completed quest — a sworn quest
+    it fulfilled, or a prior unguided payout. The single source of truth for
+    'has this deed already paid out', so Fenn never rewards the same activity
+    twice regardless of what order things happened in."""
+    return bool(db.q(
+        "SELECT 1 FROM quests WHERE activity_id=? LIMIT 1", (activity_id,)
+    ).fetchone())
+
+
 def _apply_unguided_bonus(cand):
     """Actually mutate the character for a queued candidate — used both by a
     real click (claim_unguided_bonus) and by the silent day-passed sweep.
     Streak/level math reads the CURRENT character state at apply time (not
     whatever it was back when the run was first detected), since other
-    things may have happened to the character in between."""
+    things may have happened to the character in between.
+
+    Returns None (paying nothing) if the activity has since been linked to a
+    quest: a candidate can be queued before an activity is used to complete a
+    sworn quest, and that quest's reward already covered the work."""
+    if _activity_already_rewarded(cand.get("activity_id")):
+        return None
     c = get_char()
     gains = dict(cand["stat_gains"])
     streak_bonus = _update_streak(c)
@@ -880,4 +895,9 @@ def claim_unguided_bonus(activity_id=None):
         idx = next((i for i, c in enumerate(cands) if c["activity_id"] == activity_id), 0)
     cand = cands.pop(idx)
     db.kv_set("unguided_bonus_candidates", cands)
-    return _apply_unguided_bonus(cand)
+    rewards = _apply_unguided_bonus(cand)
+    if rewards is None:
+        # Activity got linked to a quest between queuing and this tap — the
+        # quest already paid for it. Drop the bubble, grant nothing.
+        raise ValueError("Fenn already settled up for that one.")
+    return rewards
