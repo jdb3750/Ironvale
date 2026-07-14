@@ -31,7 +31,7 @@ app/
   records.py     Hall read side: stats, insights, wellness, calendar/day payloads,
                  tapestry, almanac, keepsakes, chronicle, and NPC notices. Reads
                  and narrates the save; does not mutate characters or quests.
-  economy.py     Town shop purchases and the Krankwerk gacha.
+  economy.py     Town shop purchases and the Crankwerk gacha.
                  Dependency rule: quests/records/economy import the shared game
                  core; game.py must not import those focused modules, keeping the
                  backend graph acyclic.
@@ -66,7 +66,7 @@ app/
                  Sims (round-by-round HP, per-tick race noise, judged scores) run
                  for real server-side — the frontend only dramatizes the result.
   items.py       Item catalog: dungeon gear/consumables/trinkets (TRINKETS dict) +
-                 Krankwerk cosmetics (hats/decor) + monster packs. GACHA_POOL is
+                 Crankwerk cosmetics (hats/decor) + monster packs. GACHA_POOL is
                  cosmetics-only by design.
   exercises.py   Exercise catalog with muscle groups + "how" form cues.
 ```
@@ -93,7 +93,7 @@ static/
                  doctrines and routines, training logger, and Wick the Scrivener.
   js/hall.js     Hall stats and vitals, calendar/day detail, Tapestry, Long Road,
                  Mantel, Exercise Compendium, and Almanac.
-  js/misc.js     Krankwerk lever and settings + dev panel.
+  js/misc.js     Crankwerk lever and settings + dev panel.
   js/ranch.js    Menagerie simulation (RAF loop): wander/graze/sleep/fetch states,
                  drag creatures (freak-out), in-pen hat panel with drag-drop +
                  ground hats that creatures fetch, magnifying-glass lens (monLens),

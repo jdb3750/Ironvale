@@ -1,4 +1,4 @@
-"""Item catalog: shop stock, gacha (Krankwerk) pool, equipment and consumables."""
+"""Item catalog: shop stock, gacha (Crankwerk) pool, equipment and consumables."""
 import random
 
 # slot: weapon / armor / charm.  consumables have effects used in town or dungeon.
@@ -16,20 +16,20 @@ ITEMS = {
     "sword_rusty":   {"name": "Rusty Shortsword",  "sprite": "sword_rusty", "type": "weapon", "rarity": "common",    "price": 45,  "atk": 1, "desc": "It has seen better centuries. +1 ATK."},
     "sword_soldier": {"name": "Soldier's Blade",   "sprite": "sword", "type": "weapon", "rarity": "uncommon",  "price": 110, "atk": 2, "desc": "Honest steel. +2 ATK."},
     "warhammer":     {"name": "Warden's Maul",     "sprite": "hammer", "type": "weapon", "rarity": "rare",     "price": 200, "atk": 3, "desc": "Argument-ender. +3 ATK."},
-    "runeblade":     {"name": "Runeblade of the Vale", "sprite": "runeblade", "type": "weapon", "rarity": "legendary", "price": None, "atk": 5, "desc": "Whispers in a dead tongue. +5 ATK. Krankwerk only."},
+    "runeblade":     {"name": "Runeblade of the Vale", "sprite": "runeblade", "type": "weapon", "rarity": "legendary", "price": None, "atk": 5, "desc": "Whispers in a dead tongue. +5 ATK. Crankwerk only."},
     # ---- armor ----
     "vest_padded":   {"name": "Padded Vest",       "sprite": "vest", "type": "armor", "rarity": "common",    "price": 45,  "def": 1, "desc": "Better than a shirt. +1 DEF."},
     "chain_shirt":   {"name": "Chain Shirt",       "sprite": "chain", "type": "armor", "rarity": "uncommon",  "price": 120, "def": 2, "desc": "Rings of good iron. +2 DEF."},
     "plate":         {"name": "Vale Plate",        "sprite": "plate_armor", "type": "armor", "rarity": "rare",      "price": 220, "def": 3, "desc": "Forged for the old wardens. +3 DEF."},
-    "dragonscale":   {"name": "Dragonscale Cloak", "sprite": "cloak", "type": "armor", "rarity": "legendary", "price": None, "def": 5, "desc": "Still warm. +5 DEF. Krankwerk only."},
+    "dragonscale":   {"name": "Dragonscale Cloak", "sprite": "cloak", "type": "armor", "rarity": "legendary", "price": None, "def": 5, "desc": "Still warm. +5 DEF. Crankwerk only."},
     # ---- charms ----
     "pendant_vigor": {"name": "Pendant of Vigor",  "sprite": "pendant", "type": "charm", "rarity": "uncommon",  "price": 90,  "hp": 6,   "desc": "+6 max HP in the Undercroft."},
     "ring_greed":    {"name": "Ring of Greed",     "sprite": "ring", "type": "charm", "rarity": "rare",      "price": 150, "greed": 0.25, "desc": "+25% gold found in the Undercroft."},
     "clover":        {"name": "Lucky Clover",      "sprite": "clover", "type": "charm", "rarity": "uncommon",  "price": 80,  "luck": 4, "desc": "+4 LCK. Traps miss, crits land."},
-    "second_wind":   {"name": "Amulet of Second Wind", "sprite": "amulet", "type": "charm", "rarity": "legendary", "price": None, "revive": True, "desc": "Cheat death once, then it shatters. Krankwerk only."},
+    "second_wind":   {"name": "Amulet of Second Wind", "sprite": "amulet", "type": "charm", "rarity": "legendary", "price": None, "revive": True, "desc": "Cheat death once, then it shatters. Crankwerk only."},
     # ---- packs ----
     "monster_pack":  {"name": "Monster Pack",      "sprite": "pack", "type": "pack", "rarity": "uncommon", "price": 100, "desc": "Five procedurally questionable creatures. Rip it open at the ranch."},
-    # ---- menagerie hats (Krankwerk cosmetics — droppable onto monsters) ----
+    # ---- menagerie hats (Crankwerk cosmetics — droppable onto monsters) ----
     "hat_cone":    {"name": "Party Cone",        "sprite": "hat_cone",   "type": "hat", "rarity": "common",    "price": None, "desc": "A festive little cone. Mandatory fun."},
     "hat_bow":     {"name": "Crimson Bow",       "sprite": "hat_bow",    "type": "hat", "rarity": "common",    "price": None, "desc": "Ties the whole creature together."},
     "hat_mush":    {"name": "Mushroom Cap",      "sprite": "hat_mush",   "type": "hat", "rarity": "common",    "price": None, "desc": "Damp. Stylish. Possibly sentient."},
@@ -38,7 +38,7 @@ ITEMS = {
     "hat_wizard":  {"name": "Wizard's Point",    "sprite": "hat_wizard", "type": "hat", "rarity": "rare",      "price": None, "desc": "+0 to spells. +100 to vibes."},
     "hat_crown":   {"name": "Little Crown",      "sprite": "hat_crown",  "type": "hat", "rarity": "rare",      "price": None, "desc": "Every pen needs a monarch."},
     "hat_halo":    {"name": "Suspicious Halo",   "sprite": "hat_halo",   "type": "hat", "rarity": "legendary", "price": None, "desc": "This monster has definitely done nothing wrong, ever."},
-    # ---- siege trophies (weekly raid rewards ONLY — never in the Krankwerk) ----
+    # ---- siege trophies (weekly raid rewards ONLY — never in the Crankwerk) ----
     "hat_horns":      {"name": "Siegebreaker Horns",   "sprite": "hat_horns",      "type": "hat", "rarity": "legendary", "price": None, "desc": "Sawn from a fallen siege beast. It hardly misses them."},
     "hat_skullcrown": {"name": "Crown of the Unrisen", "sprite": "hat_skullcrown", "type": "hat", "rarity": "legendary", "price": None, "desc": "Bone-white and faintly smug. A siege trophy."},
     "hat_tentacle":   {"name": "The Friendly Tentacle","sprite": "hat_tentacle",   "type": "hat", "rarity": "legendary", "price": None, "desc": "It waves at passersby. A siege trophy."},
@@ -59,7 +59,7 @@ ITEMS = {
 
 RARITY_ORDER = ["common", "uncommon", "rare", "legendary"]
 
-# The Krankwerk vends delights for the Menagerie: hats, decor, and packs.
+# The Crankwerk vends delights for the Menagerie: hats, decor, and packs.
 GACHA_POOL = [
     ("hat_cone", 12), ("hat_bow", 12), ("hat_mush", 10),
     ("decor_flowers", 9), ("decor_boulder", 9),

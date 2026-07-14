@@ -9,11 +9,36 @@ const FENN_BUBBLE_LINES = [
   'The road tattled on you. Good thing I don\u2019t hold grudges as long as I hold coin.',
 ];
 
+/* Time of day: the town's sky/ground/building art follows the player's real
+   wall clock — day 6am-6pm, sunset 6-8pm, night 8pm-6am. Purely cosmetic,
+   client-side, no server truth. Dev mode can pin it to a specific state to
+   preview the art (devTOD non-null overrides the clock); the toggle cycles
+   day -> sunset -> night -> auto -> day so a dev can always get back to
+   watching it track real time. */
+const TOD_ORDER = ['day', 'sunset', 'night', null];
+const TOD_ICON = { day: 'icon_tod_sun', sunset: 'icon_tod_sunset', night: 'icon_tod_moon' };
+
+function currentTOD() {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 18) return 'day';
+  if (h >= 18 && h < 20) return 'sunset';
+  return 'night';
+}
+
+let devTOD = null;  // null = auto (follows currentTOD())
+RESETS.push(() => { devTOD = null; });
+
+G.cycleTOD = () => {
+  devTOD = TOD_ORDER[(TOD_ORDER.indexOf(devTOD) + 1) % TOD_ORDER.length];
+  render();
+};
+
 /* ================= TOWN ================= */
 
 SCREENS.town = async function () {
   const st = S.state;
   const c = st.character;
+  const effectiveTOD = devTOD || currentTOD();
   let siege = null;
   try { siege = await api('/raid'); } catch (e) { /* the walls hold without us */ }
   const activeBy = {};
@@ -21,7 +46,7 @@ SCREENS.town = async function () {
   const bld = (sprite, name, sub, target, badge = false, px = 120, id = '') => `
     <div class="bld"${id ? ` id="${id}"` : ''} onclick="${target}">
       ${badge ? '<span class="bang">!</span>' : ''}
-      ${spriteTag(sprite, px)}
+      ${buildingTag(sprite, effectiveTOD) || spriteTag(sprite, px)}
       <span class="plate">${name}<small>${sub}</small></span>
     </div>`;
   const g = st.givers;
@@ -39,13 +64,15 @@ SCREENS.town = async function () {
   </div>`;
 
   const siegeBanner = siege ? siegeBannerHtml(siege) : '';
+  const devMode = !!S.state.settings?.dev_mode;
 
   $app().innerHTML = shell(`
     ${siegeBanner}
     ${st.active_quests.length ? `<div class="win tight"><span class="win-title">Sworn Quests</span>
       ${st.active_quests.map(questRow).join('')}
     </div>` : ''}
-    <div class="town-scene">
+    <div class="town-scene tod-${effectiveTOD}">
+      ${devMode ? `<div class="tod-toggle" title="dev: cycle time of day (${devTOD ? 'pinned: ' + devTOD : 'auto: ' + effectiveTOD})" onclick="G.cycleTOD()">${spriteTag(TOD_ICON[effectiveTOD], 22)}</div>` : ''}
       <div class="trow">
         ${bld('bld_waystone', esc(g.running.name), GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
         ${bld('bld_forge', esc(g.kettlebell.name), GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell)}
@@ -57,7 +84,7 @@ SCREENS.town = async function () {
         ${bld('bld_ledger', 'The Ledger House', 'Wick: confess & amend', `nav('scrivener')`)}
         ${bld('bld_hall', 'Hall of Records', 'stats, vitals & the Curator',
           st.almanac_unread ? `statsTab='almanac';nav('stats')` : `nav('stats')`, !!st.almanac_unread)}
-        ${bld('krank', 'The Krankwerk', 'hats for the herd', `nav('krank')`)}
+        ${bld('crank', 'The Crankwerk', 'hats for the herd', `nav('crank')`)}
       </div>
       <div class="road-h"></div>
       <div class="trow">

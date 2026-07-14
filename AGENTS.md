@@ -112,7 +112,7 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   game.py       Shared core: character/settings, time, activity categories, training history.
   quests.py     Adaptive offers, quest lifecycle, Rest Writ, unguided bonuses, Wick claims.
   records.py    Hall read side: stats, wellness, calendar, keepsakes, almanac, chronicle.
-  economy.py    Town shop purchases and the Krankwerk gacha.
+  economy.py    Town shop purchases and the Crankwerk gacha.
   programs.py   Doctrines (Starting Strength etc.) + custom routines; linear progression.
   dungeon.py    Roguelike engine, Binding-of-Isaac rules: run-scoped gear/items/trinkets.
   intervals.py  intervals.icu sync (basic auth): activities + wellness.
@@ -120,7 +120,7 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   raid.py       The Siege: ONE weekly boss shared by ALL profiles (state in data/raid.json).
   road.py       The Long Road: lifetime km -> pilgrimage landmarks (kv "road_claimed").
   colosseum.py  Betting mini-games (fight/race/pageant) vs. ephemeral rivals.
-  items.py      Item catalog: dungeon gear/consumables/trinkets + Krankwerk cosmetics + packs.
+  items.py      Item catalog: dungeon gear/consumables/trinkets + Crankwerk cosmetics + packs.
   exercises.py  Exercise catalog with muscle groups + "how" form cues.
 
 static/                  Frontend (script tags, load order matters — see index.html)
@@ -132,7 +132,7 @@ static/                  Frontend (script tags, load order matters — see index
   js/town.js    Town hub, Fenn/willow bubbles, and Siege banner.
   js/giver.js   Giver/dialogue, quest, doctrine, logger, and Scrivener screens.
   js/hall.js    Hall stats, calendar, Tapestry, Road, Mantel, Compendium, Almanac.
-  js/misc.js    Krankwerk and settings/dev screens.
+  js/misc.js    Crankwerk and settings/dev screens.
   js/ranch.js   Menagerie simulation (RAF loop): wander/graze/sleep/fetch, drag creatures.
   js/colosseum.js The Colosseum: bet UI + three canvas mini-animations (fight/race/pageant).
   js/dungeon.js Undercroft UI: gate, crawler map, combat, Pip shop, relic panel.
@@ -188,7 +188,7 @@ quests_done, appearance {skin,hair,hair_color,shirt,pants}.
 
 - Vigor comes ONLY from completed quests; it gates the dungeon.
 - Nothing material leaves the dungeon (gold banks on retire; gear/items/
-  trinkets never do). Town gold sinks: Krankwerk (cosmetics), packs, rerolls.
+  trinkets never do). Town gold sinks: Crankwerk (cosmetics), packs, rerolls.
 - Auto-completion of quests happens only from SYNCED activities, never from
   logged-set counts (the player may still be mid-workout).
 - Honor completions create a typed synthetic activity (so history/calendar/

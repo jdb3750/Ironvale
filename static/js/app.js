@@ -186,7 +186,7 @@ function showCeremony(rewards, title) {
   lines.push(`<div class="reward-line" style="color:var(--green)">+${rewards.vigor} vigor</div>`);
   const sg = Object.entries(rewards.stat_gains || {});
   if (sg.length) lines.push(`<div class="reward-line" style="color:var(--blue)">${sg.map(([k, v]) => `+${v} ${STAT_NAMES[k] || k.toUpperCase()}`).join(' &nbsp; ')}</div>`);
-  if (rewards.token) lines.push(`<div class="reward-line" style="color:var(--blue)">&#9678; A brass token for the Krankwerk!</div>`);
+  if (rewards.token) lines.push(`<div class="reward-line" style="color:var(--blue)">&#9678; A brass token for the Crankwerk!</div>`);
   if (rewards.item) lines.push(`<div class="reward-line r-${rewards.item.rarity}" style="display:flex;align-items:center;justify-content:center;gap:8px">${spriteTag(rewards.item.sprite, 28)} ${esc(rewards.item.name)}</div>`);
   if (rewards.streak > 1) lines.push(`<div class="reward-line" style="color:#e07030">&#9650; ${rewards.streak}-DAY STREAK${rewards.streak_bonus ? ' — +1 Constitution!' : ''}</div>`);
   // track the level-up line's own index so its SFX plays exactly when IT

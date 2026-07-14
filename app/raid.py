@@ -40,7 +40,7 @@ BOSS_EPITHET = [
     "the Second Helping", "Patron of Excuses", "the Long Sit",
 ]
 
-# siege-exclusive trophy hats, rotating weekly (never in the Krankwerk pool)
+# siege-exclusive trophy hats, rotating weekly (never in the Crankwerk pool)
 TROPHIES = ["hat_horns", "hat_skullcrown", "hat_tentacle",
             "hat_antlers", "hat_embercrown", "hat_eyestalk"]
 

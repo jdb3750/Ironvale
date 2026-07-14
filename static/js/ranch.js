@@ -159,7 +159,7 @@ function startRanch(mons) {
           const it = (S.itemsCatalog || {})[id] || { sprite: id, name: id };
           return `<span class="hat-slot" data-hat="${id}" title="${esc(it.name)}">${spriteTag(it.sprite, 26)}<span class="qty">&times;${q}</span></span>`;
         }).join('')}</div>`
-      : '<div class="muted" style="font-size:14px">no hats in the box — crank the Krankwerk</div>';
+      : '<div class="muted" style="font-size:14px">no hats in the box — crank the Crankwerk</div>';
     hydrateSprites(panel);
   }
 
