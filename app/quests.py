@@ -696,42 +696,59 @@ def claim_deed(kind, minutes, note=""):
 
 MIN_UNGUIDED_MINUTES = 8
 
-UNGUIDED_RUN_NOTES = [
+UNGUIDED_TITLE_FLAVOR = {
+    "run": ["The Unsworn Run", "The Road Without a Writ", "The Unbidden Pace"],
+    "ride": ["The Unsworn Circuit", "The Road Without a Writ", "The Unbidden Ride"],
+    "climb": ["The Unsworn Ascent", "The Wall Without a Writ", "The Unbidden Crux"],
+    "strength": ["The Unsworn Iron", "The Lift Without a Writ", "The Unbidden Forge"],
+    "mobility": ["The Unscripted Flow", "The Willow Without a Writ", "The Unbidden Stretch"],
+    "walk": ["The Unsworn Waymark", "The Road Without a Writ", "The Unbidden Ramble"],
+    "swim": ["The Uncharted Current", "The Crossing Without a Writ", "The Unsworn Stroke"],
+    "other": ["The Unwritten Workout", "The Deed Without a Writ", "The Unbidden Effort"],
+}
+
+UNGUIDED_ACTIVITY_LABELS = {
+    "run": "a run", "ride": "a ride", "climb": "a climb", "strength": "a workout",
+    "mobility": "a mobility session", "walk": "a walk", "swim": "a swim",
+    "other": "a workout",
+}
+
+UNGUIDED_STAT_BY_CATEGORY = {
+    "run": "end", "ride": "end", "walk": "end", "swim": "end",
+    "climb": "str", "strength": "str", "mobility": "spr", "other": "con",
+}
+
+UNGUIDED_NOTES = [
     "Fenn saw you out there, oath or no oath, and paid you anyway.",
     "No quest was sworn for this one. The road told him regardless.",
-    "You ran without asking. Fenn noticed. Fenn always notices.",
+    "You trained without asking. Fenn noticed. Fenn always notices.",
 ]
 
 
-def grant_unguided_run_bonus():
-    """Old Fenn notices a run that arrived with no accepted running quest to
-    catch it, and queues it as an unclaimed candidate — same payout math as
-    one of his moderate-intensity quests, but NOT actually applied to the
-    character yet. The reward only lands when the player taps his speech
-    bubble (see claim_unguided_bonus); if a full calendar day passes
-    unclaimed, it's paid out silently instead, with no bubble at all (see
-    _sweep_stale_unguided_candidates) — the whole point of the bubble was
-    the same-day moment, so there's nothing to show once that's passed.
+def _unguided_title(activity_type, activity_id):
+    flavors = UNGUIDED_TITLE_FLAVOR.get(category(activity_type), UNGUIDED_TITLE_FLAVOR["other"])
+    return random.Random(f"unguided-title:{activity_id}").choice(flavors)
 
-    Only looks at TODAY's activities actually synced from intervals.icu (so
-    a first-time 400-day history import never floods this, and
-    manual/honor/sworn entries — which already have their own reward path —
-    never double-dip), skips entirely while a running quest is active, and
-    dedupes per activity id per day (kv key baked with the date, same idiom
-    as offer caching) so repeated sync ticks never queue the same run
-    twice."""
+
+def _unguided_stat_gains(activity_type):
+    stat = UNGUIDED_STAT_BY_CATEGORY.get(category(activity_type), "con")
+    return {stat: 1}
+
+
+def _unguided_completion_title(cand):
+    return cand.get("title") or f"Unguided Run — {cand.get('activity_name') or 'the road'}"
+
+
+def grant_unguided_run_bonus():
     _sweep_stale_unguided_candidates()
-    if db.q("SELECT 1 FROM quests WHERE giver='running' AND status='active'").fetchone():
-        return
     t = today()
     seen_key = f"unguided_bonus_seen:{t}"
     seen = set(db.kv_get(seen_key, []))
-    ph = ",".join("?" * len(RUN_TYPES))
     rows = db.q(
-        f"SELECT * FROM activities WHERE type IN ({ph}) AND start >= ? AND source='intervals.icu' "
+        "SELECT * FROM activities WHERE start >= ? AND source='intervals.icu' "
         "AND id NOT IN (SELECT activity_id FROM quests WHERE activity_id IS NOT NULL) "
         "ORDER BY start ASC",
-        (*RUN_TYPES, t),
+        (t,),
     ).fetchall()
     rng = random.Random()
     candidates = db.kv_get("unguided_bonus_candidates", [])
@@ -743,11 +760,16 @@ def grant_unguided_run_bonus():
         dirty = True
         minutes = (r["moving_time"] or 0) / 60
         if minutes < MIN_UNGUIDED_MINUTES:
-            continue  # too short to count as a real run; still marked seen above
+            continue
+        activity_type = r["type"] or "Workout"
+        activity_category = category(activity_type)
         xp = int(minutes * 1.35 * 2.2)  # priced as a "moderate" quest, per _price_offer
         candidates.append({
             "activity_id": r["id"],
-            "activity_name": r["name"] or "a run",
+            "activity_name": r["name"] or UNGUIDED_ACTIVITY_LABELS[activity_category],
+            "activity_type": activity_type,
+            "category": activity_category,
+            "title": _unguided_title(activity_type, r["id"]),
             "minutes": round(minutes),
             "date": t,
             "xp": xp,
@@ -755,8 +777,8 @@ def grant_unguided_run_bonus():
             "vigor": 2,
             "token": rng.random() < 0.3,
             "drop": "monster_pack" if rng.random() < 0.06 else None,
-            "stat_gains": {"end": 1},
-            "note": rng.choice(UNGUIDED_RUN_NOTES),
+            "stat_gains": _unguided_stat_gains(activity_type),
+            "note": rng.choice(UNGUIDED_NOTES),
         })
     if dirty:
         db.kv_set(seen_key, list(seen))
@@ -766,21 +788,23 @@ def grant_unguided_run_bonus():
 def _record_unguided_completion(cand, rewards, completed_at):
     import json
 
-    if db.q("SELECT 1 FROM quests WHERE kind='unguided_run' AND activity_id=?",
+    if db.q("SELECT 1 FROM quests WHERE kind IN ('unguided_run', 'unguided_activity') AND activity_id=?",
             (cand["activity_id"],)).fetchone():
         return
     activity = db.q("SELECT start FROM activities WHERE id=?", (cand["activity_id"],)).fetchone()
     accepted_at = activity["start"] if activity else completed_at
-    title = f"Unguided Run — {cand['activity_name'] or 'the road'}"
+    title = _unguided_completion_title(cand)
     details = {
         "unguided": True,
         "activity_id": cand["activity_id"],
         "target_minutes": cand["minutes"],
+        "activity_type": cand.get("activity_type"),
+        "category": cand.get("category"),
     }
     db.q(
         "INSERT INTO quests (giver, kind, title, details, status, accepted_at, completed_at, "
         "honor, activity_id, rewards) VALUES (?,?,?,?, 'done', ?, ?, 0, ?, ?)",
-        ("running", "unguided_run", title, json.dumps(details), accepted_at,
+        ("running", "unguided_activity", title, json.dumps(details), accepted_at,
          completed_at, cand["activity_id"], json.dumps(rewards)),
     )
     db.commit()
@@ -812,13 +836,13 @@ def _apply_unguided_bonus(cand):
         "item": items.get(cand["drop"]) if cand["drop"] else None,
         "stat_gains": gains, "levels": levels, "level": c["level"],
         "streak": c["streak"]["count"], "streak_bonus": streak_bonus,
-        "note": cand["note"],
+        "note": cand["note"], "quest_title": _unguided_completion_title(cand),
     }
     completed_at = now_iso()
     _record_unguided_completion(cand, rewards, completed_at)
     db.log_event(
-        completed_at, "unguided_run",
-        f"Fenn rewarded an unguided run ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
+        completed_at, "unguided_activity",
+        f"Fenn rewarded an unguided activity ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
         + (f", LEVEL UP to {c['level']}!" if levels else ""),
     )
     return rewards
@@ -857,4 +881,3 @@ def claim_unguided_bonus(activity_id=None):
     cand = cands.pop(idx)
     db.kv_set("unguided_bonus_candidates", cands)
     return _apply_unguided_bonus(cand)
-

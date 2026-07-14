@@ -162,7 +162,7 @@ G.claimFennBubble = async () => {
   const rewards = await api('/unguided/claim', { method: 'POST', body: { activity_id: b.activity_id } });
   await refreshState();
   render();
-  showCeremony(rewards, `An Unguided Run \u2014 ${b.minutes} min`);
+  showCeremony(rewards, rewards.quest_title || b.title || `An Unguided Activity \u2014 ${b.minutes} min`);
 };
 
 /* ---- The willow's writ bubble: Elowen sends word when a Rest Writ resolved

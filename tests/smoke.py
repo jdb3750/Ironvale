@@ -130,18 +130,27 @@ r = client.post(f"/api/quests/{q[0]['id']}/complete", json={})
 ok("complete quest", r.status_code == 200 and "rewards" in r.json())
 ok("xp granted", client.get("/api/state").json()["character"]["xp"] > 0)
 
-free_run = (game.now() + timedelta(minutes=2)).isoformat(timespec="seconds")
+free_climb = (game.now() + timedelta(minutes=2)).isoformat(timespec="seconds")
 db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
-     "VALUES ('smoke-free-run', 'intervals.icu', ?, 'Run', 'unplanned run', 1800, 7000)",
-     (free_run,))
+     "VALUES ('smoke-free-climb', 'intervals.icu', ?, 'RockClimbing', 'unplanned climb', 1800, NULL)",
+     (free_climb,))
+free_other = (game.now() + timedelta(minutes=3)).isoformat(timespec="seconds")
+db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+     "VALUES ('smoke-free-other', 'intervals.icu', ?, 'Elliptical', 'unplanned cross-training', 1500, NULL)",
+     (free_other,))
 db.commit()
 quests.grant_unguided_run_bonus()
 pending = quests.unguided_pending()
-ok("unguided run queued", any(c["activity_id"] == "smoke-free-run" for c in pending))
-rewards = quests.claim_unguided_bonus("smoke-free-run")
-ok("unguided reward claimed", rewards["xp"] > 0)
-day = client.get("/api/day/" + free_run[:10]).json()
-ok("unguided run appears as calendar quest", any(q_["title"].startswith("Unguided Run") for q_ in day["quests"]))
+climb = next(c for c in pending if c["activity_id"] == "smoke-free-climb")
+other = next(c for c in pending if c["activity_id"] == "smoke-free-other")
+ok("unguided climb queued", climb["title"])
+ok("unguided other activity queued", other["title"])
+rewards = quests.claim_unguided_bonus("smoke-free-climb")
+ok("unguided climb reward claimed", rewards["xp"] > 0)
+ok("unguided title returned", rewards["quest_title"] == climb["title"])
+quests.claim_unguided_bonus("smoke-free-other")
+day = client.get("/api/day/" + free_climb[:10]).json()
+ok("unguided title appears as calendar quest", any(q_["title"] == climb["title"] for q_ in day["quests"]))
 
 # ---- dungeon: enter -> move -> retire --------------------------------------
 print("dungeon lifecycle:")
