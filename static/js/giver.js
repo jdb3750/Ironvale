@@ -956,13 +956,17 @@ SCREENS.scrivener = async function () {
   L.records.clear();
   W.sets.forEach(rememberLiftRecord);
 
-  $app().innerHTML = shell(`
+  // phones seat Wick below the ledger work, like the quest givers — his
+  // typewriter dialog reflows its window and would shove the form around
+  const wickWin = `
     <div class="win">
       <div class="npc-head">
         ${portraitTag('wick', 128)}
         <div class="dialog"><div class="npc-name">Wick the Scrivener</div><div id="dlg"></div></div>
       </div>
-    </div>
+    </div>`;
+  $app().innerHTML = shell(`
+    ${isCompactPhone() ? '' : wickWin}
     <div class="win"><span class="win-title">Confess a Deed (unverified)</span>
       <div class="muted" style="font-size:17px;margin-bottom:8px">Forgot your tracker at the crag? Swear it before Wick.
         No witness means prorated pay: seven coins in ten.</div>
@@ -985,6 +989,7 @@ SCREENS.scrivener = async function () {
       <div class="muted" id="scrivener-empty" ${recent.activities.length || W.sets.length ? 'hidden' : ''}>Nothing recorded today.</div>
       <div class="muted" style="font-size:16px;margin-top:6px">older entries: Hall of Records &rarr; Calendar &rarr; tap a day</div>
     </div>
+    ${isCompactPhone() ? wickWin : ''}
   `);
   typewrite(document.getElementById('dlg'), line, 14, npcPortraitEl());
 };

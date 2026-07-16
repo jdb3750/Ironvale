@@ -1027,6 +1027,27 @@ document.addEventListener('click', (e) => {
   if (el && !el.disabled) SFX.click();
 });
 
+/* The key-click pop is a GHOST: a body-level, fixed-position flash pinned
+   to the key's rect. It cannot ride the button itself — most clicks call
+   render(), which wipes #app and the animating element with it (that's why
+   an on-element animation only survived while the click was held). The
+   ghost lives outside #app, so it always plays its full 180ms. */
+document.addEventListener('pointerdown', (e) => {
+  if (!(e.target instanceof Element)) return;
+  const key = e.target.closest('.btn, .dock-action');
+  if (!key || key.disabled || prefersReducedMotion()) return;
+  const r = key.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.className = 'key-pop-ghost';
+  ghost.style.left = r.left + 'px';
+  ghost.style.top = r.top + 'px';
+  ghost.style.width = r.width + 'px';
+  ghost.style.height = r.height + 'px';
+  document.body.appendChild(ghost);
+  ghost.addEventListener('animationend', () => ghost.remove());
+  setTimeout(() => ghost.remove(), 400);   // belt and braces
+});
+
 let bootGeneration = 0;
 
 async function boot() {

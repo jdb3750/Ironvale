@@ -88,31 +88,111 @@ h1, h2, h3 { font-weight: normal; }
 }
 .win.tight { padding: 8px 10px; }
 
-/* ---- buttons ---- */
+/* ---- buttons: physical keys, tape-deck style ----
+   Faces are tinted toward their bevel color (warm gold plastic by default)
+   so keys separate from the cool blue panels. Three live states model a
+   real key: raised at rest (bright top bevel, solid "key side" below),
+   finger-on-key on hover (face shades darker, highlights ease, no travel),
+   pressed on :active (travels down, side collapses, bevel inverts, face
+   recessed in shadow, plus a brief key-click glint). Selected/latched keys
+   reuse the pressed look persistently; disabled keys go gray. Depth shadows
+   are straight-down on purpose — panels (.win) cast diagonal shadows,
+   keys don't. */
 .btn {
+  --key-travel: 4px;
   font-family: 'VT323', monospace;
   font-size: 20px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  background: var(--panel2);
+  background: #2e2a1c;
   color: var(--gold-bright);
-  border: 2px solid var(--gold);
+  border: 2px solid;
+  border-color: var(--gold-bright) #7a5f28 #52401c var(--gold);
   padding: 8px 16px;
   cursor: pointer;
-  box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+  box-shadow:
+    0 4px 0 #3a2c10,
+    0 6px 0 rgba(0,0,0,0.5);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.btn:hover { background: var(--gold); color: var(--bg); }
-.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:hover:not(:disabled) {
+  background: #242015;
+  border-color: var(--gold) #6b5426 #4a3d20 #a8863e;
+}
+.btn:active:not(:disabled) {
+  background: #12100a;
+  color: var(--gold);
+  border-color: #3a2c10 #6b5426 #7a5f28 #52401c;
+  transform: translateY(var(--key-travel, 4px));
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.5),
+    inset 0 3px 0 rgba(0,0,0,0.55);
+}
+/* the click pop: a body-level ghost pinned over the pressed key by app.js
+   (an on-element animation dies mid-flight when the click re-renders the
+   screen). Three hard frames, sprite-style: a gold flash over the face
+   with a tight ring, then the flash fading as the ring expands away,
+   riding 2px down with the key. steps(1, end) — no easing, all snap. */
+.key-pop-ghost {
+  position: fixed;
+  z-index: 950;   /* over content and dock, under overlays (1000) */
+  pointer-events: none;
+  animation: key-pop-ghost 0.18s steps(1, end) forwards;
+}
+@keyframes key-pop-ghost {
+  0% {
+    background: rgba(240, 208, 128, 0.28);
+    outline: 2px solid rgba(240, 208, 128, 0.9);
+    outline-offset: 0px;
+    transform: translateY(2px);
+  }
+  55% {
+    background: rgba(240, 208, 128, 0.1);
+    outline: 2px solid rgba(240, 208, 128, 0.45);
+    outline-offset: 4px;
+    transform: translateY(2px);
+  }
+  100% {
+    background: transparent;
+    outline: 2px solid transparent;
+    outline-offset: 7px;
+    transform: translateY(0);
+  }
+}
+/* keep the key's depth shadows under the shared focus ring — the generic
+   :where(...):focus-visible rule replaces box-shadow outright, which would
+   visually flatten a raised key while it's keyboard-focused */
+.btn:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  box-shadow:
+    0 4px 0 #3a2c10,
+    0 6px 0 rgba(0,0,0,0.5),
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--gold-bright);
+}
 .btn.small { font-size: 17px; padding: 4px 10px; }
 .btn.wide { width: 100%; }
 .btn.big { font-size: 24px; padding: 12px 24px; width: 100%; }
-.btn.danger { border-color: var(--red); color: var(--red); }
-.btn.danger:hover { background: var(--red); color: var(--bg); }
-.btn.green { border-color: var(--green); color: var(--green); }
-.btn.green:hover { background: var(--green); color: var(--bg); }
+.btn.danger { color: var(--red); background: #2f1a1a; border-color: #e08c8c #7a3030 #521f1f var(--red); }
+.btn.danger:hover:not(:disabled) { background: #261313; border-color: var(--red) #6b2a2a #461b1b #9a4040; }
+.btn.danger:active:not(:disabled) { color: var(--red); background: #130a0a; border-color: #38150e #6b2a2a #7a3030 #461b1b; }
+.btn.green { color: var(--green); background: #1f281a; border-color: #a8d888 #446b34 #2e4a22 var(--green); }
+.btn.green:hover:not(:disabled) { background: #171f12; border-color: var(--green) #3a5c2c #26401c #5e9146; }
+.btn.green:active:not(:disabled) { color: var(--green); background: #0c1208; border-color: #16280e #3a5c2c #446b34 #26401c; }
+/* unselectable = grayed out: still a raised key, but the plastic itself is
+   gray. Placed after the color variants so a disabled danger/green key goes
+   gray too (equal specificity, later wins). */
+.btn:disabled {
+  cursor: not-allowed;
+  background: #232329;
+  color: #7a7884;
+  border-color: #6e6e78 #3f3f47 #2c2c33 #55555e;
+  box-shadow:
+    0 4px 0 #1c1c21,
+    0 6px 0 rgba(0,0,0,0.4);
+}
 
 /* ---- header: brand left, adventurer stacked right ---- */
 .hdr {
@@ -285,10 +365,23 @@ label { color: var(--dim); font-size: 18px; text-transform: uppercase; letter-sp
 
 /* ---- stats ---- */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 4px; }
-.tabs .btn.active, .hall-nav .btn.active { background: var(--gold); color: var(--bg); }
+/* selected tab = latched key, held down like a tape deck's PLAY button:
+   the pressed-dark state made persistent, with the label kept bright so
+   the selection still reads at a glance (also used by the Crankwerk pay
+   toggle) */
+.tabs .btn.active, .hall-nav .btn.active, .crank-pay .btn.pay-active {
+  background: #12100a;
+  color: var(--gold-bright);
+  border-color: #3a2c10 #6b5426 #7a5f28 #52401c;
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.5),
+    inset 0 3px 0 rgba(0,0,0,0.55);
+}
+/* glow rides on filter, NOT box-shadow — the key bevels live in box-shadow
+   and an animation would override them outright (see iron-vale-gotchas) */
 .tabs .btn.tab-glow, .hall-nav .btn.tab-glow {
   position: relative;
-  border-color: var(--gold-bright);
   animation: tab-glow-pulse 1.4s ease-in-out infinite;
 }
 
@@ -318,10 +411,6 @@ label { color: var(--dim); font-size: 18px; text-transform: uppercase; letter-sp
 @media (max-width: 860px) {
   .hall-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.hall-nav .btn:focus-visible {
-  outline: 2px solid var(--gold-bright);
-  outline-offset: 2px;
-}
 .tab-glow-dot {
   position: absolute; top: -5px; right: -5px;
   width: 10px; height: 10px; border-radius: 50%;
@@ -329,8 +418,8 @@ label { color: var(--dim); font-size: 18px; text-transform: uppercase; letter-sp
   box-shadow: 0 0 4px 1px var(--gold-bright);
 }
 @keyframes tab-glow-pulse {
-  0%, 100% { box-shadow: 0 0 2px 0 rgba(240,208,128,0.3); }
-  50% { box-shadow: 0 0 10px 3px rgba(240,208,128,0.7); }
+  0%, 100% { filter: drop-shadow(0 0 1px rgba(240,208,128,0.3)); }
+  50% { filter: drop-shadow(0 0 5px rgba(240,208,128,0.8)); }
 }
 .statbar { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
 .statbar .sb-label { width: 52px; color: var(--gold-bright); }
@@ -719,11 +808,52 @@ body.megashake #app { animation: bodyshake 0.35s linear 2; }
   color: #fff; font-size: 14px; letter-spacing: 1px;
 }
 .lever.snap .knob { transition: top 0.25s cubic-bezier(.3,1.6,.6,1); }
-.crank-pay .btn.pay-active { background: var(--gold); color: var(--bg); }
+/* .crank-pay .btn.pay-active shares the latched-key rule up in the tabs block */
 
 /* ---- monster ranch ---- */
 .ranch-box { position: relative; }
-canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2a; background: #24331e; display: block; cursor: pointer; }
+canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2a; background: #24331e; display: block; cursor: pointer; touch-action: none; }
+/* phone Menagerie: the inline pen is look-don't-touch (page scroll fights
+   creature drags); tapping it steps into a fullscreen pen where pointer
+   play works. Layering: pen 880 < dock 900 < overlays 1000. */
+.pen-inert { cursor: pointer; }
+.pen-inert canvas.ranch { pointer-events: none; }
+.pen-inert .pen-ui { display: none; }
+.pen-visit {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+/* a bare, half-there invitation floating on the glass — no box, no key */
+.pen-visit .pen-visit-label {
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: 'VT323', monospace;
+  font-size: 24px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  padding: 10px;
+  color: rgba(240, 208, 128, 0.75);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
+  background: none;
+  border: 0;
+}
+.ranch-box.pen-full {
+  position: fixed;
+  inset: 0;
+  z-index: 880;
+  background: #0a0a12;
+}
+/* the phone media block hides .pen-ui (hats live in the creature lens on
+   the small INLINE pen), but inside the fullscreen pen there's room to
+   bring the draggable hat tray back */
+.ranch-box.pen-full .pen-ui { display: block; }
+.ranch-box.pen-full canvas.ranch {
+  width: 100%; height: 100%;
+  border: 0;
+  border-bottom: 2px solid #3a4a2a;
+}
+.pen-leave { position: absolute; top: 8px; left: 8px; }
 .ranch-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); text-align: center; padding: 20px; }
 .mon-card { text-align: center; }
 .mon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
@@ -1276,10 +1406,19 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pixel-select > summary::-webkit-details-marker { display: none; }
 .hat-picker-summary::after,
 .pixel-select-summary::after { content: ' \25be'; color: var(--gold); }
+/* open picker = latched key, same held-down state as a selected tab */
 .hat-picker[open] > .hat-picker-summary,
-.pixel-select[open] > .pixel-select-summary { background: var(--gold); color: var(--bg); }
+.pixel-select[open] > .pixel-select-summary {
+  background: #12100a;
+  color: var(--gold-bright);
+  border-color: #3a2c10 #6b5426 #7a5f28 #52401c;
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.5),
+    inset 0 2px 0 rgba(0,0,0,0.4);
+}
 .hat-picker[open] > .hat-picker-summary::after,
-.pixel-select[open] > .pixel-select-summary::after { content: ' \25b4'; color: var(--bg); }
+.pixel-select[open] > .pixel-select-summary::after { content: ' \25b4'; color: var(--gold); }
 .hat-picker-menu,
 .pixel-select-menu {
   display: flex;
@@ -1303,9 +1442,9 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pixel-select-menu .pixel-option::before { content: '\25b8'; color: var(--gold); margin-right: 6px; }
 .hat-picker-menu .hat-option:hover,
 .pixel-select-menu .pixel-option:hover {
-  /* .btn:hover drops text to var(--bg) expecting a gold background swap;
-     these rows keep their dark panel2 background, so pin the text color
-     back to gold-bright or it reads as near-black on near-black. */
+  /* these rows are flattened .btn keys (no bevel, no depth); pin their
+     hover to a plain gold border on the dark panel2 background so they
+     read as menu rows, not raised keys */
   border-color: var(--gold);
   background: var(--panel2);
   color: var(--gold-bright);
@@ -1467,6 +1606,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     transition: transform 0.16s ease-out, opacity 0.12s linear;
   }
   .phone-dock .dock-action {
+    --key-travel: 3px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1480,29 +1620,51 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     letter-spacing: 0;
     text-transform: uppercase;
     color: var(--gold-bright);
-    border: 2px solid var(--gold);
+    border: 2px solid;
+    border-color: var(--gold-bright) #7a5f28 #52401c var(--gold);
     border-radius: 0;
-    background: var(--panel2);
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+    background: #2e2a1c;
+    /* shallower key than .btn — the dock is a fixed bar with 6px of floor */
+    box-shadow:
+      0 3px 0 #3a2c10,
+      0 4px 0 rgba(0,0,0,0.5);
     cursor: pointer;
     user-select: none;
     white-space: normal;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  .phone-dock .dock-action:hover { background: var(--gold); color: var(--bg); }
+  .phone-dock .dock-action:hover {
+    background: #242015;
+    border-color: var(--gold) #6b5426 #4a3d20 #a8863e;
+  }
   .phone-dock .dock-action:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+    background: #12100a;
+    color: var(--gold);
+    border-color: #3a2c10 #6b5426 #7a5f28 #52401c;
+    transform: translateY(var(--key-travel, 3px));
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(0,0,0,0.55);
   }
   .phone-dock .dock-action[aria-current='page'] {
-    background: var(--gold);
-    color: var(--bg);
+    background: #12100a;
+    color: var(--gold-bright);
+    border-color: #3a2c10 #6b5426 #7a5f28 #52401c;
+    transform: translateY(3px);
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(0,0,0,0.55);
   }
   .phone-dock .dock-action:disabled,
   .phone-dock .dock-action[aria-disabled='true'] {
-    opacity: 0.4;
     pointer-events: none;
+    background: #232329;
+    color: #7a7884;
+    border-color: #6e6e78 #3f3f47 #2c2c33 #55555e;
+    box-shadow:
+      0 3px 0 #1c1c21,
+      0 4px 0 rgba(0,0,0,0.4);
   }
   body.dock-collapsed .phone-dock {
     transform: translateY(calc(100% + env(safe-area-inset-bottom)));
