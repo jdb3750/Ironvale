@@ -10,6 +10,8 @@ behavior.
 Run:  .venv/bin/python tests/smoke.py
 (never against the live data/ dir — it always builds its own scratch)
 """
+import json
+import math
 import os
 import shutil
 import sys
@@ -44,8 +46,32 @@ def get(path, **expect):
     return body
 
 
+def lift_count():
+    return db.q("SELECT COUNT(*) AS n FROM lift_sets").fetchone()["n"]
+
+
+def lift_row(set_id):
+    row = db.q("SELECT * FROM lift_sets WHERE id=?", (set_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def ledger_count():
+    return db.q("SELECT COUNT(*) AS n FROM ledger").fetchone()["n"]
+
+
+def json_request(method, path, payload):
+    return client.request(
+        method,
+        path,
+        content=json.dumps(payload),
+        headers={"content-type": "application/json"},
+    )
+
+
 # ---- boot + seed ----------------------------------------------------------
 client.get("/api/state")  # first touch creates the schema
+selected = client.post("/api/profiles/select", json={"slug": "main"})
+ok("scratch main profile selected", selected.status_code == 200)
 NOW = game.now()
 
 for path in ("/docs", "/redoc", "/openapi.json"):
@@ -98,7 +124,15 @@ get("/api/raid")
 get("/api/chronicle", keys=["events"])
 get("/api/items")
 get("/api/trinkets", keys=["trinkets"])
-get("/api/exercises")
+exercise_payload = get("/api/exercises")
+exercise_public = {exercise["name"]: exercise for exercise in exercise_payload["exercises"]}
+ok("exercise catalog exposes units without schemes", all(exercise.get("unit") in ("reps", "seconds", "steps") and "scheme" not in exercise for exercise in exercise_payload["exercises"]))
+ok("exercise Plank exposes seconds only", exercise_public["Plank"].get("unit") == "seconds" and "scheme" not in exercise_public["Plank"])
+ok("exercise Farmer Carry exposes steps only", exercise_public["Farmer Carry"].get("unit") == "steps" and "scheme" not in exercise_public["Farmer Carry"])
+ok("exercise Back Squat exposes reps only", exercise_public["Back Squat"].get("unit") == "reps" and "scheme" not in exercise_public["Back Squat"])
+today_before = lift_count()
+today_payload = get("/api/today", keys=["today"])
+ok("server today is authoritative and side-effect free", today_payload == {"today": game.today()} and lift_count() == today_before)
 get("/api/programs")
 get("/api/monsters")
 get("/api/inventory")
@@ -175,6 +209,7 @@ c["vigor"] = 10
 game.save_char(c)
 r = client.post("/api/dungeon/enter")
 ok("dungeon enter", r.status_code == 200 and r.json()["theme"]["key"])
+ok("dungeon enter returns reconciled character", r.json().get("character", {}).get("vigor") == 8)
 d = r.json()["state"]
 moved = False
 dr = None
@@ -210,12 +245,197 @@ game.save_char(c)
 r = client.post("/api/gacha", json={"use_token": False})
 ok("gacha crank", r.status_code == 200)
 
+print("lift API:")
+
+created = client.post("/api/lifts", json={
+    "exercise": "Back Squat", "weight": 80.5, "reps": 5, "quest_id": None,
+})
+created_body = created.json()
+created_set = created_body.get("set", {})
+created_id = created_set.get("id")
+ok("lift create returns authoritative date", created.status_code == 200 and created_body.get("today") == game.today())
+ok("lift create returns exact persisted record", created_set == lift_row(created_id) | {"unit": "reps"})
+ok("lift create returns stable numeric fields", isinstance(created_set.get("weight"), (int, float)) and not isinstance(created_set.get("weight"), bool) and isinstance(created_set.get("reps"), int))
+
+patched = client.patch(f"/api/lifts/{created_id}", json={"weight": " 82.25 ", "reps": " 6 "})
+ok("lift PATCH targets exact id", patched.status_code == 200 and lift_row(created_id)["weight"] == 82.25 and lift_row(created_id)["reps"] == 6)
+
+missing_patch = client.patch("/api/lifts/99999999", json={"weight": 1, "reps": 1})
+missing_delete = client.delete("/api/lifts/99999999")
+ok("lift PATCH missing id fails", missing_patch.status_code == 400)
+ok("lift DELETE missing id fails", missing_delete.status_code == 400)
+
+deleted = client.delete(f"/api/lifts/{created_id}")
+ok("lift DELETE targets exact id", deleted.status_code == 200 and lift_row(created_id) is None)
+
+custom_plank_details = {
+    "routine": [{"exercise": "Plank", "sets": 1, "reps": 30, "unit": "reps"}],
+}
+custom_plank = db.q(
+    "INSERT INTO quests (giver, kind, title, details, status, accepted_at) VALUES (?,?,?,?,?,?)",
+    ("strength", "program:custom:smoke", "Custom Plank", json.dumps(custom_plank_details), "active", game.now_iso()),
+)
+custom_plank_id = custom_plank.lastrowid
+farmer_details = {
+    "routine": [{"exercise": "Farmer Carry", "sets": 1, "reps": 40, "unit": "steps"}],
+}
+farmer_quest = db.q(
+    "INSERT INTO quests (giver, kind, title, details, status, accepted_at) VALUES (?,?,?,?,?,?)",
+    ("kettlebell", "strength", "Carry the Vale", json.dumps(farmer_details), "active", game.now_iso()),
+)
+farmer_quest_id = farmer_quest.lastrowid
+db.commit()
+
+custom_plank_post = client.post("/api/lifts", json={
+    "exercise": "Plank", "weight": 0, "reps": 30, "quest_id": custom_plank_id,
+})
+farmer_post = client.post("/api/lifts", json={
+    "exercise": "Farmer Carry", "weight": 24, "reps": 40, "quest_id": farmer_quest_id,
+})
+custom_plank_set = custom_plank_post.json().get("set", {})
+farmer_set = farmer_post.json().get("set", {})
+ok("active custom Plank uses persisted reps", custom_plank_set.get("unit") == "reps" and isinstance(custom_plank_set.get("reps"), int))
+ok("active Farmer Carry uses persisted steps", farmer_set.get("unit") == "steps" and isinstance(farmer_set.get("reps"), int))
+
+db.q("UPDATE quests SET status='done', completed_at=? WHERE id=?", (game.now_iso(), custom_plank_id))
+db.q("UPDATE quests SET status='abandoned' WHERE id=?", (farmer_quest_id,))
+db.commit()
+
+questless_payloads = [
+    ("Plank", 0, 45, "seconds"),
+    ("Farmer Carry", 32, 55, "steps"),
+    ("Back Squat", 70, 5, "reps"),
+]
+questless_sets = []
+for exercise, weight, reps, unit in questless_payloads:
+    response = client.post("/api/lifts", json={
+        "exercise": exercise, "weight": weight, "reps": reps, "quest_id": None,
+    })
+    result = response.json().get("set", {})
+    questless_sets.append(result)
+    ok(f"questless {exercise} POST catalog unit {unit}", response.status_code == 200 and result.get("unit") == unit and result.get("quest_id") is None)
+
+recent = client.get("/api/lifts/recent?limit=100").json()
+recent_by_id = {row["id"]: row for row in recent["sets"]}
+day = client.get(f"/api/day/{game.today()}").json()
+day_by_id = {row["id"]: row for row in day["sets"]}
+ok("recent lifts returns authoritative today", recent.get("today") == game.today())
+ok("completed custom Plank preserves reps", recent_by_id[custom_plank_set["id"]]["unit"] == "reps" and day_by_id[custom_plank_set["id"]]["unit"] == "reps")
+ok("abandoned Farmer Carry preserves steps", recent_by_id[farmer_set["id"]]["unit"] == "steps" and day_by_id[farmer_set["id"]]["unit"] == "steps")
+for result, (exercise, _, _, unit) in zip(questless_sets, questless_payloads):
+    set_id = result["id"]
+    ok(f"questless {exercise} fresh recent/day unit {unit}", recent_by_id[set_id]["unit"] == unit and day_by_id[set_id]["unit"] == unit)
+
+valid_number = client.post("/api/lifts", json={"exercise": "Deadlift", "weight": 100, "reps": 5})
+valid_string = client.post("/api/lifts", json={"exercise": "Deadlift", "weight": " 100.75 ", "reps": " 5 "})
+ok("lift accepts JSON numeric values", valid_number.status_code == 200 and valid_number.json()["set"]["weight"] == 100 and valid_number.json()["set"]["reps"] == 5)
+ok("lift accepts trimmed plain-decimal strings", valid_string.status_code == 200 and valid_string.json()["set"]["weight"] == 100.75 and valid_string.json()["set"]["reps"] == 5)
+
+invalid_weight = [
+    ("null", None), ("empty", ""), ("whitespace", "   "), ("boolean", True),
+    ("array", []), ("object", {}), ("malformed", "heavy"), ("exponent", "1e2"),
+    ("negative", -1), ("nan", math.nan), ("positive infinity", math.inf),
+    ("negative infinity", -math.inf),
+]
+invalid_reps = [
+    ("null", None), ("empty", ""), ("whitespace", "   "), ("boolean", False),
+    ("array", []), ("object", {}), ("malformed", "five"), ("exponent", "1e2"),
+    ("negative", -1), ("fractional", 1.5), ("nan", math.nan),
+    ("positive infinity", math.inf), ("negative infinity", -math.inf),
+]
+
+for field, payload in (("weight", {"exercise": "Deadlift", "reps": 5}),
+                       ("reps", {"exercise": "Deadlift", "weight": 100})):
+    before = lift_count()
+    response = client.post("/api/lifts", json=payload)
+    ok(f"POST missing {field} rejects without mutation", response.status_code == 400 and lift_count() == before)
+
+for label, value in invalid_weight:
+    before = lift_count()
+    response = json_request("POST", "/api/lifts", {"exercise": "Deadlift", "weight": value, "reps": 5})
+    ok(f"POST invalid weight {label} rejects without mutation", response.status_code == 400 and lift_count() == before)
+for label, value in invalid_reps:
+    before = lift_count()
+    response = json_request("POST", "/api/lifts", {"exercise": "Deadlift", "weight": 100, "reps": value})
+    ok(f"POST invalid reps {label} rejects without mutation", response.status_code == 400 and lift_count() == before)
+
+before = lift_count()
+huge_reps = client.post("/api/lifts", json={"exercise": "Deadlift", "weight": 100, "reps": 10 ** 100})
+ok("POST oversized reps rejects without mutation", huge_reps.status_code == 400 and lift_count() == before)
+
+before = lift_count()
+overflowing_set = client.post("/api/lifts", json={
+    "exercise": "Deadlift", "weight": "1" + "0" * 308, "reps": 2_147_483_647,
+})
+ok("POST overflowing tonnage rejects without mutation", overflowing_set.status_code == 400 and lift_count() == before)
+
+before = lift_count()
+oversized_weight = client.post("/api/lifts", json={
+    "exercise": "Deadlift", "weight": "1" + "0" * 308, "reps": 1,
+})
+ok("POST stats-overflowing weight rejects without mutation", oversized_weight.status_code == 400 and lift_count() == before)
+
+invalid_quest_ids = [
+    ("boolean", True), ("array", []), ("object", {}), ("string", "2"),
+    ("fractional", 1.5), ("zero", 0), ("negative", -1),
+]
+for label, value in invalid_quest_ids:
+    before = lift_count()
+    response = json_request("POST", "/api/lifts", {
+        "exercise": "Deadlift", "weight": 100, "reps": 5, "quest_id": value,
+    })
+    ok(f"POST invalid quest id {label} rejects without mutation", response.status_code == 400 and lift_count() == before)
+
+before = lift_count()
+blank_exercise = client.post("/api/lifts", json={"exercise": "   ", "weight": 100, "reps": 5})
+ok("POST blank exercise rejects without mutation", blank_exercise.status_code == 400 and lift_count() == before)
+
+patch_target = client.post("/api/lifts", json={"exercise": "Deadlift", "weight": 100, "reps": 5}).json()["set"]
+patch_id = patch_target["id"]
+for field, payload in (("weight", {"reps": 5}), ("reps", {"weight": 100})):
+    before = (lift_row(patch_id), ledger_count())
+    response = client.patch(f"/api/lifts/{patch_id}", json=payload)
+    ok(f"PATCH missing {field} rejects without mutation", response.status_code == 400 and (lift_row(patch_id), ledger_count()) == before)
+for label, value in invalid_weight:
+    before = (lift_row(patch_id), ledger_count())
+    response = json_request("PATCH", f"/api/lifts/{patch_id}", {"weight": value, "reps": 5})
+    ok(f"PATCH invalid weight {label} rejects without mutation", response.status_code == 400 and (lift_row(patch_id), ledger_count()) == before)
+for label, value in invalid_reps:
+    before = (lift_row(patch_id), ledger_count())
+    response = json_request("PATCH", f"/api/lifts/{patch_id}", {"weight": 100, "reps": value})
+    ok(f"PATCH invalid reps {label} rejects without mutation", response.status_code == 400 and (lift_row(patch_id), ledger_count()) == before)
+
+before = (lift_row(patch_id), ledger_count())
+overflowing_patch = client.patch(f"/api/lifts/{patch_id}", json={
+    "weight": "1" + "0" * 308, "reps": 2_147_483_647,
+})
+ok("PATCH overflowing tonnage rejects without mutation", overflowing_patch.status_code == 400 and (lift_row(patch_id), ledger_count()) == before)
+
+before = (lift_row(patch_id), ledger_count())
+oversized_weight_patch = client.patch(f"/api/lifts/{patch_id}", json={
+    "weight": "1" + "0" * 308, "reps": 1,
+})
+ok("PATCH stats-overflowing weight rejects without mutation", oversized_weight_patch.status_code == 400 and (lift_row(patch_id), ledger_count()) == before)
+
+patch_numbers = client.patch(f"/api/lifts/{patch_id}", json={"weight": 101.5, "reps": 6})
+patch_strings = client.patch(f"/api/lifts/{patch_id}", json={"weight": " 102.25 ", "reps": " 7 "})
+ok("PATCH accepts numeric and trimmed decimal values", patch_numbers.status_code == 200 and patch_strings.status_code == 200 and lift_row(patch_id)["weight"] == 102.25 and lift_row(patch_id)["reps"] == 7)
+
+before = lift_count()
+wildcard_day = client.delete("/api/lifts/day/%25")
+invalid_day = client.delete("/api/lifts/day/2026-02-30")
+ok("wildcard lift day delete rejects without mutation", wildcard_day.status_code == 400 and lift_count() == before)
+ok("invalid lift day delete rejects without mutation", invalid_day.status_code == 400 and lift_count() == before)
+
 # ---- writes that must not 500 ----------------------------------------------
 print("misc writes:")
-r = client.post("/api/lifts", json={"exercise": "Deadlift", "weight": 100, "reps": 5})
-ok("log lift", r.status_code == 200)
 r = client.post("/api/settings", json={"weight_unit": "kg"})
 ok("save settings", r.status_code == 200)
+bad_weight_unit = client.post("/api/settings", json={
+    "weight_unit": '<img src=x onerror=alert(1)>',
+})
+settings_after_bad_unit = client.get("/api/state").json()["settings"]
+ok("reject unsafe weight unit without mutation", bad_weight_unit.status_code == 400 and settings_after_bad_unit["weight_unit"] == "kg")
 r = client.post("/api/claim", json={"kind": "hike", "minutes": 30, "note": "smoke"})
 ok("scrivener claim", r.status_code == 200)
 

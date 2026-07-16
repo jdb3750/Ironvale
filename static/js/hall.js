@@ -13,6 +13,7 @@ let vitalsRange = 90; // days shown in the Vitals charts; 0 = all time
 let almMonth = null;  // Almanac edition being read; null = latest published
 let hallDaySets = new Map();
 let hallDayActivities = new Map();
+let roadClaimPending = false;
 // tab pairs render as spaced clusters (related views stay adjacent)
 const HALL_GROUPS = [
   { tabs: [['body', 'Body'], ['vitals', 'Vitals']] },
@@ -23,6 +24,7 @@ const HALL_GROUPS = [
 RESETS.push(() => {
   statsTab = 'body';
   calState = null;
+  roadClaimPending = false;
   vitalsRange = 90;
   almMonth = null;
   hallDaySets = new Map();
@@ -31,8 +33,10 @@ RESETS.push(() => {
 });
 
 SCREENS.stats = async function () {
+  const routeToken = captureRouteToken();
   const d = await api('/stats?wellness_days=' + vitalsRange);
   const chron = statsTab === 'chronicle' ? (await api('/chronicle')).events : [];
+  if (!isRouteTokenCurrent(routeToken)) return;
   const c = d.character;
   const wu = S.state.settings.weight_unit;
 
@@ -67,7 +71,8 @@ SCREENS.stats = async function () {
     const mantelWin = ks ? `<div class="win"><span class="win-title">The Mantel</span>
       <div class="muted" style="font-size:16px;margin-bottom:6px">what the years leave on the shelf${ks.length ? ' — tap a keepsake' : ''}</div>
       ${ks.length ? `<div class="mantel">${ks.map((k, i) =>
-        `<div class="ks" onclick="G.keepsake(${i})">${spriteTag(k.sprite, 48)}</div>`).join('')}</div>`
+        `<button type="button" class="ks control-reset" style="padding:2px 4px 6px;border-bottom:5px solid #5a4426"
+          aria-label="Open keepsake: ${esc(k.name)}" onclick="G.keepsake(${i})">${spriteTag(k.sprite, 48)}</button>`).join('')}</div>`
     : '<div class="mantel mantel-empty"><span class="muted">bare wood, for now. it is patient.</span></div>'}
     </div>` : '';
     const notesWin = d.insights.length ? `<div class="win"><span class="win-title">The Curator's Notes</span>
@@ -146,7 +151,7 @@ SCREENS.stats = async function () {
         <br><span class="muted" style="font-size:14px">${road.breakdown.run} run &middot; ${road.breakdown.walk} walked &middot; ${road.breakdown.swim} swum &middot; ${road.breakdown.ride} ridden (counts &frac14;) &middot; tap a landmark for its story</span>
       </div>
       ${road.unclaimed > 0 ? `<div class="center" style="margin-top:8px">
-        <button class="btn wide green" onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
+        <button class="btn wide green" id="road-claim" ${roadClaimPending ? 'disabled aria-busy="true"' : ''} onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
       </div>` : ''}
     </div>` : ''}
     <div class="win"><span class="win-title">The Road (12 weeks)</span>
@@ -258,6 +263,7 @@ SCREENS.stats = async function () {
     </div>`;
   }
 
+  if (!isRouteTokenCurrent(routeToken)) return;
   $app().innerHTML = shell(`
     <div class="win tight">
       <div class="npc-head">
@@ -299,12 +305,14 @@ function compendiumBody() {
   S.exercises.forEach(e => (byEquip[e.equipment] = byEquip[e.equipment] || []).push(e));
   const section = (eq, label) => byEquip[eq] ? `
     <div class="win"><span class="win-title">${label}</span>
-      ${byEquip[eq].map(e => `<div class="shop-row" style="cursor:pointer" onclick="G.compToggle(${S.exercises.indexOf(e)})">
+      ${byEquip[eq].map(e => `<button type="button" class="shop-row control-reset" style="width:100%;padding:8px 4px;border-bottom:1px solid #22203a;cursor:pointer"
+        aria-label="${COMP.open[e.name] ? 'Close' : 'Open'} form notes for ${esc(e.name)}" aria-expanded="${!!COMP.open[e.name]}"
+        onclick="G.compToggle(${S.exercises.indexOf(e)})">
         <span class="grow"><span class="s-name">${esc(e.name)}</span><br>
           <span class="s-desc">targets: ${e.groups.join(', ')}</span>
-          ${COMP.open[e.name] ? `<div class="muted" style="font-size:17px;border-left:2px solid var(--gold);padding-left:8px;margin-top:6px">${esc(e.how || '')}</div>` : ''}</span>
+          ${COMP.open[e.name] ? `<span class="muted" style="display:block;font-size:17px;border-left:2px solid var(--gold);padding-left:8px;margin-top:6px">${esc(e.how || '')}</span>` : ''}</span>
         ${bodyMapTag(e.groups, 90)}
-      </div>`).join('')}
+      </button>`).join('')}
     </div>` : '';
   return `<div class="muted center" style="margin:4px 0">The Compendium of Honest Labor — tap a lift for the how.
       Left figure: front. Right: back.</div>
@@ -324,16 +332,16 @@ G.compToggle = (index) => {
 /* ---- real month calendar ---- */
 
 async function calendarBody() {
+  const serverToday = (await api('/today')).today;
   if (!calState) {
-    const t = new Date();
-    calState = { y: t.getFullYear(), m: t.getMonth() + 1 };
+    const [y, m] = serverToday.split('-').map(Number);
+    calState = { y, m };
   }
   const cal = await api(`/calendar?year=${calState.y}&month=${calState.m}`);
-  const first = new Date(calState.y, calState.m - 1, 1);
-  const startDow = (first.getDay() + 6) % 7; // monday-first
-  const daysInMonth = new Date(calState.y, calState.m, 0).getDate();
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const monthName = first.toLocaleString('default', { month: 'long' });
+  const first = new Date(Date.UTC(calState.y, calState.m - 1, 1));
+  const startDow = (first.getUTCDay() + 6) % 7; // monday-first
+  const daysInMonth = new Date(Date.UTC(calState.y, calState.m, 0)).getUTCDate();
+  const monthName = first.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
 
   let cells = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => `<div class="dow">${d}</div>`).join('');
   for (let i = 0; i < startDow; i++) cells += '<div class="calday other"></div>';
@@ -345,11 +353,15 @@ async function calendarBody() {
       dots = info.acts.slice(0, 6).map(a => `<span class="cdot cat-${a.category}" title="${esc(a.name || a.type)}"></span>`).join('');
       if (info.sets > 0 && !info.acts.some(a => a.category === 'strength')) dots += '<span class="cdot cat-strength" title="lifting logged"></span>';
     }
-    cells += `<div class="calday ${dstr === todayStr ? 'today' : ''}" onclick="G.dayDetail('${dstr}')">
+    const daySummary = info
+      ? `${info.acts.length} deed${info.acts.length === 1 ? '' : 's'}, ${info.sets} lifting set${info.sets === 1 ? '' : 's'}, ${info.quests || 0} quest${info.quests === 1 ? '' : 's'}`
+      : 'no deeds recorded';
+    cells += `<button type="button" class="calday ${dstr === serverToday ? 'today' : ''}" style="font:inherit;color:inherit;text-align:left"
+      aria-label="Inspect ${dstr}: ${daySummary}" onclick="G.dayDetail('${dstr}')">
       <span class="dn">${day}</span>
       ${info && info.quests ? `<span class="qmark">&#9733;${info.quests > 1 ? info.quests : ''}</span>` : ''}
-      <div class="caldots">${dots}</div>
-    </div>`;
+      <span class="caldots">${dots}</span>
+    </button>`;
   }
 
   const legend = Object.entries(CAT_LABELS).map(([k, v]) =>
@@ -375,7 +387,9 @@ G.calNav = (dir) => {
 };
 
 G.dayDetail = async (dstr) => {
+  const token = captureRouteToken();
   const d = await api(`/day/${dstr}`);
+  if (!isRouteTokenCurrent(token)) return;
   const wu = S.state.settings.weight_unit;
   hallDaySets = new Map(d.sets.map(s => [s.id, s]));
   hallDayActivities = new Map(d.activities.map((activity, index) => [index, activity.id]));
@@ -387,7 +401,7 @@ G.dayDetail = async (dstr) => {
   </div>`).join('');
   const sets = d.sets.map(s => `<div class="shop-row">
     <span class="cdot cat-strength"></span>
-    <span class="grow"><span class="s-name">${esc(s.exercise)}</span> <span class="s-desc">${s.weight}${wu} &times; ${s.reps}</span></span>
+    <span class="grow"><span class="s-name">${esc(s.exercise)}</span> <span class="s-desc">${esc(G.formatLift(s, wu))}</span></span>
     <button class="btn small" style="min-width:0" onclick="G.editHallSet(${s.id})">fix</button>
   </div>`).join('');
   const quests = d.quests.map(q => `<div class="shop-row"><span style="color:var(--gold-bright)">&#9733;</span>
@@ -396,14 +410,14 @@ G.dayDetail = async (dstr) => {
     ${acts || ''}${sets || ''}${quests || ''}
     ${d.sets.length ? `<div class="center" style="margin-top:8px"><button class="btn danger small" style="min-width:0" onclick="G.strikeDay('${dstr}',${d.sets.length})">STRIKE WHOLE LIFTING SESSION (${d.sets.length} sets)</button></div>` : ''}
     ${!acts && !sets && !quests ? '<p class="muted">A day of rest. The ledger holds nothing against you.</p>' : ''}
-    <div class="center" style="margin-top:10px"><button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">close</button></div>
+    <div class="center" style="margin-top:10px"><button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">close</button></div>
   </div>`);
 };
 
 G.editHallSet = (id) => {
   const set = hallDaySets.get(id);
   if (!set) return;
-  G.editSet(set.id, set.exercise, set.weight, set.reps);
+  G.editSetByRecord(set);
 };
 
 G.strikeHallActivity = (index) => {
@@ -412,19 +426,23 @@ G.strikeHallActivity = (index) => {
 };
 
 G.strikeActivity = async (id) => {
-  if (!confirm('Strike this entire workout from the record? Wick will not restore it.')) return;
+  if (!await confirmModal('Strike this entire workout from the record? Wick will not restore it.',
+      { title: 'Strike the record?', okLabel: 'STRIKE IT', danger: true })) return;
+  const token = captureRouteToken();
   await api(`/activities/${id}`, { method: 'DELETE' });
+  if (!isRouteTokenCurrent(token)) return;
   toast('Struck from the record.');
-  document.querySelectorAll('.overlay').forEach(o => o.remove());
-  render();
+  G.closeOverlays(render);
 };
 
 G.strikeDay = async (dstr, n) => {
-  if (!confirm(`Strike all ${n} sets from ${dstr}? The whole session, gone.`)) return;
+  if (!await confirmModal(`Strike all ${n} sets from ${dstr}? The whole session, gone.`,
+      { title: 'Strike the session?', okLabel: 'STRIKE ALL', danger: true })) return;
+  const token = captureRouteToken();
   await api(`/lifts/day/${dstr}`, { method: 'DELETE' });
+  if (!isRouteTokenCurrent(token)) return;
   toast('The session is struck from the record.');
-  document.querySelectorAll('.overlay').forEach(o => o.remove());
-  render();
+  G.closeOverlays(render);
 };
 
 /* ---- The Tapestry: a year of days as a woven grid, GitHub-graph style but
@@ -613,7 +631,7 @@ G.roadLore = (key) => {
     <div style="display:flex;justify-content:center;margin:10px 0">${spriteTag(m.icon, 72)}</div>
     <div class="muted" style="font-size:14px;letter-spacing:2px">KILOMETER ${m.km}</div>
     <p class="road-lore">${esc(m.lore)}</p>
-    <button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">walk on</button>
+    <button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">walk on</button>
   </div>`);
 };
 
@@ -625,16 +643,34 @@ G.keepsake = (i) => {
     <div style="display:flex;justify-content:center;margin:10px 0">${spriteTag(k.sprite, 72)}</div>
     <div class="muted" style="font-size:14px;letter-spacing:2px">${k.date ? 'KEPT SINCE ' + k.date : 'FROM A DAY THE LEDGER DOES NOT NAME'}</div>
     <p class="road-lore">${esc(k.lore)}</p>
-    <button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">back on the shelf</button>
+    <button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">back on the shelf</button>
   </div>`);
 };
 
 G.roadClaim = async () => {
+  if (roadClaimPending) return;
+  const token = captureRouteToken();
+  roadClaimPending = true;
+  const button = document.getElementById('road-claim');
+  if (button) {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+  }
   let r;
   try {
     r = await api('/road/claim', { method: 'POST' });
-  } catch (e) { return; }
-  await refreshState();
+    await refreshState();
+  } catch (e) {
+    return;
+  } finally {
+    roadClaimPending = false;
+    const currentButton = document.getElementById('road-claim');
+    if (currentButton) {
+      currentButton.disabled = false;
+      currentButton.removeAttribute('aria-busy');
+    }
+  }
+  if (!isRouteTokenCurrent(token)) return;
   SFX.fanfare();
   const more = (S.roadState?.unclaimed || 1) - 1;
   showModal(`<div class="win ceremony road-card">
@@ -645,7 +681,7 @@ G.roadClaim = async () => {
     <div class="reward-line" style="color:var(--blue)">&#9678; +${r.reward.tokens} brass token</div>
     ${r.reward.pack ? '<div class="reward-line">+ a Monster Pack, left by an earlier traveler</div>' : ''}
     <div style="margin-top:14px">
-      <button class="btn big" onclick="this.closest('.overlay').remove();render()">${more > 0 ? 'PRESS ON' : 'WALK ON'}</button>
+      <button class="btn big" onclick="G.closeOverlay(this.closest('.overlay'),render)">${more > 0 ? 'PRESS ON' : 'WALK ON'}</button>
     </div>
   </div>`, { backdropClose: false });
 };

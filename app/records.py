@@ -4,14 +4,74 @@ Everything here READS the save and narrates it — no mutations to character
 or quests. Split out of game.py in the pre-1.0 refactor.
 
 Import direction: may import game (shared core) and db; never the reverse."""
+import json
 import random
+import sqlite3
 from datetime import datetime, timedelta
+from typing import List, Optional, TypedDict
 
-from . import db
+from . import db, exercises
 from .game import (
     CATEGORIES, RUN_TYPES, category, get_char, get_settings, muscle_recency,
     now, run_history, today,
 )
+
+SUPPORTED_LIFT_UNITS = ("reps", "seconds", "steps")
+
+
+class LiftPayload(TypedDict):
+    id: int
+    ts: str
+    exercise: str
+    weight: float
+    reps: int
+    quest_id: Optional[int]
+    unit: str
+
+
+def shape_lift_row(row: sqlite3.Row) -> LiftPayload:
+    unit = None
+    if row["quest_details"]:
+        details = json.loads(row["quest_details"])
+        unit = next((
+            entry.get("unit")
+            for entry in details.get("routine", [])
+            if entry.get("exercise") == row["exercise"]
+            and entry.get("unit") in SUPPORTED_LIFT_UNITS
+        ), None)
+    if unit is None:
+        exercise = exercises.EXERCISES.get(row["exercise"])
+        catalog_unit = exercise["scheme"][0] if exercise else "reps"
+        unit = catalog_unit if catalog_unit in SUPPORTED_LIFT_UNITS else "reps"
+    return {
+        "id": row["id"],
+        "ts": row["ts"],
+        "exercise": row["exercise"],
+        "weight": float(row["weight"]),
+        "reps": int(row["reps"]),
+        "quest_id": row["quest_id"],
+        "unit": unit,
+    }
+
+
+def lift_payload(set_id: int) -> Optional[LiftPayload]:
+    row = db.q(
+        "SELECT lifts.*, quests.details AS quest_details "
+        "FROM lift_sets AS lifts LEFT JOIN quests ON quests.id=lifts.quest_id "
+        "WHERE lifts.id=?",
+        (set_id,),
+    ).fetchone()
+    return shape_lift_row(row) if row else None
+
+
+def recent_lift_payload(limit: int) -> List[LiftPayload]:
+    rows = db.q(
+        "SELECT lifts.*, quests.details AS quest_details "
+        "FROM lift_sets AS lifts LEFT JOIN quests ON quests.id=lifts.quest_id "
+        "ORDER BY lifts.id DESC LIMIT ?",
+        (limit,),
+    ).fetchall()
+    return [shape_lift_row(row) for row in rows]
 
 def wellness_series(days=180):
     """days<=0 means "all time" — no cutoff at all."""
@@ -349,7 +409,12 @@ def calendar_payload(year, month):
 def day_payload(dstr):
     acts = [dict(a) | {"category": category(a["type"]), "minutes": round((a["moving_time"] or 0) / 60)}
             for a in db.q("SELECT * FROM activities WHERE start LIKE ? ORDER BY start", (dstr + "%",)).fetchall()]
-    sets_ = [dict(r) for r in db.q("SELECT * FROM lift_sets WHERE ts LIKE ? ORDER BY id", (dstr + "%",)).fetchall()]
+    sets_ = [shape_lift_row(row) for row in db.q(
+        "SELECT lifts.*, quests.details AS quest_details "
+        "FROM lift_sets AS lifts LEFT JOIN quests ON quests.id=lifts.quest_id "
+        "WHERE lifts.ts LIKE ? ORDER BY lifts.id",
+        (dstr + "%",),
+    ).fetchall()]
     quests = [{"id": r["id"], "title": r["title"], "giver": r["giver"]}
               for r in db.q("SELECT * FROM quests WHERE status='done' AND completed_at LIKE ?", (dstr + "%",)).fetchall()]
     return {"date": dstr, "activities": acts, "sets": sets_, "quests": quests}

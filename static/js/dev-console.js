@@ -101,8 +101,7 @@ G.openDevConsole = () => {
   devConsolePrint(output, 'type help for commands', 'muted');
 
   const close = () => {
-    ov.remove();
-    render();
+    G.closeOverlay(ov, render);
   };
   ov.onclick = e => { if (e.target === ov) close(); };
   ov.querySelector('[data-dev-close]').addEventListener('click', close);

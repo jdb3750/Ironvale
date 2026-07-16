@@ -128,6 +128,8 @@ h1, h2, h3 { font-weight: normal; }
   gap: 8px; flex-wrap: wrap; font-size: 19px;
 }
 .hdr-char .hc-row canvas { border: 1px solid #4a3d20; background: #000; }
+.character-name { color: var(--gold-bright); overflow-wrap: anywhere; }
+.character-name.paired-cjk { word-break: keep-all; overflow-wrap: normal; }
 .hdr-char .hc-res { margin-top: 3px; gap: 12px; }
 .hdr-char .hc-res canvas { border: none; background: none; }
 .hdr-char .stat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -161,7 +163,14 @@ h1, h2, h3 { font-weight: normal; }
   .hdr-char { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 8px; text-align: center; }
   .hdr-char .hc-row { justify-content: center; flex-wrap: nowrap; font-size: 15px; gap: 6px; }
   .hdr-char .hc-res { margin-top: 0; gap: 8px; }
-  .hdr-char .hero-btn canvas, .hdr-char .buddy-chip canvas { width: 28px; height: 28px; }
+  /* Hero and buddy sprites carry different intrinsic heights from the renderer
+     (inline width/height), so pin both to one centered box so they line up. */
+  .hdr-char .hero-btn, .hdr-char .buddy-chip { align-items: center; }
+  .hdr-char .hero-btn canvas, .hdr-char .buddy-chip canvas {
+    width: 28px !important;
+    height: 28px !important;
+    object-fit: contain;
+  }
   .hdr .xpbar { display: none; }
 }
 
@@ -806,7 +815,9 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   font-family: inherit; padding: 2px 4px;
 }
 .lens-box-close:hover { color: var(--gold-bright); }
-.lens-box-name { font-size: 19px; padding-right: 16px; }
+/* symmetric padding: the absolute ✕ needs clearance on the right, but
+   one-sided padding shoved the centered name off-axis */
+.lens-box-name { font-size: 19px; padding-inline: 18px; }
 .lens-box-info { font-size: 14px; margin: 6px 0 10px; line-height: 1.5; }
 .lens-box-btns { display: flex; flex-direction: column; gap: 5px; }
 .lens-box-btns .btn { min-width: 0; width: 100%; font-size: 14px; padding: 5px 6px; }
@@ -945,6 +956,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
    sibling of content only (not the whole card), that border naturally spans
    just their shared row height and stops there. */
 .siege-banner.expanded {
+  position: relative;
   padding: 14px;
   display: flex;
   flex-wrap: wrap;
@@ -953,6 +965,14 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   cursor: pointer;
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #4a2828, 6px 6px 0 rgba(0,0,0,0.55);
 }
+/* quiet corner control, like the lens box's ✕ — not a full command button */
+.sg-collapse {
+  position: absolute; top: 2px; right: 4px; z-index: 2;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: 18px; line-height: 1;
+  color: var(--dim); padding: 6px 8px;
+}
+.sg-collapse:hover { color: var(--gold-bright); }
 .siege-banner.expanded.won { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #3e6234, 6px 6px 0 rgba(0,0,0,0.55); }
 .siege-banner.expanded:not(.won):hover { border-color: #a84028; }
 .siege-banner.expanded.won:hover { border-color: #4e8244; }
@@ -986,7 +1006,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     linear-gradient(180deg, rgba(34,16,16,0.55), rgba(16,10,10,0.12));
   border: 1px solid #3a1818;
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5);
-  cursor: auto;
+  cursor: pointer;  /* the whole card collapses on click */
 }
 .siege-banner.expanded.won .sg-content {
   background:
@@ -1111,4 +1131,580 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     margin-bottom: 8px;
   }
   .hall-nav-buttons .btn { font-size: 11px; }
+}
+
+/* CSS owns transitions/keyframes; shared JS owns media-query state, timers, RAF, and canvas outcomes. */
+.control-reset,
+.illustrated-control {
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+}
+.control-reset { border: 0; padding: 0; }
+.illustrated-control { border: 0; padding: 0; }
+
+:where(
+  .btn,
+  .dock-action,
+  .control-reset,
+  .illustrated-control,
+  .hdr-brand,
+  .hero-btn,
+  .buddy-chip,
+  .profile-card[role="button"],
+  .bld,
+  .tod-toggle,
+  .dcell.adjacent,
+  .calday,
+  .mantel .ks,
+  .col-contestant,
+  .mon-tile,
+  .pen-btn,
+  .hat-slot,
+  .lever,
+  .pack-wrap,
+  .lens-box-close,
+  input,
+  select,
+  summary
+):focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold-bright);
+}
+
+.overlay {
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  overflow-y: auto;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+}
+.overlay .win {
+  max-block-size: calc(100vh - 32px);
+  max-block-size: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overscroll-behavior: contain;
+}
+
+.phone-dock { display: none; }
+
+.logger-card {
+  border: 2px solid #3a3450;
+  background: var(--panel2);
+  margin: 8px 0;
+  min-inline-size: 0;
+}
+.logger-card[open] { border-color: var(--gold); }
+.logger-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  padding: 8px 10px;
+  color: var(--gold-bright);
+  cursor: pointer;
+  list-style: none;
+}
+.logger-summary::-webkit-details-marker { display: none; }
+.logger-summary::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--gold);
+}
+.logger-card[open] > .logger-summary::after { content: '\2212'; }
+.logger-card-body { padding: 0 10px 10px; }
+.logger-ex {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-inline-size: 0;
+}
+.logger-how-btn {
+  align-self: center;
+  font: inherit;
+  line-height: 1;
+  color: var(--gold);
+  background: none;
+  border: 2px solid var(--gold);
+  border-radius: 0;
+  min-inline-size: 26px;
+  min-block-size: 26px;
+  padding: 0 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.logger-how-btn:hover { background: var(--gold); color: var(--bg); }
+.logger-ex .ex-target { color: var(--dim); font-size: 0.82em; }
+.logger-fields {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+.logger-fields.logger-fields-stacked { grid-template-columns: minmax(0, 1fr); }
+/* In the correction modal, stack label above the stepper row so weight and
+   count rows share an identical control template and line up evenly. */
+.logger-fields-stacked .logger-field-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+.logger-fields-stacked .logger-field-row > label { grid-column: 1 / -1; }
+
+/* The creature's hat picker is a pixel dropdown, not a native select, so its
+   toggle and menu match the lens-box buttons instead of a system popup.
+   When open, the menu reads as a panel attached to the toggle: the toggle
+   inverts, the panel shares its border, and the options render as lighter
+   inset rows so they clearly belong to the dropdown — unlike the standalone
+   buttons (UNBUDDY etc.) below it. */
+.hat-picker,
+.pixel-select { min-inline-size: 0; }
+.hat-picker > summary,
+.pixel-select > summary {
+  display: block;
+  width: 100%;
+  text-align: center;
+  list-style: none;
+}
+.hat-picker > summary::-webkit-details-marker,
+.pixel-select > summary::-webkit-details-marker { display: none; }
+.hat-picker-summary::after,
+.pixel-select-summary::after { content: ' \25be'; color: var(--gold); }
+.hat-picker[open] > .hat-picker-summary,
+.pixel-select[open] > .pixel-select-summary { background: var(--gold); color: var(--bg); }
+.hat-picker[open] > .hat-picker-summary::after,
+.pixel-select[open] > .pixel-select-summary::after { content: ' \25b4'; color: var(--bg); }
+.hat-picker-menu,
+.pixel-select-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 2px solid var(--gold);
+  border-top: 0;
+  background: #0b0b14;
+  padding: 5px;
+}
+.pixel-select-menu { max-block-size: 230px; overflow-y: auto; }
+.hat-picker-menu .hat-option,
+.pixel-select-menu .pixel-option {
+  width: 100%;
+  border: 1px solid #4a3d20;
+  box-shadow: none;
+  background: var(--panel2);
+  text-align: left;
+}
+.hat-picker-menu .hat-option::before,
+.pixel-select-menu .pixel-option::before { content: '\25b8'; color: var(--gold); margin-right: 6px; }
+.hat-picker-menu .hat-option:hover,
+.pixel-select-menu .pixel-option:hover {
+  /* .btn:hover drops text to var(--bg) expecting a gold background swap;
+     these rows keep their dark panel2 background, so pin the text color
+     back to gold-bright or it reads as near-black on near-black. */
+  border-color: var(--gold);
+  background: var(--panel2);
+  color: var(--gold-bright);
+}
+.pixel-select-menu .pixel-option.selected {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+}
+
+/* In-world confirm dialog (replaces window.confirm). */
+.confirm-win { max-width: 360px; }
+.confirm-msg { margin: 10px 0 14px; font-size: 19px; }
+.confirm-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.logger-field-row {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) 48px minmax(5rem, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+}
+.logger-field-row > label,
+.logger-field-label {
+  margin: 0;
+  min-inline-size: 0;
+}
+.logger-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 48px;
+  min-block-size: 48px;
+  padding: 0;
+  font-size: 26px;
+  line-height: 1;
+  touch-action: manipulation;
+}
+.logger-input {
+  min-inline-size: 0;
+  min-block-size: 44px;
+  font-size: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.logger-input[aria-invalid='true'],
+.logger-card.has-error .logger-input {
+  border-color: var(--red);
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+.logger-error {
+  min-block-size: 1.35em;
+  margin: 6px 0;
+  color: #d96969;
+  font-size: 18px;
+  line-height: 1.35;
+}
+.logger-feedback {
+  min-block-size: 1.35em;
+  color: var(--green);
+  font-size: 18px;
+}
+.logger-save { min-block-size: 44px; }
+.logger-card[aria-busy='true'],
+.logger-card.is-saving { border-color: var(--blue); }
+.logger-card[aria-busy='true'] .logger-save,
+.logger-card.is-saving .logger-save {
+  cursor: wait;
+  opacity: 0.65;
+}
+.logger-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  padding-block: 4px;
+}
+.logger-recent-row > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 720px) {
+  .logger-summary {
+    min-block-size: 36px;
+    padding-block: 4px;
+  }
+  .logger-card-body { padding-bottom: 8px; }
+  .logger-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-block: 4px;
+  }
+  .logger-field-row {
+    grid-template-columns: minmax(5rem, auto) 40px minmax(4rem, 1fr) 40px;
+    gap: 6px;
+  }
+  .logger-field-row:only-child { grid-column: 1 / -1; }
+  .logger-step {
+    min-inline-size: 40px;
+    min-block-size: 40px;
+    font-size: 24px;
+  }
+  .logger-input { min-block-size: 40px; }
+  .logger-error:empty,
+  .logger-feedback:empty {
+    min-block-size: 0;
+    margin: 0;
+  }
+  .btn.big.logger-save {
+    min-block-size: 40px;
+    margin-top: 2px;
+    padding: 6px 16px;
+    font-size: 20px;
+  }
+}
+
+.phone-disclosure > summary { display: none; }
+.phone-disclosure:not([open]) > :not(summary) { display: block; }
+.phone-disclosure-content { min-inline-size: 0; }
+
+.dungeon-gate { min-inline-size: 0; }
+.dungeon-gate-primary,
+.dungeon-gate-rules { min-inline-size: 0; }
+
+@media (max-width: 719px) {
+  body { min-block-size: 100dvh; }
+
+  #app {
+    padding-top: 6px;
+    padding-right: max(6px, env(safe-area-inset-right));
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    padding-left: max(6px, env(safe-area-inset-left));
+  }
+  .hdr {
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-left: max(4px, env(safe-area-inset-left));
+  }
+  .hdr .pixel-title {
+    font-size: clamp(22px, 8vw, 34px);
+    line-height: 1.2;
+    letter-spacing: 1px;
+  }
+
+  .phone-dock {
+    position: fixed;
+    z-index: 900;
+    right: env(safe-area-inset-right);
+    bottom: 0;
+    left: env(safe-area-inset-left);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-top: 2px solid var(--gold);
+    background: rgba(10,10,18,0.97);
+    box-shadow: 0 -4px 0 rgba(0,0,0,0.45);
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 0.16s ease-out, opacity 0.12s linear;
+  }
+  .phone-dock .dock-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    padding: 4px;
+    font-family: 'VT323', monospace;
+    font-size: 17px;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+    border: 2px solid var(--gold);
+    border-radius: 0;
+    background: var(--panel2);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+    cursor: pointer;
+    user-select: none;
+    white-space: normal;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .phone-dock .dock-action:hover { background: var(--gold); color: var(--bg); }
+  .phone-dock .dock-action:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  }
+  .phone-dock .dock-action[aria-current='page'] {
+    background: var(--gold);
+    color: var(--bg);
+  }
+  .phone-dock .dock-action:disabled,
+  .phone-dock .dock-action[aria-disabled='true'] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  body.dock-collapsed .phone-dock {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .backrow,
+  .footer-btns { display: none; }
+  .footer {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  .toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+  select,
+  input[type=text],
+  input[type=password],
+  input[type=number] { min-block-size: 44px; }
+
+  :where(
+    .btn,
+    .hdr-brand,
+    .hero-btn,
+    .buddy-chip,
+    .bld,
+    .dpad .btn,
+    .combat-actions .btn,
+    .pip-panel .btn,
+    .col-contestant,
+    .pen-btn,
+    .hat-slot,
+    .mon-tile,
+    .pack-wrap,
+    .lens-box-close,
+    .crank-action,
+    .ranch-action,
+    .dungeon-action
+  ) {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+  }
+  .btn.small {
+    min-block-size: 44px;
+    padding-block: 6px;
+  }
+
+  .logger-field-row {
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    gap: 8px;
+  }
+  .logger-field-row > label,
+  .logger-field-label {
+    grid-column: 1 / -1;
+  }
+  .logger-step,
+  .stepper .logger-step { min-inline-size: 48px; min-block-size: 48px; }
+  .logger-input { min-block-size: 48px; }
+  .logger-save { min-block-size: 48px; }
+  .logger-recent-row { align-items: flex-start; flex-wrap: wrap; }
+  .logger-recent-row .btn {
+    flex: 0 0 auto;
+    min-inline-size: 44px;
+    min-width: 44px !important;
+  }
+
+  .hall-nav {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .hall-nav-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .hall-nav-buttons .btn {
+    min-block-size: 44px;
+    padding: 6px 4px;
+    font-size: 19px;
+    line-height: 1.1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .phone-disclosure > summary {
+    display: flex;
+    align-items: center;
+    min-block-size: 44px;
+    padding: 6px 8px;
+    color: var(--gold-bright);
+    border: 2px solid #4a3d20;
+    background: var(--panel2);
+    cursor: pointer;
+    list-style: none;
+  }
+  .phone-disclosure > summary::-webkit-details-marker { display: none; }
+  .phone-disclosure > summary::after {
+    content: '+';
+    margin-left: auto;
+    color: var(--gold);
+  }
+  .phone-disclosure[open] > summary::after { content: '\2212'; }
+  .phone-disclosure:not([open]) > :not(summary) { display: none; }
+  .phone-disclosure[open] > .phone-disclosure-content { display: block; }
+  .offer-primary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .offer-primary .btn { align-self: stretch; }
+  .offer-lore { margin-top: 8px; }
+
+  .dungeon-gate {
+    display: flex;
+    flex-direction: column;
+  }
+  .dungeon-gate-primary { order: -2; }
+  .dungeon-gate-rules { order: 2; }
+  .dungeon-gate-primary .btn { width: 100%; }
+  .dpad { grid-template-columns: repeat(3, minmax(64px, 76px)); }
+
+  :where(
+    button.hdr-brand,
+    button.hero-btn,
+    button.buddy-chip,
+    button.bld,
+    button.dcell,
+    button.calday,
+    button.col-contestant,
+    button.mon-tile,
+    button.pen-btn,
+    button.hat-slot,
+    button.lever,
+    button.pack-wrap,
+    button.lens-box-close
+  ) {
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 0;
+    font-family: inherit;
+    color: inherit;
+  }
+  button.bld,
+  button.col-contestant,
+  button.mon-tile { background: var(--panel2); }
+  button.bld { background: transparent; border: 0; }
+  button.dcell { padding: 0; }
+  button.dcell.adjacent { min-inline-size: 44px; min-block-size: 44px; }
+  .dcell.adjacent { touch-action: manipulation; }
+  .col-contestant[aria-pressed='true'],
+  .col-contestant[aria-selected='true'] {
+    border-color: var(--gold-bright);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold-bright);
+  }
+  .ranch-action,
+  .crank-action,
+  .dungeon-action { touch-action: manipulation; }
+
+  /* Phone equips hats via the one-tap dropdown in the creature lens;
+     the draggable HATS tray is desktop-only. */
+  .pen-ui { display: none; }
+
+  /* creature details render as a centered overlay on phones */
+  .ranch-info-win { max-width: 300px; width: 100%; }
+
+  /* the siege card stacks: boss above, text below, full width for both */
+  .siege-banner.expanded .sg-boss-col {
+    flex: 1 1 100%;
+    padding-right: 0;
+    border-right: 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #4a2828;
+  }
+  .siege-banner.expanded.won .sg-boss-col {
+    border-right: 0;
+    border-bottom-color: #345030;
+  }
+}
+
+@media (max-width: 340px) {
+  .logger-workout-win > .win-title {
+    position: static;
+    display: block;
+    margin: 0 0 8px;
+    padding: 0;
+    line-height: 1.1;
+    background: transparent;
+  }
+}
+
+@media (display-mode: standalone) and (max-width: 719px) {
+  .hdr { padding-top: max(6px, env(safe-area-inset-top)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .cursor-blink::after { animation: none !important; opacity: 1; }
 }
