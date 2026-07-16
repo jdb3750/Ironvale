@@ -6,8 +6,10 @@ const COL = { kind: 'fight', field: null, picked: 0, wager: 20, animating: false
 const COL_LABELS = { fight: 'the duel', race: 'the race', pageant: 'the pageant' };
 
 SCREENS.colosseum = async function () {
+  const routeToken = captureRouteToken();
   const kind = COL.kind || 'fight';
   const d = await api(`/colosseum/${kind}`);
+  if (!isRouteTokenCurrent(routeToken)) return;
   COL.field = d;
 
   if (d.needs_buddy) {
@@ -28,29 +30,29 @@ SCREENS.colosseum = async function () {
   }
 
   const tabBtn = (k, label) =>
-    `<button class="btn small ${kind === k ? 'active' : ''}" style="min-width:0" onclick="COL.kind='${k}';render()">${label}</button>`;
+    `<button type="button" class="btn small ${kind === k ? 'active' : ''}" style="min-width:0" aria-pressed="${kind === k}" data-col-input onclick="G.colKind('${k}')"${COL.animating ? ' disabled' : ''}>${label}</button>`;
 
   const contestantCard = (c, i) => `
-    <div class="col-contestant ${COL.picked === i ? 'picked' : ''}" onclick="COL.picked=${i};render()">
+    <button type="button" class="col-contestant ${COL.picked === i ? 'picked' : ''}" style="font-family:inherit;color:inherit" aria-pressed="${COL.picked === i}" aria-label="Select ${esc(c.name)}, odds ${d.odds[i]} to 1" data-col-input onclick="G.colPick(${i})"${COL.animating ? ' disabled' : ''}>
       ${monsterTag(c.dna, c.rarity, 56, c.hat)}
-      <div class="cc-name r-${c.rarity}">${esc(c.name)}${c.is_buddy ? ' <span style="color:#e05070">&#9829;</span>' : ''}</div>
-      <div class="muted" style="font-size:12px;text-transform:uppercase">${c.rarity}</div>
-      <div class="cc-odds">${d.odds[i]}&times;</div>
-    </div>`;
+      <span class="cc-name r-${c.rarity}" style="display:block">${esc(c.name)}${c.is_buddy ? ' <span style="color:#e05070">&#9829;</span>' : ''}</span>
+      <span class="muted" style="display:block;font-size:12px;text-transform:uppercase">${c.rarity}</span>
+      <span class="cc-odds" style="display:block">${d.odds[i]}&times;</span>
+    </button>`;
 
   $app().innerHTML = shell(`
     <div class="win"><span class="win-title">The Colosseum</span>
       <div class="muted" style="margin-bottom:6px">A game of chance. Back a contestant, wager gold, watch it play out.</div>
       <div class="tabs" style="justify-content:center">${tabBtn('fight', 'FIGHT')}${tabBtn('race', 'RACE')}${tabBtn('pageant', 'PAGEANT')}</div>
-      <div class="col-field">${d.contestants.map(contestantCard).join('')}</div>
-      <div class="formrow center"><label>wager</label>
-        <div class="stepper" style="justify-content:center">
-          <button class="btn" onclick="G.colWager(-5)">&minus;</button>
-          <span class="val" id="col-wager">${spriteTag('icon_coin', 15)} ${COL.wager}</span>
-          <button class="btn" onclick="G.colWager(5)">+</button>
+      <div class="col-field" role="group" aria-label="Contestants">${d.contestants.map(contestantCard).join('')}</div>
+      <div class="formrow center"><span>wager</span>
+        <div class="stepper" style="justify-content:center" role="group" aria-label="Wager in gold">
+          <button type="button" class="btn" aria-label="Decrease wager by 5 gold" data-col-input onclick="G.colWager(-5)"${COL.animating ? ' disabled' : ''}>&minus;</button>
+          <span class="val" id="col-wager" aria-live="polite">${spriteTag('icon_coin', 15)} ${COL.wager}</span>
+          <button type="button" class="btn" aria-label="Increase wager by 5 gold" data-col-input onclick="G.colWager(5)"${COL.animating ? ' disabled' : ''}>+</button>
         </div>
       </div>
-      <div class="col-enter-wrap"><button class="btn big green" id="col-enter-btn" onclick="G.colEnter()">PLACE BET &amp; BEGIN</button></div>
+      <div class="col-enter-wrap"><button type="button" class="btn big green" id="col-enter-btn" data-col-input onclick="G.colEnter()"${COL.animating ? ' disabled aria-busy="true"' : ''}>PLACE BET &amp; BEGIN</button></div>
       <div class="muted center" style="font-size:15px;margin-top:6px">you carry ${spriteTag('icon_coin', 14)}${d.gold} gold</div>
     </div>
     <div class="win center">
@@ -61,7 +63,20 @@ SCREENS.colosseum = async function () {
   drawColosseumIdle(kind, d.contestants);
 };
 
+G.colKind = (kind) => {
+  if (COL.animating || !Object.hasOwn(COL_LABELS, kind)) return;
+  COL.kind = kind;
+  render();
+};
+
+G.colPick = (index) => {
+  if (COL.animating || !Number.isInteger(index) || index < 0 || index >= (COL.field?.contestants.length || 0)) return;
+  COL.picked = index;
+  render();
+};
+
 G.colWager = (delta) => {
+  if (COL.animating) return;
   const f = COL.field;
   COL.wager = Math.max(f.min_bet, Math.min(f.max_bet, Math.min(f.gold, COL.wager + delta)));
   const el = document.getElementById('col-wager');
@@ -132,23 +147,63 @@ function drawColosseumIdle(kind, contestants) {
 
 G.colEnter = async () => {
   if (COL.animating) return;
+  COL.animating = true;
   const kind = COL.kind;
+  const routeToken = captureRouteToken();
+  const profileToken = captureProfileToken();
+  const btn = document.getElementById('col-enter-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+  }
+  document.querySelectorAll('[data-col-input]').forEach(control => { control.disabled = true; });
   let r;
   try {
     r = await api(`/colosseum/${kind}/enter`, { method: 'POST', body: { contestant: COL.picked, wager: COL.wager } });
-  } catch (e) { return; }
-  COL.animating = true;
-  const btn = document.getElementById('col-enter-btn');
-  if (btn) btn.disabled = true;
+  } catch (e) {
+    COL.animating = false;
+    document.querySelectorAll('[data-col-input]').forEach(control => { control.disabled = false; });
+    if (btn && btn.isConnected) btn.removeAttribute('aria-busy');
+    return;
+  }
+  if (!reconcileMutationState({ character: r.character }, profileToken)) {
+    COL.animating = false;
+    return;
+  }
+  if (!isRouteTokenCurrent(routeToken)) {
+    COL.animating = false;
+    if (S.screen === 'colosseum') render();
+    return;
+  }
+  const routeWork = createRouteWork(routeToken);
+  let finished = false;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    routeWork.cancel();
+    COL.animating = false;
+    if (isRouteTokenCurrent(routeToken)) showColosseumResult(r, routeToken);
+  };
+  routeWork.addCleanup(() => { COL.animating = false; });
+  routeWork.addCleanup(onReducedMotionRequested(() => {
+    if (!routeWork.active) return;
+    drawColosseumSettled(r);
+    done();
+  }));
   SFX.crank();
-  const done = () => { COL.animating = false; showColosseumResult(r); };
-  if (kind === 'fight') animateFight(r, done);
-  else if (kind === 'race') animateRace(r, done);
-  else animatePageant(r, done);
+  if (prefersReducedMotion()) {
+    drawColosseumSettled(r);
+    done();
+    return;
+  }
+  if (kind === 'fight') animateFight(r, done, routeWork);
+  else if (kind === 'race') animateRace(r, done, routeWork);
+  else animatePageant(r, done, routeWork);
 };
 
-async function showColosseumResult(r) {
+async function showColosseumResult(r, routeToken) {
   await refreshState();
+  if (!isRouteTokenCurrent(routeToken)) return;
   SFX[r.won ? 'fanfare' : 'error']();
   const ov = document.createElement('div');
   ov.className = 'overlay';
@@ -156,14 +211,89 @@ async function showColosseumResult(r) {
     <h2>${r.won ? 'VICTORY!' : 'DEFEAT'}</h2>
     <div class="muted" style="margin:8px 0">${esc(r.contestants[r.winner].name)} took ${COL_LABELS[r.kind]}</div>
     <div class="reward-line" style="color:${r.won ? 'var(--gold-bright)' : 'var(--red)'}">${r.won ? `+${r.payout} gold` : `&minus;${r.wager} gold`}</div>
-    <button class="btn big" style="margin-top:14px" onclick="this.closest('.overlay').remove();render()">CONTINUE</button>
+    <button class="btn big" style="margin-top:14px" onclick="G.closeOverlay(this.closest('.overlay'),render)">CONTINUE</button>
   </div>`;
   document.body.appendChild(ov);
+  ov.dataset.escapeClose = 'false';
+  prepareOverlay(ov);
+}
+
+function drawColosseumSettled(r) {
+  const cv = document.getElementById('col-stage');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const contestants = r.contestants;
+  const models = contestants.map(c => genMonsterModel(c.dna, c.rarity));
+  drawArenaBg(ctx, W, H, r.kind);
+
+  if (r.kind === 'fight') {
+    const hp = r.rounds.length ? r.rounds[r.rounds.length - 1].hp : r.max_hp;
+    const posX = [W * 0.28, W * 0.72];
+    const baseY = H * 0.62;
+    contestants.forEach((c, i) => {
+      const x = posX[i];
+      const dead = hp[i] <= 0;
+      const y = dead ? baseY + 14 : baseY;
+      drawMonster(ctx, models[i], 5, Math.round(x - 30), Math.round(y - 60), i === 1, dead, c.hat);
+      const barWidth = 96;
+      const healthPercent = Math.max(0, hp[i] / r.max_hp[i]);
+      ctx.fillStyle = '#101014'; ctx.fillRect(x - barWidth / 2, y - 78, barWidth, 8);
+      ctx.fillStyle = healthPercent > 0.4 ? '#7ab55c' : '#c85050';
+      ctx.fillRect(x - barWidth / 2 + 1, y - 77, (barWidth - 2) * healthPercent, 6);
+      ctx.fillStyle = '#f0d080'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(c.name, x, y - 84);
+      if (i === r.winner) {
+        ctx.fillStyle = '#f0d060'; ctx.font = 'bold 16px monospace';
+        ctx.fillText('WINNER', x, y - 102);
+      }
+    });
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  if (r.kind === 'race') {
+    const laneHeight = H / contestants.length;
+    const finalTick = r.ticks[r.ticks.length - 1];
+    const maxPosition = Math.max(...finalTick, 1);
+    const positions = finalTick.map(position => 20 + (position / maxPosition) * (W - 60));
+    contestants.forEach((c, i) => {
+      const x = positions[i];
+      const y = laneHeight * i + laneHeight / 2;
+      drawMonster(ctx, models[i], 3, Math.round(x), Math.round(y - 18), false, false, c.hat);
+      ctx.fillStyle = '#f0d080'; ctx.font = '11px monospace';
+      ctx.fillText(c.name, x, y - 20);
+    });
+    ctx.fillStyle = '#f0d060'; ctx.font = 'bold 16px monospace';
+    ctx.fillText('WINNER', positions[r.winner] - 8, laneHeight * r.winner + laneHeight / 2 - 30);
+    return;
+  }
+
+  const slotWidth = W / contestants.length;
+  contestants.forEach((c, i) => {
+    const x = slotWidth * i + slotWidth / 2;
+    const baseY = H * 0.55 - 48;
+    drawMonster(ctx, models[i], 4, Math.round(x - 24), Math.round(baseY), false, false, c.hat);
+    ctx.fillStyle = '#f0d080'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(c.name, x, H * 0.55 + 22);
+    const barWidth = slotWidth * 0.6;
+    const barX = x - barWidth / 2;
+    const barY = H - 22;
+    ctx.fillStyle = '#101014'; ctx.fillRect(barX, barY, barWidth, 10);
+    ctx.fillStyle = '#c9a24b'; ctx.fillRect(barX + 1, barY + 1, (barWidth - 2) * (r.scores[i] / 100), 8);
+    ctx.fillStyle = '#fff'; ctx.font = '10px monospace';
+    ctx.fillText(r.scores[i].toFixed(0), x, barY - 4);
+    if (i === r.winner) {
+      ctx.fillStyle = '#f0d060'; ctx.font = 'bold 22px monospace';
+      ctx.fillText('★', x, H * 0.55 - 58);
+    }
+  });
+  ctx.textAlign = 'left';
 }
 
 /* ---- FIGHT: a few rounds of exchanged blows in the sand ---- */
 
-function animateFight(r, onDone) {
+function animateFight(r, onDone, routeWork) {
   const cv = document.getElementById('col-stage');
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
@@ -194,7 +324,7 @@ function animateFight(r, onDone) {
       }
     } else if (!finished) {
       finished = true;
-      setTimeout(onDone, 500);
+      routeWork.timeout(onDone, 500);
     }
 
     contestants.forEach((c, i) => {
@@ -225,14 +355,14 @@ function animateFight(r, onDone) {
     });
     popups = popups.filter(p => p.life > 0);
 
-    if (!finished || popups.length) requestAnimationFrame(frame);
+    if (!finished || popups.length) routeWork.frame(frame);
   }
-  requestAnimationFrame(frame);
+  routeWork.frame(frame);
 }
 
 /* ---- RACE: four lanes to the finish line ---- */
 
-function animateRace(r, onDone) {
+function animateRace(r, onDone, routeWork) {
   const cv = document.getElementById('col-stage');
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
@@ -259,12 +389,12 @@ function animateRace(r, onDone) {
     });
     idx++;
     if (idx <= total) {
-      setTimeout(step, 90);
+      routeWork.timeout(step, 90);
     } else {
       const wi = r.winner;
       ctx.fillStyle = '#f0d060'; ctx.font = 'bold 16px monospace';
       ctx.fillText('WINNER', ticks[total - 1][wi] - 8, laneH * wi + laneH / 2 - 30);
-      setTimeout(onDone, 700);
+      routeWork.timeout(onDone, 700);
     }
   };
   step();
@@ -272,7 +402,7 @@ function animateRace(r, onDone) {
 
 /* ---- PAGEANT: the runway — they dance, they twirl, they blow kisses ---- */
 
-function animatePageant(r, onDone) {
+function animatePageant(r, onDone, routeWork) {
   const cv = document.getElementById('col-stage');
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
@@ -334,7 +464,7 @@ function animatePageant(r, onDone) {
     if (t < 1 || kisses.length || !crowned) {
       if (t >= 1 && !crowned) {
         crowned = true;
-        setTimeout(onDone, 900);
+        routeWork.timeout(onDone, 900);
       }
       if (crowned) {
         const wi = r.winner;
@@ -343,8 +473,8 @@ function animatePageant(r, onDone) {
         ctx.fillText('★', x, H * 0.55 - 58);
         ctx.textAlign = 'left';
       }
-      requestAnimationFrame(frame);
+      routeWork.frame(frame);
     }
   }
-  requestAnimationFrame(frame);
+  routeWork.frame(frame);
 }

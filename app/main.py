@@ -1,10 +1,14 @@
 """Iron Vale — a self-hosted fitness RPG. FastAPI app: serves the API and the static frontend."""
 import asyncio
 import hashlib
+import math
 import os
-from typing import Optional
+import re
+from decimal import Decimal
+from datetime import date, timedelta
+from typing import Optional, Tuple
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -52,6 +56,10 @@ async def _start_auto_sync():
 
 STATIC = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+PLAIN_DECIMAL = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
+ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+MAX_LIFT_COUNT = 2_147_483_647
+MAX_LIFT_WEIGHT = 1_000_000
 
 
 def _token():
@@ -206,6 +214,8 @@ async def save_appearance(request: Request):
 @app.post("/api/settings")
 async def save_settings(request: Request):
     body = await request.json()
+    if "weight_unit" in body and body["weight_unit"] not in ("kg", "lb"):
+        raise ValueError("Choose kilograms or pounds for the weight measure.")
     s = game.get_settings()
     for k in ("ambition", "units", "weight_unit", "intervals_athlete_id", "dev_mode"):
         if k in body:
@@ -347,20 +357,89 @@ async def manual_activity(request: Request):
     return {"ok": True}
 
 
+def _parse_lift_decimal(value, field: str) -> Decimal:
+    if isinstance(value, bool):
+        raise ValueError(f"Record {field} as a plain number.")
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and not math.isfinite(value):
+            raise ValueError(f"Record {field} as a finite number.")
+        return Decimal(str(value))
+    if isinstance(value, str):
+        text = value.strip()
+        if not PLAIN_DECIMAL.fullmatch(text):
+            raise ValueError(f"Record {field} as a plain number.")
+        return Decimal(text)
+    raise ValueError(f"Record {field} as a plain number.")
+
+
+def _parse_lift_values(body) -> Tuple[float, int]:
+    if not isinstance(body, dict):
+        raise ValueError("The set record is malformed.")
+    if "weight" not in body:
+        raise ValueError("Record the weight, even when it is zero.")
+    if "reps" not in body:
+        raise ValueError("Record the reps, seconds, or steps.")
+    weight_decimal = _parse_lift_decimal(body["weight"], "weight")
+    reps_decimal = _parse_lift_decimal(body["reps"], "reps, seconds, or steps")
+    weight = float(weight_decimal)
+    if not math.isfinite(weight) or weight < 0:
+        raise ValueError("Weight must be a finite, non-negative number.")
+    if weight_decimal > MAX_LIFT_WEIGHT:
+        raise ValueError("That weight is too large for the ledger.")
+    if reps_decimal < 0 or reps_decimal != reps_decimal.to_integral_value():
+        raise ValueError("Reps, seconds, or steps must be a non-negative whole number.")
+    if reps_decimal > MAX_LIFT_COUNT:
+        raise ValueError("That set count is too large for the ledger.")
+    reps = int(reps_decimal)
+    if not math.isfinite(weight * reps):
+        raise ValueError("That set is too large for the ledger.")
+    return weight, reps
+
+
+def _parse_lift_quest_id(value) -> Optional[int]:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError("The quest mark on that set is malformed.")
+    return value
+
+
+def _lift_day_bounds(value: str) -> Tuple[str, str]:
+    if not ISO_DAY.fullmatch(value):
+        raise ValueError("Name the ledger day as YYYY-MM-DD.")
+    try:
+        start = date.fromisoformat(value)
+    except ValueError as error:
+        raise ValueError("That day does not exist in the ledger.") from error
+    return start.isoformat(), (start + timedelta(days=1)).isoformat()
+
+
 @app.post("/api/lifts")
 async def log_lift(request: Request):
     body = await request.json()
-    ex = body.get("exercise", "").strip()
+    if not isinstance(body, dict):
+        raise ValueError("The set record is malformed.")
+    raw_exercise = body.get("exercise")
+    ex = raw_exercise.strip() if isinstance(raw_exercise, str) else ""
     if not ex:
         raise ValueError("Name the exercise.")
-    db.q(
+    weight, reps = _parse_lift_values(body)
+    quest_id = _parse_lift_quest_id(body.get("quest_id"))
+    today = game.today()
+    cursor = db.q(
         "INSERT INTO lift_sets (ts, exercise, weight, reps, quest_id) VALUES (?,?,?,?,?)",
-        (game.now_iso(), ex, float(body.get("weight", 0)), int(body.get("reps", 0)),
-         body.get("quest_id")),
+        (game.now_iso(), ex, weight, reps, quest_id),
     )
     db.commit()
-    return {"ok": True, "sets_today": db.q(
-        "SELECT COUNT(*) AS n FROM lift_sets WHERE ts >= ?", (game.today(),)).fetchone()["n"]}
+    created = records.lift_payload(cursor.lastrowid)
+    return {
+        "ok": True,
+        "today": today,
+        "sets_today": db.q(
+            "SELECT COUNT(*) AS n FROM lift_sets WHERE ts >= ?", (today,)
+        ).fetchone()["n"],
+        "set": created,
+    }
 
 
 @app.delete("/api/lifts/last")
@@ -374,8 +453,12 @@ def undo_lift():
 
 @app.get("/api/lifts/recent")
 def recent_lifts(limit: int = 20):
-    rows = db.q("SELECT * FROM lift_sets ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    return {"sets": [dict(r) for r in rows]}
+    return {"today": game.today(), "sets": records.recent_lift_payload(limit)}
+
+
+@app.get("/api/today")
+def server_today():
+    return {"today": game.today()}
 
 
 @app.get("/api/trinkets")
@@ -394,7 +477,8 @@ def item_catalog():
 @app.get("/api/exercises")
 def exercise_list():
     return {"exercises": [
-        {"name": k, **{kk: vv for kk, vv in v.items() if kk != "scheme"}}
+        {"name": k, "unit": v["scheme"][0],
+         **{kk: vv for kk, vv in v.items() if kk != "scheme"}}
         for k, v in exercises.EXERCISES.items()
     ]}
 
@@ -415,7 +499,8 @@ def calendar(year: int, month: int):
 
 @app.get("/api/day/{dstr}")
 def day_detail(dstr: str):
-    return records.day_payload(dstr)
+    start, _ = _lift_day_bounds(dstr)
+    return records.day_payload(start)
 
 
 @app.delete("/api/activities/{aid}")
@@ -431,12 +516,15 @@ def delete_activity(aid: str):
 
 @app.delete("/api/lifts/day/{dstr}")
 def delete_lift_day(dstr: str):
-    n = db.q("SELECT COUNT(*) AS n FROM lift_sets WHERE ts LIKE ?", (dstr + "%",)).fetchone()["n"]
+    start, end = _lift_day_bounds(dstr)
+    n = db.q(
+        "SELECT COUNT(*) AS n FROM lift_sets WHERE ts>=? AND ts<?", (start, end)
+    ).fetchone()["n"]
     if not n:
         raise ValueError("No sets recorded that day.")
-    db.q("DELETE FROM lift_sets WHERE ts LIKE ?", (dstr + "%",))
+    db.q("DELETE FROM lift_sets WHERE ts>=? AND ts<?", (start, end))
     db.commit()
-    db.log_event(game.now_iso(), "amend", f"Wick struck an entire lifting session ({n} sets) from {dstr}.")
+    db.log_event(game.now_iso(), "amend", f"Wick struck an entire lifting session ({n} sets) from {start}.")
     return {"ok": True, "deleted": n}
 
 
@@ -454,11 +542,10 @@ def delete_lift(set_id: int):
 @app.patch("/api/lifts/{set_id}")
 async def edit_lift(set_id: int, request: Request):
     body = await request.json()
+    weight, reps = _parse_lift_values(body)
     row = db.q("SELECT * FROM lift_sets WHERE id=?", (set_id,)).fetchone()
     if not row:
         raise ValueError("No such set in the ledger.")
-    weight = float(body.get("weight", row["weight"]))
-    reps = int(body.get("reps", row["reps"]))
     db.q("UPDATE lift_sets SET weight=?, reps=? WHERE id=?", (weight, reps, set_id))
     db.commit()
     db.log_event(game.now_iso(), "amend", f"Wick corrected a set of {row['exercise']}: {weight} x {reps}.")
@@ -688,7 +775,12 @@ def dungeon_state():
 @app.post("/api/dungeon/enter")
 def dungeon_enter():
     d = dungeon.enter()
-    return {"state": d, "stats": dungeon.player_stats(), "theme": dungeon.theme_payload(d)}
+    return {
+        "state": d,
+        "stats": dungeon.player_stats(),
+        "theme": dungeon.theme_payload(d),
+        "character": game.get_char(),
+    }
 
 
 @app.post("/api/dungeon/action")

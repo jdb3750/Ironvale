@@ -5,13 +5,28 @@ const CELL_SPRITES = {
   entrance: 'icon_up', stairs: 'icon_stairs', monster: 'icon_skull',
   chest: 'icon_chest', shrine: 'icon_shrine', merchant: 'pip', relic: 'icon_relic',
 };
+const DIRECTION_NAMES = { n: 'north', s: 'south', e: 'east', w: 'west' };
 
 let dlogHistory = [];
-RESETS.push(() => { dlogHistory = []; });
+let dungeonActionPending = false;
+RESETS.push(() => {
+  dlogHistory = [];
+  dungeonActionPending = false;
+});
+
+function setDungeonActionBusy(busy) {
+  document.querySelectorAll('.dungeon-action').forEach(control => {
+    control.disabled = busy;
+    control.setAttribute('aria-busy', String(busy));
+  });
+}
 
 SCREENS.undercroft = async function () {
+  const routeToken = captureRouteToken();
   const d = await api('/dungeon');
+  if (!isRouteTokenCurrent(routeToken)) return;
   if (d.state) { renderDungeon(d.state, d.stats, d.theme); return; }
+  const revealGateRules = !window.matchMedia('(max-width: 719px)').matches;
 
   $app().innerHTML = shell(`
     <div class="win">
@@ -21,23 +36,30 @@ SCREENS.undercroft = async function () {
       </div>
     </div>
     <div class="win"><span class="win-title">The Descent</span>
-      <table class="rpg">
-        <tr><td>Entry toll</td><td>${d.enter_cost} vigor <span class="muted">(you have ${d.vigor})</span></td></tr>
-        <tr><td>You will start at</td><td>floor ${d.resume_floor}</td></tr>
-        <tr><td>Your training grants</td><td>${d.stats.max_hp} HP &middot; ${d.stats.atk} ATK &middot; ${d.stats.def} DEF &middot; ${d.stats.luck} LCK</td></tr>
-      </table>
-      <hr class="rule">
-      <div class="muted" style="font-size:18px">
-        &#9656; You descend with nothing. Weapons, trinkets and potions are all found below:
-          Pip trades on every floor, every floor holds a relic pedestal, and chests hide the rest.<br>
-        &#9656; <b style="color:var(--gold-bright)">Nothing leaves the dungeon.</b> Retire at stairs or entrance and only your looted gold banks.<br>
-        &#9656; <span style="color:var(--red)">Die</span>, and even the gold stays down there — and your depth resets to floor 1.<br>
-        &#9656; Vigor comes only from completed quests. Sweat above, spend below.
-      </div>
-      <div style="margin-top:12px">
-        <button class="btn big ${d.vigor >= d.enter_cost ? 'green' : ''}" ${d.vigor >= d.enter_cost ? '' : 'disabled'}
-          onclick="G.enterDungeon()">DESCEND (&minus;${d.enter_cost} VIGOR)</button>
-        ${d.vigor < d.enter_cost ? '<div class="muted center" style="margin-top:6px">not enough vigor — go complete a quest</div>' : ''}
+      <div class="dungeon-gate">
+        <table class="rpg">
+          <tr><td>Entry toll</td><td>${d.enter_cost} vigor <span class="muted">(you have ${d.vigor})</span></td></tr>
+          <tr><td>You will start at</td><td>floor ${d.resume_floor}</td></tr>
+          <tr><td>Your training grants</td><td>${d.stats.max_hp} HP &middot; ${d.stats.atk} ATK &middot; ${d.stats.def} DEF &middot; ${d.stats.luck} LCK</td></tr>
+        </table>
+        <details class="phone-disclosure dungeon-gate-rules" ${revealGateRules ? 'open' : ''}>
+          <summary>RULES OF THE UNDERCROFT</summary>
+          <div class="phone-disclosure-content">
+            <hr class="rule">
+            <div class="muted" style="font-size:18px">
+              &#9656; You descend with nothing. Weapons, trinkets and potions are all found below:
+                Pip trades on every floor, every floor holds a relic pedestal, and chests hide the rest.<br>
+              &#9656; <b style="color:var(--gold-bright)">Nothing leaves the dungeon.</b> Retire at stairs or entrance and only your looted gold banks.<br>
+              &#9656; <span style="color:var(--red)">Die</span>, and even the gold stays down there — and your depth resets to floor 1.<br>
+              &#9656; Vigor comes only from completed quests. Sweat above, spend below.
+            </div>
+          </div>
+        </details>
+        <div class="dungeon-gate-primary" style="margin-top:12px">
+          <button type="button" class="btn big dungeon-action ${d.vigor >= d.enter_cost ? 'green' : ''}" ${d.vigor >= d.enter_cost ? '' : 'disabled'}
+            onclick="G.enterDungeon()">DESCEND (&minus;${d.enter_cost} VIGOR)</button>
+          ${d.vigor < d.enter_cost ? '<div class="muted center" style="margin-top:6px">not enough vigor — go complete a quest</div>' : ''}
+        </div>
       </div>
     </div>
   `);
@@ -47,11 +69,26 @@ SCREENS.undercroft = async function () {
 };
 
 G.enterDungeon = async () => {
-  const r = await api('/dungeon/enter', { method: 'POST' });
-  SFX.stairs();
-  await refreshState();
-  dlogHistory = r.state.log.slice();
-  renderDungeon(r.state, r.stats, r.theme);
+  if (dungeonActionPending) return;
+  const routeToken = captureRouteToken();
+  const profileToken = captureProfileToken();
+  dungeonActionPending = true;
+  setDungeonActionBusy(true);
+  try {
+    const r = await api('/dungeon/enter', { method: 'POST' });
+    if (!reconcileMutationState({
+      character: r.character,
+      combat_stats: r.stats,
+      dungeon_active: true,
+    }, profileToken)) return;
+    if (!isRouteTokenCurrent(routeToken)) return;
+    SFX.stairs();
+    dlogHistory = r.state.log.slice();
+    renderDungeon(r.state, r.stats, r.theme);
+  } finally {
+    dungeonActionPending = false;
+    if (isRouteTokenCurrent(routeToken)) setDungeonActionBusy(false);
+  }
 };
 
 function gearLine(st) {
@@ -85,7 +122,9 @@ function renderDungeon(st, stats, theme) {
         else inner = '<span class="muted">?</span>';
       }
       const dir = adjacent ? (x > st.px ? 'e' : x < st.px ? 'w' : y > st.py ? 's' : 'n') : '';
-      grid += `<div class="${cls}" ${dir ? `onclick="G.dmove('${dir}')"` : ''}>${inner}</div>`;
+      grid += dir
+        ? `<button type="button" class="${cls}" style="padding:0;font:inherit;color:inherit;border-radius:0" aria-label="Move ${DIRECTION_NAMES[dir]}" onclick="G.dmove('${dir}')">${inner}</button>`
+        : `<div class="${cls}">${inner}</div>`;
     }
   }
 
@@ -104,10 +143,10 @@ function renderDungeon(st, stats, theme) {
       <div class="mon-name">${esc(m.name)}</div>
       <div class="hpbar" style="max-width:220px;margin:6px auto"><div style="width:${mpct}%"></div><span>${m.hp}/${m.max_hp}</span></div>
       <div class="combat-actions">
-        <button class="btn" onclick="G.dact({action:'attack'})">ATTACK</button>
-        <button class="btn" onclick="G.dact({action:'brace'})">BRACE</button>
-        <button class="btn" onclick="G.dItems()">ITEM</button>
-        <button class="btn danger" onclick="G.dact({action:'flee'})">FLEE</button>
+        <button type="button" class="btn dungeon-action" onclick="G.dact({action:'attack'})">ATTACK</button>
+        <button type="button" class="btn dungeon-action" onclick="G.dact({action:'brace'})">BRACE</button>
+        <button type="button" class="btn dungeon-action" onclick="G.dItems()">ITEM</button>
+        <button type="button" class="btn danger dungeon-action" onclick="G.dact({action:'flee'})">FLEE</button>
       </div>
     </div>`;
   }
@@ -130,7 +169,7 @@ function renderDungeon(st, stats, theme) {
             ${s.kind !== 'item' ? `<span class="chip" style="font-size:13px">${s.kind}</span>` : ''}<br>
             <span class="s-desc">${esc(it.desc)}</span></span>
           <span class="price">&#9670;${s.price}</span>
-          <button class="btn small" style="min-width:0" ${st.loot_gold >= s.price ? '' : 'disabled'}
+          <button type="button" class="btn small dungeon-action" style="min-width:0" ${st.loot_gold >= s.price ? '' : 'disabled'}
             onclick="G.dact({action:'buy',item_id:'${s.id}'})">BUY</button>
         </div>`;
       }).join('') : '<div class="muted" style="margin-top:6px">"Sold out! Marvelous doing business."</div>'}
@@ -150,7 +189,7 @@ function renderDungeon(st, stats, theme) {
         <div class="r-${it.rarity}" style="font-size:24px">${esc(it.name)}</div>
         <div class="muted" style="font-size:17px">${esc(it.desc)}${replacing}</div>
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
-          <button class="btn wide green" onclick="G.dact({action:'take_relic'})">TAKE IT</button>
+          <button type="button" class="btn wide green dungeon-action" onclick="G.dact({action:'take_relic'})">TAKE IT</button>
         </div>
       </div>
     </div>`;
@@ -172,16 +211,16 @@ function renderDungeon(st, stats, theme) {
     ${relicPanel}
     ${!st.combat ? `<div class="win tight"><div class="dmap">${grid}</div>
       <div class="dpad">
-        <span></span><button class="btn" onclick="G.dmove('n')">&#9650;</button><span></span>
-        <button class="btn" onclick="G.dmove('w')">&#9668;</button>
-        <button class="btn small" style="min-width:0" onclick="G.dItems()">USE</button>
-        <button class="btn" onclick="G.dmove('e')">&#9658;</button>
-        <span></span><button class="btn" onclick="G.dmove('s')">&#9660;</button><span></span>
+        <span></span><button type="button" class="btn dungeon-action" aria-label="Move north" onclick="G.dmove('n')">&#9650;</button><span></span>
+        <button type="button" class="btn dungeon-action" aria-label="Move west" onclick="G.dmove('w')">&#9668;</button>
+        <button type="button" class="btn small dungeon-action" style="min-width:0" onclick="G.dItems()">USE</button>
+        <button type="button" class="btn dungeon-action" aria-label="Move east" onclick="G.dmove('e')">&#9658;</button>
+        <span></span><button type="button" class="btn dungeon-action" aria-label="Move south" onclick="G.dmove('s')">&#9660;</button><span></span>
       </div>
       <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        ${atStairs && !bossPending ? `<button class="btn green" onclick="G.dact({action:'descend'})">DESCEND &#9660;</button>` : ''}
+        ${atStairs && !bossPending ? `<button type="button" class="btn green dungeon-action" onclick="G.dact({action:'descend'})">DESCEND &#9660;</button>` : ''}
         ${bossPending ? `<span class="muted">something vast sleeps on these stairs...</span>` : ''}
-        ${(atStairs || atEntrance) ? `<button class="btn" onclick="G.dRetire()">RETIRE &amp; BANK GOLD</button>` : ''}
+        ${(atStairs || atEntrance) ? `<button type="button" class="btn dungeon-action" onclick="G.dRetire()">RETIRE &amp; BANK GOLD</button>` : ''}
       </div>
     </div>` : ''}
     <div class="dlog" id="dlog">${dlogHistory.slice(-30).map(l => `<p>${esc(l)}</p>`).join('')}</div>
@@ -203,8 +242,9 @@ const TRINKET_CACHE = {};
 G.dmove = (dir) => G.dact({ action: 'move', dir });
 
 G.dGear = async () => {
+  const routeToken = captureRouteToken();
   const d = (await api('/dungeon')).state;
-  if (!d) return;
+  if (!isRouteTokenCurrent(routeToken) || !d) return;
   const cat = S.itemsCatalog || {};
   const gearRows = ['weapon', 'armor', 'charm'].map(s => {
     const iid = d.gear[s];
@@ -220,30 +260,44 @@ G.dGear = async () => {
   showModal(`<div class="win"><span class="win-title">This Run's Findings</span>
     ${gearRows}${tkRows || ''}
     <div class="muted center" style="font-size:16px;margin-top:6px">none of it leaves the Undercroft</div>
-    <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">close</button></div>
+    <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">close</button></div>
   </div>`);
 };
 
-G.dact = async (body) => {
+async function runDungeonAction(body, routeToken, profileToken = captureProfileToken()) {
   let r;
   try {
     r = await api('/dungeon/action', { method: 'POST', body });
   } catch (e) { return; }
+  if (!reconcileMutationState({
+    character: r.character,
+    combat_stats: r.stats,
+    dungeon_active: r.state != null,
+  }, profileToken)) return;
+  if (!isRouteTokenCurrent(routeToken)) return;
   (r.log || []).forEach(l => dlogHistory.push(l));
 
-  if (r.character) S.state.character = r.character;
-
   if (r.captured) {
-    setTimeout(() => {
+    const revealWork = createRouteWork(routeToken);
+    let revealed = false;
+    const revealCaptured = () => {
+      if (revealed || !revealWork.active) return;
+      revealed = true;
+      revealWork.cancel();
       SFX.reveal(r.captured.rarity);
       showModal(`<div class="win mon-card gacha-card">
         <div class="muted">it stops fighting. it looks up at you.</div>
         <div style="display:flex;justify-content:center;margin:10px 0">${monsterTag(r.captured.dna, r.captured.rarity, 100)}</div>
         <div class="r-${r.captured.rarity}" style="font-size:26px">${esc(r.captured.name)}</div>
         <div class="muted" style="font-size:16px">${esc(r.captured.personality)} &middot; joins your menagerie</div>
-        <button class="btn big" style="margin-top:10px" onclick="this.closest('.overlay').remove()">WELCOME, STRANGE ONE</button>
+        <button type="button" class="btn big dungeon-action" style="margin-top:10px" onclick="G.closeOverlay(this.closest('.overlay'))">WELCOME, STRANGE ONE</button>
       </div>`);
-    }, 500);
+    };
+    if (prefersReducedMotion()) revealCaptured();
+    else {
+      revealWork.addCleanup(onReducedMotionRequested(revealCaptured));
+      revealWork.timeout(revealCaptured, 500);
+    }
   }
 
   // sfx by log content
@@ -258,6 +312,7 @@ G.dact = async (body) => {
   if (r.death) {
     SFX.death();
     await refreshState();
+    if (!isRouteTokenCurrent(routeToken)) return;
     const dd = r.death;
     showModal(`<div class="win ceremony">
       <div class="youdied">YOU DIED</div>
@@ -268,33 +323,50 @@ G.dact = async (body) => {
         <div>your depth resets to floor 1</div>
       </div>
       <p class="muted" style="margin-top:10px">Sweat buys another descent. The Undercroft will wait.</p>
-      <button class="btn big" onclick="this.closest('.overlay').remove();nav('town')">RETURN TO TOWN</button>
+      <button class="btn big" onclick="G.closeOverlay(this.closest('.overlay'),()=>nav('town'))">RETURN TO TOWN</button>
     </div>`, { backdropClose: false });
     return;
   }
   if (r.retired) {
     SFX.fanfare();
     await refreshState();
+    if (!isRouteTokenCurrent(routeToken)) return;
     showModal(`<div class="win ceremony">
       <h2>SAFE RETURN</h2>
       <div class="reward-line" style="animation-delay:0.2s;color:var(--gold-bright)">&#9670; +${r.banked_gold ?? 0} gold banked</div>
       <p class="muted" style="margin-top:8px">The gear stayed below, as it must. Next descent starts at floor ${r.floor}.</p>
-      <button class="btn big" onclick="this.closest('.overlay').remove();nav('town')">TO TOWN</button>
+      <button class="btn big" onclick="G.closeOverlay(this.closest('.overlay'),()=>nav('town'))">TO TOWN</button>
     </div>`, { backdropClose: false });
     return;
   }
   renderDungeon(r.state, r.stats, r.theme);
+}
+
+G.dact = async (body) => {
+  if (dungeonActionPending) return;
+  const routeToken = captureRouteToken();
+  const profileToken = captureProfileToken();
+  dungeonActionPending = true;
+  setDungeonActionBusy(true);
+  try {
+    await runDungeonAction(body, routeToken, profileToken);
+  } finally {
+    dungeonActionPending = false;
+    if (isRouteTokenCurrent(routeToken)) setDungeonActionBusy(false);
+  }
 };
 
-G.dRetire = () => {
-  if (confirm('Retire from the expedition? Looted gold banks; everything else stays below.')) {
+G.dRetire = async () => {
+  if (await confirmModal('Retire from the expedition? Looted gold banks; everything else stays below.',
+      { title: 'Leave the Undercroft?', okLabel: 'RETIRE & BANK' })) {
     G.dact({ action: 'retire' });
   }
 };
 
 G.dItems = async () => {
+  const routeToken = captureRouteToken();
   const d = (await api('/dungeon')).state;
-  if (!d) return;
+  if (!isRouteTokenCurrent(routeToken) || !d) return;
   const cat = S.itemsCatalog || {};
   const entries = Object.entries(d.items || {});
   showModal(`<div class="win"><span class="win-title">Use Item</span>
@@ -303,16 +375,16 @@ G.dItems = async () => {
       return `<div class="shop-row">
       <span class="icon">${spriteTag(it.sprite, 30)}</span>
       <span class="grow"><span class="s-name">${esc(it.name)} <span class="qty muted">&times;${qty}</span></span><br><span class="s-desc">${esc(it.desc)}</span></span>
-      <button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove();G.dact({action:'use',item_id:'${iid}'})">USE</button>
+      <button type="button" class="btn small dungeon-action" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'),()=>G.dact({action:'use',item_id:'${iid}'}))">USE</button>
     </div>`;
     }).join('') : '<p class="muted">Empty pockets. Pip trades on every floor; chests hide the rest.</p>'}
-    <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="this.closest('.overlay').remove()">close</button></div>
+    <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">close</button></div>
   </div>`);
 };
 
 /* keyboard controls */
 document.addEventListener('keydown', (e) => {
-  if (S.screen !== 'undercroft' && !document.querySelector('.dmap')) return;
+  if (S.screen !== 'undercroft' || document.querySelector('.overlay')) return;
   const map = { ArrowUp: 'n', ArrowDown: 's', ArrowLeft: 'w', ArrowRight: 'e' };
   if (map[e.key] && document.querySelector('.dmap')) { e.preventDefault(); G.dmove(map[e.key]); }
 });

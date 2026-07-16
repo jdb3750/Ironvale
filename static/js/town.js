@@ -47,6 +47,23 @@ function scheduleTODRefresh() {
   }, nextTODBoundaryDelay());
 }
 
+function watchRouteDeparture(routeToken, cleanup) {
+  const root = $app();
+  if (!root) return () => {};
+  let active = true;
+  const observer = new MutationObserver(() => {
+    if (!active || isRouteTokenCurrent(routeToken)) return;
+    active = false;
+    observer.disconnect();
+    cleanup();
+  });
+  observer.observe(root, { attributes: true, childList: true });
+  return () => {
+    active = false;
+    observer.disconnect();
+  };
+}
+
 let devTOD = null;  // null = auto (follows currentTOD())
 RESETS.push(() => {
   devTOD = null;
@@ -62,33 +79,44 @@ G.cycleTOD = () => {
 /* ================= TOWN ================= */
 
 SCREENS.town = async function () {
+  const routeToken = captureRouteToken();
   const st = S.state;
   const c = st.character;
   let siege = null;
   try { siege = await api('/raid'); } catch (e) { /* the walls hold without us */ }
+  if (!isRouteTokenCurrent(routeToken)) return;
   const effectiveTOD = devTOD || currentTOD();
   const activeBy = {};
   st.active_quests.forEach(q => activeBy[q.giver] = q);
   const bld = (sprite, name, sub, target, badge = false, px = 120, id = '') => `
-    <div class="bld"${id ? ` id="${id}"` : ''} onclick="${target}">
+    <div class="bld"${id ? ` id="${id}"` : ''}>
       ${badge ? '<span class="bang">!</span>' : ''}
-      ${buildingTag(sprite, effectiveTOD) || spriteTag(sprite, px)}
-      <span class="plate">${name}<small>${sub}</small></span>
+      <button type="button" class="control-reset illustrated-control" style="display:block;width:100%"
+        aria-label="Visit ${esc(name)}: ${esc(sub)}" onclick="${target}">
+        ${buildingTag(sprite, effectiveTOD) || spriteTag(sprite, px)}
+        <span class="plate">${esc(name)}<small>${esc(sub)}</small></span>
+      </button>
     </div>`;
   const g = st.givers;
 
-  const questRow = (q) => `<div class="offer" style="margin:8px 0">
-    <div><span class="o-title" style="font-size:20px">${esc(q.title)}</span>
-      <span class="muted">— ${esc(st.givers[q.giver].name)}</span></div>
-    <div class="${q.completable ? '' : 'muted'}" style="font-size:17px">${q.completable ? '&#10004; ' : ''}${esc(q.progress_note)}</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-      ${q.completable ? `<button class="btn small green" style="min-width:0" onclick="G.complete(${q.id}, false)">TURN IN</button>` : ''}
-      <button class="btn small" style="min-width:0" onclick="nav('giver',{giver:'${q.giver}'})">visit ${esc(st.givers[q.giver].name)}</button>
-      ${['kettlebell', 'strength'].includes(q.giver) ? `<button class="btn small" style="min-width:0" onclick="nav('logger',{quest:${q.id}})">log sets</button>` : ''}
-      <button class="btn small danger" style="min-width:0" onclick="G.abandonQuick(${q.id})">abandon</button>
-    </div>
-  </div>`;
+  const questRow = (q) => {
+    const lifting = ['kettlebell', 'strength'].includes(q.giver);
+    return `<div class="offer" style="margin:8px 0">
+      <div><span class="o-title" style="font-size:20px">${esc(q.title)}</span>
+        <span class="muted">— ${esc(st.givers[q.giver].name)}</span></div>
+      <div class="${q.completable ? '' : 'muted'}" style="font-size:17px">${q.completable ? '&#10004; ' : ''}${esc(q.progress_note)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+        ${lifting ? `<button type="button" class="btn small" style="min-width:0" onclick="nav('logger',{quest:${q.id}})">LOG SETS</button>` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button type="button" class="btn small" style="min-width:0" onclick="nav('giver',{giver:'${q.giver}'})">VISIT ${esc(st.givers[q.giver].name)}</button>
+          ${q.completable ? `<button type="button" class="btn small green" style="min-width:0" onclick="G.complete(${q.id}, false)">TURN IN</button>` : ''}
+          <button type="button" class="btn small danger" style="min-width:0" onclick="G.abandonQuick(${q.id})">ABANDON</button>
+        </div>
+      </div>
+    </div>`;
+  };
 
+  SIEGE.current = siege;
   const siegeBanner = siege ? siegeBannerHtml(siege) : '';
   const devMode = !!S.state.settings?.dev_mode;
 
@@ -98,12 +126,12 @@ SCREENS.town = async function () {
       ${st.active_quests.map(questRow).join('')}
     </div>` : ''}
     <div class="town-scene tod-${effectiveTOD}">
-      ${devMode ? `<div class="tod-toggle" title="dev: cycle time of day (${devTOD ? 'pinned: ' + devTOD : 'auto: ' + effectiveTOD})" onclick="G.cycleTOD()">${spriteTag(TOD_ICON[effectiveTOD], 22)}</div>` : ''}
+      ${devMode ? `<button type="button" class="tod-toggle" aria-label="Cycle town time of day" title="dev: cycle time of day (${devTOD ? 'pinned: ' + devTOD : 'auto: ' + effectiveTOD})" onclick="G.cycleTOD()">${spriteTag(TOD_ICON[effectiveTOD], 22)}</button>` : ''}
       <div class="trow">
-        ${bld('bld_waystone', esc(g.running.name), GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
-        ${bld('bld_forge', esc(g.kettlebell.name), GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell)}
-        ${bld('bld_keep', esc(g.strength.name), GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength)}
-        ${bld('bld_willow', esc(g.mobility.name), GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility, 120, 'bld-elowen')}
+        ${bld('bld_waystone', g.running.name, GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
+        ${bld('bld_forge', g.kettlebell.name, GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell)}
+        ${bld('bld_keep', g.strength.name, GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength)}
+        ${bld('bld_willow', g.mobility.name, GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility, 120, 'bld-elowen')}
       </div>
       <div class="road-h"></div>
       <div class="trow">
@@ -115,7 +143,7 @@ SCREENS.town = async function () {
       <div class="road-h"></div>
       <div class="trow">
         ${bld('bld_ranch', 'The Menagerie', 'your creatures graze here', `nav('ranch')`)}
-        ${bld('bld_colosseum', 'The Colosseum', 'duels, races &amp; pageants', `nav('colosseum')`)}
+        ${bld('bld_colosseum', 'The Colosseum', 'duels, races & pageants', `nav('colosseum')`)}
         ${bld('bld_gate', 'The Undercroft', st.dungeon_active ? 'expedition below!' : `descend — floor ${st.resume_floor}`, `nav('undercroft')`, st.dungeon_active)}
       </div>
     </div>
@@ -142,26 +170,33 @@ function showFennBubbleIfQueued() {
   if (!anchor) return;
   anchor.insertAdjacentHTML('beforeend', `
     <div class="fenn-bubble-wrap" data-activity-id="${esc(next.activity_id)}">
-      <div class="fenn-bubble" onclick="event.stopPropagation();G.claimFennBubble()">
-        <div class="fb-line">&ldquo;${esc(pickLine(FENN_BUBBLE_LINES))}&rdquo;</div>
-        <div class="fb-rewards">
+      <button type="button" class="fenn-bubble" style="width:100%;font:inherit;color:inherit;text-align:inherit" aria-label="Claim Fenn's unguided activity reward" onclick="G.claimFennBubble()">
+        <span class="fb-line" style="display:block">&ldquo;${esc(pickLine(FENN_BUBBLE_LINES))}&rdquo;</span>
+        <span class="fb-rewards">
           <span style="color:var(--purple)">+${next.xp} XP</span>
           <span class="g">&#9670; +${next.gold}</span>
           <span style="color:var(--green)">+${next.vigor} vigor</span>
-        </div>
-        <button class="btn small green">FENN LEFT THIS FOR YOU</button>
-      </div>
+        </span>
+        <span class="btn small green" aria-hidden="true" style="display:block;width:100%;box-sizing:border-box">FENN LEFT THIS FOR YOU</span>
+      </button>
     </div>`);
   SFX.coin();
 }
 
 G.claimFennBubble = async () => {
+  const routeToken = captureRouteToken();
   const b = S.fennQueue && S.fennQueue[0];
   if (!b) return;
   document.querySelectorAll('.fenn-bubble-wrap').forEach(x => x.remove());
   const rewards = await api('/unguided/claim', { method: 'POST', body: { activity_id: b.activity_id } });
+  const requestStillCurrent = isRouteTokenCurrent(routeToken);
   await refreshState();
+  if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   render();
+  // NB: no token passed \u2014 showCeremony must default-capture AFTER render(),
+  // which bumps viewGeneration. Passing the pre-render routeToken here made the
+  // ceremony's own isRouteTokenCurrent guard fail every time and silently
+  // swallowed the reward reveal. The guard above already covers navigation.
   showCeremony(rewards, rewards.quest_title || b.title || `An Unguided Activity \u2014 ${b.minutes} min`);
 };
 
@@ -183,25 +218,28 @@ function showWillowBubbleIfQueued() {
   const kept = next.type === 'kept';
   anchor.insertAdjacentHTML('beforeend', `
     <div class="fenn-bubble-wrap willow-bubble-wrap" data-ts="${esc(next.ts)}">
-      <div class="fenn-bubble willow" onclick="event.stopPropagation();G.ackWillowBubble()">
-        <div class="fb-line">&ldquo;${kept ? 'The writ is kept. Rise rested \u2014 the Vale noticed.' : 'The iron called, and you answered. The willow does not scold.'}&rdquo;</div>
-        ${kept ? `<div class="fb-rewards">
+      <button type="button" class="fenn-bubble willow" style="width:100%;font:inherit;color:inherit;text-align:inherit" aria-label="Read the willow's writ notice" onclick="G.ackWillowBubble()">
+        <span class="fb-line" style="display:block">&ldquo;${kept ? 'The writ is kept. Rise rested \u2014 the Vale noticed.' : 'The iron called, and you answered. The willow does not scold.'}&rdquo;</span>
+        ${kept ? `<span class="fb-rewards">
           <span style="color:var(--purple)">+${next.rewards.xp} XP</span>
           <span class="g">&#9670; +${next.rewards.gold}</span>
           <span style="color:#e07030">streak kept &middot; ${next.rewards.streak}</span>
-        </div>` : ''}
-        <button class="btn small ${kept ? 'green' : ''}">${kept ? 'WORD FROM THE WILLOW' : 'THE WRIT SLIPPED AWAY'}</button>
-      </div>
+        </span>` : ''}
+        <span class="btn small ${kept ? 'green' : ''}" aria-hidden="true" style="display:block;width:100%;box-sizing:border-box">${kept ? 'WORD FROM THE WILLOW' : 'THE WRIT SLIPPED AWAY'}</span>
+      </button>
     </div>`);
   SFX.coin();
 }
 
 G.ackWillowBubble = async () => {
+  const routeToken = captureRouteToken();
   const b = S.writQueue && S.writQueue[0];
   if (!b) return;
   document.querySelectorAll('.willow-bubble-wrap').forEach(x => x.remove());
   const n = await api('/writ/ack', { method: 'POST', body: { ts: b.ts } });
+  const requestStillCurrent = isRouteTokenCurrent(routeToken);
   await refreshState();
+  if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   render();
   if (n.type === 'kept') {
     showCeremony(n.rewards, 'The Rest Writ \u2014 Kept');
@@ -211,7 +249,7 @@ G.ackWillowBubble = async () => {
       <span class="win-title">The Writ Slipped Away</span>
       <p style="margin:10px 0">${esc(n.detail || 'Training')} broke the stillness. The willow bends; it does not break \u2014 and neither, apparently, do you.</p>
       <p class="muted" style="font-size:16px">No penalty. The omens will be read again tomorrow.</p>
-      <button class="btn" onclick="this.closest('.overlay').remove()">ONWARD</button>
+      <button class="btn" onclick="G.closeOverlay(this.closest('.overlay'))">ONWARD</button>
     </div>`);
   }
 };
@@ -219,22 +257,23 @@ G.ackWillowBubble = async () => {
 /* ---- the siege banner: a small breathing preview by default; expands into a
    D&D-style monster card (no health bar) with an expandable war-party board ---- */
 
-const SIEGE = { collapsed: true, leaderOpen: {} };
-RESETS.push(() => { SIEGE.collapsed = true; SIEGE.leaderOpen = {}; });
+const SIEGE = { collapsed: true, leaderOpen: {}, current: null };
+RESETS.push(() => { SIEGE.collapsed = true; SIEGE.leaderOpen = {}; SIEGE.current = null; });
 
 function siegeBannerHtml(siege) {
   const pct = Math.max(0, Math.round(100 * siege.hp_left / siege.hp_max));
-  const hpBar = `<div class="hpbar sg-hp"><div style="width:${pct}%"></div><span>${siege.hp_left} / ${siege.hp_max}</span></div>`;
+  const hpBar = `<span class="hpbar sg-hp" style="display:block"><i aria-hidden="true" style="display:block;height:100%;width:${pct}%;background:linear-gradient(0deg,#8c2020,#c85050);transition:width 0.25s"></i><span>${siege.hp_left} / ${siege.hp_max}</span></span>`;
 
   // COLLAPSED (default): just the beast breathing + a slim health bar
   if (SIEGE.collapsed) {
-    return `<div class="siege-banner collapsed ${siege.defeated ? 'won' : ''}" onclick="G.siegeToggle()" title="expand the siege">
-      <div class="sg-boss breathing">${bossTag(siege.dna, 44)}</div>
-      <div class="sg-mini">
-        <div class="sg-mini-name"><span class="r-legendary">${esc(siege.name)}</span> <span class="muted">${esc(siege.epithet)}</span></div>
-        ${siege.defeated ? '<div class="sg-sub" style="color:var(--green)">FELLED — the town holds &middot; tap for spoils</div>' : hpBar}
-      </div>
-    </div>`;
+    return `<button type="button" class="siege-banner collapsed ${siege.defeated ? 'won' : ''}" style="width:calc(100% - 8px);font:inherit;color:inherit;text-align:left"
+      aria-expanded="false" aria-label="Expand the Siege: ${esc(siege.name)}" title="expand the siege" onclick="G.siegeToggle()">
+      <span class="sg-boss breathing">${bossTag(siege.dna, 44)}</span>
+      <span class="sg-mini">
+        <span class="sg-mini-name" style="display:block"><span class="r-legendary">${esc(siege.name)}</span> <span class="muted">${esc(siege.epithet)}</span></span>
+        ${siege.defeated ? '<span class="sg-sub" style="display:block;color:var(--green)">FELLED — the town holds &middot; tap for spoils</span>' : hpBar}
+      </span>
+    </button>`;
   }
 
   // EXPANDED: the monster card — no health bar, just the stat block
@@ -245,23 +284,24 @@ function siegeBannerHtml(siege) {
 
   const board = siege.contributors.length
     ? siege.contributors.map((x, i) => {
-      const open = SIEGE.leaderOpen[x.name];
+      const open = SIEGE.leaderOpen[i] === x.name;
       const blows = (x.blows || []).map(b =>
         `<div class="sg-blow"><span class="sg-blow-dmg">+${b.dmg}</span> ${esc(b.label)} <span class="muted">${b.ts.slice(5, 16).replace('T', ' ')}</span></div>`
       ).join('') || '<div class="muted" style="font-size:14px">no blows recorded</div>';
       return `<div class="sg-leader ${open ? 'open' : ''}">
-        <div class="sg-leader-row" onclick="event.stopPropagation();G.siegeLeader('${esc(x.name).replace(/'/g, '')}')">
+        <button type="button" class="sg-leader-row" style="width:100%;border:0;font:inherit;color:inherit;text-align:left" onclick="G.siegeLeader(${i})" aria-expanded="${open}">
           <span class="sg-rank">${i + 1}</span>
           <span class="sg-leader-name">${esc(x.name)}${x.you ? ' <span class="muted">(you)</span>' : ''}</span>
           <span class="sg-leader-dmg">${x.damage.toLocaleString()}</span>
           <span class="sg-leader-caret">${open ? '&#9662;' : '&#9656;'}</span>
-        </div>
-        ${open ? `<div class="sg-blows" onclick="event.stopPropagation()">${blows}</div>` : ''}
+        </button>
+        ${open ? `<div class="sg-blows">${blows}</div>` : ''}
       </div>`;
     }).join('')
     : '<div class="muted center" style="padding:6px">no blows struck yet — be the first to draw its ire</div>';
 
-  return `<div class="siege-banner expanded ${siege.defeated ? 'won' : ''}" onclick="G.siegeToggle()" title="collapse the siege">
+  return `<section class="siege-banner expanded ${siege.defeated ? 'won' : ''}" aria-label="The Siege: ${esc(siege.name)}" title="collapse the siege" onclick="G.siegeBoxToggle(event)">
+    <button type="button" class="sg-collapse" onclick="G.siegeToggle()" aria-expanded="true" aria-label="Collapse the siege" title="collapse the siege">&#9652;</button>
     <div class="sg-boss-col">
       <div class="sg-boss-frame">
         <div class="sg-boss breathing">${bossTag(siege.dna, 124)}</div>
@@ -276,7 +316,7 @@ function siegeBannerHtml(siege) {
       <div class="sg-desc">${esc(siege.description)}</div>
       <div class="sg-statline">${statLine}</div>
       <div class="sg-trophy">TROPHY FOR ALL WHO FELL IT: <span class="r-legendary">${spriteTag((S.itemsCatalog[siege.trophy] || {}).sprite || 'hat_horns', 20)} ${esc(trophyName)}</span></div>
-      ${siege.defeated && !siege.claimed ? `<div class="center" style="margin:8px 0"><button class="btn wide green" onclick="event.stopPropagation();G.raidClaim()">CLAIM YOUR SPOILS</button></div>` : ''}
+      ${siege.defeated && !siege.claimed ? `<div class="center" style="margin:8px 0"><button type="button" class="btn wide green" onclick="G.raidClaim()">CLAIM YOUR SPOILS</button></div>` : ''}
       ${siege.defeated && siege.claimed ? '<div class="sg-sub muted center" style="margin:6px 0">spoils claimed &#10004; &middot; a new horror comes Monday</div>' : ''}
     </div>
     <div class="sg-divider"><span>&#9670; &#9670; &#9670;</span></div>
@@ -285,7 +325,7 @@ function siegeBannerHtml(siege) {
       <div class="sg-board">${board}</div>
       <div class="muted" style="font-size:13px;margin-top:6px">1 active minute = 10 damage &middot; every adventurer's workouts count</div>
     </div>
-  </div>`;
+  </section>`;
 }
 
 G.siegeToggle = () => {
@@ -294,18 +334,35 @@ G.siegeToggle = () => {
   render();
 };
 
-G.siegeLeader = (name) => {
-  SIEGE.leaderOpen[name] = !SIEGE.leaderOpen[name];
+/* Clicking anywhere on the expanded card collapses it again — except its own
+   controls (claim, collapse caret) and the leaderboard, which stays
+   interactive for inspecting blows without surprise collapses. */
+G.siegeBoxToggle = (event) => {
+  // Exempt the whole war-party section (heading + board + footer), not just the
+  // board rows — its instructional heading/footer are siblings of .sg-board, and
+  // a mis-tap there shouldn't surprise-collapse the card.
+  if (event.target.closest('button, .sg-warparty')) return;
+  G.siegeToggle();
+};
+
+G.siegeLeader = (index) => {
+  const contributor = SIEGE.current && SIEGE.current.contributors[index];
+  if (!contributor) return;
+  SIEGE.leaderOpen[index] = SIEGE.leaderOpen[index] === contributor.name ? null : contributor.name;
   SFX.click();
   render();
 };
 
 G.raidClaim = async () => {
+  const routeToken = captureRouteToken();
   let r;
+  let requestStillCurrent = false;
   try {
     r = await api('/raid/claim', { method: 'POST' });
+    requestStillCurrent = isRouteTokenCurrent(routeToken);
   } catch (e) { return; }
   await refreshState();
+  if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   SFX.fanfare();
   const cap = r.captured;
   showModal(`<div class="win ceremony">
@@ -321,30 +378,74 @@ G.raidClaim = async () => {
       <div class="muted" style="font-size:15px">it did not die — it follows you home. A siege beast joins your Menagerie.</div>
     </div>` : ''}
     <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button class="btn big" style="width:auto" onclick="this.closest('.overlay').remove();nav('ranch')">TO THE MENAGERIE</button>
-      <button class="btn" onclick="this.closest('.overlay').remove();render()">GLORY</button>
+      <button class="btn big" style="width:auto" onclick="G.closeOverlay(this.closest('.overlay'),()=>nav('ranch'))">TO THE MENAGERIE</button>
+      <button class="btn" onclick="G.closeOverlay(this.closest('.overlay'),render)">GLORY</button>
     </div>
   </div>`, { backdropClose: false });
-  if (cap) { document.body.classList.add('megashake'); setTimeout(() => document.body.classList.remove('megashake'), 700); }
+  if (cap) {
+    let stopDepartureWatch = () => {};
+    stopDepartureWatch = watchRouteDeparture(routeToken, () => {
+      document.body.classList.remove('megashake');
+      stopDepartureWatch();
+    });
+    document.body.classList.add('megashake');
+    const shakeTimer = setTimeout(() => {
+      appRouteTimers.delete(shakeTimer);
+      stopDepartureWatch();
+      if (!isRouteTokenCurrent(routeToken)) return;
+      document.body.classList.remove('megashake');
+    }, 700);
+    appRouteTimers.add(shakeTimer);
+  }
 };
 
 G.abandonQuick = async (id) => {
-  if (!confirm('Abandon this quest? The Vale forgives; the ledger remembers.')) return;
+  const routeToken = captureRouteToken();
+  if (!await confirmModal('Abandon this quest? The Vale forgives; the ledger remembers.',
+      { title: 'Abandon the quest?', okLabel: 'ABANDON', danger: true })) return;
   await api(`/quests/${id}/abandon`, { method: 'POST' });
+  const requestStillCurrent = isRouteTokenCurrent(routeToken);
   await refreshState();
+  if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   toast('The oath is released.');
   render();
 };
 
 G.syncNow = async () => {
+  const routeToken = captureRouteToken();
   toast('Ravens away...');
-  const r = await api('/sync', { method: 'POST' });
-  await refreshState();
+  const routeToast = document.querySelector('.toast');
+  let stopDepartureWatch = () => {};
+  stopDepartureWatch = watchRouteDeparture(routeToken, () => {
+    if (routeToast && routeToast.isConnected) routeToast.remove();
+    stopDepartureWatch();
+  });
+  let r;
+  let requestStillCurrent = false;
+  try {
+    r = await api('/sync', { method: 'POST' });
+    requestStillCurrent = isRouteTokenCurrent(routeToken);
+    await refreshState();
+  } finally {
+    stopDepartureWatch();
+  }
+  if (r.completed && r.completed.length) {
+    r.completed.forEach(q => recordQuestDone(q.title, q.giver));
+  }
+  if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   render();
   if (r.completed && r.completed.length) {
+    // Re-capture after render(): the pre-render routeToken is already stale
+    // (render bumps viewGeneration), which would fail both this guard and
+    // showCeremony's, swallowing every synced-quest ceremony.
+    const ceremonyToken = captureRouteToken();
     r.completed.forEach((q, i) => {
-      recordQuestDone(q.title, q.giver);
-      setTimeout(() => showCeremony(q.rewards, q.title), i * 400);
+      const ceremonyTimer = setTimeout(() => {
+        appRouteTimers.delete(ceremonyTimer);
+        if (!isRouteTokenCurrent(ceremonyToken)) return;
+        showCeremony(q.rewards, q.title, ceremonyToken);
+      }, i * 400);
+      appRouteTimers.add(ceremonyTimer);
     });
   } else if (r.raid_damage) {
     toast(`${r.new_activities} new deed(s) — you strike the siege for ${r.raid_damage}!`);

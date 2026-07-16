@@ -3,14 +3,46 @@
    fresh visit so the herd feels like it lived while you were gone. Hat
    operations never re-render — they act on the live simulation. */
 
-const RANCH = { mons: [], hats: {}, decors: [], packs: 0, saved: null, groundHats: [] };
+const RANCH = {
+  mons: [], hats: {}, decors: [], packs: 0, saved: null, groundHats: [],
+  actors: [], hatPending: new Set(), packPending: false, packTimers: new Set(),
+  packOverlay: null, packRequest: null, packMotionCleanup: null, redraw: null, renderHatPanel: null,
+  offerGroundHat: null,
+};
+
+function resetRanchState() {
+  if (window.__stopRanch) {
+    window.__stopRanch();
+    window.__stopRanch = null;
+  }
+  cancelRanchPack();
+  RANCH.mons = [];
+  RANCH.hats = {};
+  RANCH.decors = [];
+  RANCH.packs = 0;
+  RANCH.saved = null;
+  RANCH.groundHats = [];
+  RANCH.actors = [];
+  RANCH.hatPending.clear();
+  RANCH.packPending = false;
+  RANCH.packRequest = null;
+  RANCH.redraw = null;
+  RANCH.renderHatPanel = null;
+  RANCH.offerGroundHat = null;
+}
+RESETS.push(resetRanchState);
 
 SCREENS.ranch = async function () {
-  const d = await api('/monsters');
-  const inv = (await api('/inventory')).items;
+  const token = captureRouteToken();
+  const [d, inventory] = await Promise.all([api('/monsters'), api('/inventory')]);
+  if (!isRouteTokenCurrent(token)) return;
+  const inv = inventory.items;
   RANCH.mons = d.monsters;
   RANCH.hats = {};
   inv.filter(i => i.type === 'hat').forEach(h => RANCH.hats[h.id] = h.qty);
+  RANCH.groundHats.filter(groundHat => !groundHat.done).forEach(groundHat => {
+    RANCH.hats[groundHat.hat] = Math.max(0, (RANCH.hats[groundHat.hat] || 0) - 1);
+  });
   RANCH.decors = inv.filter(i => i.type === 'decor');
   RANCH.packs = d.packs_owned;
 
@@ -19,7 +51,7 @@ SCREENS.ranch = async function () {
       <div class="ranch-box">
         <canvas class="ranch" id="ranch-cv" width="640" height="300"></canvas>
         <div class="pen-ui">
-          <button class="pen-btn" id="pen-hats-btn">HATS</button>
+          <button type="button" class="pen-btn" id="pen-hats-btn" aria-expanded="false" aria-controls="pen-panel">HATS</button>
           <div class="pen-panel" id="pen-panel" style="display:none"></div>
         </div>
         ${!d.monsters.length ? '<div class="ranch-empty">The pen stands empty. Rip a pack, or subdue a creature in the Undercroft.</div>' : ''}
@@ -27,17 +59,17 @@ SCREENS.ranch = async function () {
       <div class="muted center" style="font-size:16px;margin-top:4px">tap a creature to meet it &middot; drag one to relocate it (they hate this)
         &middot; drag a hat onto a head, or drop it on the grass and see who claims it</div>
       <div class="center" style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn wide green" onclick="G.ripPack()">RIP A PACK ${RANCH.packs > 0 ? `(${RANCH.packs} owned)` : `(${spriteTag('icon_coin', 14)}${d.pack_cost})`}</button>
+        <button type="button" class="btn wide green ranch-action" onclick="G.ripPack()">RIP A PACK ${RANCH.packs > 0 ? `(${RANCH.packs} owned)` : `(${spriteTag('icon_coin', 14)}${d.pack_cost})`}</button>
       </div>
       <div class="muted center" style="font-size:15px;margin-top:6px">now dropping: <span class="r-uncommon">${esc(d.series)}</span>
         &middot; ${d.series_days_left === 1 ? 'ends today' : `ends in ${d.series_days_left} days`} — limited monthly run</div>
     </div>
     ${d.monsters.length ? `<div class="win"><span class="win-title">The Herd</span>
       <div class="mon-grid">${d.monsters.map(m => `
-        <div class="mon-tile ${m.boss ? 'boss' : 'r-' + m.rarity}" data-mid="${m.id}" onclick="G.monLens(${m.id})">
+        <button type="button" class="mon-tile ${m.boss ? 'boss' : 'r-' + m.rarity}" data-mid="${m.id}" style="font:inherit;color:inherit;border-radius:0;appearance:none" aria-label="Meet ${esc(m.name)}" onclick="G.monLens(${m.id})">
           <div style="display:flex;justify-content:center">${critterTag(m, 48)}</div>
           <div class="mn r-${m.rarity}">${esc(m.name)}${S.state.buddy && S.state.buddy.id === m.id ? ' <span style="color:#e05070">&#9829;</span>' : ''}</div>
-        </div>`).join('')}</div>
+        </button>`).join('')}</div>
     </div>` : ''}
   `);
   startRanch(d.monsters);
@@ -54,6 +86,103 @@ function drawSpriteCtx(ctx, key, x, y, scale) {
   }));
 }
 
+function updateRanchHerdTile(monster) {
+  const root = document.querySelector(`.mon-tile[data-mid="${monster.id}"]`);
+  const tile = root && root.querySelector('canvas');
+  if (!tile) return;
+  tile.outerHTML = critterTag(monster, 48);
+  hydrateSprites(root);
+}
+
+async function setRanchHat(id, hatId, options = {}) {
+  if (RANCH.hatPending.has(id)) return false;
+  const monster = RANCH.mons.find(candidate => candidate.id === id);
+  if (!monster) return false;
+
+  const actor = (RANCH.actors || []).find(candidate => candidate.m.id === id);
+  const oldHat = monster.hat || null;
+  const routeToken = captureRouteToken();
+  RANCH.hatPending.add(id);
+  try {
+    await api(`/monsters/${id}/hat`, { method: 'POST', body: { hat_id: hatId } });
+  } catch (error) {
+    return false;
+  } finally {
+    RANCH.hatPending.delete(id);
+  }
+
+  if (!isRouteTokenCurrent(routeToken) || S.screen !== 'ranch') {
+    RANCH.groundHats = [];
+    RANCH.saved = null;
+    return false;
+  }
+
+  if (hatId && options.source !== 'ground') {
+    RANCH.hats[hatId] = Math.max(0, (RANCH.hats[hatId] || 0) - 1);
+  }
+  if (oldHat) {
+    if (options.tumbleOld && actor) {
+      const groundHat = {
+        hat: oldHat,
+        x: Math.min(610, actor.x + 30),
+        y: actor.y + 20,
+        claimed: false,
+      };
+      RANCH.groundHats.push(groundHat);
+      if (RANCH.offerGroundHat) RANCH.offerGroundHat(groundHat, 1200);
+    } else {
+      RANCH.hats[oldHat] = (RANCH.hats[oldHat] || 0) + 1;
+    }
+  }
+
+  monster.hat = hatId;
+  if (actor) {
+    actor.m.hat = hatId;
+    actor.emote = 'heart';
+    actor.emoteT = 80;
+    actor.hatCd = 1500;
+  }
+  SFX.accept();
+  updateRanchHerdTile(monster);
+  if (RANCH.renderHatPanel) RANCH.renderHatPanel();
+  if (RANCH.redraw) RANCH.redraw();
+  return true;
+}
+
+function cancelRanchPack(removeOverlay = true) {
+  if (RANCH.packMotionCleanup) RANCH.packMotionCleanup();
+  RANCH.packMotionCleanup = null;
+  RANCH.packTimers.forEach(timer => clearTimeout(timer));
+  RANCH.packTimers.clear();
+  document.body.classList.remove('megashake');
+  if (removeOverlay && RANCH.packOverlay && RANCH.packOverlay.isConnected) {
+    removeRouteOverlay(RANCH.packOverlay, { force: true, restoreFocus: false });
+  }
+  RANCH.packOverlay = null;
+}
+
+function scheduleRanchPack(callback, delay, routeToken, overlay) {
+  const timer = setTimeout(() => {
+    RANCH.packTimers.delete(timer);
+    if (!isRouteTokenCurrent(routeToken) || !overlay.isConnected) return;
+    callback();
+  }, delay);
+  RANCH.packTimers.add(timer);
+}
+
+function bindRanchPackMotion(settlePack) {
+  if (RANCH.packMotionCleanup) RANCH.packMotionCleanup();
+  RANCH.packMotionCleanup = onReducedMotionRequested(settlePack);
+}
+
+function ranchPackCard(monster, reducedMotion = false) {
+  return `<div class="pack-card r-${monster.rarity}"${reducedMotion ? ' style="animation:none"' : ''}>
+    <div style="display:flex;justify-content:center">${monsterTag(monster.dna, monster.rarity, 60)}</div>
+    <div class="pc-name r-${monster.rarity}">${esc(monster.name)}</div>
+    <div class="muted" style="font-size:13px">${esc(monster.personality)}</div>
+  </div>`;
+}
+
 function startRanch(mons) {
   const cv = document.getElementById('ranch-cv');
   if (!cv) return;
@@ -62,6 +191,10 @@ function startRanch(mons) {
   const GROUND = 60;
   const SCALE = 3;
   RANCH.groundHats = RANCH.groundHats.filter(g => !g.done);
+  RANCH.groundHats.forEach(groundHat => {
+    groundHat.claimed = false;
+    groundHat.pending = false;
+  });
 
   // pre-render grass background + owned decorations
   const bg = document.createElement('canvas');
@@ -103,7 +236,10 @@ function startRanch(mons) {
   });
   RANCH.actors = actors;
 
-  let raf;
+  const ranchRouteToken = captureRouteToken();
+  const simTimers = new Set();
+  let running = true;
+  let raf = null;
   let grabbed = null;
   let downAt = null;
   let hovered = null;
@@ -124,27 +260,35 @@ function startRanch(mons) {
     ghat.claimed = true;
   }
 
-  function updateHerdTile(m) {
-    const tile = document.querySelector(`.mon-tile[data-mid="${m.id}"] canvas`);
-    if (!tile) return;
-    tile.outerHTML = critterTag(m, 48);
-    hydrateSprites(document.querySelector(`.mon-tile[data-mid="${m.id}"]`));
+  function offerGroundHat(groundHat, delay) {
+    if (prefersReducedMotion()) return;
+    const timer = setTimeout(() => {
+      simTimers.delete(timer);
+      if (!running || !isRouteTokenCurrent(ranchRouteToken)) return;
+      assignFetcher(groundHat);
+    }, delay);
+    simTimers.add(timer);
   }
+  RANCH.offerGroundHat = offerGroundHat;
 
-  function crownLocal(actor, hatId) {
-    const old = actor.m.hat;
-    actor.m.hat = hatId;
-    actor.emote = 'heart'; actor.emoteT = 80;
-    actor.hatCd = 1500;   // ~25s of hat contentment
-    SFX.accept();
-    api(`/monsters/${actor.m.id}/hat`, { method: 'POST', body: { hat_id: hatId } }).catch(() => {});
-    updateHerdTile(actor.m);
-    if (old) {
-      // the old hat tumbles to the grass; someone will want it
-      const ghat = { hat: old, x: Math.min(W - 30, actor.x + 30), y: actor.y + 20, claimed: false };
-      RANCH.groundHats.push(ghat);
-      setTimeout(() => assignFetcher(ghat), 1200);
+  async function claimGroundHat(actor, groundHat) {
+    if (groundHat.pending) return;
+    groundHat.pending = true;
+    const crowned = await setRanchHat(actor.m.id, groundHat.hat, {
+      source: 'ground',
+      tumbleOld: true,
+    });
+    if (!running || !isRouteTokenCurrent(ranchRouteToken)) return;
+    groundHat.pending = false;
+    if (crowned) {
+      groundHat.done = true;
+      RANCH.groundHats = RANCH.groundHats.filter(candidate => candidate !== groundHat);
+    } else {
+      groundHat.claimed = false;
     }
+    actor.state = 'wander';
+    actor.target = null;
+    if (RANCH.redraw) RANCH.redraw();
   }
 
   /* ---- hat panel (lives inside the pen, top right) ---- */
@@ -157,16 +301,17 @@ function startRanch(mons) {
       ? `<div class="muted" style="font-size:14px;margin-bottom:4px">drag onto a creature, or onto the grass</div>
          <div class="pen-hats">${owned.map(([id, q]) => {
           const it = (S.itemsCatalog || {})[id] || { sprite: id, name: id };
-          return `<span class="hat-slot" data-hat="${id}" title="${esc(it.name)}">${spriteTag(it.sprite, 26)}<span class="qty">&times;${q}</span></span>`;
+          return `<button type="button" class="hat-slot" data-hat="${id}" style="font:inherit;color:inherit;border-radius:0;appearance:none" title="${esc(it.name)}" aria-label="Drag ${esc(it.name)}, ${q} owned">${spriteTag(it.sprite, 26)}<span class="qty">&times;${q}</span></button>`;
         }).join('')}</div>`
       : '<div class="muted" style="font-size:14px">no hats in the box — crank the Crankwerk</div>';
     hydrateSprites(panel);
   }
+  RANCH.renderHatPanel = renderHatPanel;
 
   hatsBtn.onclick = () => {
-    SFX.click();
     const open = panel.style.display !== 'none';
     panel.style.display = open ? 'none' : 'block';
+    hatsBtn.setAttribute('aria-expanded', String(!open));
     if (!open) renderHatPanel();
   };
 
@@ -193,7 +338,7 @@ function startRanch(mons) {
     hatDrag.ghost.style.left = e.clientX + 'px';
     hatDrag.ghost.style.top = e.clientY + 'px';
   };
-  const onDocUp = (e) => {
+  const onDocUp = async (e) => {
     if (!hatDrag) return;
     const { hat, ghost } = hatDrag;
     hatDrag = null;
@@ -205,16 +350,18 @@ function startRanch(mons) {
       x: (e.clientX - rect.left) * (W / rect.width),
       y: (e.clientY - rect.top) * (H / rect.height),
     };
-    RANCH.hats[hat]--;
     const hit = hitTest(p);
     if (hit) {
-      crownLocal(hit, hat);
-      toast('Crowned. Devastating.');
+      if (await setRanchHat(hit.m.id, hat, { source: 'box', tumbleOld: true })) {
+        toast('Crowned. Devastating.');
+      }
     } else {
+      RANCH.hats[hat]--;
       const ghat = { hat, x: Math.max(4, Math.min(W - 30, p.x - 12)), y: Math.max(GROUND, Math.min(H - 24, p.y - 8)), claimed: false };
       RANCH.groundHats.push(ghat);
       SFX.coin();
-      setTimeout(() => assignFetcher(ghat), 700 + Math.random() * 900);
+      offerGroundHat(ghat, 700 + Math.random() * 900);
+      if (RANCH.redraw) RANCH.redraw();
     }
     if (panel.style.display !== 'none') renderHatPanel();
   };
@@ -223,7 +370,7 @@ function startRanch(mons) {
 
   /* ---- simulation ---- */
   let reassignT = 0;
-  function tick() {
+  function advanceSimulation() {
     // unclaimed hats on the grass get re-offered as cooldowns expire
     if (++reassignT % 240 === 0) {
       RANCH.groundHats.filter(g => !g.claimed && !g.done).forEach(assignFetcher);
@@ -247,10 +394,7 @@ function startRanch(mons) {
           const dx = g.x + 8 - (a.x + 6 * SCALE), dy = g.y - (a.y + 6 * SCALE);
           const dist = Math.hypot(dx, dy);
           if (dist < 12) {
-            g.done = true;
-            RANCH.groundHats = RANCH.groundHats.filter(x => x !== g);
-            a.state = 'wander'; a.target = null;
-            crownLocal(a, g.hat);
+            claimGroundHat(a, g);
           } else {
             a.dir = dx > 0 ? 1 : -1;
             a.x += (dx / dist) * 0.9;
@@ -284,7 +428,9 @@ function startRanch(mons) {
       }
       if (a.state === 'graze' && a.emoteT <= 0 && Math.random() < 0.01) { a.emote = 'nom'; a.emoteT = 40; }
     });
+  }
 
+  function drawFrame() {
     ctx.drawImage(bg, 0, 0);
     RANCH.groundHats.forEach(g => drawSpriteCtx(ctx, ((S.itemsCatalog || {})[g.hat] || { sprite: g.hat }).sprite, g.x, g.y, 2));
     const buddyId = S.state.buddy ? S.state.buddy.id : null;
@@ -335,14 +481,49 @@ function startRanch(mons) {
         else { ctx.fillStyle = '#8ac05e'; ctx.fillRect(a.x + 14, a.y + 12 * SCALE - 4, 3, 3); }
       }
     });
+  }
+  RANCH.redraw = drawFrame;
+
+  function tick() {
+    if (!running || prefersReducedMotion()) {
+      raf = null;
+      return;
+    }
+    advanceSimulation();
+    drawFrame();
     raf = requestAnimationFrame(tick);
   }
-  tick();
+
+  const motionQuery = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  const syncRanchMotion = () => {
+    if (prefersReducedMotion()) {
+      if (raf !== null) cancelAnimationFrame(raf);
+      raf = null;
+      drawFrame();
+    } else if (running && raf === null) {
+      tick();
+    }
+  };
+  if (motionQuery && motionQuery.addEventListener) motionQuery.addEventListener('change', syncRanchMotion);
+  if (prefersReducedMotion()) drawFrame();
+  else tick();
+
   window.__stopRanch = () => {
-    cancelAnimationFrame(raf);
+    running = false;
+    if (raf !== null) cancelAnimationFrame(raf);
+    raf = null;
+    simTimers.forEach(timer => clearTimeout(timer));
+    simTimers.clear();
+    if (motionQuery && motionQuery.removeEventListener) motionQuery.removeEventListener('change', syncRanchMotion);
     document.removeEventListener('pointermove', onDocMove);
     document.removeEventListener('pointerup', onDocUp);
     if (hatDrag) { hatDrag.ghost.remove(); hatDrag = null; }
+    cancelRanchPack();
+    RANCH.packRequest = null;
+    RANCH.packPending = false;
+    RANCH.redraw = null;
+    RANCH.renderHatPanel = null;
+    RANCH.offerGroundHat = null;
     // remember the herd's arrangement so in-page updates don't teleport anyone
     RANCH.saved = {};
     actors.forEach(a => {
@@ -366,9 +547,26 @@ function startRanch(mons) {
   cv.addEventListener('pointerdown', (e) => {
     const p = toPen(e);
     const hit = hitTest(p);
-    // clicking empty grass while a card is open just closes it; clicking another
-    // creature closes the old card and opens the new one (handled on drop -> monLens)
-    if (!hit) { if (document.querySelector('.lens-layer')) G.closeLens(); return; }
+    if (!hit) {
+      // a hat lying in the grass can be taken back into the box with a tap —
+      // otherwise a drop nobody fetches (reduced motion, content herd) sits forever
+      const ghat = RANCH.groundHats.find(g => !g.pending && !g.done
+        && p.x >= g.x - 6 && p.x <= g.x + 26 && p.y >= g.y - 6 && p.y <= g.y + 22);
+      if (ghat) {
+        ghat.done = true;   // any fetcher mid-walk shrugs and wanders off
+        RANCH.groundHats = RANCH.groundHats.filter(g => g !== ghat);
+        RANCH.hats[ghat.hat] = (RANCH.hats[ghat.hat] || 0) + 1;
+        if (panel.style.display !== 'none') renderHatPanel();
+        SFX.coin();
+        toast('Back in the hat box.');
+        if (RANCH.redraw) RANCH.redraw();
+        return;
+      }
+      // clicking empty grass while a card is open just closes it; clicking another
+      // creature closes the old card and opens the new one (handled on drop -> monLens)
+      if (document.querySelector('.lens-layer')) G.closeLens();
+      return;
+    }
     downAt = { x: p.x, y: p.y, actor: hit };   // a tap is just a tap — no panic yet
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointers */ }
   });
@@ -383,11 +581,16 @@ function startRanch(mons) {
     if (grabbed) {
       grabbed.x = Math.max(4, Math.min(W - 12 * SCALE - 4, p.x - 6 * SCALE));
       grabbed.y = Math.max(GROUND - 20, Math.min(H - 12 * SCALE, p.y - 6 * SCALE));
+      if (prefersReducedMotion()) drawFrame();
       return;
     }
     hovered = hitTest(p) || null;
+    if (prefersReducedMotion()) drawFrame();
   });
-  cv.addEventListener('pointerleave', () => { hovered = null; });
+  cv.addEventListener('pointerleave', () => {
+    hovered = null;
+    if (prefersReducedMotion()) drawFrame();
+  });
   const drop = (e) => {
     if (grabbed) {
       const a = grabbed;
@@ -401,30 +604,85 @@ function startRanch(mons) {
       G.monLens(downAt.actor.m.id);
     }
     downAt = null;
+    if (prefersReducedMotion()) drawFrame();
   };
   cv.addEventListener('pointerup', drop);
-  cv.addEventListener('pointercancel', () => { grabbed = null; downAt = null; });
+  cv.addEventListener('pointercancel', () => {
+    grabbed = null;
+    downAt = null;
+    if (prefersReducedMotion()) drawFrame();
+  });
 }
 
 /* ---- magnifying-glass inspection: a lens over the creature + an info
    dialog docked beside it, on whichever side of the pen has room ---- */
 
 G.closeLens = () => {
+  // Phone details live in a standard overlay; the desktop lens is a layer.
+  document.querySelectorAll('.overlay[data-ranch-info]').forEach(o =>
+    removeRouteOverlay(o, { force: true, restoreFocus: false }));
   const layer = document.querySelector('.lens-layer');
-  if (!layer) return;
   const a = (RANCH.actors || []).find(x => x.posing);
   if (a) { a.posing = false; a.state = 'wander'; a.timer = 60; }
-  layer.remove();
+  if (layer) layer.remove();
+  if ((layer || a) && RANCH.redraw) RANCH.redraw();
 };
 
-G.monLens = (id) => {
+function openRanchLens(id, playSound) {
+  // Tapping the creature (or its herd card) a second time dismisses its details.
+  const wasOpen = document.querySelector(`.lens-layer[data-mid="${id}"], .overlay[data-ranch-info][data-mid="${id}"]`);
   G.closeLens();
+  if (playSound && wasOpen) return;
   const actor = (RANCH.actors || []).find(a => a.m.id === id);
   const m = RANCH.mons.find(x => x.id === id);
   const cv = document.getElementById('ranch-cv');
   if (!m || !actor || !cv) return;
-  SFX.click();
+  if (playSound) SFX.click();
+
+  const isBuddy = S.state.buddy && S.state.buddy.id === id;
+  const hatName = m.hat && S.itemsCatalog && S.itemsCatalog[m.hat] ? S.itemsCatalog[m.hat].name : null;
+  const ownedHats = Object.entries(RANCH.hats).filter(([, quantity]) => quantity > 0);
+  const inner = `
+      <div class="lens-box-name r-${m.rarity}">${esc(m.name)}${isBuddy ? ' <span style="color:#e05070">&#9829;</span>' : ''}</div>
+      <div class="muted" style="text-transform:uppercase;font-size:13px">${m.rarity}</div>
+      <div class="lens-box-info">
+        <span style="color:var(--blue)">${esc(m.personality)}</span>
+        ${hatName ? `<br>wearing <span style="color:var(--gold-bright)">${esc(hatName)}</span>` : ''}
+        <br><span class="muted">${esc(m.source)}</span>
+        <br><span class="muted">joined ${m.born.slice(0, 10)}</span>
+      </div>
+      <div class="lens-box-btns">
+        ${ownedHats.length ? `<details class="hat-picker">
+            <summary class="btn small hat-picker-summary">PUT ON A HAT</summary>
+            <div class="hat-picker-menu" role="menu" aria-label="Hats for ${esc(m.name)}">
+              ${ownedHats.map(([hatId, quantity]) => {
+                const item = (S.itemsCatalog || {})[hatId] || { name: hatId };
+                return `<button type="button" class="btn small hat-option ranch-action" role="menuitem" onclick="G.equipHat(${id},'${esc(hatId)}')">${esc(item.name)} <span class="muted">&times;${quantity}</span></button>`;
+              }).join('')}
+            </div>
+          </details>`
+          : '<div class="muted">No hats wait in the box.</div>'}
+        <button type="button" class="btn small ${isBuddy ? '' : 'green'}" onclick="G.toggleBuddy(${id})">${isBuddy ? 'UNBUDDY' : '&#9829; MAKE BUDDY'}</button>
+        ${m.hat ? `<button type="button" class="btn small ranch-action" data-hat-monster="${id}" onclick="G.doffHat(${id})">DOFF HAT</button>` : ''}
+        <button type="button" class="btn small danger" onclick="G.setFree(${id})">SET FREE</button>
+      </div>`;
+
+  // Phone: the pen is far too short to hold the floating dialog, so the
+  // creature's details open as a standard centered overlay instead of a
+  // lens box that would cover the creature it describes.
+  if (window.matchMedia('(max-width: 719px)').matches) {
+    const ov = showModal(`<div class="win center ranch-info-win">
+      <button type="button" class="lens-box-close" aria-label="Close details for ${esc(m.name)}" onclick="G.closeLens()">&#10005;</button>
+      <div style="margin:2px 0 4px">${critterTag(m, 96)}</div>
+      ${inner}
+    </div>`);
+    ov.dataset.ranchInfo = '1';
+    ov.dataset.mid = id;
+    return;
+  }
+
   actor.posing = true;
+  if (RANCH.redraw) RANCH.redraw();
 
   const box = cv.closest('.ranch-box');
   const brect = box.getBoundingClientRect();
@@ -438,12 +696,9 @@ G.monLens = (id) => {
   cx = Math.max(R + 6, Math.min(brect.width - R - 6, cx));
   cy = Math.max(R + 24, Math.min(brect.height - R - 30, cy));
   const rightSide = cx < brect.width / 2;   // dock the dialog where there's room
+  box.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 
-  const isBuddy = S.state.buddy && S.state.buddy.id === id;
-  const hatName = m.hat && S.itemsCatalog && S.itemsCatalog[m.hat] ? S.itemsCatalog[m.hat].name : null;
-  box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-
-  const BOXW = 190, BOXH_EST = 190;
+  const BOXW = 190, BOXH_EST = ownedHats.length ? 265 : 210;
   let boxLeft = rightSide ? cx + R + 14 : cx - R - 14 - BOXW;
   boxLeft = Math.max(6, Math.min(brect.width - BOXW - 6, boxLeft));
   let boxTop = cy - BOXH_EST / 2;
@@ -451,34 +706,36 @@ G.monLens = (id) => {
 
   const layer = document.createElement('div');
   layer.className = 'lens-layer';
-  // clicking the glass or any non-button part of the card closes it; the action
-  // buttons stop the click from bubbling so they act instead of just closing
+  layer.dataset.mid = id;
   layer.innerHTML = `
-    <div class="lens" style="left:${Math.round(cx - R)}px;top:${Math.round(cy - R)}px;width:${L}px;height:${L}px" onclick="G.closeLens()">
+    <button type="button" class="lens control-reset illustrated-control" aria-label="Close details for ${esc(m.name)}" style="left:${Math.round(cx - R)}px;top:${Math.round(cy - R)}px;width:${L}px;height:${L}px" onclick="G.closeLens()">
       <div class="lens-inner-wrap"><div class="lens-inner">${critterTag(m, 104)}</div></div>
-    </div>
-    <div class="lens-box" style="left:${Math.round(boxLeft)}px;top:${Math.round(boxTop)}px;width:${BOXW}px" onclick="G.closeLens()">
-      <button class="lens-box-close" onclick="event.stopPropagation();G.closeLens()">&#10005;</button>
-      <div class="lens-box-name r-${m.rarity}">${esc(m.name)}${isBuddy ? ' <span style="color:#e05070">&#9829;</span>' : ''}</div>
-      <div class="muted" style="text-transform:uppercase;font-size:13px">${m.rarity}</div>
-      <div class="lens-box-info">
-        <span style="color:var(--blue)">${esc(m.personality)}</span>
-        ${hatName ? `<br>wearing <span style="color:var(--gold-bright)">${esc(hatName)}</span>` : ''}
-        <br><span class="muted">${esc(m.source)}</span>
-        <br><span class="muted">joined ${m.born.slice(0, 10)}</span>
-      </div>
-      <div class="lens-box-btns">
-        <button class="btn small ${isBuddy ? '' : 'green'}" onclick="event.stopPropagation();G.toggleBuddy(${id})">${isBuddy ? 'UNBUDDY' : '&#9829; MAKE BUDDY'}</button>
-        ${m.hat ? `<button class="btn small" onclick="event.stopPropagation();G.doffHat(${id})">DOFF HAT</button>` : ''}
-        <button class="btn small danger" onclick="event.stopPropagation();G.setFree(${id})">SET FREE</button>
-      </div>
+    </button>
+    <div class="lens-box" style="left:${Math.round(boxLeft)}px;top:${Math.round(boxTop)}px;width:${BOXW}px">
+      <button type="button" class="lens-box-close" aria-label="Close details for ${esc(m.name)}" onclick="G.closeLens()">&#10005;</button>
+      ${inner}
     </div>`;
   box.appendChild(layer);
   hydrateSprites(layer);
+}
+
+G.monLens = id => openRanchLens(id, true);
+
+G.equipHat = async (id, hatId) => {
+  const crowned = await setRanchHat(id, hatId, { source: 'box' });
+  if (!crowned) return;
+  toast('Crowned. Devastating.');
+  openRanchLens(id, false);
+  // the details rebuild closes the menu — reopen it so trying on the next
+  // hat is one tap away (the menu was open to make this pick at all)
+  const picker = document.querySelector(`.lens-layer[data-mid="${id}"] .hat-picker, .overlay[data-ranch-info][data-mid="${id}"] .hat-picker`);
+  if (picker) picker.open = true;
 };
 
 G.toggleBuddy = async (id) => {
+  const token = captureRouteToken();
   const r = await api(`/monsters/${id}/buddy`, { method: 'POST' });
+  if (!isRouteTokenCurrent(token)) return;
   S.state.buddy = r.buddy;
   SFX.accept();
   G.closeLens();
@@ -487,19 +744,7 @@ G.toggleBuddy = async (id) => {
 };
 
 G.doffHat = async (id) => {
-  await api(`/monsters/${id}/hat`, { method: 'POST', body: { hat_id: null } });
-  const m = RANCH.mons.find(x => x.id === id);
-  if (m) {
-    RANCH.hats[m.hat] = (RANCH.hats[m.hat] || 0) + 1;
-    const actor = (RANCH.actors || []).find(a => a.m.id === id);
-    if (actor) { actor.m.hat = null; actor.hatCd = 1500; }
-    m.hat = null;
-    const tile = document.querySelector(`.mon-tile[data-mid="${id}"] canvas`);
-    if (tile) {
-      tile.outerHTML = critterTag(m, 48);
-      hydrateSprites(document.querySelector(`.mon-tile[data-mid="${id}"]`));
-    }
-  }
+  if (!await setRanchHat(id, null, { source: 'box' })) return;
   G.closeLens();
   toast('Hat returned to the box.');
 };
@@ -507,8 +752,11 @@ G.doffHat = async (id) => {
 G.setFree = async (id) => {
   const m = RANCH.mons.find(x => x.id === id);
   const name = m ? m.name : 'it';
-  if (!confirm(`Set ${name} free? It will look back once, then be gone.`)) return;
+  if (!await confirmModal(`Set ${name} free? It will look back once, then be gone.`,
+      { title: 'Set it free?', okLabel: 'SET FREE', danger: true })) return;
+  const token = captureRouteToken();
   await api(`/monsters/${id}`, { method: 'DELETE' });
+  if (!isRouteTokenCurrent(token)) return;
   if (S.state.buddy && S.state.buddy.id === id) S.state.buddy = null;
   G.closeLens();
   SFX.stairs();
@@ -517,49 +765,106 @@ G.setFree = async (id) => {
 };
 
 G.ripPack = async () => {
-  let r;
+  if (RANCH.packPending) return;
+  const routeToken = captureRouteToken();
+  const request = { routeToken };
+  RANCH.packPending = true;
+  RANCH.packRequest = request;
+  let result;
   try {
-    r = await api('/monsters/rip', { method: 'POST' });
-  } catch (e) { return; }
-  await refreshState();
+    result = await api('/monsters/rip', { method: 'POST' });
+    if (!isRouteTokenCurrent(routeToken)) return;
+    await refreshState();
+    if (!isRouteTokenCurrent(routeToken)) return;
+  } catch (error) {
+    return;
+  } finally {
+    if (RANCH.packRequest === request) {
+      RANCH.packRequest = null;
+      RANCH.packPending = false;
+    }
+  }
+
+  cancelRanchPack();
   SFX.crank();
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.innerHTML = `<div class="win pack-stage">
-    <div class="r-uncommon" style="font-size:20px">${esc(r.series)}</div>
+    <div class="r-uncommon" style="font-size:20px">${esc(result.series)}</div>
     <div class="muted">something scrabbles inside...</div>
-    <div class="pack-wrap" id="pack-wrap" style="margin:14px 0">${spriteTag('pack', 120)}</div>
+    <button type="button" class="pack-wrap ranch-action control-reset illustrated-control" id="pack-wrap" style="margin:14px 0" aria-label="Rip open the monster pack">${spriteTag('pack', 120)}</button>
     <div style="color:var(--gold-bright)" id="pack-prompt">TAP THE PACK TO RIP IT OPEN</div>
     <div class="pack-cards" id="pack-cards"></div>
-    <div style="margin-top:12px;display:none" id="pack-done"><button class="btn big" onclick="this.closest('.overlay').remove();render()">TO THE PEN</button></div>
+    <div style="margin-top:12px;display:none" id="pack-done"><button type="button" class="btn big">TO THE PEN</button></div>
   </div>`;
+  if (!isRouteTokenCurrent(routeToken)) return;
   document.body.appendChild(ov);
+  ov.dataset.escapeClose = 'false';
+  prepareOverlay(ov);
+  RANCH.packOverlay = ov;
   hydrateSprites(ov);
   const wrap = ov.querySelector('#pack-wrap');
+  const prompt = ov.querySelector('#pack-prompt');
+  const cards = ov.querySelector('#pack-cards');
+  const done = ov.querySelector('#pack-done');
+  let opened = false;
+  let revealed = 0;
+
+  done.querySelector('button').onclick = () => {
+    if (!isRouteTokenCurrent(routeToken) || !ov.isConnected) return;
+    cancelRanchPack(false);
+    G.closeOverlay(ov, render);
+  };
+
   wrap.onclick = () => {
-    if (wrap.classList.contains('ripping')) return;
+    if (opened || !isRouteTokenCurrent(routeToken) || !ov.isConnected) return;
+    opened = true;
+    const reducedMotion = prefersReducedMotion();
+    const settlePack = () => {
+      if (!isRouteTokenCurrent(routeToken) || !ov.isConnected) return;
+      RANCH.packTimers.forEach(timer => clearTimeout(timer));
+      RANCH.packTimers.clear();
+      document.body.classList.remove('megashake');
+      wrap.style.animation = 'none';
+      wrap.style.display = 'none';
+      prompt.style.display = 'none';
+      cards.innerHTML = result.monsters.map(monster => ranchPackCard(monster, true)).join('');
+      hydrateSprites(cards);
+      result.monsters.slice(revealed).forEach(monster => SFX.reveal(monster.rarity));
+      revealed = result.monsters.length;
+      done.style.display = 'block';
+      if (RANCH.packMotionCleanup) RANCH.packMotionCleanup();
+      RANCH.packMotionCleanup = null;
+    };
+    if (reducedMotion) {
+      settlePack();
+      return;
+    }
+
+    bindRanchPackMotion(settlePack);
     wrap.classList.add('ripping');
     SFX.hit();
-    const prompt = ov.querySelector('#pack-prompt');
     prompt.textContent = '...';
-    setTimeout(() => { wrap.style.display = 'none'; prompt.style.display = 'none'; }, 460);
-    const cards = ov.querySelector('#pack-cards');
-    r.monsters.forEach((m, i) => {
-      setTimeout(() => {
-        cards.insertAdjacentHTML('beforeend', `
-          <div class="pack-card r-${m.rarity}">
-            <div style="display:flex;justify-content:center">${monsterTag(m.dna, m.rarity, 60)}</div>
-            <div class="pc-name r-${m.rarity}">${esc(m.name)}</div>
-            <div class="muted" style="font-size:13px">${esc(m.personality)}</div>
-          </div>`);
+    scheduleRanchPack(() => {
+      wrap.style.display = 'none';
+      prompt.style.display = 'none';
+    }, 460, routeToken, ov);
+    result.monsters.forEach((monster, index) => {
+      scheduleRanchPack(() => {
+        cards.insertAdjacentHTML('beforeend', ranchPackCard(monster));
         hydrateSprites(cards);
-        SFX.reveal(m.rarity);
-        if (m.rarity === 'legendary') {
+        SFX.reveal(monster.rarity);
+        revealed = Math.max(revealed, index + 1);
+        if (monster.rarity === 'legendary') {
           document.body.classList.add('megashake');
-          setTimeout(() => document.body.classList.remove('megashake'), 700);
+          scheduleRanchPack(() => document.body.classList.remove('megashake'), 700, routeToken, ov);
         }
-        if (i === r.monsters.length - 1) ov.querySelector('#pack-done').style.display = 'block';
-      }, 500 + i * 650);
+        if (index === result.monsters.length - 1) {
+          done.style.display = 'block';
+          if (RANCH.packMotionCleanup) RANCH.packMotionCleanup();
+          RANCH.packMotionCleanup = null;
+        }
+      }, 500 + index * 650, routeToken, ov);
     });
   };
 };

@@ -1,9 +1,11 @@
 # Iron Vale Design System
 
 This document records the visual system currently implemented in
-`static/style.css`. It is an extraction, not a redesign: existing exceptions
-are observations, and this document does not create new CSS tokens or a
-component library.
+`static/style.css` and the responsive interaction contract approved for the
+smartphone experience. Sections describing existing implementation are an
+extraction; sections labeled **required contract** govern the upcoming shared
+web-app changes. The contract adds no framework, native client, mobile API, or
+parallel component library.
 
 ## 1. Atmosphere & Identity
 
@@ -113,8 +115,9 @@ be silently normalized during unrelated work.
 - The header condenses progressively: the full streak box becomes a compact
   resource-line indicator at `max-width: 900px`, then the brand and character
   rows center and hide the tagline/xp bar at `max-width: 719px`.
-- Hall navigation uses four paired columns above `860px`, two columns at or
-  below `860px`, and tighter button spacing/font size at `max-width: 359px`.
+- Hall navigation uses four paired group columns above `860px`, two group
+  columns from `720px` through `860px`, and one group per row below `720px`.
+  Each group retains two destination buttons across.
 - Layouts use flex and grid locally rather than a global column system.
 - Reusable groups wrap when space runs out. Pixel-art canvases and served PNG
   art use `image-rendering: pixelated`.
@@ -124,6 +127,36 @@ be silently normalized during unrelated work.
   trailing building.
 - The mobile rules reduce type slightly, tighten the app shell, and stack the
   generic NPC row vertically.
+
+### Required Responsive Contract
+
+- There is one document, one screen registry, and one set of domain functions.
+  Responsive rules may change layout, density, disclosure, and navigation
+  presentation; they must not create separate mobile screen functions, API
+  routes, workout rules, or saved state.
+- `max-width: 719px` is the compact phone-shell breakpoint. It covers the
+  required 320px, 375px, and 430px phone widths while leaving the existing
+  768px/tablet and 1280px desktop compositions outside compact dock mode.
+  Narrow refinements may use `max-width: 430px` or the existing 359px/560px
+  boundaries, but they may not change behavior or content ownership.
+- The app shell uses dynamic viewport units (`dvh`) where viewport height is
+  part of the layout. At every width, the document must have no horizontal
+  page overflow. Essential content may wrap or stack; clipping or
+  `overflow-x: hidden` is not a substitute for fitting it.
+- At the phone breakpoint, reserve bottom space for the compact dock plus
+  `env(safe-area-inset-bottom)`. Horizontal shell padding accounts for
+  `env(safe-area-inset-left)` and `env(safe-area-inset-right)`; the header
+  accounts for `env(safe-area-inset-top)` in standalone display mode.
+- The phone layout follows a one-handed priority order: current requirement,
+  current value/progress, and primary action first; supporting lore, complete
+  rules, and history use progressive disclosure below or behind an explicit
+  labeled control. Progressive disclosure may shorten the initial path but
+  never hide a requirement, reward/cost, validation error, or destructive
+  consequence.
+- The desktop shell at 720px and above keeps the existing header, centered
+  880px content window, document footer, Town tableau, Hall arrangement, and
+  feature-specific wide compositions. Shared semantic, focus, target, and
+  mutation fixes are allowed; phone density or a fixed dock is not.
 
 ## 5. Components
 
@@ -210,11 +243,11 @@ be silently normalized during unrelated work.
   Compendium/Almanac. The navigation sits below Maud's standard `.npc-head`
   and `.dialog` block, so the Hall follows the same portrait and dialogue
   structure as the other NPC screens.
-- **Layout:** groups are equal-width desktop columns and become two columns at
-  `max-width: 860px`. Buttons fill their tracks, use one-line labels, and keep
-  at least `44px` of height on small screens. Hall navigation uses `13px`
-  buttons at `max-width: 560px` and `11px` buttons below `360px` to preserve
-  readable targets without horizontal overflow.
+- **Layout:** groups are equal-width desktop columns, become two columns from
+  `720px` through `860px`, and stack one group per row below `720px`. Every
+  phone row therefore presents two destination buttons across. Buttons fill
+  their tracks, wrap when needed, use the `19px` mobile body scale, and keep at
+  least `44px` of height without horizontal overflow.
 - **Appearance:** grouped buttons reuse the shared pixel-button surface and
   the Hall keeps the same square windows, gold borders, and semantic status
   colors as the rest of the interface. Maud renders at the standard `128px`
@@ -225,6 +258,95 @@ be silently normalized during unrelated work.
   unread state adds a bright-gold pulsing border and dot. Empty data states are
   rendered by each Hall destination; stale optional endpoints degrade to the
   available base view.
+
+### Compact Phone Dock — required contract
+
+- **Structure:** the shared shell renders one navigation model. At
+  `max-width: 719px` CSS presents it as a fixed bottom `nav` containing Back,
+  Town, Ravens, and Settings in that order. Sound moves inside Settings on
+  phone. At 720px and above, the same actions retain the existing document
+  footer presentation, including Sound.
+- **Targets:** each dock action owns at least a 44x44 CSS-pixel hit region and
+  an accessible name. The active/current destination is exposed visually and
+  semantically; unavailable Back remains a stable disabled item rather than
+  shifting the other actions.
+- **Safe area:** the dock pads its controls above
+  `env(safe-area-inset-bottom)` and spans between the left/right safe-area
+  insets. Main content bottom padding is at least dock block-size plus the
+  bottom inset, so no action or final row can sit underneath it.
+- **Keyboard:** when a text or numeric field is focused and `visualViewport`
+  shows the software keyboard has reduced usable height, the dock collapses
+  out of the input path. The focused field, its inline error, and the relevant
+  submit action remain visible. The dock returns without moving the user to a
+  different route or resetting scroll.
+- **States:** default, current, hover where supported, pressed, explicit
+  `:focus-visible`, disabled, and safe loading behavior. A dock action fires
+  once per intentional activation and never creates a duplicate history entry
+  for the already-current route.
+
+### Workout Set Editor — required contract
+
+- **Shared ownership:** the active strength-quest logger is one shared screen
+  backed by the same lift API and quest/domain functions on phone and desktop.
+  Responsive CSS may stack its controls, but there is no mobile logger copy,
+  mobile-only payload, or duplicate set-mutation function.
+- **Open state:** on entry, the first incomplete exercise opens by default.
+  Any other exercise can be opened independently and multiple editors stay
+  open, so a superset never requires reopening a card after every set.
+- **Anatomy:** each open exercise has a weight row and a count row. Both offer
+  direct numeric entry plus decrement/increment controls; the count label and
+  formatting use the server-returned unit (`reps`, `seconds`, or `steps`). A
+  bodyweight seconds exercise stores weight 0 without demanding weight entry;
+  weighted steps retains both weight and integer steps.
+- **Touch and typing:** repeated decrement/increment controls are at least
+  48x48 CSS pixels; direct inputs and the Log Set action are at least 44px
+  high. Numeric input text is at least 16px (the existing 20px control type is
+  preferred), supports an appropriate input mode, selects predictably, and
+  remains visible above the keyboard.
+- **Validation:** blank, malformed, negative, fractional where an integer is
+  required, or non-finite values show a specific inline error and send zero
+  requests. A valid activation sends exactly one request while the action is
+  guarded as pending. A failed request preserves the entered values and offers
+  an unambiguous retry.
+- **In-place responsibility:** weight/count adjustments, editor expansion,
+  pending state, validation, successful progress, and the recent-set row are
+  local state/DOM updates. They must not call the app-root `render()`, refetch
+  the recent list, replace `#app`, close another superset editor, or reset
+  scroll. The shared mutation helper consumes the exact created lift returned
+  by the API, updates the matching exercise/count/history row, and retains its
+  stable backend id for edit/delete/undo.
+- **Root-replacement responsibility:** full root rendering is reserved for a
+  route transition, initial route hydration, profile switch, or a domain-level
+  state transition that truly changes screens (for example, leaving the
+  logger after quest completion). An async result first checks the current
+  route token; a response from an abandoned screen cannot replace the current
+  root, open completion UI, or mutate a new screen. Any same-route root
+  replacement invalidates callbacks begun against the detached root and
+  cancels route-owned RAF, timers, and cleanup work before the DOM is replaced.
+  Successful mutations reconcile their returned shared state only
+  while the originating profile generation is current. Full-state refreshes
+  obey the same profile-generation boundary, and profile switches invalidate
+  all outstanding route tokens; resource values repaint in place without
+  wiping destination-screen input.
+- **Correction:** edit, delete, and undo target the exact stable lift id, not
+  the newest-looking row. Local lists, progress, Scrivener, and Hall formatting
+  preserve the persisted `reps`/`seconds`/`steps` meaning after active quest
+  state is gone.
+- **Desktop:** the 1280px logger retains its compact horizontal rows and
+  multi-card density. It uses the same direct-entry fields, validation,
+  one-request guard, local mutation helper, exact-id correction, and unit
+  semantics; only the responsive arrangement differs.
+
+### Progressive Action Panel — required contract
+
+- Used for phone quest offers, giver dialogue, and the Undercroft gate where
+  flavor or long rules currently push the primary action below the fold.
+- The primary view always shows title, requirement/cost, reward/outcome, live
+  eligibility, and action. Secondary lore and complete rules follow in a
+  native disclosure control with a semantic expanded state.
+- Desktop keeps the existing fully composed content where it already fits.
+  The disclosure is a presentation rule around the same source content, not a
+  second abbreviated mobile copy string.
 
 ## 6. Motion & Interaction
 
@@ -244,10 +366,26 @@ component-specific rather than tokenized:
 | Town time-of-day refresh | one-shot at `06:00`, `18:00`, or `20:00` | Keeps the scene aligned with the local clock |
 
 Most motion uses `transform`, `opacity`, or visual effects; the HP bar
-transitions width as an existing exception. The stylesheet does not currently
-define `prefers-reduced-motion` handling, and most interactive controls do not
-have explicit focus-visible styling. Both are observed accessibility debt, not
-changes made by this extraction.
+transitions width as an existing exception. The responsive pass adds the
+reduced-motion and focus-visible behavior required below while preserving the
+normal-motion presentation.
+
+### Required Motion Contract
+
+- CSS supplies a global `@media (prefers-reduced-motion: reduce)` path. It
+  removes non-essential looping/bobbing/blinking/reveal animation and shortens
+  non-essential transitions without hiding state, content, focus, or outcome.
+- JavaScript reads the same preference through one shared helper. Typewriter
+  text resolves immediately; Crankwerk, Dungeon, Colosseum, Menagerie/Ranch,
+  pack reveal, and other RAF/timer sequences reach the same final state without
+  prolonged animation. Reduced motion changes presentation timing only, never
+  odds, rewards, combat results, navigation, or persisted data.
+- The no-preference path keeps the existing game-like motion and outcomes.
+  Runtime preference changes apply to the next/current cancellable sequence
+  without leaving stale timers, RAF callbacks, body classes, or overlays.
+- Every interactive control has a visible `:focus-visible` treatment that
+  works against the dark CRT surface. Hover cannot be the only indication of
+  interactivity; pressed feedback remains brief and meaningful.
 
 ## 7. Depth & Surface
 
@@ -263,3 +401,122 @@ Specialized scenes and reward moments use gradients, glows, and raw colors,
 but shared windows and controls remain square-edged and border-led. The mix of
 tokenized core surfaces with raw feature colors is an existing inconsistency;
 it may be consolidated only as a separate, explicitly approved change.
+
+## 8. Navigation and History Contract
+
+- `nav(screen, params)` remains the one screen-navigation function and owns
+  both application state and browser history. A user-initiated forward
+  navigation pushes one serializable route entry; replacement is reserved for
+  boot, invalid-state recovery, or canonicalization.
+- Browser/OS Back and edge-swipe are first-class. `popstate` restores the
+  previous Iron Vale route and parameters without pushing another entry. The
+  visible Back control requests the same history transition when one exists;
+  it uses the app fallback only when there is no usable in-app history entry.
+- Back never loops between duplicate entries, leaves a route-owned overlay
+  stranded on the destination, or reopens a dismissed overlay. Route
+  restoration may rehydrate a screen but cannot resurrect stale async work
+  from the route being left.
+- Overlays are transient state owned by the current route and never create or
+  consume browser-history entries. Any route transition, including Back,
+  removes the outgoing route's overlays before restoring the destination.
+  Explicit Close dismisses only the overlay and does not change history.
+- Town is the stable home destination. Selecting Town from the compact dock
+  must not grow an unbounded series of identical Town entries. Back at the
+  initial entry is disabled or follows normal browser ownership; the app does
+  not trap the user with synthetic history.
+
+## 9. Accessibility and Adaptive Constraints
+
+- Target WCAG 2.2 AA. On phone, every high-traffic action has a 44x44 CSS-pixel
+  target. Repeated workout steppers use 48x48. Where a low-frequency control
+  cannot reach 44px, it must still satisfy WCAG's 24x24 minimum and spacing
+  exception; this is not permitted for the dock, logger, primary actions,
+  correction controls, or essential direct alternatives to drag/precision.
+- Use semantic buttons, links, form controls, and disclosure elements where
+  possible. Custom scenic targets expose the correct role, accessible name,
+  keyboard activation, current/selected/expanded/disabled state, and a visible
+  `:focus-visible` ring. Visual pixel labels do not replace programmatic names.
+- Viewport metadata must permit user zoom: `width=device-width,
+  initial-scale=1` with no `maximum-scale` and no `user-scalable=no`. At 200%
+  zoom and 320px width, essential content and actions remain reachable with no
+  document-level horizontal overflow.
+- Form text stays at least 16px to avoid involuntary focus zoom. The visual
+  keyboard is handled through focus plus `visualViewport`, not a guessed
+  device height. Scrolling a field/action into view must respect the compact
+  header, dock state, and safe-area insets.
+- Top, bottom, left, and right `safe-area` insets are layout inputs, not device
+  assumptions. Browser and standalone display modes must both keep the header,
+  dock, overlays, controls, and final content clear of cutouts/home indicators.
+- Loading preserves control geometry and exposes busy state; disabled controls
+  remain perceivable; errors are inline, specific, and focusable/announced
+  when appropriate; empty states explain the next available action. Pending
+  mutations cannot be activated twice.
+- Essential drag or precision interactions in Town-adjacent game surfaces
+  also have a direct tap and keyboard path with the same outcome. Pointer
+  cancel, navigation away, and backend rejection restore a coherent state.
+- Color continues to carry the world semantics defined in Section 2, but text,
+  shape, label, or state supplies a non-color cue. CRT scanlines and pixel type
+  may not reduce critical control/error readability below the AA contract.
+
+## 10. Shared-App Architecture Contract
+
+- Iron Vale remains one vanilla-JavaScript SPA and one FastAPI application.
+  Phone and desktop share database records, API schemas, validation, quest
+  logic, unit rules, screen registry, route state, mutation helpers, and base
+  render functions. A fix to shared functionality must affect both platforms.
+- Responsive presentation belongs in shared markup plus media queries and
+  narrowly scoped adaptive wiring (dock visibility, disclosure, keyboard
+  clearance). Do not create `mobile/` and `desktop/` modules, duplicate screen
+  registries, parallel API endpoints, user-agent branches, or two versions of
+  a mutation/domain function.
+- A shared component may expose one state and one action model with two CSS
+  arrangements. Conditional markup is allowed only for presentation elements
+  whose existence is mode-specific, such as the compact dock versus desktop
+  footer; both must invoke the same named navigation actions.
+- Server-returned ids, units, and server-local dates are authoritative.
+  Responsive code never derives a different domain value or date because it
+  runs on a phone.
+- Phone-only improvements must transfer to the base game when they are
+  behavioral or accessibility fixes: exact created-lift responses, stable-id
+  correction, validation, history semantics, focus handling, reduced-motion
+  outcomes, and local logger mutation are shared. Only layout/density/dock
+  presentation changes at the phone breakpoint.
+
+## 11. Desktop Preservation and Review Scenarios
+
+At 1280x900, Town remains a wide illustrated village, Hall retains its broad
+portrait/navigation composition, Undercroft keeps the full rule/action panel,
+Menagerie keeps the wide grazing field, Colosseum keeps its centered contest
+and arena, and Crankwerk keeps its compact ceremonial composition. The compact
+dock is absent and the existing document footer remains. No phone rule removes
+desktop information or capability.
+
+The contract is unambiguous only if each representative decision resolves as
+follows:
+
+1. A backend lift-validation or created-record fix is implemented once and is
+   consumed by both phone and desktop.
+2. A logger adjustment or successful mutation uses one shared local helper;
+   neither layout refetches/replaces `#app` for per-set work.
+3. At 375px, Back/Town/Ravens/Settings appear in the safe-area-aware compact
+   dock; at 1280px they use the existing footer and no dock is rendered.
+4. Browser Back closes an overlay first, then restores the preceding route
+   without a duplicate push or stale async repaint.
+5. Opening the keyboard hides/collapses the phone dock only as needed and
+   leaves the focused direct-entry field, error, and Log Set action reachable.
+6. A 44px primary target and 48px repeated stepper remain operable at 320px
+   and 200% zoom without hidden horizontal overflow.
+7. With reduced motion, animation-dependent screens reach the same final
+   result immediately or through a minimal transition; with no preference,
+   the existing playful motion still runs.
+
+### Accepted design debt
+
+- Raw feature colors and intermediate legacy spacing values remain documented
+  extraction debt. This smartphone scope does not normalize them.
+- Real home-screen installation on the deployed production origin remains a
+  deployment-time verification item. Manifest/icon metadata may be added, but
+  this contract makes no offline, service-worker, or background-sync claim.
+- No new accessibility or persona-blocking debt is accepted by this contract.
+  Any implementation exception must be recorded here with affected users,
+  exact location, rationale, owner, and exit condition before sign-off.
