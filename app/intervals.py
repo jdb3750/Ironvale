@@ -41,6 +41,24 @@ def _get(path, params, athlete, key):
         raise ValueError(f"Could not reach intervals.icu: {e.__class__.__name__}")
 
 
+def activity_start(a):
+    """Pick the stored `start` string for a synced intervals.icu activity.
+
+    `start_date_local` is the athlete-local timestamp and is trusted verbatim.
+    When it's missing, fall back to the UTC `start_date` converted to
+    system-local time (see game.utc_to_local_iso) so the activity is bucketed
+    on the day it was actually trained rather than the UTC day. An unparseable
+    `start_date` is stored verbatim instead of discarded, so a malformed
+    payload never blanks a real timestamp.
+    """
+    slocal = a.get("start_date_local")
+    if slocal:
+        return slocal
+    utc = a.get("start_date")
+    conv = game.utc_to_local_iso(utc)
+    return conv or utc or ""
+
+
 def sync(days=None):
     athlete, key = _creds()
     first = not db.kv_get("first_sync_done")
@@ -58,11 +76,12 @@ def sync(days=None):
         db.q(
             "INSERT INTO activities (id, source, start, type, name, moving_time, distance, load, avg_hr) "
             "VALUES (?,?,?,?,?,?,?,?,?) "
-            "ON CONFLICT(id) DO UPDATE SET moving_time=excluded.moving_time, distance=excluded.distance, "
+            "ON CONFLICT(id) DO UPDATE SET start=excluded.start, "
+            "moving_time=excluded.moving_time, distance=excluded.distance, "
             "type=excluded.type, name=excluded.name, load=excluded.load, avg_hr=excluded.avg_hr",
             (
                 aid, "intervals.icu",
-                a.get("start_date_local") or a.get("start_date") or "",
+                activity_start(a),
                 a.get("type") or "Workout",
                 a.get("name"),
                 mt,
