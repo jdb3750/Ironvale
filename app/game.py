@@ -4,7 +4,7 @@ categories, and training-history analysis every other module leans on.
 Import direction: quests.py / economy.py / records.py import from here;
 this module imports none of them (keeps the graph acyclic)."""
 import statistics
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from . import db, exercises
 
@@ -69,6 +69,34 @@ def now_iso():
 
 def today():
     return now().date().isoformat()
+
+
+def utc_to_local_iso(s):
+    """Normalize a UTC ISO timestamp to system-local time as an offset-aware
+    ISO string with second precision (the same format now_iso() emits).
+
+    intervals.icu reports `start_date` in UTC but `start_date_local` in the
+    athlete's local time. When the trusted `start_date_local` is missing we
+    still need the activity to land on the day the athlete actually trained,
+    not the UTC day (a 21:00 PDT run is 04:00Z the next day). The app has no
+    per-profile timezone setting, so system-local time — the same source
+    now()/today() and every cutoff use — is the implicit timezone for all
+    date bucketing; this helper reuses that one source rather than inventing
+    a new one. Naive inputs (no offset/Z) are read as UTC per the
+    `start_date` field contract.
+
+    Returns None for empty/non-string/unparseable input so callers can fall
+    back to the raw value instead of silently blanking a real timestamp.
+    """
+    if not isinstance(s, str) or not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone().isoformat(timespec="seconds")
 
 
 # ---------------- character ----------------
