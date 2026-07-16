@@ -7,7 +7,7 @@ const RANCH = {
   mons: [], hats: {}, decors: [], packs: 0, saved: null, groundHats: [],
   actors: [], hatPending: new Set(), packPending: false, packTimers: new Set(),
   packOverlay: null, packRequest: null, packMotionCleanup: null, redraw: null, renderHatPanel: null,
-  offerGroundHat: null,
+  offerGroundHat: null, fullscreen: false,
 };
 
 function resetRanchState() {
@@ -29,6 +29,7 @@ function resetRanchState() {
   RANCH.redraw = null;
   RANCH.renderHatPanel = null;
   RANCH.offerGroundHat = null;
+  RANCH.fullscreen = false;
 }
 RESETS.push(resetRanchState);
 
@@ -46,18 +47,33 @@ SCREENS.ranch = async function () {
   RANCH.decors = inv.filter(i => i.type === 'decor');
   RANCH.packs = d.packs_owned;
 
+  // On a compact phone the inline pen is look-don't-touch (page scrolling
+  // fights creature drags); stepping inside opens a fullscreen pen where
+  // pointer play works properly. The pen-ui must exist in BOTH modes —
+  // startRanch binds handlers to it unconditionally — so the preview only
+  // hides it with CSS.
+  const phonePen = isCompactPhone();
+  const fullPen = phonePen && RANCH.fullscreen && d.monsters.length > 0;
+  const inertPen = phonePen && !fullPen;
+
   $app().innerHTML = shell(`
     <div class="win"><span class="win-title">The Menagerie (${d.monsters.length})</span>
-      <div class="ranch-box">
+      <div class="ranch-box${fullPen ? ' pen-full' : ''}${inertPen ? ' pen-inert' : ''}"${inertPen && d.monsters.length ? ' onclick="G.openPen()"' : ''}>
         <canvas class="ranch" id="ranch-cv" width="640" height="300"></canvas>
         <div class="pen-ui">
           <button type="button" class="pen-btn" id="pen-hats-btn" aria-expanded="false" aria-controls="pen-panel">HATS</button>
           <div class="pen-panel" id="pen-panel" style="display:none"></div>
         </div>
+        ${fullPen ? '<button type="button" class="pen-btn pen-leave" onclick="event.stopPropagation();G.closePen()">&larr; LEAVE THE PEN</button>' : ''}
+        ${inertPen && d.monsters.length ? `<div class="pen-visit">
+          <button type="button" class="control-reset pen-visit-label ranch-action" onclick="event.stopPropagation();G.openPen()">ENTER THE PEN</button>
+        </div>` : ''}
         ${!d.monsters.length ? '<div class="ranch-empty">The pen stands empty. Rip a pack, or subdue a creature in the Undercroft.</div>' : ''}
       </div>
-      <div class="muted center" style="font-size:16px;margin-top:4px">tap a creature to meet it &middot; drag one to relocate it (they hate this)
-        &middot; drag a hat onto a head, or drop it on the grass and see who claims it</div>
+      <div class="muted center" style="font-size:16px;margin-top:4px">${inertPen
+        ? 'step inside to meet the herd, drag creatures about, and hand out hats'
+        : `tap a creature to meet it &middot; drag one to relocate it (they hate this)
+        &middot; drag a hat onto a head, or drop it on the grass and see who claims it`}</div>
       <div class="center" style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
         <button type="button" class="btn wide green ranch-action" onclick="G.ripPack()">RIP A PACK ${RANCH.packs > 0 ? `(${RANCH.packs} owned)` : `(${spriteTag('icon_coin', 14)}${d.pack_cost})`}</button>
       </div>
@@ -72,8 +88,22 @@ SCREENS.ranch = async function () {
         </button>`).join('')}</div>
     </div>` : ''}
   `);
+  if (fullPen) {
+    // the fixed pen ends where the dock begins, and the canvas's logical
+    // grid must match the box's portrait aspect BEFORE startRanch reads it
+    const box = document.querySelector('.ranch-box.pen-full');
+    const dock = document.querySelector('.phone-dock');
+    if (dock) box.style.bottom = dock.offsetHeight + 'px';
+    const rect = box.getBoundingClientRect();
+    const cv = document.getElementById('ranch-cv');
+    cv.width = 360;
+    cv.height = Math.max(240, Math.round(360 * (rect.height / Math.max(1, rect.width))));
+  }
   startRanch(d.monsters);
 };
+
+G.openPen = () => { RANCH.fullscreen = true; render(); };
+G.closePen = () => { RANCH.fullscreen = false; render(); };
 
 function drawSpriteCtx(ctx, key, x, y, scale) {
   const s = SPRITES[key];
@@ -222,7 +252,14 @@ function startRanch(mons) {
   const modelFor = (m) => m.boss ? genBossModel(m.dna) : genMonsterModel(m.dna, m.rarity);
   const actors = mons.map((m, i) => {
     const s = saved[m.id];
-    if (s) return { ...s, m, model: modelFor(m), emote: null, emoteT: 0 };
+    // clamp restored spots to THIS pen's bounds — the phone's preview and
+    // fullscreen pens have different geometries, and a sleeper never
+    // re-clamps on its own (only wanderers hit the walls)
+    if (s) return {
+      ...s, m, model: modelFor(m), emote: null, emoteT: 0,
+      x: Math.max(6, Math.min(W - 12 * SCALE - 6, s.x)),
+      y: Math.max(GROUND + 4, Math.min(H - 12 * SCALE, s.y)),
+    };
     const states = ['wander', 'wander', 'graze', 'sleep'];
     return {
       m, model: modelFor(m),

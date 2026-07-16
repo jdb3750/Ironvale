@@ -28,13 +28,17 @@ SCREENS.undercroft = async function () {
   if (d.state) { renderDungeon(d.state, d.stats, d.theme); return; }
   const revealGateRules = !window.matchMedia('(max-width: 719px)').matches;
 
-  $app().innerHTML = shell(`
+  // phones seat the Warden below the gate table, like the quest givers —
+  // his typewriter dialog reflows its window and would shove DESCEND around
+  const heskWin = `
     <div class="win">
       <div class="npc-head">
         ${portraitTag('hesk', 128)}
         <div class="dialog"><div class="npc-name">Warden Hesk, Keeper of the Undercroft</div><div id="dlg"></div></div>
       </div>
-    </div>
+    </div>`;
+  $app().innerHTML = shell(`
+    ${isCompactPhone() ? '' : heskWin}
     <div class="win"><span class="win-title">The Descent</span>
       <div class="dungeon-gate">
         <table class="rpg">
@@ -62,6 +66,7 @@ SCREENS.undercroft = async function () {
         </div>
       </div>
     </div>
+    ${isCompactPhone() ? heskWin : ''}
   `);
   typewrite(document.getElementById('dlg'),
     'Empty pockets, full heart — that is how you enter. The dark provides the rest, at its own prices.',

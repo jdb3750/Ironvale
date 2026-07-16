@@ -264,7 +264,7 @@ SCREENS.stats = async function () {
   }
 
   if (!isRouteTokenCurrent(routeToken)) return;
-  $app().innerHTML = shell(`
+  const curatorWin = `
     <div class="win tight">
       <div class="npc-head">
         ${portraitTag('maud', 128)}
@@ -273,10 +273,12 @@ SCREENS.stats = async function () {
           <div id="curator-dlg" style="min-height:24px;font-size:19px"></div>
         </div>
       </div>
-    </div>
-    ${hallNav}
-    ${body}
-  `);
+    </div>`;
+  // phones seat Maud below the records, like the quest givers — her
+  // typewriter dialog reflows its window and would shove the nav around
+  $app().innerHTML = shell(isCompactPhone()
+    ? `${hallNav}${body}${curatorWin}`
+    : `${curatorWin}${hallNav}${body}`);
   typewrite(document.getElementById('curator-dlg'),
     CURATOR_LINES[statsTab] || CURATOR_LINES.body, 14, npcPortraitEl());
   if (statsTab === 'deeds') {
