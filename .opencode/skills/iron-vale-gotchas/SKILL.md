@@ -1,6 +1,6 @@
 ---
 name: iron-vale-gotchas
-description: Hard-won footguns and edge cases discovered across past Iron Vale sessions — TestClient/profile DB routing, sprite pointer-capture, ranch hat-fetch cooldown, overlay CSS title positioning, background sync loop iteration, character/dungeon dict defaults, CSS animation composition and standalone transform properties, backend restart requirements, lsof/kill process-targeting, wellness data contamination, intervals.icu API quirks, raid damage dedup limitations, and PIN-handling rules. Use before touching dungeon.js/ranch.js/colosseum.js/pixel.js, intervals.py sync, raid.py damage logic, wellness data, CSS animations/canvas code, or before restarting/redeploying the server — check here first so known mistakes aren't repeated.
+description: Hard-won footguns and edge cases discovered across past Iron Vale sessions — TestClient/profile DB routing, sprite pointer-capture, ranch hat-fetch cooldown, overlay CSS title positioning, background sync loop iteration, character/dungeon dict defaults, CSS animation composition and standalone transform properties, render()-wipe vs in-flight animations, the two-clock timezone model (profile tz vs Siege Bell), lsof/kill process-targeting, wellness data contamination, intervals.icu API quirks, raid damage dedup limitations, and PIN-handling rules. Use before touching dungeon.js/ranch.js/colosseum.js/pixel.js, intervals.py sync, raid.py damage logic, wellness data, CSS animations/canvas code, or any date/time bucketing — check here first so known mistakes aren't repeated.
 ---
 
 # Iron Vale — gotchas learned the hard way
@@ -70,13 +70,25 @@ non-obvious way. Check the relevant group before touching that area.
   that both touch `transform`, split them into a wrapper + inner element
   (each animates its own `transform` solo) rather than fighting over one
   element's single `transform` stack.
+- **render() wipes #app mid-animation.** Most button click handlers end in
+  `nav()`/`render()`, which rebuilds `#app` via innerHTML — any CSS
+  animation running ON the clicked element dies the instant the handler
+  runs (it only appears to work when the click is held, because the handler
+  fires on release). Press feedback that must outlive the click goes on a
+  body-level element pinned to the control's rect — see the `.key-pop-ghost`
+  pattern in app.js (spawned on pointerdown, self-removes on animationend
+  with a setTimeout backstop). Binding the animation to `:active` is doubly
+  wrong: it also cancels the moment the selector stops matching.
 
 ## Deploy & process management
 
-- **Backend `.py` changes need a uvicorn restart.** Static JS/CSS/HTML are
-  served fresh from disk on every request (so they update instantly), but
-  Python modules are loaded once at startup. When testing the full stack
-  against a running port-8322 server, restart uvicorn after any `.py` edit.
+- **Backend `.py` changes need a uvicorn restart** on the LOCAL test
+  server. Static JS/CSS/HTML are served fresh from disk on every request
+  (so they update instantly), but Python modules are loaded once at
+  startup. When testing the full stack against a running port-8322 server,
+  restart uvicorn after any `.py` edit. Production restarts itself — the
+  server's Docker instance auto-pulls `origin/main` every ~15 min (see
+  skill `iron-vale-ops`), so merging IS deploying.
 - **`lsof -ti :<port>` can return multiple pids**, including unrelated
   processes that merely hold a stale/closed socket referencing the port
   (observed in a real session: an unrelated helper showed up alongside the
@@ -84,6 +96,29 @@ non-obvious way. Check the relevant group before touching that area.
   them and can take down the wrong process. Filter to the real listener:
   `lsof -iTCP:8321 -sTCP:LISTEN -t` (same for 8322 when restarting the test
   server).
+
+## Time & timezones (the two-clock model)
+
+- **There are exactly two clocks; never mix them.** Personal time —
+  `game.now()`, `game.today()`, `utc_to_local_iso()`, calendars, quest
+  days, activity bucketing — follows the per-profile `settings.timezone`,
+  which the client auto-syncs from the device (`Intl` timezone) on every
+  boot ("last device wins"). Siege week math — `raid.siege_now()`,
+  `week_key()`, `week_start()` — follows the ONE shared realm bell stored
+  in `data/realm.json` (default UTC, editable in Settings behind an
+  in-world confirm). Using `game.now()` in siege-week logic re-splits the
+  shared week per profile; using `siege_now()` for personal days puts a
+  player's run on the wrong calendar day.
+- **Activity `start` strings are local-offset ISO** (e.g.
+  `2026-07-13T21:00:00-07:00`). String comparison against a boundary
+  timestamp is unreliable across offsets — query a deliberately loose
+  window (a bare `YYYY-MM-DD` lower bound sorts before any datetime on
+  that date) and re-check each row with real tz-aware parsing. See
+  `raid.apply_damage` for the canonical shape.
+- **Changing the Siege Bell near a week boundary can re-key the current
+  week** (the ISO year-week only shifts when the change moves a
+  Monday-midnight across "now"). The settings UI warns via confirm;
+  prefer changing the bell right after a boss dies.
 
 ## Background sync & JSON defaults
 
