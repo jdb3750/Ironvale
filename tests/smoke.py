@@ -465,5 +465,28 @@ ok("reject invalid siege timezone", r.status_code == 400)
 r = client.post("/api/claim", json={"kind": "hike", "minutes": 30, "note": "smoke"})
 ok("scrivener claim", r.status_code == 200)
 
+# ---- the Vault: nightly snapshots ------------------------------------------
+print("the vault:")
+import sqlite3 as _sq  # noqa: E402
+from app import vault  # noqa: E402
+backups_root = os.path.join(SCRATCH, "backups")
+os.makedirs(backups_root, exist_ok=True)
+for i in range(20):  # stale snapshots from imaginary past days
+    os.makedirs(os.path.join(backups_root, f"2001-01-{i + 1:02d}"), exist_ok=True)
+os.makedirs(os.path.join(backups_root, "keep-me-manual"), exist_ok=True)
+sealed = vault.snapshot_if_due()
+ok("vault seals a dated snapshot", sealed is not None and os.path.isdir(sealed))
+ok("vault copies every profile db",
+   sorted(f for f in os.listdir(sealed) if f.endswith(".db"))
+   == sorted(os.path.basename(p) for p in __import__("glob").glob(os.path.join(SCRATCH, "*.db"))))
+ok("vault includes shared realm json", os.path.exists(os.path.join(sealed, "realm.json")))
+with _sq.connect(os.path.join(sealed, "ironvale.db")) as check:
+    n_backed = check.execute("SELECT COUNT(*) FROM activities").fetchone()[0]
+ok("vault snapshot is a readable database", n_backed > 0)
+ok("vault runs once per day", vault.snapshot_if_due() is None)
+dated_left = [d for d in os.listdir(backups_root) if d[:2] == "20" and d != "keep-me-manual"]
+ok("vault prunes to retention window", len(dated_left) == vault.KEEP_DAYS)
+ok("vault never touches non-dated folders", os.path.isdir(os.path.join(backups_root, "keep-me-manual")))
+
 shutil.rmtree(SCRATCH, ignore_errors=True)
 print(f"\nSMOKE PASSED — {PASS} checks green")
