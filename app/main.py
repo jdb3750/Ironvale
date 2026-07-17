@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, monsters, profiles, programs, quests, raid, records, road
+from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, monsters, profiles, programs, quests, raid, records, road, vault
 
 app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -47,6 +47,8 @@ def _sync_one_profile(slug, path):
 async def _start_auto_sync():
     async def loop():
         while True:
+            # once per UTC day, seal the realm's snapshot before the ravens fly
+            await asyncio.to_thread(vault.snapshot_if_due)
             for p in profiles.ensure_index():
                 try:
                     await asyncio.to_thread(_sync_one_profile, p["slug"], os.path.join(db.DATA_DIR, p["file"]))

@@ -13,7 +13,7 @@ from . import db, exercises, intervals, items
 from .game import (
     AMBITION, CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVERS, RUN_TYPES,
     ambition_mult, apply_xp, category, get_char, get_settings, last_weight,
-    muscle_recency, now, now_iso, run_history, save_char, today,
+    modality_history, muscle_recency, now, now_iso, run_history, save_char, today,
 )
 
 # ---------------- quest generation ----------------
@@ -31,6 +31,33 @@ RUN_FLAVOR = {
     "hills":     ["The Sisyphean Slopes", "Assault on Beacon Hill", "The Giant's Staircase", "Up the Crag"],
 }
 
+# Fenn serves every endurance road, wet and turning ones included — a
+# profile that swims or rides sees those quests on his board (see
+# _endurance_mix). Same voice, different weather.
+SWIM_FLAVOR = {
+    "easy":      ["The Quiet Water", "The Miller's Pond Round", "Soft Strokes Home"],
+    "steady":    ["The Ferryman's Wage", "Crossing the Grey Mere", "The Long Stroke"],
+    "intervals": ["Stormwater Sprints", "The Pike's Pursuit", "Whitecap Drills"],
+    "long":      ["The Great Crossing", "To the Far Shore", "The Deep Patrol"],
+}
+
+RIDE_FLAVOR = {
+    "easy":      ["The Miller's Errand", "Soft Wheels Home", "The Rolling Meadows"],
+    "steady":    ["The Courier's Circuit", "Wheels of the Vale", "The Turning Road"],
+    "hills":     ["The Switchback Penance", "Assault on the High Pass", "The Grinding Climb"],
+    "long":      ["The Far Village Errand", "Beyond the Watchtower", "The Century's Apprentice"],
+}
+
+# Ser Bram counts the wall as iron that fights back (see gen_lift_offers).
+CLIMB_FLAVOR = {
+    "session":   ["The Wall's Interrogation", "Trial of Grip and Nerve", "The Vertical Court"],
+    "volume":    ["Laps on the Old Face", "The Ant's Ascent", "Stonework"],
+    "technique": ["Quiet Feet", "The Spider's Lesson", "Statecraft of the Foothold"],
+}
+
+ENDURANCE_MODALITIES = ("run", "ride", "swim")
+ENDURANCE_FLAVOR = {"run": RUN_FLAVOR, "ride": RIDE_FLAVOR, "swim": SWIM_FLAVOR}
+
 LIFT_FLAVOR = {
     "kettlebell": ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning", "The Bell Tolls for Thee", "Rites of the Forge-Daughter"],
     "strength":   ["The Loadbearer's Oath", "Trial of Heavy Things", "The Squire's Burden", "Steel Shall Be Answered", "The Weight of Duty"],
@@ -39,7 +66,7 @@ LIFT_FLAVOR = {
 MOBILITY_FLAVOR = ["The Willow's Lesson", "Unknotting the Rope", "The Patient Root", "Stillwater Rites", "The Long Exhale"]
 
 
-def gen_running_offers(rng):
+def _run_pool(rng):
     h = run_history()
     amb = ambition_mult()
     med = h["median"]
@@ -83,9 +110,109 @@ def gen_running_offers(rng):
         "structure": f"10 min warm-up, then {hill_reps} x (45-60 sec uphill hard, walk down), 5 min cool-down.",
         "blurb": "The hill was here first. Show it respect, then defeat it.",
     })
-    offers = rng.sample(pool, min(3, len(pool)))
+    for o in pool:
+        o["modality"] = "run"
+    return pool
+
+
+def _swim_pool(rng):
+    h = modality_history("swim", default_median=20)
+    amb = ambition_mult()
+    med = h["median"]
+    pool = []
+    ez = _r5(med * 0.75 * amb)
+    pool.append({
+        "kind": "swim_easy", "intensity": "low", "target_minutes": ez,
+        "structure": f"Swim {ez} minutes relaxed. Long strokes, long exhales, no clock-watching.",
+        "blurb": "The water argues less when you stop arguing back.",
+    })
+    st = _r5(med * amb)
+    pool.append({
+        "kind": "swim_steady", "intensity": "moderate", "target_minutes": st,
+        "structure": f"Swim {st} minutes continuous at a comfortable, steady effort.",
+        "blurb": "A ferryman crosses in all weather. So do you.",
+    })
+    reps = max(4, min(10, int(med / 3)))
+    pool.append({
+        "kind": "swim_intervals", "intensity": "hard", "target_minutes": 5 + reps * 3 + 5,
+        "structure": f"5 min easy warm-up, then {reps} x (2 min strong / 1 min easy), 5 min easy cool-down.",
+        "blurb": "Somewhere below, a pike is pacing you. Outswim it.",
+    })
+    if h["n"] >= 3:
+        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
+        pool.append({
+            "kind": "swim_long", "intensity": "moderate", "target_minutes": lng,
+            "structure": f"Swim {lng} minutes at an easy-to-steady effort. The far shore is patient.",
+            "blurb": "Every crossing worth telling of started as too far.",
+        })
+    for o in pool:
+        o["modality"] = "swim"
+    return pool
+
+
+def _ride_pool(rng):
+    h = modality_history("ride", default_median=40)
+    amb = ambition_mult()
+    med = h["median"]
+    pool = []
+    ez = _r5(med * 0.75 * amb)
+    pool.append({
+        "kind": "ride_easy", "intensity": "low", "target_minutes": ez,
+        "structure": f"Ride {ez} minutes at an easy spin. Light gears, light heart.",
+        "blurb": "The meadows roll. Let the wheels roll with them.",
+    })
+    st = _r5(med * amb)
+    pool.append({
+        "kind": "ride_steady", "intensity": "moderate", "target_minutes": st,
+        "structure": f"Ride {st} minutes at a steady, comfortable effort.",
+        "blurb": "A courier's wage is earned in the turning, not the sprinting.",
+    })
+    hill_reps = max(3, min(8, int(med / 10)))
+    pool.append({
+        "kind": "ride_hills", "intensity": "hard", "target_minutes": 15 + hill_reps * 5 + 5,
+        "structure": f"15 min easy warm-up, then {hill_reps} x (3 min hard climb or big-gear grind, easy spin down), 5 min cool-down.",
+        "blurb": "The pass does not lower itself. Rise to it.",
+    })
+    if h["n"] >= 3:
+        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
+        pool.append({
+            "kind": "ride_long", "intensity": "moderate", "target_minutes": lng,
+            "structure": f"Ride {lng} minutes at an easy-to-steady effort. Bring water; the watchtower is farther than it looks.",
+            "blurb": "Past the last fence, the Vale keeps going. Go see.",
+        })
+    for o in pool:
+        o["modality"] = "ride"
+    return pool
+
+
+def _endurance_mix():
+    """Split Fenn's three offer slots among the endurance modalities this
+    profile actually practices (last 28 days). Every practiced modality gets
+    at least one slot (up to three); leftover slots go to the most practiced.
+    Cold start — no endurance history at all — deals the classic all-run
+    board. Counts are deterministic per day, so the daily offer cache stays
+    stable regardless of how often this runs."""
+    counts = {m: modality_history(m, days=28)["n"] for m in ENDURANCE_MODALITIES}
+    practiced = [m for m in ENDURANCE_MODALITIES if counts[m] > 0]
+    if not practiced:
+        return {"run": 3}
+    practiced.sort(key=lambda m: -counts[m])
+    practiced = practiced[:3]
+    mix = {m: 1 for m in practiced}
+    for _ in range(3 - len(practiced)):
+        mix[practiced[0]] += 1
+    return mix
+
+
+def gen_endurance_offers(rng):
+    pools = {"run": _run_pool, "ride": _ride_pool, "swim": _swim_pool}
+    offers = []
+    for m, slots in _endurance_mix().items():
+        pool = pools[m](rng)
+        offers += rng.sample(pool, min(slots, len(pool)))
+    rng.shuffle(offers)
     for o in offers:
-        o["title"] = rng.choice(RUN_FLAVOR[o["kind"].split("_")[1]])
+        o["title"] = rng.choice(ENDURANCE_FLAVOR[o["modality"]][o["kind"].split("_")[1]])
         o["giver"] = "running"
         _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
     return offers
@@ -131,6 +258,38 @@ def _build_routine(rng, chosen, style):
     return routine
 
 
+def _climb_pool(rng):
+    """Ser Bram's climbing offers — the wall is iron that fights back. Time
+    at the wall is the target (a synced climb session completes it); grades
+    and crags are a later chapter (see issue #57)."""
+    h = modality_history("climb", default_median=60)
+    amb = ambition_mult()
+    med = h["median"]
+    sess = _r5(med * amb, lo=30)
+    vol = _r5(med * 0.9 * amb, lo=30)
+    tech = _r5(max(30, med * 0.7), lo=30)
+    pool = [
+        {
+            "kind": "climb_session", "intensity": "hard", "target_minutes": sess,
+            "structure": f"{sess} minutes at the wall. Warm up on easy ground, then push attempts near your limit while fresh.",
+            "blurb": "The wall asks its questions plainly. Answer with your hands.",
+        },
+        {
+            "kind": "climb_volume", "intensity": "moderate", "target_minutes": vol,
+            "structure": f"{vol} minutes of mileage: many routes or problems well below your limit, minimal rest between.",
+            "blurb": "A soldier drills the easy strikes ten hundred times. So does a climber.",
+        },
+        {
+            "kind": "climb_technique", "intensity": "low", "target_minutes": tech,
+            "structure": f"{tech} minutes climbing deliberately easy: silent feet, straight arms, no rushed moves.",
+            "blurb": "Strength wins moves. Footwork wins walls.",
+        },
+    ]
+    for o in pool:
+        o["modality"] = "climb"
+    return pool
+
+
 def gen_lift_offers(rng, giver):
     names = exercises.KB_NAMES if giver == "kettlebell" else exercises.GYM_NAMES
     rec = muscle_recency()
@@ -145,7 +304,19 @@ def gen_lift_offers(rng, giver):
         "volume": "Lighter, more reps. Chase the burn.",
         "circuit": "Move briskly between exercises, minimal rest.",
     }
-    for i in range(3):
+    # a climber's board trades lift slots for wall sessions: one slot with
+    # any climbing in the last 28 days, two when the wall is their habit
+    climb_slots = 0
+    if giver == "strength":
+        climb_n = modality_history("climb", days=28)["n"]
+        climb_slots = 2 if climb_n >= 6 else (1 if climb_n >= 1 else 0)
+        if climb_slots:
+            for o in rng.sample(_climb_pool(rng), climb_slots):
+                o["giver"] = giver
+                o["title"] = rng.choice(CLIMB_FLAVOR[o["kind"].split("_")[1]])
+                _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
+                offers.append(o)
+    for i in range(3 - climb_slots):
         style = styles[i % len(styles)]
         focus = focus_sets[i]
         chosen = _pick_exercises(rng, names, focus)
@@ -402,7 +573,7 @@ def get_offers(giver, reroll=False):
     if cached is None:
         rng = random.Random(f"{giver}:{today()}:{bump}")
         if giver == "running":
-            cached = gen_running_offers(rng)
+            cached = gen_endurance_offers(rng)
         elif giver in ("kettlebell", "strength"):
             cached = gen_lift_offers(rng, giver)
         elif giver == "mobility":
@@ -473,15 +644,21 @@ def abandon_quest(quest_id):
 def find_matching_activity(quest):
     """Find an unlinked synced activity that satisfies this quest.
 
-    running  -> a run of >=70% target duration
-    mobility -> yoga/stretch/walk/hike of >=70% target duration
-    lifting  -> a WeightTraining-type session of reasonable length
+    modality set -> an activity of that category, >=70% target duration
+                    (swim quests need swims, climb quests need climbs, ...)
+    running      -> a run of >=70% target duration (pre-modality quests)
+    mobility     -> yoga/stretch/walk/hike of >=70% target duration
+    lifting      -> a WeightTraining-type session of reasonable length
     """
     g = quest["giver"]
     details = quest["details"]
     if quest["kind"] == "rest":
         return None  # a rest writ is KEPT, not fulfilled — a yoga session must never "complete" it
-    if g == "running":
+    modality = details.get("modality")
+    if modality in CATEGORIES:
+        types = CATEGORIES[modality]
+        need_s = details.get("target_minutes", 20) * 60 * 0.7
+    elif g == "running":
         types = RUN_TYPES
         need_s = details.get("target_minutes", 20) * 60 * 0.7
     elif g == "mobility":
@@ -522,6 +699,10 @@ def quest_completable(quest):
     act = find_matching_activity(quest)
     if act:
         return True, f"Matched: {act['name'] or act['type']} ({round((act['moving_time'] or 0)/60)} min)", act
+    modality = quest["details"].get("modality")
+    if modality in ("ride", "swim", "climb"):
+        label = {"ride": "ride", "swim": "swim", "climb": "climb session"}[modality]
+        return False, f"No matching {label} found yet. Sync your log, or swear on your honor.", None
     if g == "running":
         return False, "No matching run found yet. Sync your log, or swear on your honor.", None
     if g in ("kettlebell", "strength"):
@@ -597,10 +778,14 @@ def complete_quest(quest_id, honor=False, _writ=False):
     linked_id = act["id"] if act else None
     if not act and honor:
         from . import intervals
-        type_map = {"running": "Run", "mobility": "Yoga", "kettlebell": "WeightTraining", "strength": "WeightTraining"}
+        # the synthetic activity's type follows the quest's modality so the
+        # calendar/records stay truthful — an honored swim IS a swim
+        modality_types = {"run": "Run", "ride": "Ride", "swim": "Swim", "climb": "Climbing"}
+        giver_types = {"running": "Run", "mobility": "Yoga", "kettlebell": "WeightTraining", "strength": "WeightTraining"}
+        act_type = modality_types.get(details.get("modality")) or giver_types.get(quest["giver"], "Workout")
         mins = details.get("target_minutes") or details.get("total_sets", 12) * 3
         linked_id = intervals.add_manual_activity({
-            "type": type_map.get(quest["giver"], "Workout"), "minutes": mins,
+            "type": act_type, "minutes": mins,
             "name": quest["title"] + " (honor)", "source": "honor",
         })
     rng = random.Random()

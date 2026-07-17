@@ -173,16 +173,20 @@ def ambition_mult():
 
 # ---------------- training history ----------------
 
-def run_history(days=60):
+def modality_history(cat, days=60, default_median=20):
+    """run_history's shape for ANY activity category — session count, median
+    and p80 minutes, recent weekly volume. Drives adaptive offer sizing for
+    every modality a giver serves (runs, rides, swims, climbs, ...)."""
+    types = CATEGORIES[cat]
     cutoff = (now() - timedelta(days=days)).isoformat()
-    ph = ",".join("?" * len(RUN_TYPES))
+    ph = ",".join("?" * len(types))
     rows = db.q(
         f"SELECT * FROM activities WHERE type IN ({ph}) AND start >= ? ORDER BY start",
-        (*RUN_TYPES, cutoff),
+        (*types, cutoff),
     ).fetchall()
     mins = [r["moving_time"] / 60 for r in rows if r["moving_time"]]
     if not mins:
-        return {"n": 0, "median": 20, "p80": 25, "weekly_min": 0, "runs": rows}
+        return {"n": 0, "median": default_median, "p80": default_median + 5, "weekly_min": 0, "rows": rows}
     mins_sorted = sorted(mins)
     p80 = mins_sorted[min(len(mins_sorted) - 1, int(len(mins_sorted) * 0.8))]
     recent_cutoff = (now() - timedelta(days=28)).isoformat()
@@ -192,8 +196,14 @@ def run_history(days=60):
         "median": statistics.median(mins),
         "p80": p80,
         "weekly_min": round(sum(recent) / 4, 1),
-        "runs": rows,
+        "rows": rows,
     }
+
+
+def run_history(days=60):
+    h = modality_history("run", days=days)
+    h["runs"] = h.pop("rows")
+    return h
 
 
 def muscle_recency():

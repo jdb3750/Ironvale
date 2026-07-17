@@ -144,7 +144,9 @@ SCREENS.town = async function () {
   const g = st.givers;
 
   const questRow = (q) => {
-    const lifting = ['kettlebell', 'strength'].includes(q.giver);
+    // "log sets" belongs to quests that carry a routine — a climb quest from
+    // Ser Bram completes by synced wall time, not the lift logger
+    const lifting = ['kettlebell', 'strength'].includes(q.giver) && !!(q.details && q.details.routine);
     return `<div class="offer" style="margin:8px 0">
       <div><span class="o-title" style="font-size:20px">${esc(q.title)}</span>
         <span class="muted">— ${esc(st.givers[q.giver].name)}</span></div>

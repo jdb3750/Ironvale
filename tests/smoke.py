@@ -90,6 +90,7 @@ acts = [
     ("s4", 8, "RockClimbing", "gym session", 5400, None),
     ("s5", 35, "Run", "long run", 3600, 10000),
     ("s6", 400, "Run", "ancient run", 1800, 5000),
+    ("s7", 2, "Swim", "pool laps", 1800, 1500),
 ]
 for id_, days, typ, name_, secs, dist in acts:
     db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
@@ -149,15 +150,24 @@ get("/api/dungeon", keys=["state", "stats", "theme", "enter_cost"])
 # ---- quest lifecycle: accept -> matching deed -> completable -> complete --
 print("quest lifecycle:")
 offers = client.get("/api/offers/running").json()["offers"]
+# with run+ride+swim all in recent history, Fenn's board deals one of each
+ok("Fenn deals every practiced endurance modality",
+   {o.get("modality") for o in offers} == {"run", "ride", "swim"})
+bram_offers = client.get("/api/offers/strength").json()["offers"]
+ok("Bram deals the wall to a climber",
+   any(o.get("modality") == "climb" and o.get("target_minutes") for o in bram_offers))
 r = client.post("/api/quests/accept", json={"giver": "running", "offer_id": offers[0]["offer_id"]})
 ok("accept quest", r.status_code == 200)
 q = client.get("/api/state").json()["active_quests"]
 ok("quest is active", len(q) == 1)
 mins = q[0]["details"].get("target_minutes", 30)
+# complete it with an activity of the quest's OWN modality — this is also
+# the matcher-by-modality regression test (a swim quest needs a Swim)
+act_type = {"run": "Run", "ride": "Ride", "swim": "Swim"}.get(q[0]["details"].get("modality"), "Run")
 after_accept = (game.now() + timedelta(minutes=1)).isoformat(timespec="seconds")
 db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
-     "VALUES ('smoke-run', 'smoke', ?, 'Run', 'quest run', ?, ?)",
-     (after_accept, (mins + 10) * 60, (mins + 10) * 150))
+     "VALUES ('smoke-run', 'smoke', ?, ?, 'quest deed', ?, ?)",
+     (after_accept, act_type, (mins + 10) * 60, (mins + 10) * 150))
 db.commit()
 q = client.get("/api/state").json()["active_quests"]
 ok("quest completable after matching deed", q[0]["completable"], q[0]["progress_note"])
@@ -454,6 +464,29 @@ r = client.post("/api/settings", json={"siege_timezone": "Not/A_Timezone"})
 ok("reject invalid siege timezone", r.status_code == 400)
 r = client.post("/api/claim", json={"kind": "hike", "minutes": 30, "note": "smoke"})
 ok("scrivener claim", r.status_code == 200)
+
+# ---- the Vault: nightly snapshots ------------------------------------------
+print("the vault:")
+import sqlite3 as _sq  # noqa: E402
+from app import vault  # noqa: E402
+backups_root = os.path.join(SCRATCH, "backups")
+os.makedirs(backups_root, exist_ok=True)
+for i in range(20):  # stale snapshots from imaginary past days
+    os.makedirs(os.path.join(backups_root, f"2001-01-{i + 1:02d}"), exist_ok=True)
+os.makedirs(os.path.join(backups_root, "keep-me-manual"), exist_ok=True)
+sealed = vault.snapshot_if_due()
+ok("vault seals a dated snapshot", sealed is not None and os.path.isdir(sealed))
+ok("vault copies every profile db",
+   sorted(f for f in os.listdir(sealed) if f.endswith(".db"))
+   == sorted(os.path.basename(p) for p in __import__("glob").glob(os.path.join(SCRATCH, "*.db"))))
+ok("vault includes shared realm json", os.path.exists(os.path.join(sealed, "realm.json")))
+with _sq.connect(os.path.join(sealed, "ironvale.db")) as check:
+    n_backed = check.execute("SELECT COUNT(*) FROM activities").fetchone()[0]
+ok("vault snapshot is a readable database", n_backed > 0)
+ok("vault runs once per day", vault.snapshot_if_due() is None)
+dated_left = [d for d in os.listdir(backups_root) if d[:2] == "20" and d != "keep-me-manual"]
+ok("vault prunes to retention window", len(dated_left) == vault.KEEP_DAYS)
+ok("vault never touches non-dated folders", os.path.isdir(os.path.join(backups_root, "keep-me-manual")))
 
 shutil.rmtree(SCRATCH, ignore_errors=True)
 print(f"\nSMOKE PASSED — {PASS} checks green")
