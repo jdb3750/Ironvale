@@ -414,8 +414,20 @@ G.saveWeightUnit = async (value) => {
 
 G.saveSiegeTimezone = async (value) => {
   const token = captureRouteToken();
+  const timezone = value || 'UTC';
+  // The bell is realm-shared and the picker auto-saves; re-picking the
+  // current value is a no-op, and an actual change gets an in-world
+  // confirm so a browsing thumb can't re-forge everyone's siege week.
+  if (timezone === (S.state.siege_timezone || 'UTC')) return;
+  const ring = await confirmModal(
+    'The Siege Bell rings for every adventurer in the realm, and re-hanging it mid-siege can re-forge the week. Ring it anyway?',
+    { title: 'The Siege Bell', okLabel: 'RING IT', danger: true });
+  if (!isRouteTokenCurrent(token)) return;
+  if (!ring) {
+    if (S.screen === 'settings') render();   // snap the picker label back
+    return;
+  }
   try {
-    const timezone = value || 'UTC';
     await api('/settings', { method: 'POST', body: { siege_timezone: timezone } });
     await refreshState();
     if (!isRouteTokenCurrent(token)) return;
