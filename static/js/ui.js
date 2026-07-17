@@ -25,11 +25,12 @@ function showModal(html, { backdropClose = true } = {}) {
    dropdown the Menagerie's hat picker uses, generalized. Renders around a
    hidden input carrying the chosen value, so any code that already reads
    document.getElementById(id).value keeps working unchanged. */
-function pixelSelect(id, options, selected, ariaLabel) {
+function pixelSelect(id, options, selected, ariaLabel, onChange) {
   // Degrade gracefully on an empty option set (a native <select> would too),
   // rather than throwing on esc(current.label) and blanking the whole screen.
   const current = options.find(o => o.value === selected) || options[0] || { value: '', label: '' };
-  return `<details class="pixel-select">
+  const onAttr = onChange ? ` data-onchange="${esc(onChange)}"` : '';
+  return `<details class="pixel-select"${onAttr}>
     <summary class="btn small pixel-select-summary" aria-haspopup="menu" aria-label="${esc(ariaLabel)}"><span class="pixel-select-label">${esc(current.label)}</span></summary>
     <div class="pixel-select-menu" role="menu" aria-label="${esc(ariaLabel)}">
       ${options.map(o => `<button type="button" class="btn small pixel-option${o.value === current.value ? ' selected' : ''}" role="menuitemradio" aria-checked="${o.value === current.value}" data-value="${esc(o.value)}" onclick="G.pixelSelectPick(this)">${esc(o.label)}</button>`).join('')}
@@ -47,6 +48,8 @@ G.pixelSelectPick = (btn) => {
     b.setAttribute('aria-checked', String(b === btn));
   });
   root.open = false;
+  const handler = root.dataset.onchange;
+  if (handler && typeof G[handler] === 'function') G[handler](btn.dataset.value);
 };
 
 /* In-world replacement for window.confirm(): a pixel dialog that resolves

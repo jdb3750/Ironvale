@@ -239,21 +239,39 @@ SCREENS.settings = function () {
   const s = S.state.settings;
   const c = S.state.character;
   const amb = S.state.ambition_levels;
+  const siegeTz = S.state.siege_timezone || 'UTC';
+  const siegeTzOptions = [
+    { value: 'UTC', label: 'Siege Bell Timezone: UTC' },
+    { value: 'America/New_York', label: 'Siege Bell Timezone: America/New_York' },
+    { value: 'America/Chicago', label: 'Siege Bell Timezone: America/Chicago' },
+    { value: 'America/Denver', label: 'Siege Bell Timezone: America/Denver' },
+    { value: 'America/Los_Angeles', label: 'Siege Bell Timezone: America/Los_Angeles' },
+    { value: 'Europe/London', label: 'Siege Bell Timezone: Europe/London' },
+    { value: 'Europe/Berlin', label: 'Siege Bell Timezone: Europe/Berlin' },
+    { value: 'Australia/Sydney', label: 'Siege Bell Timezone: Australia/Sydney' },
+  ];
+  if (siegeTz && !siegeTzOptions.some(o => o.value === siegeTz)) {
+    siegeTzOptions.unshift({ value: siegeTz, label: 'Siege Bell Timezone: ' + siegeTz });
+  }
+  const weightOpts = [
+    { value: 'kg', label: 'Weight Unit: kg' },
+    { value: 'lb', label: 'Weight Unit: lb' },
+  ];
   $app().innerHTML = shell(`
     <section aria-labelledby="settings-common">
     <div class="win"><span class="win-title" id="settings-common">At Hand</span>
-      <div class="formrow"><span class="muted" style="display:block;text-transform:uppercase;letter-spacing:1px">sound</span>
+      <div class="formrow">
         <button type="button" class="btn wide" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
       </div>
-      <hr class="rule">
-      <div class="formrow"><span class="muted" style="display:block;text-transform:uppercase;letter-spacing:1px">ravens</span>
-        <button type="button" class="btn wide" onclick="G.syncNow()">SEND RAVENS</button>
-        <div class="muted" style="font-size:15px;margin-top:4px">sync new activities from intervals.icu</div>
+      <div class="formrow">
+        <button type="button" class="btn wide" onclick="G.syncNow()">Send ravens (sync)</button>
       </div>
-      <hr class="rule">
-      <div class="formrow"><span class="muted" style="display:block;text-transform:uppercase;letter-spacing:1px">weights</span>
-        ${pixelSelect('set-wu', [{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }], s.weight_unit, 'weight units')}</div>
-      <button class="btn wide" onclick="G.saveSettings(false)">SAVE UNITS</button>
+      <div class="formrow">
+        ${pixelSelect('set-wu', weightOpts, s.weight_unit, 'weight unit', 'saveWeightUnit')}
+      </div>
+      <div class="formrow">
+        ${pixelSelect('set-siege-tz', siegeTzOptions, siegeTz, 'siege timezone', 'saveSiegeTimezone')}
+      </div>
       <hr class="rule">
       <span class="muted" style="display:block;text-transform:uppercase;letter-spacing:1px">ambition</span>
       <div class="muted" style="margin-bottom:8px">how hard the quest-givers push you</div>
@@ -383,4 +401,26 @@ G.saveSettings = async (sync) => {
   if (sync) await G.syncNow();
   if (!isRouteTokenCurrent(token)) return;
   render();
+};
+
+G.saveWeightUnit = async (value) => {
+  try {
+    await api('/settings', { method: 'POST', body: { weight_unit: value } });
+    if (S.state?.settings) S.state.settings.weight_unit = value;
+    SFX.accept();
+    toast('Weight unit set.');
+  } catch (e) { /* api already toast */ }
+};
+
+G.saveSiegeTimezone = async (value) => {
+  const token = captureRouteToken();
+  try {
+    const timezone = value || 'UTC';
+    await api('/settings', { method: 'POST', body: { siege_timezone: timezone } });
+    await refreshState();
+    if (!isRouteTokenCurrent(token)) return;
+    SFX.accept();
+    toast('The siege bell is set.');
+    if (S.screen === 'settings') render();
+  } catch (e) { /* api already toast */ }
 };

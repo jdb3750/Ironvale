@@ -15,12 +15,16 @@ import json
 import os
 import random
 import threading
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from . import db, game, profiles
 
 RAID_PATH = os.path.join(db.DATA_DIR, "raid.json")
+REALM_PATH = os.path.join(db.DATA_DIR, "realm.json")
 _lock = threading.Lock()
+
+DEFAULT_SIEGE_TZ = "UTC"
 
 DMG_PER_MIN = 10
 HP_TUNING = 0.85          # slightly beatable at usual volume
@@ -47,6 +51,58 @@ TROPHIES = ["hat_horns", "hat_skullcrown", "hat_tentacle",
 # a rare chance the fallen beast is subdued rather than slain, joining the
 # claimer's menagerie as a (creepy) creature
 CAPTURE_CHANCE = 0.12
+
+
+def get_siege_timezone():
+    if not os.path.exists(REALM_PATH):
+        return DEFAULT_SIEGE_TZ
+    try:
+        with open(REALM_PATH) as f:
+            realm = json.load(f)
+            name = realm.get("siege_timezone") if isinstance(realm, dict) else None
+    except (OSError, ValueError, TypeError, AttributeError):
+        return DEFAULT_SIEGE_TZ
+    if not isinstance(name, str) or not name:
+        return DEFAULT_SIEGE_TZ
+    try:
+        ZoneInfo(name)
+    except (KeyError, TypeError, ValueError, ZoneInfoNotFoundError):
+        return DEFAULT_SIEGE_TZ
+    return name
+
+
+def set_siege_timezone(name):
+    name = name.strip() if isinstance(name, str) else ""
+    if not name:
+        name = DEFAULT_SIEGE_TZ
+    try:
+        ZoneInfo(name)
+    except (KeyError, TypeError, ValueError, ZoneInfoNotFoundError):
+        raise ValueError("That bell does not strike in any land of the siege.")
+    realm = {}
+    if os.path.exists(REALM_PATH):
+        try:
+            with open(REALM_PATH) as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                realm = loaded
+        except (OSError, ValueError, TypeError):
+            pass
+    realm["siege_timezone"] = name
+    try:
+        with open(REALM_PATH, "w") as f:
+            json.dump(realm, f, indent=2)
+    except OSError:
+        raise ValueError("The realm's bell-tower refuses the new setting.")
+    return name
+
+
+def siege_tz():
+    return ZoneInfo(get_siege_timezone())
+
+
+def siege_now():
+    return datetime.now(siege_tz())
 
 DESC_ORIGIN = [
     "Dredged from the silt beneath the Undercroft,",
@@ -81,13 +137,21 @@ def describe(dna):
 
 
 def week_key(dt=None):
-    dt = dt or game.now()
+    dt = dt or siege_now()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=siege_tz())
+    else:
+        dt = dt.astimezone(siege_tz())
     y, w, _ = dt.isocalendar()
     return f"{y}-W{w:02d}"
 
 
 def week_start(dt=None):
-    dt = dt or game.now()
+    dt = dt or siege_now()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=siege_tz())
+    else:
+        dt = dt.astimezone(siege_tz())
     monday = dt - timedelta(days=dt.weekday())
     return monday.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -162,15 +226,25 @@ def apply_damage(slug):
     with _lock:
         r = _current_locked()
         seen = set(r["counted"].get(slug, []))
+        wk = week_start()
+        loose_since = (wk - timedelta(days=2)).date().isoformat()
         rows = db.q(
-            "SELECT id, name, type, moving_time FROM activities WHERE start >= ?",
-            (week_start().isoformat(),),
+            "SELECT id, name, type, moving_time, start FROM activities WHERE start >= ?",
+            (loose_since,),
         ).fetchall()
         char_name = game.get_char()["name"]
         dealt = 0
         already_down = bool(r["defeated_at"])
         blows = r.setdefault("blows", {}).setdefault(slug, [])
         for a in rows:
+            start = a["start"]
+            if start.endswith("Z"):
+                start = start[:-1] + "+00:00"
+            st = datetime.fromisoformat(start)
+            if st.tzinfo is None:
+                st = st.replace(tzinfo=siege_tz())
+            if st < wk:
+                continue
             if a["id"] in seen:
                 continue
             seen.add(a["id"])
@@ -208,7 +282,7 @@ def apply_damage(slug):
 def state_for(slug):
     with _lock:
         r = _current_locked()
-    now = game.now()
+    now = siege_now()
     next_monday = week_start() + timedelta(days=7)
     hours_left = max(0, int((next_monday - now).total_seconds() // 3600))
     total = sum(r["damage"].values())

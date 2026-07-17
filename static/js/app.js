@@ -295,6 +295,29 @@ async function refreshState() {
   return S.state;
 }
 
+function clientTimeZone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
+  catch (e) { return ''; }
+}
+
+function localToday() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function syncClientTimezone() {
+  const tz = clientTimeZone();
+  if (!tz || !S.state?.settings) return;
+  if (S.state.settings.timezone === tz) return;
+  try {
+    await api('/settings', { method: 'POST', body: { timezone: tz } });
+    S.state.settings.timezone = tz;
+  } catch (e) { /* non-fatal */ }
+}
+
 /* Old Fenn pays a bonus for runs done with no quest accepted, but only once
    his speech bubble is actually tapped (see render() below and
    showFennBubbleIfQueued/G.claimFennBubble in town.js) — the reward is
@@ -1081,6 +1104,8 @@ async function boot() {
   } catch (e) {
     return;
   }
+  if (thisBoot !== bootGeneration) return;
+  await syncClientTimezone();
   if (thisBoot !== bootGeneration) return;
   try {
     S.exercises = (await api('/exercises')).exercises;

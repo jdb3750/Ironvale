@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, game, quests  # noqa: E402
+from app import db, game, quests, raid  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -110,7 +110,8 @@ db.commit()
 # ---- every read endpoint --------------------------------------------------
 print("read endpoints:")
 st = get("/api/state", keys=["character", "active_quests", "givers", "version",
-                             "npc_notices", "almanac_unread", "writ_notices"])
+                              "npc_notices", "almanac_unread", "writ_notices"])
+ok("default siege timezone is UTC", st["siege_timezone"] == "UTC" and raid.get_siege_timezone() == "UTC")
 get("/api/stats?wellness_days=90", keys=["character", "weeks", "muscles", "insights", "wellness"])
 get("/api/calendar?year=%d&month=%d" % (NOW.year, NOW.month), keys=["days"])
 get("/api/day/" + iso(1)[:10], keys=["activities", "sets", "quests"])
@@ -436,6 +437,16 @@ bad_weight_unit = client.post("/api/settings", json={
 })
 settings_after_bad_unit = client.get("/api/state").json()["settings"]
 ok("reject unsafe weight unit without mutation", bad_weight_unit.status_code == 400 and settings_after_bad_unit["weight_unit"] == "kg")
+bad_timezone = client.post("/api/settings", json={"timezone": "Not/A_Timezone"})
+ok("reject invalid timezone", bad_timezone.status_code == 400)
+r = client.post("/api/settings", json={"timezone": "America/Los_Angeles"})
+ok("save valid timezone", r.status_code == 200 and client.get("/api/today").json()["today"] == game.today())
+r = client.post("/api/settings", json={"siege_timezone": "America/New_York"})
+ok("save valid siege timezone", r.status_code == 200 and r.json().get("siege_timezone") == "America/New_York")
+ok("siege timezone round-trips through state", client.get("/api/state").json()["siege_timezone"] == "America/New_York")
+ok("siege week uses shared timezone", raid.week_start().tzinfo.key == "America/New_York")
+r = client.post("/api/settings", json={"siege_timezone": "Not/A_Timezone"})
+ok("reject invalid siege timezone", r.status_code == 400)
 r = client.post("/api/claim", json={"kind": "hike", "minutes": 30, "note": "smoke"})
 ok("scrivener claim", r.status_code == 200)
 

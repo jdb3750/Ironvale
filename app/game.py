@@ -5,6 +5,7 @@ Import direction: quests.py / economy.py / records.py import from here;
 this module imports none of them (keeps the graph acyclic)."""
 import statistics
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from . import db, exercises
 
@@ -59,8 +60,18 @@ GIVERS = {
 }
 
 
+def profile_tz():
+    name = get_settings().get("timezone")
+    if isinstance(name, str) and name:
+        try:
+            return ZoneInfo(name)
+        except (KeyError, TypeError, ValueError, ZoneInfoNotFoundError):
+            pass
+    return datetime.now().astimezone().tzinfo
+
+
 def now():
-    return datetime.now().astimezone()
+    return datetime.now(profile_tz())
 
 
 def now_iso():
@@ -72,17 +83,17 @@ def today():
 
 
 def utc_to_local_iso(s):
-    """Normalize a UTC ISO timestamp to system-local time as an offset-aware
+    """Normalize a UTC ISO timestamp to profile-local time as an offset-aware
     ISO string with second precision (the same format now_iso() emits).
 
     intervals.icu reports `start_date` in UTC but `start_date_local` in the
     athlete's local time. When the trusted `start_date_local` is missing we
     still need the activity to land on the day the athlete actually trained,
     not the UTC day (a 21:00 PDT run is 04:00Z the next day). The app has no
-    per-profile timezone setting, so system-local time — the same source
-    now()/today() and every cutoff use — is the implicit timezone for all
-    date bucketing; this helper reuses that one source rather than inventing
-    a new one. Naive inputs (no offset/Z) are read as UTC per the
+    per-profile `timezone` setting is the source of truth, with system-local
+    time as the fallback — the same source now()/today() and every cutoff use.
+    This helper reuses that one source rather than inventing a new one. Naive
+    inputs (no offset/Z) are read as UTC per the
     `start_date` field contract.
 
     Returns None for empty/non-string/unparseable input so callers can fall
@@ -96,7 +107,7 @@ def utc_to_local_iso(s):
         return None
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone().isoformat(timespec="seconds")
+    return dt.astimezone(profile_tz()).isoformat(timespec="seconds")
 
 
 # ---------------- character ----------------
@@ -137,6 +148,7 @@ def get_settings():
     s.setdefault("intervals_athlete_id", "")
     s.setdefault("intervals_api_key", "")
     s.setdefault("weight_unit", "kg")
+    s.setdefault("timezone", "")
     return s
 
 
@@ -235,5 +247,3 @@ def last_weight(exercise):
         (exercise,),
     ).fetchone()
     return row["weight"] if row else None
-
-

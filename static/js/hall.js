@@ -334,9 +334,9 @@ G.compToggle = (index) => {
 /* ---- real month calendar ---- */
 
 async function calendarBody() {
-  const serverToday = (await api('/today')).today;
+  const today = localToday();
   if (!calState) {
-    const [y, m] = serverToday.split('-').map(Number);
+    const [y, m] = today.split('-').map(Number);
     calState = { y, m };
   }
   const cal = await api(`/calendar?year=${calState.y}&month=${calState.m}`);
@@ -358,7 +358,7 @@ async function calendarBody() {
     const daySummary = info
       ? `${info.acts.length} deed${info.acts.length === 1 ? '' : 's'}, ${info.sets} lifting set${info.sets === 1 ? '' : 's'}, ${info.quests || 0} quest${info.quests === 1 ? '' : 's'}`
       : 'no deeds recorded';
-    cells += `<button type="button" class="calday ${dstr === serverToday ? 'today' : ''}" style="font:inherit;color:inherit;text-align:left"
+    cells += `<button type="button" class="calday ${dstr === today ? 'today' : ''}" style="font:inherit;color:inherit;text-align:left"
       aria-label="Inspect ${dstr}: ${daySummary}" onclick="G.dayDetail('${dstr}')">
       <span class="dn">${day}</span>
       ${info && info.quests ? `<span class="qmark">&#9733;${info.quests > 1 ? info.quests : ''}</span>` : ''}

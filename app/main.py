@@ -7,6 +7,7 @@ import re
 from decimal import Decimal
 from datetime import date, timedelta
 from typing import Optional, Tuple
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -179,6 +180,7 @@ def state():
     return {
         "character": c,
         "settings": {**s, "intervals_api_key": bool(s["intervals_api_key"])},
+        "siege_timezone": raid.get_siege_timezone(),
         "givers": game.GIVERS,
         "ambition_levels": game.AMBITION,
         "active_quests": actives,
@@ -217,6 +219,18 @@ async def save_settings(request: Request):
     if "weight_unit" in body and body["weight_unit"] not in ("kg", "lb"):
         raise ValueError("Choose kilograms or pounds for the weight measure.")
     s = game.get_settings()
+    if "timezone" in body:
+        name = body["timezone"]
+        if not isinstance(name, str):
+            raise ValueError("That realm is not on the map of hours.")
+        if name:
+            try:
+                ZoneInfo(name)
+            except (KeyError, TypeError, ValueError, ZoneInfoNotFoundError):
+                raise ValueError("That realm is not on the map of hours.")
+        s["timezone"] = name
+    if "siege_timezone" in body:
+        raid.set_siege_timezone(body["siege_timezone"])
     for k in ("ambition", "units", "weight_unit", "intervals_athlete_id", "dev_mode"):
         if k in body:
             s[k] = body[k]
@@ -227,7 +241,12 @@ async def save_settings(request: Request):
         c = game.get_char()
         c["name"] = str(body["name"])[:24]
         game.save_char(c)
-    return {"ok": True}
+    response = {"ok": True}
+    if "siege_timezone" in body:
+        # Read the shared realm value back after writing so the client can
+        # rebuild its settings screen from the same source of truth as state.
+        response["siege_timezone"] = raid.get_siege_timezone()
+    return response
 
 
 # ---------------- quests ----------------
