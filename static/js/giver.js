@@ -131,6 +131,7 @@ SCREENS.giver = async function () {
       <div class="offer-primary">
         <div><span class="o-title">${esc(o.title)}</span>
           ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
+          ${o.modality ? `<span class="chip mod-${o.modality}">${o.modality}</span>` : ''}
           ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${o.intensity}">${o.intensity}</span>`}
           ${o.target_minutes ? `<span class="o-kind">~${o.target_minutes} min</span>` : ''}</div>
         <div class="o-struct">${esc(o.structure)}</div>
@@ -158,6 +159,7 @@ SCREENS.giver = async function () {
       <div class="offer ${isWrit ? 'writ' : ''}">
         <div class="offer-primary">
           <div><span class="o-title">${esc(q.title)}</span>
+            ${q.details.modality ? `<span class="chip mod-${q.details.modality}">${q.details.modality}</span>` : ''}
             ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${q.details.intensity}">${q.details.intensity}</span>`}</div>
           <div class="o-struct">${esc(q.details.structure)}</div>
           ${q.details.routine ? `<div class="o-struct">${q.details.routine.map(routineLine).join('<br>')}</div>` : ''}
@@ -250,8 +252,14 @@ G.complete = async (id, honor) => {
 };
 
 G.completeHonor = async (id) => {
-  if (await confirmModal('No matching record found. Swear on your honor that the deed is done?',
-      { title: 'On your honor?', okLabel: 'I SWEAR IT' })) {
+  // With a tracker linked, honoring too early is the one path that can
+  // double-record a workout: honor writes a synthetic deed NOW, and the
+  // ravens may deliver the real one later (it also strikes the Siege
+  // twice). Nudge toward syncing first; honor stays one tap away.
+  const message = S.state?.settings?.intervals_api_key
+    ? 'No matching record found. If your tracker logged this deed, SEND RAVENS first — swearing now records it by hand, and the ravens may bring a second copy later.'
+    : 'No matching record found. Swear on your honor that the deed is done?';
+  if (await confirmModal(message, { title: 'On your honor?', okLabel: 'I SWEAR IT' })) {
     G.complete(id, true);
   }
 };

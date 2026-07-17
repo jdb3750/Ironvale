@@ -337,6 +337,11 @@ h1, h2, h3 { font-weight: normal; }
 .chip.hard { border-color: var(--red); color: var(--red); }
 .chip.moderate { border-color: var(--gold); color: var(--gold); }
 .chip.low { border-color: var(--green); color: var(--green); }
+/* modality tags on quests/offers — same hues as the calendar's category dots */
+.chip.mod-run { border-color: #7ab55c; color: #7ab55c; }
+.chip.mod-ride { border-color: #6aa0c8; color: #6aa0c8; }
+.chip.mod-swim { border-color: #4a90d0; color: #4a90d0; }
+.chip.mod-climb { border-color: #e07030; color: #e07030; }
 
 /* ---- logger ---- */
 .ex-row { border: 2px solid #3a3450; background: var(--panel2); padding: 8px 10px; margin: 8px 0; }

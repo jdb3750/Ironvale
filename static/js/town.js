@@ -149,6 +149,7 @@ SCREENS.town = async function () {
     const lifting = ['kettlebell', 'strength'].includes(q.giver) && !!(q.details && q.details.routine);
     return `<div class="offer" style="margin:8px 0">
       <div><span class="o-title" style="font-size:20px">${esc(q.title)}</span>
+        ${q.details && q.details.modality ? `<span class="chip mod-${q.details.modality}">${q.details.modality}</span>` : ''}
         <span class="muted">— ${esc(st.givers[q.giver].name)}</span></div>
       <div class="${q.completable ? '' : 'muted'}" style="font-size:17px">${q.completable ? '&#10004; ' : ''}${esc(q.progress_note)}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">
