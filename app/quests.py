@@ -718,11 +718,52 @@ UNGUIDED_STAT_BY_CATEGORY = {
     "climb": "str", "strength": "str", "mobility": "spr", "other": "con",
 }
 
-UNGUIDED_NOTES = [
-    "Fenn saw you out there, oath or no oath, and paid you anyway.",
-    "No quest was sworn for this one. The road told him regardless.",
-    "You trained without asking. Fenn noticed. Fenn always notices.",
-]
+# Which giver notices an unsworn deed: the archetype that owns the effort,
+# not one catch-all NPC. Endurance roads (wet ones included) are Fenn's;
+# iron and rock are Ser Bram's; ballistic chaos is Grunhilda's; stillness
+# is Elowen's; anything unclassifiable reaches Wick's ledger. "wick" is not
+# a quest giver — it's an attribution target the town knows how to anchor.
+DEED_GIVER_BY_CATEGORY = {
+    "run": "running", "ride": "running", "walk": "running", "swim": "running",
+    "climb": "strength", "strength": "strength",
+    "mobility": "mobility",
+    "other": "wick",
+}
+GRUNHILDA_TYPES = ("Crossfit", "HIIT")  # filed under "strength", but her kind of bedlam
+
+DEED_NOTES = {
+    "running": [
+        "Fenn saw you out there, oath or no oath, and paid you anyway.",
+        "No quest was sworn for this one. The road told him regardless.",
+        "You trained without asking. Fenn noticed. Fenn always notices.",
+    ],
+    "kettlebell": [
+        "You swung without her blessing. The bell heard it anyway.",
+        "Sweat without a writ still rings true. Grunhilda pays what rings true.",
+        "The forge does not ask who ordered the fire. Well struck.",
+    ],
+    "strength": [
+        "Iron moved is iron moved, sworn or not. Ser Bram settles his debts.",
+        "You trained without orders. Good. Initiative suits you.",
+        "The keep watched you work. A knight pays what honor owes.",
+    ],
+    "mobility": [
+        "Stillness taken unbidden is stillness all the same.",
+        "The willow saw you bend, and it approves. Quietly.",
+        "No writ asked for this practice. The practice counts. It always counts.",
+    ],
+    "wick": [
+        "This deed reached the ledger without a writ. Wick recorded it anyway.",
+        "Unsworn and unasked — still ink-worthy. Signed, sealed, paid.",
+        "The record keeps what the road forgets. Your pay, per the ledger.",
+    ],
+}
+
+
+def deed_giver(activity_type):
+    if activity_type in GRUNHILDA_TYPES:
+        return "kettlebell"
+    return DEED_GIVER_BY_CATEGORY.get(category(activity_type), "wick")
 
 
 def _unguided_title(activity_type, activity_id):
@@ -736,7 +777,7 @@ def _unguided_stat_gains(activity_type):
 
 
 def _unguided_completion_title(cand):
-    return cand.get("title") or f"Unguided Run — {cand.get('activity_name') or 'the road'}"
+    return cand.get("title") or f"A Deed Unsworn — {cand.get('activity_name') or 'the road'}"
 
 
 def grant_unguided_run_bonus():
@@ -763,12 +804,14 @@ def grant_unguided_run_bonus():
             continue
         activity_type = r["type"] or "Workout"
         activity_category = category(activity_type)
+        giver = deed_giver(activity_type)
         xp = int(minutes * 1.35 * 2.2)  # priced as a "moderate" quest, per _price_offer
         candidates.append({
             "activity_id": r["id"],
             "activity_name": r["name"] or UNGUIDED_ACTIVITY_LABELS[activity_category],
             "activity_type": activity_type,
             "category": activity_category,
+            "giver": giver,
             "title": _unguided_title(activity_type, r["id"]),
             "minutes": round(minutes),
             "date": t,
@@ -778,7 +821,7 @@ def grant_unguided_run_bonus():
             "token": rng.random() < 0.3,
             "drop": "monster_pack" if rng.random() < 0.06 else None,
             "stat_gains": _unguided_stat_gains(activity_type),
-            "note": rng.choice(UNGUIDED_NOTES),
+            "note": rng.choice(DEED_NOTES[giver]),
         })
     if dirty:
         db.kv_set(seen_key, list(seen))
@@ -881,7 +924,12 @@ def unguided_pending():
     """Read-only peek at today's still-unclaimed bubbles — never mutates the
     character; claiming is an explicit action (claim_unguided_bonus)."""
     _sweep_stale_unguided_candidates()
-    return db.kv_get("unguided_bonus_candidates", [])
+    cands = db.kv_get("unguided_bonus_candidates", [])
+    for c in cands:
+        # candidates queued before per-giver attribution lack the field;
+        # they were all Fenn's back then (load-bearing JSON: .setdefault)
+        c.setdefault("giver", "running")
+    return cands
 
 
 def claim_unguided_bonus(activity_id=None):
@@ -889,7 +937,7 @@ def claim_unguided_bonus(activity_id=None):
     given activity_id if provided, else the oldest still-pending one."""
     cands = db.kv_get("unguided_bonus_candidates", [])
     if not cands:
-        raise ValueError("Fenn has nothing more to give you today.")
+        raise ValueError("No deed waits to be claimed today.")
     idx = 0
     if activity_id:
         idx = next((i for i, c in enumerate(cands) if c["activity_id"] == activity_id), 0)

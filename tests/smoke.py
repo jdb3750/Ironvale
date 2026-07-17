@@ -180,6 +180,11 @@ climb = next(c for c in pending if c["activity_id"] == "smoke-free-climb")
 other = next(c for c in pending if c["activity_id"] == "smoke-free-other")
 ok("unguided climb queued", climb["title"])
 ok("unguided other activity queued", other["title"])
+ok("deed attributed to its archetype giver", climb["giver"] == "strength")
+ok("unclassifiable deed reaches Wick", other["giver"] == "wick")
+ok("HIIT deeds belong to Grunhilda", quests.deed_giver("HIIT") == "kettlebell"
+   and quests.deed_giver("WeightTraining") == "strength"
+   and quests.deed_giver("OpenWaterSwim") == "running")
 rewards = quests.claim_unguided_bonus("smoke-free-climb")
 ok("unguided climb reward claimed", rewards["xp"] > 0)
 ok("unguided title returned", rewards["quest_title"] == climb["title"])

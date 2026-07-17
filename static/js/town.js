@@ -1,13 +1,57 @@
-/* The town square: the hub screen, Fenn's and the willow's bubbles, and
-   the siege banner. */
-/* Fenn's quip when his speech bubble pops out of the waystone for an
-   unguided-run bonus — the fuller "note" line lives server-side in
-   game.UNGUIDED_RUN_NOTES and shows in the ceremony that follows. */
-const FENN_BUBBLE_LINES = [
-  'Psst. I saw that run. You didn\u2019t even ask me first.',
-  'Ran off without a word to me, did you? Rude. Here \u2014 take this anyway.',
-  'The road tattled on you. Good thing I don\u2019t hold grudges as long as I hold coin.',
-];
+/* The town square: the hub screen, the givers' deed bubbles, the willow's
+   writ bubble, and the siege banner. */
+/* An unsworn deed pops a speech bubble from the giver whose archetype owns
+   the effort (the server decides via quests.deed_giver; the fuller "note"
+   line lives in quests.DEED_NOTES and shows in the ceremony that follows).
+   Each entry: the building that anchors the bubble, the quip pool, and the
+   claim-button label. */
+const DEED_BUBBLES = {
+  running: {
+    anchor: 'bld-fenn',
+    label: 'FENN LEFT THIS FOR YOU',
+    lines: [
+      'Psst. I saw that. You didn\u2019t even ask me first.',
+      'Off without a word to me, were you? Rude. Here \u2014 take this anyway.',
+      'The road tattled on you. Good thing I don\u2019t hold grudges as long as I hold coin.',
+    ],
+  },
+  kettlebell: {
+    anchor: 'bld-grun',
+    label: 'GRUNHILDA HEARD THE BELL',
+    lines: [
+      'You swung without my blessing. The bell rang anyway. It always rings.',
+      'Unsworn sweat still counts, little anvil. Take your due.',
+      'I felt the ground shake and knew it was you. Here.',
+    ],
+  },
+  strength: {
+    anchor: 'bld-bram',
+    label: 'SER BRAM TOOK NOTE',
+    lines: [
+      'Iron moved is iron moved, writ or no writ. Take your pay.',
+      'You trained without orders. Good. Initiative suits you.',
+      'The keep saw you working. A knight settles his debts.',
+    ],
+  },
+  mobility: {
+    anchor: 'bld-elowen',
+    label: 'THE WILLOW SAW YOU BEND',
+    lines: [
+      'Stillness taken unbidden is stillness all the same.',
+      'You practiced without asking leave. The practice counts. It always counts.',
+      'The willow does not need a writ to notice you. Few things escape a tree.',
+    ],
+  },
+  wick: {
+    anchor: 'bld-wick',
+    label: 'WICK RECORDED A DEED',
+    lines: [
+      'A deed reached the ledger without a writ. I recorded it. Obviously.',
+      'Unsworn, unasked \u2014 still ink-worthy. Signed and sealed.',
+      'The record keeps what the road forgets. Your pay, per the ledger.',
+    ],
+  },
+};
 
 /* Time of day: the town's sky/ground/building art follows the player's real
    wall clock — day 6am-6pm, sunset 6-8pm, night 8pm-6am. Purely cosmetic,
@@ -129,13 +173,13 @@ SCREENS.town = async function () {
       ${devMode ? `<button type="button" class="tod-toggle" aria-label="Cycle town time of day" title="dev: cycle time of day (${devTOD ? 'pinned: ' + devTOD : 'auto: ' + effectiveTOD})" onclick="G.cycleTOD()">${spriteTag(TOD_ICON[effectiveTOD], 22)}</button>` : ''}
       <div class="trow">
         ${bld('bld_waystone', g.running.name, GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
-        ${bld('bld_forge', g.kettlebell.name, GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell)}
-        ${bld('bld_keep', g.strength.name, GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength)}
+        ${bld('bld_forge', g.kettlebell.name, GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell, 120, 'bld-grun')}
+        ${bld('bld_keep', g.strength.name, GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength, 120, 'bld-bram')}
         ${bld('bld_willow', g.mobility.name, GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility, 120, 'bld-elowen')}
       </div>
       <div class="road-h"></div>
       <div class="trow">
-        ${bld('bld_ledger', 'The Ledger House', 'Wick: confess & amend', `nav('scrivener')`)}
+        ${bld('bld_ledger', 'The Ledger House', 'Wick: confess & amend', `nav('scrivener')`, false, 120, 'bld-wick')}
         ${bld('bld_hall', 'Hall of Records', 'stats, vitals & the Curator',
           st.almanac_unread ? `statsTab='almanac';nav('stats')` : `nav('stats')`, !!st.almanac_unread)}
         ${bld('crank', 'The Crankwerk', 'hats for the herd', `nav('crank')`)}
@@ -151,33 +195,35 @@ SCREENS.town = async function () {
   scheduleTODRefresh();
 };
 
-/* ---- Fenn's unguided-run bubble: pops out of the waystone (bld-fenn). The
-   reward is NOT granted until this is actually tapped — see G.claimFennBubble,
-   which hits /api/unguided/claim. S.fennQueue is a straight mirror of the
-   server's current unclaimed-today list (see queueFennBubbles in app.js), so
-   we reconcile against its head rather than blindly inserting: if a bubble
-   is already showing but no longer matches (claimed elsewhere, or quietly
+/* ---- Deed bubbles: an unsworn deed pops out of the responsible giver's
+   building (DEED_BUBBLES maps giver -> anchor/voice). The reward is NOT
+   granted until this is actually tapped — see G.claimFennBubble, which hits
+   /api/unguided/claim. S.fennQueue is a straight mirror of the server's
+   current unclaimed-today list (see queueFennBubbles in app.js), so we
+   reconcile against its head rather than blindly inserting: if a bubble is
+   already showing but no longer matches (claimed elsewhere, or quietly
    auto-resolved by the server after a day passed), swap it out. ---- */
 function showFennBubbleIfQueued() {
   const next = S.fennQueue && S.fennQueue[0];
-  const shown = document.querySelector('.fenn-bubble-wrap');
+  const shown = document.querySelector('.fenn-bubble-wrap:not(.willow-bubble-wrap)');
   if (shown) {
     if (next && shown.dataset.activityId === String(next.activity_id)) return; // already correct
     shown.remove();
   }
   if (!next) return;
-  const anchor = document.getElementById('bld-fenn');
+  const deed = DEED_BUBBLES[next.giver] || DEED_BUBBLES.running;
+  const anchor = document.getElementById(deed.anchor);
   if (!anchor) return;
   anchor.insertAdjacentHTML('beforeend', `
     <div class="fenn-bubble-wrap" data-activity-id="${esc(next.activity_id)}">
-      <button type="button" class="fenn-bubble" style="width:100%;font:inherit;color:inherit;text-align:inherit" aria-label="Claim Fenn's unguided activity reward" onclick="G.claimFennBubble()">
-        <span class="fb-line" style="display:block">&ldquo;${esc(pickLine(FENN_BUBBLE_LINES))}&rdquo;</span>
+      <button type="button" class="fenn-bubble" style="width:100%;font:inherit;color:inherit;text-align:inherit" aria-label="Claim this deed's reward" onclick="G.claimFennBubble()">
+        <span class="fb-line" style="display:block">&ldquo;${esc(pickLine(deed.lines))}&rdquo;</span>
         <span class="fb-rewards">
           <span style="color:var(--purple)">+${next.xp} XP</span>
           <span class="g">&#9670; +${next.gold}</span>
           <span style="color:var(--green)">+${next.vigor} vigor</span>
         </span>
-        <span class="btn small green" aria-hidden="true" style="display:block;width:100%;box-sizing:border-box">FENN LEFT THIS FOR YOU</span>
+        <span class="btn small green" aria-hidden="true" style="display:block;width:100%;box-sizing:border-box">${esc(deed.label)}</span>
       </button>
     </div>`);
   SFX.coin();
@@ -197,7 +243,7 @@ G.claimFennBubble = async () => {
   // which bumps viewGeneration. Passing the pre-render routeToken here made the
   // ceremony's own isRouteTokenCurrent guard fail every time and silently
   // swallowed the reward reveal. The guard above already covers navigation.
-  showCeremony(rewards, rewards.quest_title || b.title || `An Unguided Activity \u2014 ${b.minutes} min`);
+  showCeremony(rewards, rewards.quest_title || b.title || `A Deed Unsworn \u2014 ${b.minutes} min`);
 };
 
 /* ---- The willow's writ bubble: Elowen sends word when a Rest Writ resolved

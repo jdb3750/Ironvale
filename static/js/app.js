@@ -456,6 +456,9 @@ function footer() {
   const st = S.state;
   const canGoBack = S.depth > 0 && !S.historyBusy;
   const current = route => S.screen === route ? ' aria-current="page"' : '';
+  // unclaimed deed bubbles or willow-writ notices only show in town — glow
+  // the dock's TOWN key so a phone player knows a ceremony is waiting
+  const townAwaits = (S.fennQueue && S.fennQueue.length) || (S.writQueue && S.writQueue.length);
   return `${S.screen !== 'town' ? `<div class="backrow"><button type="button" class="btn small" data-route-back onclick="G.back()" ${canGoBack ? '' : 'disabled'}>&larr; BACK</button></div>` : ''}
   <div class="footer">
     <div class="footer-btns">
@@ -470,7 +473,7 @@ function footer() {
   </div>
   <nav class="phone-dock" aria-label="Iron Vale commands">
     <button type="button" class="dock-action" data-route-back onclick="G.back()" ${canGoBack ? '' : 'disabled'} aria-label="Back">&larr;<span>BACK</span></button>
-    <button type="button" class="dock-action" data-route-town${current('town')} onclick="nav('town')" ${S.historyBusy ? 'disabled' : ''} aria-label="Town"><span>TOWN</span></button>
+    <button type="button" class="dock-action${townAwaits && S.screen !== 'town' ? ' tab-glow' : ''}" data-route-town${current('town')} onclick="nav('town')" ${S.historyBusy ? 'disabled' : ''} aria-label="Town${townAwaits ? ' — something waits for you there' : ''}"><span>TOWN</span>${townAwaits && S.screen !== 'town' ? '<span class="tab-glow-dot"></span>' : ''}</button>
     <button type="button" class="dock-action"${current('settings')} onclick="nav('settings')" aria-label="Settings"><span>SETTINGS</span></button>
   </nav>`;
 }
