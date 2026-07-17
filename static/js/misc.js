@@ -261,10 +261,10 @@ SCREENS.settings = function () {
     <section aria-labelledby="settings-common">
     <div class="win"><span class="win-title" id="settings-common">At Hand</span>
       <div class="formrow">
-        <button type="button" class="btn wide" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
+        <button type="button" class="btn wide btn-fit" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
       </div>
       <div class="formrow">
-        <button type="button" class="btn wide" onclick="G.syncNow()">Send ravens (sync)</button>
+        <button type="button" class="btn wide btn-fit" onclick="G.syncNow()">Send ravens (sync)</button>
       </div>
       <div class="formrow">
         ${pixelSelect('set-wu', weightOpts, s.weight_unit, 'weight unit', 'saveWeightUnit')}
@@ -306,7 +306,7 @@ SCREENS.settings = function () {
         Athlete ID and API key: intervals.icu &rarr; Settings &rarr; Developer.</div>
       <div class="formrow"><label for="set-aid">athlete id (e.g. i12345)</label><input type="text" id="set-aid" value="${esc(s.intervals_athlete_id)}"></div>
       <div class="formrow"><label for="set-key">api key ${s.intervals_api_key ? '(saved — leave blank to keep)' : ''}</label><input type="password" id="set-key" placeholder="${s.intervals_api_key ? '••••••••' : ''}"></div>
-      <button class="btn wide" onclick="G.saveSettings(true)">SAVE &amp; SEND RAVENS</button>
+      <button class="btn wide btn-fit" onclick="G.saveSettings(true)">SAVE &amp; SEND RAVENS</button>
     </div>
     </section>
     <section aria-labelledby="settings-dev">
@@ -314,7 +314,7 @@ SCREENS.settings = function () {
       <div class="muted" style="font-size:17px;margin-bottom:6px">for testing features without living an entire second life</div>
       <button class="btn ${s.dev_mode ? 'danger' : ''}" onclick="G.toggleDev(${s.dev_mode ? 'false' : 'true'})">
         ${s.dev_mode ? 'DISABLE DEV MODE' : 'ENABLE DEV MODE'}</button>
-      ${s.dev_mode ? '<button class="btn wide" style="margin-top:10px" onclick="G.openDevConsole()">OPEN DEV CONSOLE</button>' : ''}
+      ${s.dev_mode ? '<button class="btn wide btn-fit" style="margin-top:10px" onclick="G.openDevConsole()">OPEN DEV CONSOLE</button>' : ''}
     </div>
     </section>
   `);

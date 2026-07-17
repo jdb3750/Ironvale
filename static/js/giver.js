@@ -131,7 +131,7 @@ SCREENS.giver = async function () {
       <div class="offer-primary">
         <div><span class="o-title">${esc(o.title)}</span>
           ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
-          ${o.modality ? `<span class="chip mod-${o.modality}">${o.modality}</span>` : ''}
+          ${modalityChip(o.modality, o.giver, o.program)}
           ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${o.intensity}">${o.intensity}</span>`}
           ${o.target_minutes ? `<span class="o-kind">~${o.target_minutes} min</span>` : ''}</div>
         <div class="o-struct">${esc(o.structure)}</div>
@@ -159,7 +159,7 @@ SCREENS.giver = async function () {
       <div class="offer ${isWrit ? 'writ' : ''}">
         <div class="offer-primary">
           <div><span class="o-title">${esc(q.title)}</span>
-            ${q.details.modality ? `<span class="chip mod-${q.details.modality}">${q.details.modality}</span>` : ''}
+            ${isWrit ? '' : modalityChip(q.details.modality, q.giver, q.details.program)}
             ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${q.details.intensity}">${q.details.intensity}</span>`}</div>
           <div class="o-struct">${esc(q.details.structure)}</div>
           ${q.details.routine ? `<div class="o-struct">${q.details.routine.map(routineLine).join('<br>')}</div>` : ''}
@@ -981,11 +981,12 @@ SCREENS.scrivener = async function () {
       <div class="formrow"><label>what was done</label>
         ${pixelSelect('cl-kind', types.map(t => ({ value: t.kind, label: t.label })),
           types.length ? types[0].kind : '', 'kind of deed')}</div>
-      <div class="formrow"><label>for how long (minutes)</label>
-        <input type="number" id="cl-min" value="60" min="1" max="600" step="1" inputmode="numeric"
-          style="max-width:120px" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
-      <div class="formrow"><label>note (optional)</label><input type="text" id="cl-note" placeholder="e.g. bouldering at the gym"></div>
-      <button class="btn big green" onclick="G.claim()">SWEAR IT ON THE LEDGER</button>
+      <div class="formrow">
+        <input type="number" id="cl-min" placeholder="duration (minutes)" aria-label="duration in minutes"
+          min="1" max="600" step="1" inputmode="numeric"
+          style="max-width:220px" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+      <div class="formrow"><input type="text" id="cl-note" placeholder="note (optional)" aria-label="note (optional)" style="max-width:340px"></div>
+      <button class="btn big green btn-fit" onclick="G.claim()">SWEAR IT ON THE LEDGER</button>
     </div>
     <div class="win"><span class="win-title">Today's Record (tap to fix)</span>
       ${recent.activities.map(a => `<div class="shop-row">

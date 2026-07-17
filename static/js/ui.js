@@ -8,6 +8,19 @@ function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 /* The one way to put an overlay on screen. Returns the overlay element.
    backdropClose: false for forced-choice moments (death, safe return)
    where dismissing by tapping outside would skip the ceremony. */
+/* The little colored tag naming a quest's activity type. Endurance/climb
+   offers carry an explicit modality; lift quests are tagged by their giver
+   (display only — adding a modality field to lift offers would flip their
+   matching from sets-based to time-based). Doctrine offers skip it: the
+   DOCTRINE chip already says "lifting" and three chips is a crowd. */
+function modalityChip(modality, giver, isProgram) {
+  if (modality) return `<span class="chip mod-${modality}">${modality}</span>`;
+  if (!isProgram && (giver === 'kettlebell' || giver === 'strength')) {
+    return '<span class="chip mod-lift">lift</span>';
+  }
+  return '';
+}
+
 function showModal(html, { backdropClose = true } = {}) {
   const ov = document.createElement('div');
   ov.className = 'overlay';
