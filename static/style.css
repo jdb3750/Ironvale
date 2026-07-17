@@ -380,7 +380,7 @@ label { color: var(--dim); font-size: 18px; text-transform: uppercase; letter-sp
 }
 /* glow rides on filter, NOT box-shadow — the key bevels live in box-shadow
    and an animation would override them outright (see iron-vale-gotchas) */
-.tabs .btn.tab-glow, .hall-nav .btn.tab-glow {
+.tabs .btn.tab-glow, .hall-nav .btn.tab-glow, .phone-dock .dock-action.tab-glow {
   position: relative;
   animation: tab-glow-pulse 1.4s ease-in-out infinite;
 }
