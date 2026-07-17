@@ -1,6 +1,6 @@
 ---
 name: iron-vale-ops
-description: Operational playbooks for Iron Vale — safely restarting/redeploying the live server on port 8321, the full scratch-DATA_DIR testing recipe, correcting live game data (raid.json, ledger) when something was recorded incorrectly, and opening pull requests. Use when deploying a backend change, setting up a test run, or fixing/amending already-synced live data.
+description: Operational playbooks for Iron Vale — the production deployment model (Portainer Docker auto-pulling origin/main), the full scratch-DATA_DIR testing recipe, running a local dev server, correcting live game data (raid.json, realm.json, ledger) on the server, and opening pull requests. Use when deploying a change, setting up a test run, or fixing/amending already-synced live data.
 ---
 
 # Iron Vale — operational playbooks
@@ -15,45 +15,41 @@ git commit -m "<imperative subject>"  # body explains why + migrations
 # ...when Joe says so: git push -u origin feat/<thing>
 ```
 
-## Redeploy procedure (port 8321, the LIVE game)
+## Deployment (production = origin/main)
 
-Use this after committing **backend `.py`** changes so the running game picks
-them up. Static JS/CSS/HTML do NOT need this — they're served fresh from disk
-on every request. Python modules are loaded once at uvicorn startup, so a
-restart is required for any `.py` edit to take effect on a running server.
+The live game runs on Joe's server as a **Docker instance managed by
+Portainer** that tracks `origin/main` on Codeberg and **auto-pulls roughly
+every 15 minutes**. There is no manual deploy step:
 
-1. **Identify the real LISTEN-state process** — filter to the listening socket,
-   do NOT use bare `lsof -ti :8321`:
-   ```sh
-   lsof -iTCP:8321 -sTCP:LISTEN -t
-   ```
-   Bare `lsof -ti :8321` can return multiple pids, including unrelated
-   processes that merely hold a stale/closed socket referencing the port
-   (observed in a real session: an unrelated helper showed up alongside the
-   actual uvicorn listener). Killing all of them can take down the wrong
-   process. `lsof -iTCP:8321 -sTCP:LISTEN -t` returns only the real listener.
-   (Same filter for port 8322 when restarting the test server.)
-2. **Capture the exact launch context BEFORE killing** — command line, cwd,
-   and env (notably `DATA_DIR`), so you can relaunch identically. For example
-   inspect the PID's full command:
-   ```sh
-   ps -o command= -p $(lsof -iTCP:8321 -sTCP:LISTEN -t)
-   ```
-   Note the cwd and any `DATA_DIR=` / port flags. The live server must keep
-   pointing at the real `data/` (Joe's live save) — NEVER point 8321 at a
-   test/scratch database.
-3. **Kill only that PID**:
-   ```sh
-   kill $(lsof -iTCP:8321 -sTCP:LISTEN -t)
-   ```
-4. **Relaunch identically, detached/backgrounded** so it survives the session
-   ending (e.g. with `nohup ... &` or the same launch mechanism Joe uses).
-   Preserve the exact `DATA_DIR`, port, and uvicorn flags you captured.
-5. **Verify it came back up** with a read-only curl, e.g.:
-   ```sh
-   curl -sS http://localhost:8321/ -o /dev/null -w "%{http_code}\n"
-   ```
-   Confirm a 200 (or the expected response) before walking away.
+- **Merging a PR into `main` IS the deployment.** The change is live for
+  every player within ~15 minutes. This is why nothing unverified may reach
+  `main` — verify on the 8322 scratch setup first, always.
+- There is nothing to restart locally. The old "restart uvicorn on 8321"
+  choreography is obsolete; port 8321 on Joe's Mac is at most a personal
+  dev instance nobody plays.
+- To confirm a deploy landed, wait out the poll interval and check the
+  live footer version (it renders the root `VERSION` file, which is read
+  at container startup).
+- Live player data (every profile DB, `raid.json`, `realm.json`,
+  `profiles.json`) lives in the server container's data volume — NOT in
+  this repo's local `data/`, which is a stale-but-real historical copy.
+
+**Backups**: the entire live state is one directory of SQLite files plus
+two small JSONs. A host-side cron that snapshots the Docker data volume
+(e.g. nightly `cp -a`/rsync to a dated folder, or `sqlite3 ... ".backup"`
+per DB for hot copies) is cheap and worth having before any testing phase
+with real players.
+
+## Running a local dev server (optional)
+
+For local poking only (never the live game): run uvicorn on **8322 with a
+scratch DATA_DIR** via the `iron-vale-test` launch config. If a stray local
+server needs killing, filter to the actual listener — bare `lsof -ti :PORT`
+can match unrelated processes holding stale sockets:
+
+```sh
+lsof -iTCP:8322 -sTCP:LISTEN -t   # the real listener, nothing else
+```
 
 ## Testing recipe
 
@@ -90,7 +86,10 @@ TestClient gotchas (see also skill `iron-vale-gotchas`):
 When something already-synced was recorded incorrectly (e.g. a mis-recorded
 activity duration that also fed raid boss damage), treat it like any other
 live-data mutation (CRITICAL SAFETY RULES: additive, log to the ledger, tell
-Joe exactly what changed). Repeatable choreography, honed in a real session:
+Joe exactly what changed). **The live files are on the server** — corrections
+happen against the Docker instance's data volume (via Portainer's console /
+`docker exec`, or however Joe grants access), never against the local repo's
+`data/` copy. Repeatable choreography, honed in a real session:
 
 1. **Back up first.** Copy the target file(s) under `data/` to `/tmp/` before
    touching anything, so you can diff/restore if the edit goes wrong.

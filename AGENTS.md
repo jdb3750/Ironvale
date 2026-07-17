@@ -22,16 +22,25 @@ This file holds only the always-true rules and quick-reference tables.
 
 ## CRITICAL SAFETY RULES
 
-1. **`data/` holds Joe's LIVE SAVE** (`ironvale.db`, `profiles.json`, plus one
-   `.db` per friend profile). Never wipe, seed, or test against it. Never run
-   test code with the default DATA_DIR.
-2. **Port 8321 is the live game.** Joe plays it mid-session, including while
-   you work. Never point 8321 at a test database. Test on **port 8322** with a
-   scratch `DATA_DIR` — a launch config `iron-vale-test` exists in
-   `~/Code/.claude/launch.json` for exactly this (update its DATA_DIR to a
-   fresh scratch dir per session).
-3. If you must mutate live data (migration, backfill), do it additively, log
-   it to the ledger (`db.log_event`), and tell Joe exactly what changed.
+1. **`main` IS production.** The live game runs on Joe's server as a
+   Portainer-managed Docker instance that tracks `origin/main` and
+   auto-pulls roughly every 15 minutes — anything merged to `main` is in
+   players' hands within minutes, with no human deploy step in between.
+   Never merge unverified or half-done work; verify on the 8322 test setup
+   first, then merge.
+2. **Live player data lives on the server**, in the Docker instance's data
+   volume — NOT in this repo's local `data/`. Local `data/` is a real
+   historical copy of Joe's save (`ironvale.db`, `profiles.json`, one `.db`
+   per friend) and contains real intervals.icu credentials: never wipe,
+   seed, test against, or commit it. Never run test code with the default
+   DATA_DIR. Test on **port 8322** with a scratch `DATA_DIR` — a launch
+   config `iron-vale-test` exists for exactly this (update its DATA_DIR to
+   a fresh scratch dir per session). A local uvicorn on 8321 is only a dev
+   convenience now; nobody plays it.
+3. If you must mutate live data (migration, backfill), it must happen
+   against the server's data volume, additively, logged to the ledger
+   (`db.log_event`) — and tell Joe exactly what changed. See skill
+   `iron-vale-ops`.
 4. **Bump the `?v=N` query on ALL static asset URLs in `static/index.html`
    whenever you change any JS/CSS file.** Browsers cache aggressively; a
    middleware sends `Cache-Control: no-cache` but the version bump is the
@@ -68,8 +77,9 @@ Golden rules:
    (see safety rule 4) — otherwise players get stale JS/CSS.
 6. **End AI-authored commits** with a trailer:
    `Co-Authored-By: <model> <noreply@anthropic.com>`.
-7. **After committing app code, redeploy**: restart uvicorn on 8321 so the
-   running game picks it up.
+7. **Merging to `main` deploys automatically** — the server's Docker
+   instance pulls `origin/main` every ~15 minutes. There is no manual
+   restart step, which is exactly why nothing unverified may reach `main`.
 
 ### Branch and release tag policy
 
@@ -114,7 +124,7 @@ separate "bump version" commit (same spirit as the `?v=N` rule). Tagging is
 recommended but not mandatory: `git tag vX.Y.Z` on the bumping commit, for
 easy reference. (The repo has zero tags today; start the habit.)
 
-See skill `iron-vale-ops` for the exact redeploy/restart procedure and for opening PRs.
+See skill `iron-vale-ops` for the deployment model, testing recipe, and opening PRs.
 
 If you ever find a stray non-project file in the tree (past example:
 `hello_world.py`, `CODEX_CACHE.md` — leftover cruft from another tool, since
@@ -137,7 +147,8 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   dungeon.py    Roguelike engine, Binding-of-Isaac rules: run-scoped gear/items/trinkets.
   intervals.py  intervals.icu sync (basic auth): activities + wellness.
   monsters.py   Menagerie: DNA-seeded procedural monsters, packs, hats, buddy, capture.
-  raid.py       The Siege: ONE weekly boss shared by ALL profiles (state in data/raid.json).
+  raid.py       The Siege: ONE weekly boss shared by ALL profiles (state in data/raid.json;
+                shared realm config — the Siege Bell timezone — in data/realm.json).
   road.py       The Long Road: lifetime km -> pilgrimage landmarks (kv "road_claimed").
   colosseum.py  Betting mini-games (fight/race/pageant) vs. ephemeral rivals.
   items.py      Item catalog: dungeon gear/consumables/trinkets + Crankwerk cosmetics + packs.
@@ -198,6 +209,11 @@ For deeper behavior of any specific module, load skill `iron-vale-architecture`.
   `api()` toasts it automatically. Endpoints are thin; logic lives in modules.
 - **kv store**: per-profile misc state (character, settings, dungeon run,
   offers cache, buddy_id, resume_floor, pack_series). `db.kv_get/set/del`.
+- **Two clocks**: personal time (`game.now()`/`today()`, calendars, quest
+  days) follows the per-profile `settings.timezone`, auto-synced from the
+  player's device at boot; Siege week math (`raid.siege_now()`/
+  `week_start()`) follows the ONE shared realm bell in `data/realm.json`.
+  Never mix the two — see skill `iron-vale-gotchas`.
 
 ## Data model quick reference
 
