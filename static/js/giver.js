@@ -165,8 +165,8 @@ SCREENS.giver = async function () {
           <div class="${q.completable ? '' : 'muted'}" style="margin:6px 0">${q.completable ? '&#10004; ' : ''}${esc(q.progress_note)}</div>
           ${q.details.focus ? `<div class="center" style="margin:6px 0">${bodyMapTag(q.details.focus, 78)}</div>` : ''}
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-            ${isLiftGiver ? `<button class="btn" onclick="nav('logger',{quest:${q.id}})">OPEN TRAINING LOG</button>` : ''}
-            ${q.giver === 'running' ? `<button class="btn" onclick="G.syncThenBack('${key}')">SYNC RUNS</button>` : ''}
+            ${isLiftGiver && q.details.routine ? `<button class="btn" onclick="nav('logger',{quest:${q.id}})">OPEN TRAINING LOG</button>` : ''}
+            ${q.giver === 'running' || q.details.modality === 'climb' ? `<button class="btn" onclick="G.syncThenBack('${key}')">SYNC ${({run:'RUNS',ride:'RIDES',swim:'SWIMS',climb:'THE WALL'})[q.details.modality] || 'RUNS'}</button>` : ''}
             ${isWrit ? ''
               : q.completable
                 ? `<button class="btn green" onclick="G.complete(${q.id}, false)">TURN IN QUEST</button>`
