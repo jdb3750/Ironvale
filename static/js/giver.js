@@ -975,17 +975,17 @@ SCREENS.scrivener = async function () {
     </div>`;
   $app().innerHTML = shell(`
     ${isCompactPhone() ? '' : wickWin}
-    <div class="win"><span class="win-title">Confess a Deed (unverified)</span>
+    <div class="win deed-form"><span class="win-title">Confess a Deed (unverified)</span>
       <div class="muted" style="font-size:17px;margin-bottom:8px">Forgot your tracker at the crag? Swear it before Wick.
         No witness means prorated pay: seven coins in ten.</div>
-      <div class="formrow"><label>what was done</label>
+      <div class="formrow">
         ${pixelSelect('cl-kind', types.map(t => ({ value: t.kind, label: t.label })),
-          types.length ? types[0].kind : '', 'kind of deed')}</div>
+          '', 'what was done', undefined, 'What was done')}</div>
       <div class="formrow">
         <input type="number" id="cl-min" placeholder="duration (minutes)" aria-label="duration in minutes"
           min="1" max="600" step="1" inputmode="numeric"
-          style="max-width:220px" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
-      <div class="formrow"><input type="text" id="cl-note" placeholder="note (optional)" aria-label="note (optional)" style="max-width:340px"></div>
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+      <div class="formrow"><input type="text" id="cl-note" placeholder="note (optional)" aria-label="note (optional)"></div>
       <button class="btn big green btn-fit" onclick="G.claim()">SWEAR IT ON THE LEDGER</button>
     </div>
     <div class="win"><span class="win-title">Today's Record (tap to fix)</span>
@@ -1006,8 +1006,12 @@ SCREENS.scrivener = async function () {
 G.claim = async () => {
   const token = captureRouteToken();
   const kind = document.getElementById('cl-kind').value;
-  const minutes = Math.max(1, Math.min(600, parseInt(document.getElementById('cl-min').value, 10) || 0));
-  if (!minutes) { toast('How long, exactly? Give Wick a number of minutes.', true); return; }
+  if (!kind) { toast('Tell Wick what was done, first.', true); return; }
+  // parse BEFORE clamping — clamping an empty field to 1 minute would
+  // quietly swear a sixty-second deed instead of asking
+  const raw = parseInt(document.getElementById('cl-min').value, 10) || 0;
+  if (!raw) { toast('How long, exactly? Give Wick a number of minutes.', true); return; }
+  const minutes = Math.max(1, Math.min(600, raw));
   const note = document.getElementById('cl-note').value;
   const r = await api('/claim', { method: 'POST', body: { kind, minutes, note } });
   await refreshState();

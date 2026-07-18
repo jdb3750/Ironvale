@@ -345,10 +345,13 @@ h1, h2, h3 { font-weight: normal; }
 .chip.mod-lift { border-color: #c85050; color: #c85050; }
 
 /* full-width is a phone affordance: keys opting in via .btn-fit (and any
-   picker in a form row) settle to a snug centered width on desktop */
+   picker or input in a form row) settle to ONE shared width on desktop, so
+   a screen's controls line up as a tidy column instead of ragged widths */
 @media (min-width: 720px) {
-  .btn.btn-fit { display: block; width: auto; min-width: 280px; margin-left: auto; margin-right: auto; }
+  .btn.btn-fit { display: block; width: 340px; max-width: 100%; margin-left: auto; margin-right: auto; }
   .formrow .pixel-select { max-width: 340px; margin-left: auto; margin-right: auto; }
+  .formrow .pixel-select-summary { display: block; width: 100%; box-sizing: border-box; }
+  .deed-form .formrow input { max-width: 340px; margin-left: auto; margin-right: auto; display: block; }
 }
 
 /* ---- logger ---- */

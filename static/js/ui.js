@@ -38,10 +38,13 @@ function showModal(html, { backdropClose = true } = {}) {
    dropdown the Menagerie's hat picker uses, generalized. Renders around a
    hidden input carrying the chosen value, so any code that already reads
    document.getElementById(id).value keeps working unchanged. */
-function pixelSelect(id, options, selected, ariaLabel, onChange) {
+function pixelSelect(id, options, selected, ariaLabel, onChange, placeholder) {
   // Degrade gracefully on an empty option set (a native <select> would too),
   // rather than throwing on esc(current.label) and blanking the whole screen.
-  const current = options.find(o => o.value === selected) || options[0] || { value: '', label: '' };
+  // With a placeholder, an unmatched selection shows the prompt text and an
+  // empty hidden value — the caller decides whether empty is submittable.
+  const current = options.find(o => o.value === selected)
+    || (placeholder ? { value: '', label: placeholder } : options[0] || { value: '', label: '' });
   const onAttr = onChange ? ` data-onchange="${esc(onChange)}"` : '';
   return `<details class="pixel-select"${onAttr}>
     <summary class="btn small pixel-select-summary" aria-haspopup="menu" aria-label="${esc(ariaLabel)}"><span class="pixel-select-label">${esc(current.label)}</span></summary>
