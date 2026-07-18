@@ -8,6 +8,19 @@ function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 /* The one way to put an overlay on screen. Returns the overlay element.
    backdropClose: false for forced-choice moments (death, safe return)
    where dismissing by tapping outside would skip the ceremony. */
+/* The little colored tag naming a quest's activity type. Endurance/climb
+   offers carry an explicit modality; lift quests are tagged by their giver
+   (display only — adding a modality field to lift offers would flip their
+   matching from sets-based to time-based). Doctrine offers skip it: the
+   DOCTRINE chip already says "lifting" and three chips is a crowd. */
+function modalityChip(modality, giver, isProgram) {
+  if (modality) return `<span class="chip mod-${modality}">${modality}</span>`;
+  if (!isProgram && (giver === 'kettlebell' || giver === 'strength')) {
+    return '<span class="chip mod-lift">lift</span>';
+  }
+  return '';
+}
+
 function showModal(html, { backdropClose = true } = {}) {
   const ov = document.createElement('div');
   ov.className = 'overlay';
@@ -25,10 +38,13 @@ function showModal(html, { backdropClose = true } = {}) {
    dropdown the Menagerie's hat picker uses, generalized. Renders around a
    hidden input carrying the chosen value, so any code that already reads
    document.getElementById(id).value keeps working unchanged. */
-function pixelSelect(id, options, selected, ariaLabel, onChange) {
+function pixelSelect(id, options, selected, ariaLabel, onChange, placeholder) {
   // Degrade gracefully on an empty option set (a native <select> would too),
   // rather than throwing on esc(current.label) and blanking the whole screen.
-  const current = options.find(o => o.value === selected) || options[0] || { value: '', label: '' };
+  // With a placeholder, an unmatched selection shows the prompt text and an
+  // empty hidden value — the caller decides whether empty is submittable.
+  const current = options.find(o => o.value === selected)
+    || (placeholder ? { value: '', label: placeholder } : options[0] || { value: '', label: '' });
   const onAttr = onChange ? ` data-onchange="${esc(onChange)}"` : '';
   return `<details class="pixel-select"${onAttr}>
     <summary class="btn small pixel-select-summary" aria-haspopup="menu" aria-label="${esc(ariaLabel)}"><span class="pixel-select-label">${esc(current.label)}</span></summary>

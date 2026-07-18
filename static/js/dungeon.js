@@ -60,7 +60,7 @@ SCREENS.undercroft = async function () {
           </div>
         </details>
         <div class="dungeon-gate-primary" style="margin-top:12px">
-          <button type="button" class="btn big dungeon-action ${d.vigor >= d.enter_cost ? 'green' : ''}" ${d.vigor >= d.enter_cost ? '' : 'disabled'}
+          <button type="button" class="btn big btn-fit dungeon-action ${d.vigor >= d.enter_cost ? 'green' : ''}" ${d.vigor >= d.enter_cost ? '' : 'disabled'}
             onclick="G.enterDungeon()">DESCEND (&minus;${d.enter_cost} VIGOR)</button>
           ${d.vigor < d.enter_cost ? '<div class="muted center" style="margin-top:6px">not enough vigor — go complete a quest</div>' : ''}
         </div>

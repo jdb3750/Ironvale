@@ -131,6 +131,7 @@ SCREENS.giver = async function () {
       <div class="offer-primary">
         <div><span class="o-title">${esc(o.title)}</span>
           ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
+          ${modalityChip(o.modality, o.giver, o.program)}
           ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${o.intensity}">${o.intensity}</span>`}
           ${o.target_minutes ? `<span class="o-kind">~${o.target_minutes} min</span>` : ''}</div>
         <div class="o-struct">${esc(o.structure)}</div>
@@ -158,6 +159,7 @@ SCREENS.giver = async function () {
       <div class="offer ${isWrit ? 'writ' : ''}">
         <div class="offer-primary">
           <div><span class="o-title">${esc(q.title)}</span>
+            ${isWrit ? '' : modalityChip(q.details.modality, q.giver, q.details.program)}
             ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${q.details.intensity}">${q.details.intensity}</span>`}</div>
           <div class="o-struct">${esc(q.details.structure)}</div>
           ${q.details.routine ? `<div class="o-struct">${q.details.routine.map(routineLine).join('<br>')}</div>` : ''}
@@ -250,8 +252,14 @@ G.complete = async (id, honor) => {
 };
 
 G.completeHonor = async (id) => {
-  if (await confirmModal('No matching record found. Swear on your honor that the deed is done?',
-      { title: 'On your honor?', okLabel: 'I SWEAR IT' })) {
+  // With a tracker linked, honoring too early is the one path that can
+  // double-record a workout: honor writes a synthetic deed NOW, and the
+  // ravens may deliver the real one later (it also strikes the Siege
+  // twice). Nudge toward syncing first; honor stays one tap away.
+  const message = S.state?.settings?.intervals_api_key
+    ? 'No matching record found. If your tracker logged this deed, SEND RAVENS first — swearing now records it by hand, and the ravens may bring a second copy later.'
+    : 'No matching record found. Swear on your honor that the deed is done?';
+  if (await confirmModal(message, { title: 'On your honor?', okLabel: 'I SWEAR IT' })) {
     G.complete(id, true);
   }
 };
@@ -967,17 +975,18 @@ SCREENS.scrivener = async function () {
     </div>`;
   $app().innerHTML = shell(`
     ${isCompactPhone() ? '' : wickWin}
-    <div class="win"><span class="win-title">Confess a Deed (unverified)</span>
+    <div class="win deed-form"><span class="win-title">Confess a Deed (unverified)</span>
       <div class="muted" style="font-size:17px;margin-bottom:8px">Forgot your tracker at the crag? Swear it before Wick.
         No witness means prorated pay: seven coins in ten.</div>
-      <div class="formrow"><label>what was done</label>
+      <div class="formrow">
         ${pixelSelect('cl-kind', types.map(t => ({ value: t.kind, label: t.label })),
-          types.length ? types[0].kind : '', 'kind of deed')}</div>
-      <div class="formrow"><label>for how long (minutes)</label>
-        <input type="number" id="cl-min" value="60" min="1" max="600" step="1" inputmode="numeric"
-          style="max-width:120px" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
-      <div class="formrow"><label>note (optional)</label><input type="text" id="cl-note" placeholder="e.g. bouldering at the gym"></div>
-      <button class="btn big green" onclick="G.claim()">SWEAR IT ON THE LEDGER</button>
+          '', 'what was done', undefined, 'What was done')}</div>
+      <div class="formrow">
+        <input type="number" id="cl-min" placeholder="duration (minutes)" aria-label="duration in minutes"
+          min="1" max="600" step="1" inputmode="numeric"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+      <div class="formrow"><input type="text" id="cl-note" placeholder="note (optional)" aria-label="note (optional)"></div>
+      <button class="btn big green btn-fit" onclick="G.claim()">SWEAR IT ON THE LEDGER</button>
     </div>
     <div class="win"><span class="win-title">Today's Record (tap to fix)</span>
       ${recent.activities.map(a => `<div class="shop-row">
@@ -997,8 +1006,12 @@ SCREENS.scrivener = async function () {
 G.claim = async () => {
   const token = captureRouteToken();
   const kind = document.getElementById('cl-kind').value;
-  const minutes = Math.max(1, Math.min(600, parseInt(document.getElementById('cl-min').value, 10) || 0));
-  if (!minutes) { toast('How long, exactly? Give Wick a number of minutes.', true); return; }
+  if (!kind) { toast('Tell Wick what was done, first.', true); return; }
+  // parse BEFORE clamping — clamping an empty field to 1 minute would
+  // quietly swear a sixty-second deed instead of asking
+  const raw = parseInt(document.getElementById('cl-min').value, 10) || 0;
+  if (!raw) { toast('How long, exactly? Give Wick a number of minutes.', true); return; }
+  const minutes = Math.max(1, Math.min(600, raw));
   const note = document.getElementById('cl-note').value;
   const r = await api('/claim', { method: 'POST', body: { kind, minutes, note } });
   await refreshState();

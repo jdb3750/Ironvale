@@ -337,6 +337,22 @@ h1, h2, h3 { font-weight: normal; }
 .chip.hard { border-color: var(--red); color: var(--red); }
 .chip.moderate { border-color: var(--gold); color: var(--gold); }
 .chip.low { border-color: var(--green); color: var(--green); }
+/* modality tags on quests/offers — same hues as the calendar's category dots */
+.chip.mod-run { border-color: #7ab55c; color: #7ab55c; }
+.chip.mod-ride { border-color: #6aa0c8; color: #6aa0c8; }
+.chip.mod-swim { border-color: #4a90d0; color: #4a90d0; }
+.chip.mod-climb { border-color: #e07030; color: #e07030; }
+.chip.mod-lift { border-color: #c85050; color: #c85050; }
+
+/* full-width is a phone affordance: keys opting in via .btn-fit (and any
+   picker or input in a form row) settle to ONE shared width on desktop, so
+   a screen's controls line up as a tidy column instead of ragged widths */
+@media (min-width: 720px) {
+  .btn.btn-fit { display: block; width: 340px; max-width: 100%; margin-left: auto; margin-right: auto; }
+  .formrow .pixel-select { max-width: 340px; margin-left: auto; margin-right: auto; }
+  .formrow .pixel-select-summary { display: block; width: 100%; box-sizing: border-box; }
+  .deed-form .formrow input { max-width: 340px; margin-left: auto; margin-right: auto; display: block; }
+}
 
 /* ---- logger ---- */
 .ex-row { border: 2px solid #3a3450; background: var(--panel2); padding: 8px 10px; margin: 8px 0; }
