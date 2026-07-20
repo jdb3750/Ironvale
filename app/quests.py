@@ -9,7 +9,7 @@ import math
 import random
 from datetime import datetime, timedelta
 
-from . import db, exercises, intervals, items
+from . import db, exercises, intervals, items, raid
 from .game import (
     AMBITION, CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVERS, RUN_TYPES,
     ambition_mult, apply_xp, category, get_char, get_settings, last_weight,
@@ -726,6 +726,46 @@ def auto_complete_ready():
             except ValueError:
                 pass
     return done
+
+
+def reconcile_honor_completions(slug):
+    """Replace a counted honor activity with its later tracker record when unambiguous."""
+    rows = db.q(
+        "SELECT q.*, a.id AS synthetic_id, a.start AS synthetic_start, "
+        "a.type AS synthetic_type, a.moving_time AS synthetic_seconds "
+        "FROM quests q JOIN activities a ON a.id=q.activity_id "
+        "WHERE q.status='done' AND q.honor=1 AND a.source='honor'"
+    ).fetchall()
+    reconciled = 0
+    for row in rows:
+        synthetic_seconds = row["synthetic_seconds"] or 0
+        if not synthetic_seconds:
+            continue
+        candidates = db.q(
+            "SELECT * FROM activities WHERE source='intervals.icu' AND start LIKE ? "
+            "AND id NOT IN (SELECT activity_id FROM quests WHERE activity_id IS NOT NULL)",
+            (row["synthetic_start"][:10] + "%",),
+        ).fetchall()
+        max_gap = max(15 * 60, int(synthetic_seconds * 0.5))
+        matches = [
+            activity for activity in candidates
+            if category(activity["type"]) == category(row["synthetic_type"])
+            and abs((activity["moving_time"] or 0) - synthetic_seconds) <= max_gap
+        ]
+        if len(matches) != 1:
+            continue
+        tracker = matches[0]
+        raid.mark_reconciled_activity(slug, row["synthetic_id"], tracker["id"])
+        db.q("UPDATE quests SET activity_id=? WHERE id=?", (tracker["id"], row["id"]))
+        db.q("DELETE FROM activities WHERE id=?", (row["synthetic_id"],))
+        db.log_event(
+            now_iso(), "reconcile",
+            f"The ravens found the true record for '{row['title']}'. Wick struck out its honor duplicate.",
+        )
+        reconciled += 1
+    if reconciled:
+        db.commit()
+    return reconciled
 
 
 def invalidate_offers():

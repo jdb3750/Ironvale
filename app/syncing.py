@@ -28,6 +28,7 @@ def _sync_profile(slug, fetch_intervals):
         completed = []
         if fetch_intervals:
             new = intervals.sync()
+            quests.reconcile_honor_completions(slug)
             completed = quests.auto_complete_ready()
             quests.grant_unguided_run_bonus()
         quests.resolve_rest_writs()
