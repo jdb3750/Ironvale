@@ -493,10 +493,13 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 }
 .dcell.seen { background: #181828; border-color: #2e2b4a; }
 .dcell.cleared { background: #20203a; }
-.dcell.adjacent { cursor: pointer; box-shadow: inset 0 0 0 1px #4a4a70; }
-.dcell.adjacent:hover { box-shadow: inset 0 0 0 2px var(--gold); }
+.dcell.adjacent {
+  cursor: pointer; background: #29251a; border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold-bright);
+}
+.dcell.adjacent:hover { background: #342f1c; box-shadow: inset 0 0 0 2px var(--gold-bright); }
 .dcell.player { background: #2a2a10; box-shadow: inset 0 0 0 2px var(--gold-bright); }
-.dpad { display: grid; grid-template-columns: repeat(3, 64px); gap: 4px; justify-content: center; margin: 10px 0; }
+.dmap-hint { margin: 6px 0; color: var(--dim); font-size: 17px; text-align: center; }
 .dlog {
   background: #000; border: 2px solid #4a3d20; padding: 8px 10px;
   min-height: 90px; max-height: 150px; overflow-y: auto; font-size: 19px;
@@ -1265,7 +1268,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     white-space: nowrap;
     overflow-wrap: normal;
   }
-  .dpad { grid-template-columns: repeat(3, 76px); }
   .topbar .game-title { font-size: 18px; }
   .topbar .btn.small { min-width: 0; }
   .calday { min-height: 44px; }
@@ -1709,7 +1711,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     .hero-btn,
     .buddy-chip,
     .bld,
-    .dpad .btn,
     .combat-actions .btn,
     .pip-panel .btn,
     .col-contestant,
@@ -1801,8 +1802,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   .dungeon-gate-primary { order: -2; }
   .dungeon-gate-rules { order: 2; }
   .dungeon-gate-primary .btn { width: 100%; }
-  .dpad { grid-template-columns: repeat(3, minmax(64px, 76px)); }
-
   :where(
     button.hdr-brand,
     button.hero-btn,

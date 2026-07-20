@@ -440,7 +440,7 @@ def action(payload):
                 d["log"].append(f"A quiet shrine to forgotten wardens. You recover {heal} HP.")
                 cell["cleared"] = True
             elif t == "merchant":
-                if not d.get("shop_stock"):
+                if d.get("shop_stock") is None:
                     d["shop_stock"] = _gen_shop(d, random.Random(d["seed"] ^ 0xB1D))
                 d["log"].append("A lantern in the dark — Pip?! 'Every floor, friend. I get around. Cave prices, loot gold only.'")
             elif t == "relic":
