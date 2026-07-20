@@ -242,7 +242,7 @@ def apply_damage(slug):
                 start = start[:-1] + "+00:00"
             st = datetime.fromisoformat(start)
             if st.tzinfo is None:
-                st = st.replace(tzinfo=siege_tz())
+                st = st.replace(tzinfo=game.profile_tz())
             if st < wk:
                 continue
             if a["id"] in seen:
