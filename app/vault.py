@@ -8,8 +8,9 @@ for a self-hosted save — a bad migration, a buggy write, an accidental
 deletion — with zero configuration. It is the floor, not the ceiling:
 off-volume host backups are still recommended (see skill iron-vale-ops).
 
-Stateless by design: "already ran today" is simply "today's folder exists",
-so there is no marker to corrupt and a restart never double-runs it.
+Stateless by design: a dated folder exists only after every copy succeeds.
+Work is sealed in a sibling `.incomplete` directory and atomically published,
+so an interruption never makes a partial snapshot look complete.
 """
 import glob
 import os
@@ -31,27 +32,36 @@ def _backups_root():
 
 def snapshot_if_due(now=None):
     """Run at most once per UTC day; returns the snapshot dir when it ran,
-    None when today's vault already exists. Never raises — a failed vault
-    must not take down the sync loop (callers already guard, but the vault
-    guards itself too)."""
+    None when today's vault already exists. Swallows the expected IO failure
+    classes (OSError, shutil, sqlite3) so a bad disk day cannot take down the
+    sync loop; the scheduler guards against anything else."""
+    today = (now or datetime.now(timezone.utc)).date().isoformat()
+    root = _backups_root()
+    dest = os.path.join(root, today)
+    staging = dest + ".incomplete"
     try:
-        today = (now or datetime.now(timezone.utc)).date().isoformat()
-        dest = os.path.join(_backups_root(), today)
         if os.path.isdir(dest):
             return None
-        os.makedirs(dest, exist_ok=True)
+        os.makedirs(root, exist_ok=True)
+        if os.path.isdir(staging):
+            shutil.rmtree(staging)
+        os.makedirs(staging)
         for src in sorted(glob.glob(os.path.join(db.DATA_DIR, "*.db"))):
-            _backup_sqlite(src, os.path.join(dest, os.path.basename(src)))
+            _backup_sqlite(src, os.path.join(staging, os.path.basename(src)))
         for name in SHARED_JSON:
             src = os.path.join(db.DATA_DIR, name)
             if os.path.exists(src):
-                shutil.copy2(src, os.path.join(dest, name))
+                shutil.copy2(src, os.path.join(staging, name))
+        os.rename(staging, dest)
         _prune(keep=KEEP_DAYS)
         print(f"[vault] realm snapshot sealed: {dest}")
         return dest
-    except Exception as e:  # noqa: BLE001 — the vault must never sink the loop
-        print(f"[vault] snapshot failed: {e}")
+    except (OSError, shutil.Error, sqlite3.Error) as error:
+        print(f"[vault] snapshot failed: {error}")
         return None
+    finally:
+        if os.path.isdir(staging):
+            shutil.rmtree(staging, ignore_errors=True)
 
 
 def _backup_sqlite(src_path, dest_path):

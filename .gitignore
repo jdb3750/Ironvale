@@ -4,7 +4,8 @@ __pycache__/
 *.pyc
 .aider*
 .DS_Store
-.omo/
+node_modules/
 test-results/
+.omo/
 .claude/
 .opencode/opencode.json

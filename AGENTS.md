@@ -135,7 +135,7 @@ assuming it's yours to remove.
 
 ```
 app/                     FastAPI backend (Python, stdlib sqlite3)
-  main.py       All HTTP endpoints, auth + profile middleware, 15-min auto-sync loop.
+  main.py       App shell, auth + profile middleware, remaining HTTP routes, scheduler.
   db.py         SQLite layer; one DB file per profile, routed via contextvar —
                 use db.q()/kv_*, never open sqlite directly.
   profiles.py   Adventurer roster: data/profiles.json maps slug -> db file + PIN hash.
@@ -146,6 +146,9 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   programs.py   Doctrines (Starting Strength etc.) + custom routines; linear progression.
   dungeon.py    Roguelike engine, Binding-of-Isaac rules: run-scoped gear/items/trinkets.
   intervals.py  intervals.icu sync (basic auth): activities + wellness.
+  syncing.py    One complete manual/background sync flight and durable error status.
+  lifts.py      Lifting-ledger routes, validation, amendments, and day bounds.
+  vault.py      Atomic daily realm snapshots with 14-day retention.
   monsters.py   Menagerie: DNA-seeded procedural monsters, packs, hats, buddy, capture.
   raid.py       The Siege: ONE weekly boss shared by ALL profiles (state in data/raid.json;
                 shared realm config — the Siege Bell timezone — in data/realm.json).
@@ -245,11 +248,17 @@ cookie first); test frontend on port 8322 with a scratch `DATA_DIR` launch
 config (`iron-vale-test`). See skill `iron-vale-ops` for the full recipe and
 TestClient/profile-routing gotchas.
 
-**Regression net**: `.venv/bin/python tests/smoke.py` — 76 checks over every
+**Regression net**: `.venv/bin/python tests/smoke.py` — 215 checks over every
 read endpoint plus the quest/dungeon/gacha/scrivener lifecycles on a throwaway
 scratch DB. Run it before AND after any refactor that moves code; identical
 green is the acceptance bar. It must never point at the live `data/` dir (it
 builds its own scratch and deletes it).
+
+Frontend logic and browser regressions are repeatable too:
+`npm run test:frontend` runs the DOM harness, while `npm run test:browser`
+launches a scratch server on port 8322 and drives headless Chromium through
+phone validation, profile/PIN switching, and sync-failure visibility. Run
+`npm install && npx playwright install chromium` once on a new checkout.
 
 ## Gotchas
 

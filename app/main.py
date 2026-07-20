@@ -1,21 +1,18 @@
 """Iron Vale — a self-hosted fitness RPG. FastAPI app: serves the API and the static frontend."""
 import asyncio
 import hashlib
-import math
 import os
-import re
-from decimal import Decimal
-from datetime import date, timedelta
-from typing import Optional, Tuple
+from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, monsters, profiles, programs, quests, raid, records, road, vault
+from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
 
 app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
+app.include_router(lifts.router)
 
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL_SECONDS", "900"))  # 15 min
 
@@ -32,13 +29,7 @@ except OSError:
 def _sync_one_profile(slug, path):
     token = db.set_profile(path)
     try:
-        s = game.get_settings()
-        if s["intervals_athlete_id"] and s["intervals_api_key"]:
-            intervals.sync()
-            quests.auto_complete_ready()
-            quests.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
-        quests.resolve_rest_writs()  # dawn check runs even without intervals creds
-        raid.apply_damage(slug)  # this week's uncounted deeds strike the siege
+        syncing.maintain_profile(slug)
     finally:
         db.reset_profile(token)
 
@@ -48,21 +39,23 @@ async def _start_auto_sync():
     async def loop():
         while True:
             # once per UTC day, seal the realm's snapshot before the ravens fly
-            await asyncio.to_thread(vault.snapshot_if_due)
+            try:
+                await asyncio.to_thread(vault.snapshot_if_due)
+            except Exception as error:  # noqa: BLE001 — the vault must never sink the loop
+                print("[vault] snapshot pass failed", {"error": error.__class__.__name__})
             for p in profiles.ensure_index():
                 try:
                     await asyncio.to_thread(_sync_one_profile, p["slug"], os.path.join(db.DATA_DIR, p["file"]))
-                except Exception:
-                    pass  # ravens get lost sometimes; try again next tick
+                except Exception as error:  # noqa: BLE001 — per-profile status is already persisted
+                    print("[sync] scheduled flight will retry", {
+                        "profile": p["slug"],
+                        "error": error.__class__.__name__,
+                    })
             await asyncio.sleep(SYNC_INTERVAL)
     asyncio.create_task(loop())
 
 STATIC = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
-PLAIN_DECIMAL = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
-ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-MAX_LIFT_COUNT = 2_147_483_647
-MAX_LIFT_WEIGHT = 1_000_000
 
 
 def _token():
@@ -190,6 +183,7 @@ def state():
         "dungeon_active": dungeon.get_state() is not None,
         "resume_floor": db.kv_get("resume_floor", 1),
         "last_sync": db.kv_get("last_sync"),
+        "last_sync_error": db.kv_get(syncing.ERROR_KEY),
         "combat_stats": dungeon.player_stats(),
         "xp_to_next": game.xp_to_next(c["level"]),
         "buddy": monsters.get_buddy(),
@@ -243,12 +237,11 @@ async def save_settings(request: Request):
         c = game.get_char()
         c["name"] = str(body["name"])[:24]
         game.save_char(c)
-    response = {"ok": True}
     if "siege_timezone" in body:
         # Read the shared realm value back after writing so the client can
         # rebuild its settings screen from the same source of truth as state.
-        response["siege_timezone"] = raid.get_siege_timezone()
-    return response
+        return {"ok": True, "siege_timezone": raid.get_siege_timezone()}
+    return {"ok": True}
 
 
 # ---------------- quests ----------------
@@ -303,13 +296,7 @@ def quest_log():
 
 @app.post("/api/sync")
 def sync(request: Request):
-    new = intervals.sync()
-    # synced activities auto-complete matching quests — return ceremonies for the UI
-    completed = quests.auto_complete_ready()
-    quests.grant_unguided_run_bonus()  # queues Fenn's bubble for any run with no quest accepted
-    quests.resolve_rest_writs()  # a freshly-synced hard workout may break an active writ
-    raid_damage = raid.apply_damage(request.cookies.get("iv_profile"))
-    return {"new_activities": new, "completed": completed, "raid_damage": raid_damage}
+    return syncing.sync_linked_profile(request.cookies.get("iv_profile"))
 
 
 @app.post("/api/unguided/claim")
@@ -378,105 +365,6 @@ async def manual_activity(request: Request):
     return {"ok": True}
 
 
-def _parse_lift_decimal(value, field: str) -> Decimal:
-    if isinstance(value, bool):
-        raise ValueError(f"Record {field} as a plain number.")
-    if isinstance(value, (int, float)):
-        if isinstance(value, float) and not math.isfinite(value):
-            raise ValueError(f"Record {field} as a finite number.")
-        return Decimal(str(value))
-    if isinstance(value, str):
-        text = value.strip()
-        if not PLAIN_DECIMAL.fullmatch(text):
-            raise ValueError(f"Record {field} as a plain number.")
-        return Decimal(text)
-    raise ValueError(f"Record {field} as a plain number.")
-
-
-def _parse_lift_values(body) -> Tuple[float, int]:
-    if not isinstance(body, dict):
-        raise ValueError("The set record is malformed.")
-    if "weight" not in body:
-        raise ValueError("Record the weight, even when it is zero.")
-    if "reps" not in body:
-        raise ValueError("Record the reps, seconds, or steps.")
-    weight_decimal = _parse_lift_decimal(body["weight"], "weight")
-    reps_decimal = _parse_lift_decimal(body["reps"], "reps, seconds, or steps")
-    weight = float(weight_decimal)
-    if not math.isfinite(weight) or weight < 0:
-        raise ValueError("Weight must be a finite, non-negative number.")
-    if weight_decimal > MAX_LIFT_WEIGHT:
-        raise ValueError("That weight is too large for the ledger.")
-    if reps_decimal < 0 or reps_decimal != reps_decimal.to_integral_value():
-        raise ValueError("Reps, seconds, or steps must be a non-negative whole number.")
-    if reps_decimal > MAX_LIFT_COUNT:
-        raise ValueError("That set count is too large for the ledger.")
-    reps = int(reps_decimal)
-    if not math.isfinite(weight * reps):
-        raise ValueError("That set is too large for the ledger.")
-    return weight, reps
-
-
-def _parse_lift_quest_id(value) -> Optional[int]:
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise ValueError("The quest mark on that set is malformed.")
-    return value
-
-
-def _lift_day_bounds(value: str) -> Tuple[str, str]:
-    if not ISO_DAY.fullmatch(value):
-        raise ValueError("Name the ledger day as YYYY-MM-DD.")
-    try:
-        start = date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError("That day does not exist in the ledger.") from error
-    return start.isoformat(), (start + timedelta(days=1)).isoformat()
-
-
-@app.post("/api/lifts")
-async def log_lift(request: Request):
-    body = await request.json()
-    if not isinstance(body, dict):
-        raise ValueError("The set record is malformed.")
-    raw_exercise = body.get("exercise")
-    ex = raw_exercise.strip() if isinstance(raw_exercise, str) else ""
-    if not ex:
-        raise ValueError("Name the exercise.")
-    weight, reps = _parse_lift_values(body)
-    quest_id = _parse_lift_quest_id(body.get("quest_id"))
-    today = game.today()
-    cursor = db.q(
-        "INSERT INTO lift_sets (ts, exercise, weight, reps, quest_id) VALUES (?,?,?,?,?)",
-        (game.now_iso(), ex, weight, reps, quest_id),
-    )
-    db.commit()
-    created = records.lift_payload(cursor.lastrowid)
-    return {
-        "ok": True,
-        "today": today,
-        "sets_today": db.q(
-            "SELECT COUNT(*) AS n FROM lift_sets WHERE ts >= ?", (today,)
-        ).fetchone()["n"],
-        "set": created,
-    }
-
-
-@app.delete("/api/lifts/last")
-def undo_lift():
-    row = db.q("SELECT id FROM lift_sets ORDER BY id DESC LIMIT 1").fetchone()
-    if row:
-        db.q("DELETE FROM lift_sets WHERE id=?", (row["id"],))
-        db.commit()
-    return {"ok": True}
-
-
-@app.get("/api/lifts/recent")
-def recent_lifts(limit: int = 20):
-    return {"today": game.today(), "sets": records.recent_lift_payload(limit)}
-
-
 @app.get("/api/today")
 def server_today():
     return {"today": game.today()}
@@ -520,7 +408,7 @@ def calendar(year: int, month: int):
 
 @app.get("/api/day/{dstr}")
 def day_detail(dstr: str):
-    start, _ = _lift_day_bounds(dstr)
+    start, _ = lifts.day_bounds(dstr)
     return records.day_payload(start)
 
 
@@ -532,44 +420,6 @@ def delete_activity(aid: str):
     db.q("DELETE FROM activities WHERE id=?", (aid,))
     db.commit()
     db.log_event(game.now_iso(), "amend", f"Wick struck '{row['name'] or aid}' from the record.")
-    return {"ok": True}
-
-
-@app.delete("/api/lifts/day/{dstr}")
-def delete_lift_day(dstr: str):
-    start, end = _lift_day_bounds(dstr)
-    n = db.q(
-        "SELECT COUNT(*) AS n FROM lift_sets WHERE ts>=? AND ts<?", (start, end)
-    ).fetchone()["n"]
-    if not n:
-        raise ValueError("No sets recorded that day.")
-    db.q("DELETE FROM lift_sets WHERE ts>=? AND ts<?", (start, end))
-    db.commit()
-    db.log_event(game.now_iso(), "amend", f"Wick struck an entire lifting session ({n} sets) from {start}.")
-    return {"ok": True, "deleted": n}
-
-
-@app.delete("/api/lifts/{set_id}")
-def delete_lift(set_id: int):
-    row = db.q("SELECT exercise FROM lift_sets WHERE id=?", (set_id,)).fetchone()
-    if not row:
-        raise ValueError("No such set in the ledger.")
-    db.q("DELETE FROM lift_sets WHERE id=?", (set_id,))
-    db.commit()
-    db.log_event(game.now_iso(), "amend", f"Wick struck a set of {row['exercise']} from the record.")
-    return {"ok": True}
-
-
-@app.patch("/api/lifts/{set_id}")
-async def edit_lift(set_id: int, request: Request):
-    body = await request.json()
-    weight, reps = _parse_lift_values(body)
-    row = db.q("SELECT * FROM lift_sets WHERE id=?", (set_id,)).fetchone()
-    if not row:
-        raise ValueError("No such set in the ledger.")
-    db.q("UPDATE lift_sets SET weight=?, reps=? WHERE id=?", (weight, reps, set_id))
-    db.commit()
-    db.log_event(game.now_iso(), "amend", f"Wick corrected a set of {row['exercise']}: {weight} x {reps}.")
     return {"ok": True}
 
 

@@ -16,7 +16,7 @@ import os
 import shutil
 import sys
 import tempfile
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 SCRATCH = tempfile.mkdtemp(prefix="iron-vale-smoke-")
 os.environ["DATA_DIR"] = SCRATCH
@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, game, quests, raid  # noqa: E402
+from app import db, game, intervals, main as main_module, quests, raid  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -487,6 +487,86 @@ ok("vault runs once per day", vault.snapshot_if_due() is None)
 dated_left = [d for d in os.listdir(backups_root) if d[:2] == "20" and d != "keep-me-manual"]
 ok("vault prunes to retention window", len(dated_left) == vault.KEEP_DAYS)
 ok("vault never touches non-dated folders", os.path.isdir(os.path.join(backups_root, "keep-me-manual")))
+
+# A failed copy must not publish the date as a completed snapshot. The next
+# scheduled pass needs to retry rather than trusting a half-written folder.
+failed_day = datetime(2031, 2, 3, tzinfo=timezone.utc)
+failed_dest = os.path.join(backups_root, failed_day.date().isoformat())
+backup_attempts = []
+original_backup_sqlite = vault._backup_sqlite
+
+
+def fail_backup(src, dest):
+    backup_attempts.append((src, dest))
+    raise OSError("simulated copy failure")
+
+
+vault._backup_sqlite = fail_backup
+try:
+    ok("failed vault publishes no dated snapshot", vault.snapshot_if_due(failed_day) is None and not os.path.exists(failed_dest))
+    vault.snapshot_if_due(failed_day)
+    ok("failed vault retries on the next pass", len(backup_attempts) == 2)
+finally:
+    vault._backup_sqlite = original_backup_sqlite
+
+# Background sync failures must survive the swallowed scheduler boundary as a
+# safe per-profile status, then clear after the next successful flight.
+settings = game.get_settings()
+settings["intervals_athlete_id"] = "i-smoke"
+settings["intervals_api_key"] = "smoke-key"
+db.kv_set("settings", settings)
+original_intervals_sync = intervals.sync
+
+
+def fail_sync():
+    raise RuntimeError("secret=must-not-leak")
+
+
+intervals.sync = fail_sync
+sync_failure_propagated = False
+try:
+    try:
+        main_module._sync_one_profile("main", db.DB_PATH)
+    except RuntimeError:
+        sync_failure_propagated = True
+    ok("background sync failure propagates to the scheduler boundary", sync_failure_propagated)
+    sync_error = db.kv_get("last_sync_error")
+    ok("background sync failure is recorded", bool(sync_error and sync_error.get("at")))
+    ok("background sync failure is safe to show", "must-not-leak" not in sync_error.get("message", ""))
+    ok("state exposes the background sync failure", client.get("/api/state").json().get("last_sync_error") == sync_error)
+finally:
+    intervals.sync = original_intervals_sync
+
+settings["intervals_athlete_id"] = ""
+settings["intervals_api_key"] = ""
+db.kv_set("settings", settings)
+main_module._sync_one_profile("main", db.DB_PATH)
+ok(
+    "unlinked maintenance preserves a linked-sync failure",
+    db.kv_get("last_sync_error") == sync_error,
+)
+
+settings["intervals_athlete_id"] = "i-smoke"
+settings["intervals_api_key"] = "smoke-key"
+db.kv_set("settings", settings)
+intervals.sync = lambda: 0
+try:
+    main_module._sync_one_profile("main", db.DB_PATH)
+    ok("successful background sync clears the prior failure", db.kv_get("last_sync_error") is None)
+finally:
+    intervals.sync = original_intervals_sync
+
+# An unlinked adventurer pressing SEND RAVENS gets guidance, not a durable
+# failure banner that nothing short of linking could ever clear.
+settings["intervals_athlete_id"] = ""
+settings["intervals_api_key"] = ""
+db.kv_set("settings", settings)
+unlinked = client.post("/api/sync")
+ok(
+    "unlinked manual sync returns guidance",
+    unlinked.status_code == 400 and "intervals.icu" in unlinked.json().get("error", ""),
+)
+ok("unlinked manual sync records no durable failure", db.kv_get("last_sync_error") is None)
 
 shutil.rmtree(SCRATCH, ignore_errors=True)
 print(f"\nSMOKE PASSED — {PASS} checks green")

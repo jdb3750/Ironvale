@@ -235,6 +235,16 @@ be silently normalized during unrelated work.
   content. `.toast.err` is the existing transient error treatment, separate
   from overlays.
 
+### Raven Sync Status
+
+- **Structure:** one shared live-region renderer appears in the document footer
+  and the Settings raven panel. It reports the last successful flight or the
+  latest durable per-profile failure without exposing credentials.
+- **States:** routine and never-synced copy use muted text. A failed scheduled
+  or manual flight uses the existing danger color, includes the failure time
+  and last safe return when known, and remains visible until a complete flight
+  succeeds.
+
 ### Hall Grouped Navigation
 
 - **Structure:** `.hall-nav` contains four `.hall-nav-group` columns. Each group

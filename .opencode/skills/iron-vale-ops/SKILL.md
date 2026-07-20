@@ -34,11 +34,11 @@ every 15 minutes**. There is no manual deploy step:
   `profiles.json`) lives in the server container's data volume — NOT in
   this repo's local `data/`, which is a stale-but-real historical copy.
 
-**Backups**: the entire live state is one directory of SQLite files plus
-two small JSONs. A host-side cron that snapshots the Docker data volume
-(e.g. nightly `cp -a`/rsync to a dated folder, or `sqlite3 ... ".backup"`
-per DB for hot copies) is cheap and worth having before any testing phase
-with real players.
+**Backups**: Iron Vale's Vault seals every profile DB and shared JSON into an
+atomic daily snapshot under `data/backups/`, retaining 14 days. Those snapshots
+share the live Docker volume, so they protect against application mistakes but
+not disk or volume loss. Keep an off-volume host backup of the entire data
+directory as the second layer.
 
 ## Running a local dev server (optional)
 
@@ -66,6 +66,10 @@ EOF
 # frontend: start "iron-vale-test" (port 8322, scratch DATA_DIR), then drive
 # the preview browser. Dev mode (Settings) seeds fake training/wellness/gold.
 # After JS edits: bump ?v=N in index.html AND hard-navigate the preview page.
+
+# repeatable frontend checks (one-time: npm install && npx playwright install chromium)
+npm run test:frontend
+npm run test:browser   # owns port 8322 and creates/deletes a scratch DATA_DIR
 ```
 
 `node --check static/js/*.js` catches syntax errors cheaply. TestClient covers

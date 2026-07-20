@@ -9,6 +9,7 @@ First sync pulls ~400 days of history (activities + wellness) so quest sizing
 and progress charts work from day one; later syncs pull a rolling 30 days.
 A background task in main.py re-syncs every 15 minutes.
 """
+import os
 import uuid
 from datetime import datetime, timedelta
 
@@ -16,7 +17,8 @@ import httpx
 
 from . import db, game
 
-BASE = "https://intervals.icu/api/v1"
+# Overridable so tests can aim the ravens at a dead port instead of the internet.
+BASE = os.environ.get("INTERVALS_BASE_URL", "https://intervals.icu/api/v1")
 
 
 def _creds():

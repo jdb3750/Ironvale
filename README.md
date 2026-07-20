@@ -6,30 +6,29 @@ Your real workouts are the quests. Your sweat is the XP.*
 ## The loop
 
 1. **Visit a quest-giver** in town. Each one hands out a different kind of training:
-   - **Old Fenn the Wayfarer** — running quests (easy runs, tempo, intervals, hills, long runs)
+   - **Old Fenn the Wayfarer** — endurance quests for running, riding, and swimming
    - **Grunhilda Iron-Bell** — kettlebell routines
-   - **Ser Bram the Loadbearer** — barbell / dumbbell / bodyweight strength work
+   - **Ser Bram the Loadbearer** — barbell, dumbbell, bodyweight, and climbing work
    - **Sage Elowen** — mobility, walking, recovery (grants bonus Vigor)
-2. **Do the workout.** Runs are verified automatically against your intervals.icu
-   activity feed; lifts are logged set-by-set in the mobile-friendly Training Log
-   (big buttons, weight/rep steppers — designed for a phone on a gym bench).
+2. **Do the workout.** Tracked activities are verified automatically against your
+   intervals.icu feed; lifts are logged set-by-set in the mobile-friendly Training
+   Log (big buttons, weight/rep steppers — designed for a phone on a gym bench).
 3. **Turn in the quest** for XP, gold, Vigor, stat gains (STR/END/CON/SPR), brass
    tokens, and item drops — with a proper fanfare.
-4. **Spend it**: buy gear and potions at **Pip's Provisions**, or feed a token to
-   **the Crankwerk** (a quarter-crank gumball machine) for a random item, up to
-   legendary rarity.
+4. **Spend it**: rip monster packs, reroll the day's offers, or feed a token to
+   **the Crankwerk** (a quarter-crank gumball machine) for cosmetic curiosities.
+   Pip trades only inside the Undercroft, using gold found during that run.
 5. **Descend into the Undercroft** — a roguelike dungeon crawler. Entry costs
    **Vigor, which only comes from completed workouts**. Fight monsters, loot
    chests, kill the boss every 3rd floor, and either **retire at the stairs to
    bank your loot and depth**, or push deeper. **If you die: all unbanked loot is
-   gone, your depth resets to floor 1, and the dungeon claims one item from your
-   pack as toll.**
+   gone and your depth resets to floor 1.**
 
 ## Quests adapt to *your* data
 
-- Running quest durations are derived from your last 60 days of runs (median,
-  80th percentile, weekly volume). If you typically run 25 minutes, you will not
-  be asked to run 2 hours.
+- Endurance quest targets are derived from your recent training history, so the
+  Vale scales requests to the work you actually do instead of prescribing a
+  generic athlete's volume.
 - Strength quests track **which muscle groups you trained recently** and target
   the neglected ones. Suggested weights come from your own logged history.
 - The **Ambition** setting (Mend / Keep / Forge / Conquer) scales everything up
@@ -134,9 +133,11 @@ docker compose up -d --build
 ```
 
 Game state persists in `./data`: one SQLite save per adventurer profile,
-`profiles.json` for the roster, and shared `raid.json` for the weekly Siege.
-Back up the whole directory. To require a password (recommended if exposed
-beyond your LAN):
+`profiles.json` for the roster, plus shared `raid.json` and `realm.json`.
+Iron Vale seals a consistent daily snapshot under `data/backups/` and keeps
+14 days. Those copies protect against bad writes, but they live on the same
+volume, so also back up the whole directory somewhere off-host. To require a
+password (recommended if exposed beyond your LAN):
 
 ```sh
 APP_PASSWORD=somesecret docker compose up -d --build
@@ -180,7 +181,7 @@ sync.
 
 ## Notes on honor
 
-Run quests auto-verify against synced activities (≥70% of target duration,
+Activity quests auto-verify against synced deeds (≥70% of target duration,
 started after you accepted the quest). Lift quests verify against logged sets
 (≥60% of prescribed sets). Anything can also be completed "on your honor" —
 it's your dungeon; cheat only yourself.

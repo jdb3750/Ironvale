@@ -1,6 +1,6 @@
 ---
 name: iron-vale-architecture
-description: Deep reference for how Iron Vale's backend modules (game.py, quests.py, records.py, economy.py, dungeon.py, raid.py, colosseum.py, monsters.py, intervals.py, programs.py, items.py, exercises.py) and split frontend systems actually work internally. Use before modifying or needing to understand any specific subsystem's mechanics (dungeon runs, raid boss math, colosseum sims, monster/ranch simulation, sprite rendering, quest offer generation, etc.) beyond the one-line summary in AGENTS.md.
+description: Deep reference for how Iron Vale's backend modules (game.py, quests.py, records.py, economy.py, dungeon.py, raid.py, colosseum.py, monsters.py, intervals.py, syncing.py, lifts.py, vault.py, programs.py, items.py, exercises.py) and split frontend systems actually work internally. Use before modifying or needing to understand any specific subsystem's mechanics (dungeon runs, raid boss math, colosseum sims, monster/ranch simulation, sprite rendering, quest offer generation, etc.) beyond the one-line summary in AGENTS.md.
 ---
 
 # Iron Vale — architecture deep reference
@@ -14,7 +14,8 @@ frontend files); every detail below is load-bearing.
 
 ```
 app/
-  main.py        All HTTP endpoints, auth + profile middleware, 15-min auto-sync loop.
+  main.py        FastAPI shell, auth + profile middleware, remaining routes,
+                 error translation, static serving, and the 15-min scheduler.
   db.py          SQLite layer. ONE DB FILE PER PROFILE, routed via contextvar —
                  middleware sets it from the iv_profile cookie; the sync loop sets
                  it per profile. Never open sqlite yourself; use db.q()/kv_*.
@@ -43,6 +44,13 @@ app/
                  state is a dict in kv "dungeon".
   intervals.py   intervals.icu sync (basic auth): activities + wellness. First sync
                  ~400 days, then rolling 30. add_manual_activity() for honor/claims.
+  syncing.py     One complete profile flight shared by manual and scheduled sync:
+                 intervals import, quest completion/bonuses, Rest Writ resolution,
+                 Siege damage, and a durable safe last_sync_error status.
+  lifts.py       /api/lifts routes plus strict numeric/quest/day validation and
+                 Wick's lifting-ledger amendments.
+  vault.py       Atomic daily snapshots of every profile DB and shared JSON. Copies
+                 stage under .incomplete, publish by rename, and retain 14 days.
   monsters.py    Menagerie: DNA-seeded procedural monsters, packs (3/pack, numbered
                  procedurally-named series), hats, buddy (kv "buddy_id"), capture.
                  preview() builds a monster dict WITHOUT persisting — use this for
