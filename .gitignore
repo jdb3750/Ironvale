@@ -8,4 +8,5 @@ node_modules/
 test-results/
 .omo/
 .claude/
+.opencode/command/
 .opencode/opencode.json
