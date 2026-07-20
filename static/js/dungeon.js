@@ -150,7 +150,6 @@ function renderDungeon(st, stats, theme) {
       <div class="combat-actions">
         <button type="button" class="btn dungeon-action" onclick="G.dact({action:'attack'})">ATTACK</button>
         <button type="button" class="btn dungeon-action" onclick="G.dact({action:'brace'})">BRACE</button>
-        <button type="button" class="btn dungeon-action" onclick="G.dItems()">ITEM</button>
         <button type="button" class="btn danger dungeon-action" onclick="G.dact({action:'flee'})">FLEE</button>
       </div>
     </div>`;
@@ -209,19 +208,16 @@ function renderDungeon(st, stats, theme) {
       </div>
       <div class="hpbar" style="margin-top:6px"><div style="width:${hpPct}%"></div><span>HP ${st.hp}/${stats.max_hp}</span></div>
       <div class="center" style="font-size:16px;margin-top:4px">${gearLine(st)}
-        ${(st.trinkets || []).length ? `<button class="btn small" style="min-width:0;padding:0 8px" onclick="G.dGear()">inspect</button>` : ''}</div>
+        <span style="display:inline-flex;align-items:center;gap:4px">
+          <button type="button" class="btn small" style="min-width:0;padding:0 8px" onclick="G.dItems()">ITEMS</button>
+          ${(st.trinkets || []).length ? `<button type="button" class="btn small" style="min-width:0;padding:0 8px" onclick="G.dGear()">inspect</button>` : ''}
+        </span></div>
     </div>
     ${combatBox}
     ${pipPanel}
     ${relicPanel}
     ${!st.combat ? `<div class="win tight"><div class="dmap">${grid}</div>
-      <div class="dpad">
-        <span></span><button type="button" class="btn dungeon-action" aria-label="Move north" onclick="G.dmove('n')">&#9650;</button><span></span>
-        <button type="button" class="btn dungeon-action" aria-label="Move west" onclick="G.dmove('w')">&#9668;</button>
-        <button type="button" class="btn small dungeon-action" style="min-width:0" onclick="G.dItems()">USE</button>
-        <button type="button" class="btn dungeon-action" aria-label="Move east" onclick="G.dmove('e')">&#9658;</button>
-        <span></span><button type="button" class="btn dungeon-action" aria-label="Move south" onclick="G.dmove('s')">&#9660;</button><span></span>
-      </div>
+      <div class="dmap-hint">tap a gold-edged neighboring room to move</div>
       <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
         ${atStairs && !bossPending ? `<button type="button" class="btn green dungeon-action" onclick="G.dact({action:'descend'})">DESCEND &#9660;</button>` : ''}
         ${bossPending ? `<span class="muted">something vast sleeps on these stairs...</span>` : ''}

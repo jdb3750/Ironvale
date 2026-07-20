@@ -180,3 +180,60 @@ test('phone Settings keeps the persistent raven status within the viewport', asy
     await context.close();
   }
 });
+
+test('Undercroft uses map movement with a single inventory control', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await page.evaluate(() => nav('undercroft'));
+    await page.getByRole('button', { name: /DESCEND/ }).click();
+    await page.locator('.dmap').waitFor();
+    assert.equal(await page.locator('.dpad').count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'USE', exact: true }).count(), 0);
+    assert.ok(await page.locator('button.dcell.adjacent').count() > 0);
+    assert.equal(await page.locator('.dmap-hint').textContent(), 'tap a gold-edged neighboring room to move');
+
+    await page.evaluate(() => {
+      const cells = {};
+      for (let y = 0; y < 6; y += 1) {
+        for (let x = 0; x < 6; x += 1) {
+          cells[`${x},${y}`] = { type: 'empty', seen: true, cleared: true };
+        }
+      }
+      cells['0,0'] = { type: 'entrance', seen: true, cleared: true };
+      renderDungeon({
+        floor: 1, gear: { weapon: null, armor: null, charm: null },
+        items: { bread: 1 }, trinkets: ['clover'], buff_atk: 0, buff_def: 0,
+        loot_gold: 0, combat: null, seed: 1, log: [], hp: 18, cells,
+        px: 0, py: 0, boss_floor: false, shop_stock: null, relic: null,
+      }, { max_hp: 18, atk: 3, def: 1 }, { name: 'The Catacombs', accent: '#b8a888' });
+    });
+    await page.waitForTimeout(250);
+    const items = page.getByRole('button', { name: 'ITEMS', exact: true });
+    const inspect = page.getByRole('button', { name: 'inspect', exact: true });
+    await items.waitFor();
+    await inspect.waitFor();
+    const [itemsBox, inspectBox] = await Promise.all([items.boundingBox(), inspect.boundingBox()]);
+    assert.equal(itemsBox?.y, inspectBox?.y);
+    assert.ok((inspectBox?.x ?? 0) > (itemsBox?.x ?? 0));
+    for (const [label, viewport] of Object.entries({
+      phone: { width: 375, height: 812 },
+      tablet: { width: 768, height: 900 },
+      desktop: { width: 1280, height: 900 },
+    })) {
+      await page.setViewportSize(viewport);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        true,
+      );
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `undercroft-${label}.png`),
+          fullPage: true,
+        });
+      }
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
