@@ -279,6 +279,19 @@ def apply_damage(slug):
         return dealt
 
 
+def mark_reconciled_activity(slug, synthetic_id, tracker_id):
+    """Prevent a late tracker record from repeating damage already dealt by honor."""
+    with _lock:
+        r = _current_locked()
+        seen = set(r["counted"].get(slug, []))
+        if synthetic_id not in seen:
+            return False
+        if tracker_id not in seen:
+            r["counted"][slug] = sorted(seen | {tracker_id})
+            _save(r)
+        return True
+
+
 def state_for(slug):
     with _lock:
         r = _current_locked()

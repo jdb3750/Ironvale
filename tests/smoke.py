@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, game, intervals, main as main_module, quests, raid  # noqa: E402
+from app import db, game, intervals, main as main_module, profiles, quests, raid, syncing  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -567,6 +567,93 @@ ok(
     unlinked.status_code == 400 and "intervals.icu" in unlinked.json().get("error", ""),
 )
 ok("unlinked manual sync records no durable failure", db.kv_get("last_sync_error") is None)
+
+# ---- honor completion reconciliation ---------------------------------------
+# Given: a quest was completed on honor before its tracker activity arrived.
+reconcile_profile = profiles.create("Reconcile", "1234")
+reconcile_slug = reconcile_profile["slug"]
+reconcile_token = db.set_profile(profiles.path_for(reconcile_slug))
+try:
+    reconcile_settings = game.get_settings()
+    reconcile_settings["intervals_athlete_id"] = "i-reconcile"
+    reconcile_settings["intervals_api_key"] = "reconcile-key"
+    db.kv_set("settings", reconcile_settings)
+    reconcile_now = game.now_iso()
+    reconcile_quest = db.q(
+        "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+        "VALUES ('running', 'run', 'The Late Raven', ?, 'active', ?)",
+        (json.dumps({"modality": "run", "target_minutes": 30}), reconcile_now),
+    )
+    db.commit()
+    quests.complete_quest(reconcile_quest.lastrowid, honor=True)
+    synthetic_id = db.q("SELECT activity_id FROM quests WHERE id=?", (reconcile_quest.lastrowid,)).fetchone()["activity_id"]
+    first_honor_damage = raid.apply_damage(reconcile_slug)
+    ok("honor activity strikes the Siege once", first_honor_damage > 0)
+
+    def sync_late_activity():
+        db.q(
+            "INSERT INTO activities (id, source, start, type, name, moving_time) "
+            "VALUES ('late-reconcile-run', 'intervals.icu', ?, 'Run', 'The Actual Run', 1800)",
+            (reconcile_now,),
+        )
+        db.commit()
+        return 1
+
+    original_intervals_sync = intervals.sync
+    intervals.sync = sync_late_activity
+    try:
+        # When: the matching tracker activity arrives during the next sync.
+        reconcile_result = syncing.sync_linked_profile(reconcile_slug)
+    finally:
+        intervals.sync = original_intervals_sync
+
+    reconciled_quest = db.q("SELECT activity_id FROM quests WHERE id=?", (reconcile_quest.lastrowid,)).fetchone()
+    synthetic_left = db.q("SELECT 1 FROM activities WHERE id=?", (synthetic_id,)).fetchone()
+    # Then: the tracker activity replaces the synthetic record and cannot strike twice.
+    ok("late sync relinks an honor quest to its tracker activity", reconciled_quest["activity_id"] == "late-reconcile-run")
+    ok("late sync retires the honor synthetic activity", synthetic_left is None)
+    ok("late sync does not deal duplicate Siege damage", reconcile_result["raid_damage"] == 0)
+finally:
+    db.reset_profile(reconcile_token)
+
+# If no one visited the Siege between honoring the quest and the later sync,
+# the reconciled tracker activity must still strike exactly once.
+uncounted_profile = profiles.create("Uncounted Reconcile", "1234")
+uncounted_slug = uncounted_profile["slug"]
+uncounted_token = db.set_profile(profiles.path_for(uncounted_slug))
+try:
+    uncounted_settings = game.get_settings()
+    uncounted_settings["intervals_athlete_id"] = "i-uncounted"
+    uncounted_settings["intervals_api_key"] = "uncounted-key"
+    db.kv_set("settings", uncounted_settings)
+    uncounted_now = game.now_iso()
+    uncounted_quest = db.q(
+        "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+        "VALUES ('running', 'run', 'The Uncounted Raven', ?, 'active', ?)",
+        (json.dumps({"modality": "run", "target_minutes": 30}), uncounted_now),
+    )
+    db.commit()
+    quests.complete_quest(uncounted_quest.lastrowid, honor=True)
+
+    def sync_uncounted_activity():
+        db.q(
+            "INSERT INTO activities (id, source, start, type, name, moving_time) "
+            "VALUES ('uncounted-reconcile-run', 'intervals.icu', ?, 'Run', 'The Real Run', 1800)",
+            (uncounted_now,),
+        )
+        db.commit()
+        return 1
+
+    original_intervals_sync = intervals.sync
+    intervals.sync = sync_uncounted_activity
+    try:
+        uncounted_result = syncing.sync_linked_profile(uncounted_slug)
+    finally:
+        intervals.sync = original_intervals_sync
+
+    ok("reconciled uncounted activity strikes the Siege once", uncounted_result["raid_damage"] == 300)
+finally:
+    db.reset_profile(uncounted_token)
 
 shutil.rmtree(SCRATCH, ignore_errors=True)
 print(f"\nSMOKE PASSED — {PASS} checks green")
