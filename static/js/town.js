@@ -475,6 +475,11 @@ G.syncNow = async () => {
     r = await api('/sync', { method: 'POST' });
     requestStillCurrent = isRouteTokenCurrent(routeToken);
     await refreshState();
+  } catch {
+    requestStillCurrent = isRouteTokenCurrent(routeToken);
+    await refreshState();
+    if (requestStillCurrent && isRouteTokenCurrent(routeToken)) render();
+    return;
   } finally {
     stopDepartureWatch();
   }

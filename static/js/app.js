@@ -452,6 +452,24 @@ function header() {
   </div>`;
 }
 
+function syncStatusHTML(state) {
+  const failure = state.last_sync_error;
+  const lastFlight = state.last_sync
+    ? esc(state.last_sync.slice(0, 16).replace('T', ' '))
+    : '';
+  if (failure) {
+    const failedAt = failure.at
+      ? esc(failure.at.slice(0, 16).replace('T', ' '))
+      : 'an unknown hour';
+    const message = esc(failure.message || 'The ravens were lost before they finished their rounds.');
+    return `<span class="sync-status-error" role="status" aria-live="polite">ravens delayed since ${failedAt} &middot; ${message}${lastFlight ? ` &middot; last safe return ${lastFlight}` : ''}</span>`;
+  }
+  const message = lastFlight
+    ? `ravens last flew ${lastFlight} &middot; they fly every 15 min`
+    : 'no sync yet — link intervals.icu in Settings';
+  return `<span class="muted" role="status" aria-live="polite">${message}</span>`;
+}
+
 function footer() {
   const st = S.state;
   const canGoBack = S.depth > 0 && !S.historyBusy;
@@ -466,8 +484,8 @@ function footer() {
       <button type="button" class="btn small"${current('settings')} onclick="nav('settings')">SETTINGS</button>
       <button type="button" class="btn small" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
     </div>
-    <div class="muted" style="font-size:16px">
-      ${st.last_sync ? 'ravens last flew ' + esc(st.last_sync.slice(0, 16).replace('T', ' ')) + ' &middot; they fly every 15 min' : 'no sync yet — link intervals.icu in Settings'}
+    <div style="font-size:16px">
+      ${syncStatusHTML(st)}
     </div>
     ${st.version ? `<div class="muted" style="font-size:14px;margin-top:4px">v${esc(st.version)}</div>` : ''}
   </div>

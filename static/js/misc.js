@@ -299,6 +299,7 @@ SCREENS.settings = function () {
     </section>
     <section aria-labelledby="settings-ravens">
     <div class="win"><span class="win-title" id="settings-ravens">The Ravens (intervals.icu)</span>
+      <div class="sync-status-panel">${syncStatusHTML(S.state)}</div>
       <div class="muted" style="font-size:17px;margin-bottom:8px">
         Runs, climbs, lifts and wellness sync from intervals.icu — which itself syncs from Garmin,
         Strava, Coros, etc. First sync fetches ~400 days; after that the ravens fly every 15 minutes

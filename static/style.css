@@ -540,6 +540,8 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
 }
 .toast.err { border-color: var(--red); color: var(--red); }
+.sync-status-error { color: var(--red); }
+.sync-status-panel { margin-bottom: 8px; }
 
 .dev-console {
   max-width: 620px !important;
