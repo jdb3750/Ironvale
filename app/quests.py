@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from . import db, exercises, intervals, items, raid
 from .game import (
-    AMBITION, CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVERS, RUN_TYPES,
+    AMBITION, CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVER_ARCHETYPES, GIVERS, RUN_TYPES,
     ambition_mult, apply_xp, category, get_char, get_settings, last_weight,
     modality_history, muscle_recency, now, now_iso, run_history, save_char, today,
 )
@@ -48,7 +48,6 @@ RIDE_FLAVOR = {
     "long":      ["The Far Village Errand", "Beyond the Watchtower", "The Century's Apprentice"],
 }
 
-# Ser Bram counts the wall as iron that fights back (see gen_lift_offers).
 CLIMB_FLAVOR = {
     "session":   ["The Wall's Interrogation", "Trial of Grip and Nerve", "The Vertical Court"],
     "volume":    ["Laps on the Old Face", "The Ant's Ascent", "Stonework"],
@@ -58,10 +57,7 @@ CLIMB_FLAVOR = {
 ENDURANCE_MODALITIES = ("run", "ride", "swim")
 ENDURANCE_FLAVOR = {"run": RUN_FLAVOR, "ride": RIDE_FLAVOR, "swim": SWIM_FLAVOR}
 
-LIFT_FLAVOR = {
-    "kettlebell": ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning", "The Bell Tolls for Thee", "Rites of the Forge-Daughter"],
-    "strength":   ["The Loadbearer's Oath", "Trial of Heavy Things", "The Squire's Burden", "Steel Shall Be Answered", "The Weight of Duty"],
-}
+LIFT_FLAVOR = ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning", "The Bell Tolls for Thee", "Rites of the Forge-Daughter"]
 
 MOBILITY_FLAVOR = ["The Willow's Lesson", "Unknotting the Rope", "The Patient Root", "Stillwater Rites", "The Long Exhale"]
 
@@ -259,9 +255,6 @@ def _build_routine(rng, chosen, style):
 
 
 def _climb_pool(rng):
-    """Ser Bram's climbing offers — the wall is iron that fights back. Time
-    at the wall is the target (a synced climb session completes it); grades
-    and crags are a later chapter (see issue #57)."""
     h = modality_history("climb", default_median=60)
     amb = ambition_mult()
     med = h["median"]
@@ -290,8 +283,17 @@ def _climb_pool(rng):
     return pool
 
 
-def gen_lift_offers(rng, giver):
-    names = exercises.KB_NAMES if giver == "kettlebell" else exercises.GYM_NAMES
+def gen_climb_offers(rng):
+    offers = _climb_pool(rng)
+    rng.shuffle(offers)
+    for o in offers:
+        o["giver"] = "strength"
+        o["title"] = rng.choice(CLIMB_FLAVOR[o["kind"].split("_")[1]])
+        _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
+    return offers
+
+
+def gen_lift_offers(rng):
     rec = muscle_recency()
     # stale-first: groups untrained the longest get priority
     ranked = sorted(exercises.GROUPS, key=lambda g: -rec[g]["days_since"])
@@ -304,28 +306,20 @@ def gen_lift_offers(rng, giver):
         "volume": "Lighter, more reps. Chase the burn.",
         "circuit": "Move briskly between exercises, minimal rest.",
     }
-    # a climber's board trades lift slots for wall sessions: one slot with
-    # any climbing in the last 28 days, two when the wall is their habit
-    climb_slots = 0
-    if giver == "strength":
-        climb_n = modality_history("climb", days=28)["n"]
-        climb_slots = 2 if climb_n >= 6 else (1 if climb_n >= 1 else 0)
-        if climb_slots:
-            for o in rng.sample(_climb_pool(rng), climb_slots):
-                o["giver"] = giver
-                o["title"] = rng.choice(CLIMB_FLAVOR[o["kind"].split("_")[1]])
-                _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
-                offers.append(o)
-    for i in range(3 - climb_slots):
+    for i, equipment in enumerate(GIVER_ARCHETYPES["kettlebell"]["modalities"]):
         style = styles[i % len(styles)]
         focus = focus_sets[i]
+        names = [
+            name for name, exercise in exercises.EXERCISES.items()
+            if exercise["equipment"] == equipment
+        ]
         chosen = _pick_exercises(rng, names, focus)
         routine = _build_routine(rng, chosen, style)
         total_sets = sum(r["sets"] for r in routine)
         o = {
             "kind": f"lift_{style}",
-            "giver": giver,
-            "title": rng.choice(LIFT_FLAVOR[giver]),
+            "giver": "kettlebell",
+            "title": rng.choice(LIFT_FLAVOR),
             "intensity": "hard" if style == "strength" else "moderate",
             "focus": focus,
             "style": style,
@@ -562,7 +556,7 @@ def ack_writ_notice(ts=None):
 
 
 def get_offers(giver, reroll=False):
-    key = f"offers:{giver}:{today()}"
+    key = f"offers:archetype-v2:{giver}:{today()}"
     bump_key = f"offerbump:{giver}:{today()}"
     bump = db.kv_get(bump_key, 0)
     if reroll:
@@ -574,8 +568,10 @@ def get_offers(giver, reroll=False):
         rng = random.Random(f"{giver}:{today()}:{bump}")
         if giver == "running":
             cached = gen_endurance_offers(rng)
-        elif giver in ("kettlebell", "strength"):
-            cached = gen_lift_offers(rng, giver)
+        elif giver == "kettlebell":
+            cached = gen_lift_offers(rng)
+        elif giver == "strength":
+            cached = gen_climb_offers(rng)
         elif giver == "mobility":
             cached = gen_mobility_offers(rng)
         else:
@@ -584,7 +580,7 @@ def get_offers(giver, reroll=False):
             o["offer_id"] = i
         db.kv_set(key, cached)
     # an active doctrine's next session leads the offers (built fresh — weights progress)
-    if giver in ("kettlebell", "strength"):
+    if giver == "kettlebell":
         from . import programs
         po = programs.build_program_offer(giver)
         if po:
@@ -943,18 +939,12 @@ UNGUIDED_STAT_BY_CATEGORY = {
     "climb": "str", "strength": "str", "mobility": "spr", "other": "con",
 }
 
-# Which giver notices an unsworn deed: the archetype that owns the effort,
-# not one catch-all NPC. Endurance roads (wet ones included) are Fenn's;
-# iron and rock are Ser Bram's; ballistic chaos is Grunhilda's; stillness
-# is Elowen's; anything unclassifiable reaches Wick's ledger. "wick" is not
-# a quest giver — it's an attribution target the town knows how to anchor.
 DEED_GIVER_BY_CATEGORY = {
     "run": "running", "ride": "running", "walk": "running", "swim": "running",
-    "climb": "strength", "strength": "strength",
+    "climb": "strength", "strength": "kettlebell",
     "mobility": "mobility",
     "other": "wick",
 }
-GRUNHILDA_TYPES = ("Crossfit", "HIIT")  # filed under "strength", but her kind of bedlam
 
 DEED_NOTES = {
     "running": [
@@ -968,9 +958,9 @@ DEED_NOTES = {
         "The forge does not ask who ordered the fire. Well struck.",
     ],
     "strength": [
-        "Iron moved is iron moved, sworn or not. Ser Bram settles his debts.",
-        "You trained without orders. Good. Initiative suits you.",
-        "The keep watched you work. A knight pays what honor owes.",
+        "The wall remembers every move, sworn or not. Ser Bram settles his debts.",
+        "You climbed without orders. Good. Initiative suits you.",
+        "The keep watched you on the stone. A knight pays what honor owes.",
     ],
     "mobility": [
         "Stillness taken unbidden is stillness all the same.",
@@ -986,8 +976,6 @@ DEED_NOTES = {
 
 
 def deed_giver(activity_type):
-    if activity_type in GRUNHILDA_TYPES:
-        return "kettlebell"
     return DEED_GIVER_BY_CATEGORY.get(category(activity_type), "wick")
 
 

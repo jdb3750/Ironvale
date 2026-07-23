@@ -11,7 +11,7 @@ from . import db, exercises, game, quests
 PROGRAMS = {
     "starting_strength": {
         "name": "Starting Strength",
-        "giver": "strength",
+        "giver": "kettlebell",
         "desc": "Rippetoe's novice barbell doctrine. Squat every day it meets you. Add weight every session.",
         "inc": {"Deadlift": 5.0, "default": 2.5},
         "sessions": [
@@ -21,7 +21,7 @@ PROGRAMS = {
     },
     "stronglifts": {
         "name": "StrongLifts 5x5",
-        "giver": "strength",
+        "giver": "kettlebell",
         "desc": "Five sets of five, alternating days. Simple, brutal, effective.",
         "inc": {"Deadlift": 5.0, "default": 2.5},
         "sessions": [

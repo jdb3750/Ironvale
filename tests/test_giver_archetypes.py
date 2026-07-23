@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import game
+from app import game, programs
 
 
 EXPECTED_ARCHETYPES = {
@@ -22,7 +22,7 @@ EXPECTED_ARCHETYPES = {
     "strength": {
         "archetype": "Skill",
         "name": "Ser Bram",
-        "title": "the Loadbearer",
+        "title": "the Unburdened",
         "modalities": ("climbing", "calisthenics", "plyometrics", "sprints"),
     },
     "mobility": {
@@ -43,5 +43,9 @@ for giver, expected in EXPECTED_ARCHETYPES.items():
     assert game.GIVERS[giver] == ownership["display"]
 
 assert tuple(game.GIVER_ARCHETYPES) == tuple(EXPECTED_ARCHETYPES)
+assert all(
+    programs.PROGRAMS[key]["giver"] == "kettlebell"
+    for key in ("starting_strength", "stronglifts", "simple_sinister", "armor_building")
+)
 
 print("GIVER ARCHETYPES PASSED")

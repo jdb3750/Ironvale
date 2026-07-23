@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, game, intervals, main as main_module, profiles, quests, raid, syncing  # noqa: E402
+from app import db, exercises, game, intervals, main as main_module, profiles, quests, raid, syncing  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -154,8 +154,15 @@ offers = client.get("/api/offers/running").json()["offers"]
 ok("Fenn deals every practiced endurance modality",
    {o.get("modality") for o in offers} == {"run", "ride", "swim"})
 bram_offers = client.get("/api/offers/strength").json()["offers"]
-ok("Bram deals the wall to a climber",
-   any(o.get("modality") == "climb" and o.get("target_minutes") for o in bram_offers))
+grunhilda_offers = client.get("/api/offers/kettlebell").json()["offers"]
+iron_equipment = {
+    exercises.EXERCISES[row["exercise"]]["equipment"]
+    for offer in grunhilda_offers
+    for row in offer.get("routine", [])
+}
+ok("Grunhilda deals every iron implement", iron_equipment == {"barbell", "dumbbell", "kettlebell"})
+ok("Bram deals only the wall",
+   all(o.get("modality") == "climb" and o.get("target_minutes") for o in bram_offers))
 r = client.post("/api/quests/accept", json={"giver": "running", "offer_id": offers[0]["offer_id"]})
 ok("accept quest", r.status_code == 200)
 q = client.get("/api/state").json()["active_quests"]
@@ -192,8 +199,8 @@ ok("unguided climb queued", climb["title"])
 ok("unguided other activity queued", other["title"])
 ok("deed attributed to its archetype giver", climb["giver"] == "strength")
 ok("unclassifiable deed reaches Wick", other["giver"] == "wick")
-ok("HIIT deeds belong to Grunhilda", quests.deed_giver("HIIT") == "kettlebell"
-   and quests.deed_giver("WeightTraining") == "strength"
+ok("iron deeds belong to Grunhilda", quests.deed_giver("HIIT") == "kettlebell"
+   and quests.deed_giver("WeightTraining") == "kettlebell"
    and quests.deed_giver("OpenWaterSwim") == "running")
 rewards = quests.claim_unguided_bonus("smoke-free-climb")
 ok("unguided climb reward claimed", rewards["xp"] > 0)

@@ -65,7 +65,7 @@ GIVER_ARCHETYPES = {
     },
     "strength": {
         "archetype": "Skill",
-        "display": {"name": "Ser Bram", "title": "the Loadbearer", "sprite": "bram"},
+        "display": {"name": "Ser Bram", "title": "the Unburdened", "sprite": "bram"},
         "modalities": ("climbing", "calisthenics", "plyometrics", "sprints"),
     },
     "mobility": {
