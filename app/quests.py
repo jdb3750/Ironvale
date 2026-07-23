@@ -8,6 +8,9 @@ import json
 import math
 import random
 from datetime import datetime, timedelta
+from typing import Literal, NamedTuple, Optional, Tuple
+
+import pydantic
 
 from . import db, exercises, intervals, items, raid
 from .game import (
@@ -61,124 +64,166 @@ LIFT_FLAVOR = ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning
 
 MOBILITY_FLAVOR = ["The Willow's Lesson", "Unknotting the Rope", "The Patient Root", "Stillwater Rites", "The Long Exhale"]
 
+EnduranceModality = Literal["run", "ride", "swim"]
+LiftStyle = Literal["strength", "volume", "circuit"]
+STARTER_MEDIANS = {"run": 20.0, "ride": 40.0, "swim": 20.0}
+
+
+class CandidateHistory(NamedTuple):
+    session_count: int
+    median_minutes: float
+    p80_minutes: float
+
+
+class QuestCandidate(NamedTuple):
+    candidate_key: str
+    payload: dict[str, pydantic.JsonValue]
+    target_groups: Tuple[str, ...]
+
+
+class LiftCandidateContext(NamedTuple):
+    giver: str
+    style: LiftStyle
+    focus: Tuple[str, ...]
+    exercises: Tuple[str, ...]
+    weights: Tuple[Optional[float], ...]
+    iron_session_count: int
+
+
+def _history_context(history) -> CandidateHistory:
+    return CandidateHistory(
+        session_count=history["n"],
+        median_minutes=history["median"],
+        p80_minutes=history["p80"],
+    )
+
+
+def _endurance_candidate(
+    modality: EnduranceModality,
+    payload: dict[str, pydantic.JsonValue],
+    sizing: str,
+) -> QuestCandidate:
+    variant = payload["kind"].split("_", 1)[1]
+    complete = {
+        **payload,
+        "modality": modality,
+        "giver": "running",
+        "title": ENDURANCE_FLAVOR[modality][variant][0],
+        "sizing": sizing,
+        "reason_codes": ["cold_start"] if sizing == "generic_starter" else [],
+    }
+    _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
+    target_groups = ("legs", "posterior") if modality in ("run", "ride") else ("back", "shoulders")
+    return QuestCandidate(payload["kind"], complete, target_groups)
+
+
+def build_endurance_candidates(
+    modality: EnduranceModality,
+    history: CandidateHistory,
+    ambition: float,
+) -> Tuple[QuestCandidate, ...]:
+    sizing = "personalized" if history.session_count >= 3 else "generic_starter"
+    med = history.median_minutes if sizing == "personalized" else STARTER_MEDIANS[modality]
+    pool = []
+    easy_minutes = _r5(med * 0.75 * ambition)
+    pool.append({
+        "kind": f"{modality}_easy", "intensity": "low", "target_minutes": easy_minutes,
+        "structure": {
+            "run": f"Run {easy_minutes} minutes at an easy, conversational pace. Nose-breathing easy.",
+            "ride": f"Ride {easy_minutes} minutes at an easy spin. Light gears, light heart.",
+            "swim": f"Swim {easy_minutes} minutes relaxed. Long strokes, long exhales, no clock-watching.",
+        }[modality],
+        "blurb": {
+            "run": "The roads are quiet. Keep them company.",
+            "ride": "The meadows roll. Let the wheels roll with them.",
+            "swim": "The water argues less when you stop arguing back.",
+        }[modality],
+    })
+    steady_minutes = _r5(med * ambition)
+    pool.append({
+        "kind": f"{modality}_steady", "intensity": "moderate", "target_minutes": steady_minutes,
+        "structure": {
+            "run": f"Run {steady_minutes} minutes at a steady, comfortable effort.",
+            "ride": f"Ride {steady_minutes} minutes at a steady, comfortable effort.",
+            "swim": f"Swim {steady_minutes} minutes continuous at a comfortable, steady effort.",
+        }[modality],
+        "blurb": {
+            "run": "A courier's pace: not hurried, never idle.",
+            "ride": "A courier's wage is earned in the turning, not the sprinting.",
+            "swim": "A ferryman crosses in all weather. So do you.",
+        }[modality],
+    })
+    if modality == "run":
+        tempo_work = _r5(max(10, med * 0.5 * ambition), lo=8)
+        repetitions = max(4, min(8, int(med / 4)))
+        pool.extend((
+            {
+                "kind": "run_tempo", "intensity": "hard", "target_minutes": tempo_work + 15,
+                "structure": f"10 min easy warm-up, {tempo_work} min at tempo (comfortably hard, ~85%), 5 min cool-down.",
+                "blurb": "Something is gaining on you. Do not let it.",
+            },
+            {
+                "kind": "run_intervals", "intensity": "hard", "target_minutes": 10 + repetitions * 4 + 5,
+                "structure": f"10 min warm-up, then {repetitions} x (2 min hard / 2 min easy jog), 5 min cool-down.",
+                "blurb": "Strike like lightning. Rest like rain. Repeat.",
+            },
+            {
+                "kind": "run_hills", "intensity": "hard", "target_minutes": 10 + repetitions * 3 + 5,
+                "structure": f"10 min warm-up, then {repetitions} x (45-60 sec uphill hard, walk down), 5 min cool-down.",
+                "blurb": "The hill was here first. Show it respect, then defeat it.",
+            },
+        ))
+    elif modality == "swim":
+        repetitions = max(4, min(10, int(med / 3)))
+        pool.append({
+            "kind": "swim_intervals", "intensity": "hard", "target_minutes": 5 + repetitions * 3 + 5,
+            "structure": f"5 min easy warm-up, then {repetitions} x (2 min strong / 1 min easy), 5 min easy cool-down.",
+            "blurb": "Somewhere below, a pike is pacing you. Outswim it.",
+        })
+    elif modality == "ride":
+        repetitions = max(3, min(8, int(med / 10)))
+        pool.append({
+            "kind": "ride_hills", "intensity": "hard", "target_minutes": 15 + repetitions * 5 + 5,
+            "structure": f"15 min easy warm-up, then {repetitions} x (3 min hard climb or big-gear grind, easy spin down), 5 min cool-down.",
+            "blurb": "The pass does not lower itself. Rise to it.",
+        })
+    if sizing == "personalized":
+        long_minutes = _r5(min(max(history.p80_minutes * 1.15, med * 1.35) * ambition, med * 2.0))
+        pool.append({
+            "kind": f"{modality}_long", "intensity": "moderate", "target_minutes": long_minutes,
+            "structure": {
+                "run": f"Run {long_minutes} minutes at an easy-to-steady effort. Slow is fine. Stopping is not.",
+                "ride": f"Ride {long_minutes} minutes at an easy-to-steady effort. Bring water; the watchtower is farther than it looks.",
+                "swim": f"Swim {long_minutes} minutes at an easy-to-steady effort. The far shore is patient.",
+            }[modality],
+            "blurb": {
+                "run": "The far cairn will not visit itself.",
+                "ride": "Past the last fence, the Vale keeps going. Go see.",
+                "swim": "Every crossing worth telling of started as too far.",
+            }[modality],
+        })
+    return tuple(_endurance_candidate(modality, payload, sizing) for payload in pool)
+
 
 def _run_pool(rng):
-    h = run_history()
-    amb = ambition_mult()
-    med = h["median"]
-    pool = []
-    ez = _r5(med * 0.75 * amb)
-    pool.append({
-        "kind": "run_easy", "intensity": "low", "target_minutes": ez,
-        "structure": f"Run {ez} minutes at an easy, conversational pace. Nose-breathing easy.",
-        "blurb": "The roads are quiet. Keep them company.",
-    })
-    st = _r5(med * amb)
-    pool.append({
-        "kind": "run_steady", "intensity": "moderate", "target_minutes": st,
-        "structure": f"Run {st} minutes at a steady, comfortable effort.",
-        "blurb": "A courier's pace: not hurried, never idle.",
-    })
-    tempo_work = _r5(max(10, med * 0.5 * amb), lo=8)
-    tempo_total = tempo_work + 15
-    pool.append({
-        "kind": "run_tempo", "intensity": "hard", "target_minutes": tempo_total,
-        "structure": f"10 min easy warm-up, {tempo_work} min at tempo (comfortably hard, ~85%), 5 min cool-down.",
-        "blurb": "Something is gaining on you. Do not let it.",
-    })
-    reps = max(4, min(8, int(med / 4)))
-    ivl_total = 10 + reps * 4 + 5
-    pool.append({
-        "kind": "run_intervals", "intensity": "hard", "target_minutes": ivl_total,
-        "structure": f"10 min warm-up, then {reps} x (2 min hard / 2 min easy jog), 5 min cool-down.",
-        "blurb": "Strike like lightning. Rest like rain. Repeat.",
-    })
-    if h["n"] >= 3:
-        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
-        pool.append({
-            "kind": "run_long", "intensity": "moderate", "target_minutes": lng,
-            "structure": f"Run {lng} minutes at an easy-to-steady effort. Slow is fine. Stopping is not.",
-            "blurb": "The far cairn will not visit itself.",
-        })
-    hill_reps = max(4, min(8, int(med / 4)))
-    pool.append({
-        "kind": "run_hills", "intensity": "hard", "target_minutes": 10 + hill_reps * 3 + 5,
-        "structure": f"10 min warm-up, then {hill_reps} x (45-60 sec uphill hard, walk down), 5 min cool-down.",
-        "blurb": "The hill was here first. Show it respect, then defeat it.",
-    })
-    for o in pool:
-        o["modality"] = "run"
-    return pool
+    del rng
+    return [dict(candidate.payload) for candidate in build_endurance_candidates(
+        "run", _history_context(run_history()), ambition_mult()
+    )]
 
 
 def _swim_pool(rng):
-    h = modality_history("swim", default_median=20)
-    amb = ambition_mult()
-    med = h["median"]
-    pool = []
-    ez = _r5(med * 0.75 * amb)
-    pool.append({
-        "kind": "swim_easy", "intensity": "low", "target_minutes": ez,
-        "structure": f"Swim {ez} minutes relaxed. Long strokes, long exhales, no clock-watching.",
-        "blurb": "The water argues less when you stop arguing back.",
-    })
-    st = _r5(med * amb)
-    pool.append({
-        "kind": "swim_steady", "intensity": "moderate", "target_minutes": st,
-        "structure": f"Swim {st} minutes continuous at a comfortable, steady effort.",
-        "blurb": "A ferryman crosses in all weather. So do you.",
-    })
-    reps = max(4, min(10, int(med / 3)))
-    pool.append({
-        "kind": "swim_intervals", "intensity": "hard", "target_minutes": 5 + reps * 3 + 5,
-        "structure": f"5 min easy warm-up, then {reps} x (2 min strong / 1 min easy), 5 min easy cool-down.",
-        "blurb": "Somewhere below, a pike is pacing you. Outswim it.",
-    })
-    if h["n"] >= 3:
-        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
-        pool.append({
-            "kind": "swim_long", "intensity": "moderate", "target_minutes": lng,
-            "structure": f"Swim {lng} minutes at an easy-to-steady effort. The far shore is patient.",
-            "blurb": "Every crossing worth telling of started as too far.",
-        })
-    for o in pool:
-        o["modality"] = "swim"
-    return pool
+    del rng
+    return [dict(candidate.payload) for candidate in build_endurance_candidates(
+        "swim", _history_context(modality_history("swim", default_median=20)), ambition_mult()
+    )]
 
 
 def _ride_pool(rng):
-    h = modality_history("ride", default_median=40)
-    amb = ambition_mult()
-    med = h["median"]
-    pool = []
-    ez = _r5(med * 0.75 * amb)
-    pool.append({
-        "kind": "ride_easy", "intensity": "low", "target_minutes": ez,
-        "structure": f"Ride {ez} minutes at an easy spin. Light gears, light heart.",
-        "blurb": "The meadows roll. Let the wheels roll with them.",
-    })
-    st = _r5(med * amb)
-    pool.append({
-        "kind": "ride_steady", "intensity": "moderate", "target_minutes": st,
-        "structure": f"Ride {st} minutes at a steady, comfortable effort.",
-        "blurb": "A courier's wage is earned in the turning, not the sprinting.",
-    })
-    hill_reps = max(3, min(8, int(med / 10)))
-    pool.append({
-        "kind": "ride_hills", "intensity": "hard", "target_minutes": 15 + hill_reps * 5 + 5,
-        "structure": f"15 min easy warm-up, then {hill_reps} x (3 min hard climb or big-gear grind, easy spin down), 5 min cool-down.",
-        "blurb": "The pass does not lower itself. Rise to it.",
-    })
-    if h["n"] >= 3:
-        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
-        pool.append({
-            "kind": "ride_long", "intensity": "moderate", "target_minutes": lng,
-            "structure": f"Ride {lng} minutes at an easy-to-steady effort. Bring water; the watchtower is farther than it looks.",
-            "blurb": "Past the last fence, the Vale keeps going. Go see.",
-        })
-    for o in pool:
-        o["modality"] = "ride"
-    return pool
+    del rng
+    return [dict(candidate.payload) for candidate in build_endurance_candidates(
+        "ride", _history_context(modality_history("ride", default_median=40)), ambition_mult()
+    )]
 
 
 def _endurance_mix():
@@ -235,52 +280,97 @@ def _pick_exercises(rng, names, focus_groups, count=4):
     return chosen[:count]
 
 
-def _build_routine(rng, chosen, style):
+def build_lift_candidate(context: LiftCandidateContext) -> QuestCandidate:
     routine = []
-    for name in chosen:
-        unit, lo, hi = exercises.EXERCISES[name]["scheme"]
-        if style == "strength":
-            sets, reps = 4, lo
-        elif style == "volume":
-            sets, reps = 3, hi
-        else:  # circuit
-            sets, reps = 3, int((lo + hi) / 2)
-        w = last_weight(name)
+    for index, name in enumerate(context.exercises):
+        unit, low_reps, high_reps = exercises.EXERCISES[name]["scheme"]
+        if context.style == "strength":
+            sets, reps = 4, low_reps
+        elif context.style == "volume":
+            sets, reps = 3, high_reps
+        else:
+            sets, reps = 3, int((low_reps + high_reps) / 2)
         routine.append({
-            "exercise": name, "sets": sets, "reps": reps, "unit": unit,
-            "suggest_weight": w,
+            "exercise": name,
+            "sets": sets,
+            "reps": reps,
+            "unit": unit,
+            "suggest_weight": context.weights[index],
             "groups": exercises.EXERCISES[name]["groups"],
         })
-    return routine
+    style_desc = {
+        "strength": "Heavy and low. Rest well between sets.",
+        "volume": "Lighter, more reps. Chase the burn.",
+        "circuit": "Move briskly between exercises, minimal rest.",
+    }
+    total_sets = sum(entry["sets"] for entry in routine)
+    has_history = context.iron_session_count > 0
+    payload = {
+        "kind": f"lift_{context.style}",
+        "giver": context.giver,
+        "title": LIFT_FLAVOR[0],
+        "intensity": "hard" if context.style == "strength" else "moderate",
+        "focus": list(context.focus),
+        "style": context.style,
+        "routine": routine,
+        "structure": style_desc[context.style],
+        "blurb": f"Focus: {', '.join(context.focus)}. {style_desc[context.style]}",
+        "total_sets": total_sets,
+        "sizing": "personalized" if has_history else "generic_starter",
+        "reason_codes": [] if has_history else ["no_iron_history"],
+    }
+    _price_offer(payload, minutes=total_sets * 3, intensity=payload["intensity"])
+    routine_key = "|".join(
+        f"{entry['exercise']}:{entry['suggest_weight']}" for entry in routine
+    )
+    key = f"{context.giver}:{payload['kind']}:{'-'.join(context.focus)}:{routine_key}"
+    return QuestCandidate(key, payload, context.focus)
 
 
-def _climb_pool(rng):
-    h = modality_history("climb", default_median=60)
-    amb = ambition_mult()
-    med = h["median"]
-    sess = _r5(med * amb, lo=30)
-    vol = _r5(med * 0.9 * amb, lo=30)
-    tech = _r5(max(30, med * 0.7), lo=30)
+def build_climb_candidates(
+    history: CandidateHistory,
+    ambition: float,
+) -> Tuple[QuestCandidate, ...]:
+    median_minutes = history.median_minutes
+    session_minutes = _r5(median_minutes * ambition, lo=30)
+    volume_minutes = _r5(median_minutes * 0.9 * ambition, lo=30)
+    technique_minutes = _r5(max(30, median_minutes * 0.7), lo=30)
     pool = [
         {
-            "kind": "climb_session", "intensity": "hard", "target_minutes": sess,
-            "structure": f"{sess} minutes at the wall. Warm up on easy ground, then push attempts near your limit while fresh.",
+            "kind": "climb_session", "intensity": "hard", "target_minutes": session_minutes,
+            "structure": f"{session_minutes} minutes at the wall. Warm up on easy ground, then push attempts near your limit while fresh.",
             "blurb": "The wall asks its questions plainly. Answer with your hands.",
         },
         {
-            "kind": "climb_volume", "intensity": "moderate", "target_minutes": vol,
-            "structure": f"{vol} minutes of mileage: many routes or problems well below your limit, minimal rest between.",
+            "kind": "climb_volume", "intensity": "moderate", "target_minutes": volume_minutes,
+            "structure": f"{volume_minutes} minutes of mileage: many routes or problems well below your limit, minimal rest between.",
             "blurb": "A soldier drills the easy strikes ten hundred times. So does a climber.",
         },
         {
-            "kind": "climb_technique", "intensity": "low", "target_minutes": tech,
-            "structure": f"{tech} minutes climbing deliberately easy: silent feet, straight arms, no rushed moves.",
+            "kind": "climb_technique", "intensity": "low", "target_minutes": technique_minutes,
+            "structure": f"{technique_minutes} minutes climbing deliberately easy: silent feet, straight arms, no rushed moves.",
             "blurb": "Strength wins moves. Footwork wins walls.",
         },
     ]
-    for o in pool:
-        o["modality"] = "climb"
-    return pool
+    candidates = []
+    for payload in pool:
+        variant = payload["kind"].split("_", 1)[1]
+        complete = {
+            **payload,
+            "modality": "climb",
+            "giver": "strength",
+            "title": CLIMB_FLAVOR[variant][0],
+        }
+        _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
+        candidates.append(QuestCandidate(payload["kind"], complete, ("back", "arms", "core")))
+    return tuple(candidates)
+
+
+def _climb_pool(rng):
+    del rng
+    return [dict(candidate.payload) for candidate in build_climb_candidates(
+        _history_context(modality_history("climb", default_median=60)), ambition_mult()
+    )]
 
 
 def gen_climb_offers(rng):
@@ -298,14 +388,13 @@ def gen_lift_offers(rng):
     # stale-first: groups untrained the longest get priority
     ranked = sorted(exercises.GROUPS, key=lambda g: -rec[g]["days_since"])
     offers = []
-    styles = ["strength", "volume", "circuit"]
+    styles: list[LiftStyle] = ["strength", "volume", "circuit"]
     rng.shuffle(styles)
     focus_sets = [ranked[0:2], ranked[1:3], [ranked[0], ranked[3]]]
-    style_desc = {
-        "strength": "Heavy and low. Rest well between sets.",
-        "volume": "Lighter, more reps. Chase the burn.",
-        "circuit": "Move briskly between exercises, minimal rest.",
-    }
+    iron_session_count = len(db.q(
+        "SELECT DISTINCT substr(ts, 1, 10) AS day FROM lift_sets WHERE ts >= ?",
+        ((now() - timedelta(days=60)).date().isoformat(),),
+    ).fetchall())
     for i, equipment in enumerate(GIVER_ARCHETYPES["kettlebell"]["modalities"]):
         style = styles[i % len(styles)]
         focus = focus_sets[i]
@@ -314,21 +403,16 @@ def gen_lift_offers(rng):
             if exercise["equipment"] == equipment
         ]
         chosen = _pick_exercises(rng, names, focus)
-        routine = _build_routine(rng, chosen, style)
-        total_sets = sum(r["sets"] for r in routine)
-        o = {
-            "kind": f"lift_{style}",
-            "giver": "kettlebell",
-            "title": rng.choice(LIFT_FLAVOR),
-            "intensity": "hard" if style == "strength" else "moderate",
-            "focus": focus,
-            "style": style,
-            "routine": routine,
-            "structure": style_desc[style],
-            "blurb": f"Focus: {', '.join(focus)}. {style_desc[style]}",
-            "total_sets": total_sets,
-        }
-        _price_offer(o, minutes=total_sets * 3, intensity=o["intensity"])
+        candidate = build_lift_candidate(LiftCandidateContext(
+            giver="kettlebell",
+            style=style,
+            focus=tuple(focus),
+            exercises=tuple(chosen),
+            weights=tuple(last_weight(name) for name in chosen),
+            iron_session_count=iron_session_count,
+        ))
+        o = dict(candidate.payload)
+        o["title"] = rng.choice(LIFT_FLAVOR)
         offers.append(o)
     return offers
 

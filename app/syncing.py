@@ -1,8 +1,48 @@
 """One complete intervals.icu flight for a routed adventurer profile."""
 
+from datetime import date, datetime, timedelta
+
 from . import db, game, intervals, quests, raid
 
 ERROR_KEY = "last_sync_error"
+
+
+def wellness_freshness(wellness=None):
+    if wellness is None:
+        wellness = intervals.get_sync_status()["wellness"]
+    if not isinstance(wellness, dict):
+        return "missing"
+    succeeded_value = wellness.get("succeeded_at")
+    field_as_of = wellness.get("field_as_of")
+    if not isinstance(succeeded_value, str) or not isinstance(field_as_of, dict):
+        return "missing"
+    try:
+        succeeded_at = datetime.fromisoformat(succeeded_value.replace("Z", "+00:00"))
+    except ValueError:
+        return "missing"
+    observations = []
+    for value in field_as_of.values():
+        if not isinstance(value, str):
+            continue
+        try:
+            observations.append(date.fromisoformat(value))
+        except ValueError:
+            continue
+    if not observations:
+        return "missing"
+    current = game.now()
+    if succeeded_at.tzinfo is None:
+        succeeded_at = succeeded_at.replace(tzinfo=game.profile_tz())
+    age = current - succeeded_at.astimezone(game.profile_tz())
+    fetch_is_recent = timedelta(0) <= age <= timedelta(hours=48)
+    observation_is_recent = max(observations) >= current.date() - timedelta(days=2)
+    return "fresh" if fetch_is_recent and observation_is_recent else "stale"
+
+
+def get_sync_status():
+    status = intervals.get_sync_status()
+    status["wellness"]["freshness"] = wellness_freshness(status["wellness"])
+    return status
 
 
 def _record_failure(slug, message, error_name, scope):
