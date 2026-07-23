@@ -52,12 +52,30 @@ AMBITION = [
     {"name": "Conquer", "mult": 1.25, "desc": "Push hard. Quests demand more."},
 ]
 
-GIVERS = {
-    "running":  {"name": "Old Fenn",            "title": "the Wayfarer",   "sprite": "fenn"},
-    "kettlebell": {"name": "Grunhilda",         "title": "Iron-Bell",      "sprite": "grunhilda"},
-    "strength": {"name": "Ser Bram",            "title": "the Loadbearer", "sprite": "bram"},
-    "mobility": {"name": "Sage Elowen",         "title": "of the Willow",  "sprite": "elowen"},
+GIVER_ARCHETYPES = {
+    "running": {
+        "archetype": "Endurance",
+        "display": {"name": "Old Fenn", "title": "the Wayfarer", "sprite": "fenn"},
+        "modalities": ("run", "ride", "swim"),
+    },
+    "kettlebell": {
+        "archetype": "Iron",
+        "display": {"name": "Grunhilda", "title": "Iron-Bell", "sprite": "grunhilda"},
+        "modalities": ("barbell", "dumbbell", "kettlebell"),
+    },
+    "strength": {
+        "archetype": "Skill",
+        "display": {"name": "Ser Bram", "title": "the Loadbearer", "sprite": "bram"},
+        "modalities": ("climbing", "calisthenics", "plyometrics", "sprints"),
+    },
+    "mobility": {
+        "archetype": "Recovery",
+        "display": {"name": "Sage Elowen", "title": "of the Willow", "sprite": "elowen"},
+        "modalities": ("mobility", "stretch", "easy movement", "rest"),
+    },
 }
+
+GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.items()}
 
 
 def profile_tz():
