@@ -482,7 +482,7 @@ function footer() {
     <div class="footer-btns">
       <button type="button" class="btn small" onclick="G.syncNow()">SEND RAVENS</button>
       <button type="button" class="btn small"${current('settings')} onclick="nav('settings')">SETTINGS</button>
-      <button type="button" class="btn small" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
+      <button type="button" class="btn small toggle ${SFX.muted ? '' : 'green'}" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
     </div>
     <div style="font-size:16px">
       ${syncStatusHTML(st)}
@@ -836,6 +836,7 @@ G.mute = () => {
   const m = SFX.toggleMute();
   document.querySelectorAll('[data-sound-btn]').forEach(b => {
     b.textContent = m ? 'SOUND: OFF' : 'SOUND: ON';
+    b.classList.toggle('green', !m);
   });
 };
 

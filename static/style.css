@@ -14,6 +14,7 @@
   --panel2: #191928;
   --ink: #d8cfa8;
   --dim: #776f8e;
+  --dim-readable: #958ca8;
   --gold: #c9a24b;
   --gold-bright: #f0d080;
   --red: #c85050;
@@ -178,9 +179,29 @@ h1, h2, h3 { font-weight: normal; }
 .btn.danger { color: var(--red); background: #2f1a1a; border-color: #e08c8c #7a3030 #521f1f var(--red); }
 .btn.danger:hover:not(:disabled) { background: #261313; border-color: var(--red) #6b2a2a #461b1b #9a4040; }
 .btn.danger:active:not(:disabled) { color: var(--red); background: #130a0a; border-color: #38150e #6b2a2a #7a3030 #461b1b; }
-.btn.green { color: var(--green); background: #1f281a; border-color: #a8d888 #446b34 #2e4a22 var(--green); }
-.btn.green:hover:not(:disabled) { background: #171f12; border-color: var(--green) #3a5c2c #26401c #5e9146; }
-.btn.green:active:not(:disabled) { color: var(--green); background: #0c1208; border-color: #16280e #3a5c2c #446b34 #26401c; }
+.btn.toggle {
+  background: var(--panel2);
+  color: var(--ink);
+  border-color: var(--dim-readable) var(--dim) var(--panel) var(--dim);
+  box-shadow:
+    0 4px 0 var(--panel),
+    0 6px 0 rgba(0,0,0,0.5);
+}
+.btn.toggle:not(.green):not(.active):hover:not(:disabled) {
+  background: #222238;
+  color: var(--ink);
+  border-color: var(--ink) var(--dim-readable) var(--panel) var(--dim-readable);
+}
+.btn.toggle:not(.green):not(.active):active:not(:disabled) {
+  background: var(--panel2);
+  border-color: var(--panel) var(--dim) var(--dim-readable) var(--dim);
+}
+.btn.green,
+.btn.toggle.active { color: var(--green); background: #1f281a; border-color: #a8d888 #446b34 #2e4a22 var(--green); }
+.btn.green:hover:not(:disabled),
+.btn.toggle.active:hover:not(:disabled) { background: #171f12; border-color: var(--green) #3a5c2c #26401c #5e9146; }
+.btn.green:active:not(:disabled),
+.btn.toggle.active:active:not(:disabled) { color: var(--green); background: #0c1208; border-color: #16280e #3a5c2c #446b34 #26401c; }
 /* unselectable = grayed out: still a raised key, but the plastic itself is
    gray. Placed after the color variants so a disabled danger/green key goes
    gray too (equal specificity, later wins). */
@@ -1474,6 +1495,88 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   color: var(--gold-bright);
 }
 
+.settings-tabs {
+  margin: 12px 4px 16px;
+  min-width: 0;
+}
+.settings-tabs .hall-nav-buttons {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.settings-tabs .btn {
+  min-height: 44px;
+}
+.settings-tabs .btn.active {
+  border-color: var(--gold-bright);
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.counsel-surface {
+  min-inline-size: 0;
+}
+.settings-surface .win-title,
+.counsel-surface .formrow > label,
+.counsel-label {
+  color: var(--blue);
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.settings-surface .sync-status-panel {
+  text-wrap: balance;
+}
+.counsel-label {
+  display: block;
+  margin-top: 8px;
+}
+.settings-helper {
+  margin: 4px 0 12px;
+  color: var(--dim-readable);
+  font-size: 17px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.counsel-path { white-space: nowrap; }
+.counsel-help {
+  margin-top: 8px;
+  color: var(--dim-readable);
+  font-size: 16px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.counsel-block {
+  border: 0;
+  border-left: 3px solid var(--blue);
+  background: var(--panel2);
+}
+
+.counsel-focus {
+  margin: 12px 0 0;
+  padding: 8px 10px 10px;
+}
+.counsel-focus legend {
+  color: var(--blue);
+  padding: 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.counsel-focus[disabled] {
+  pointer-events: none;
+}
+.counsel-focus[disabled] .pixel-select-summary {
+  opacity: 0.62;
+}
+.counsel-focus[disabled] .counsel-focus-choices button,
+.counsel-focus[disabled] > button {
+  opacity: 0.6;
+}
+.counsel-focus-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
 /* In-world confirm dialog (replaces window.confirm). */
 .confirm-win { max-width: 360px; }
 .confirm-msg { margin: 10px 0 14px; font-size: 19px; }

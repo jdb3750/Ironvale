@@ -77,6 +77,9 @@ GIVER_ARCHETYPES = {
 
 GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.items()}
 
+COUNSEL_MODES = ("considered", "self")
+COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "iron")
+
 
 def profile_tz():
     name = get_settings().get("timezone")
@@ -167,6 +170,9 @@ def get_settings():
     s.setdefault("intervals_api_key", "")
     s.setdefault("weight_unit", "kg")
     s.setdefault("timezone", "")
+    s.setdefault("counsel_mode", "considered")
+    s.setdefault("counsel_nudge_enabled", False)
+    s.setdefault("counsel_charter", None)
     return s
 
 

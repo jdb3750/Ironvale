@@ -146,6 +146,7 @@ test('a failed raven flight becomes a persistent visible status', async () => {
     assert.match(await status.innerText(), /ravens delayed since/i);
     assert.equal((await status.innerText()).includes('raven-test-key'), false);
     await page.evaluate(() => nav('settings'));
+    await page.getByRole('tab', { name: 'APIS' }).click();
     await page.locator('.sync-status-panel .sync-status-error').waitFor();
     if (EVIDENCE_DIR) {
       await page.locator('.toast').waitFor({ state: 'detached' });
@@ -164,6 +165,7 @@ test('phone Settings keeps the persistent raven status within the viewport', asy
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
     await page.evaluate(() => nav('settings'));
+    await page.getByRole('tab', { name: 'APIS' }).click();
     await page.locator('.sync-status-panel .sync-status-error').waitFor();
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -175,6 +177,223 @@ test('phone Settings keeps the persistent raven status within the viewport', asy
         path: path.join(EVIDENCE_DIR, 'sync-settings-phone.png'),
       });
     }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Settings retains an optional focus charter across the two Phase 1 loops', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await page.evaluate(async () => {
+      await api('/settings', {
+        method: 'POST',
+        body: { intervals_athlete_id: 'i-settings', intervals_api_key: 'masked-raven-key' },
+      });
+      await refreshState();
+    });
+    await page.evaluate(() => nav('settings'));
+    await page.locator('#settings-game').waitFor();
+    const settingsTabs = page.getByRole('tab');
+    assert.deepEqual(
+      await settingsTabs.allTextContents(),
+      ['GAME', 'APIS', 'DEV'],
+    );
+    assert.deepEqual(
+      await page.locator('[data-settings-section]').evaluateAll(sections => sections.map(section => section.dataset.settingsSection)),
+      ['game'],
+    );
+    assert.equal(await page.getByRole('tab', { name: 'GAME' }).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.getByText('Primary focus', { exact: true }).count(), 1);
+    assert.equal(await page.getByText('Secondary focuses (optional)', { exact: true }).count(), 1);
+    assert.equal(await page.locator('#counsel-focus').isDisabled(), false);
+    assert.deepEqual(
+      (await page.locator('.settings-surface .counsel-label').allTextContents())
+        .map(text => text.trim().toUpperCase()),
+      ['TIMEZONE', 'AMBITION', 'GAME LOOP STYLE', 'PRIMARY FOCUS', 'SECONDARY FOCUSES (OPTIONAL)'],
+    );
+    assert.deepEqual(
+      await page.locator('.settings-surface .formrow > label, .settings-surface .counsel-label, .settings-surface legend')
+        .evaluateAll(elements => [...new Set(elements.map(element => getComputedStyle(element).color))]),
+      ['rgb(106, 160, 200)'],
+    );
+    assert.equal(
+      await page.getByRole('tab', { name: 'GAME' }).evaluate(
+        element => getComputedStyle(element).backgroundColor,
+      ),
+      'rgb(201, 162, 75)',
+    );
+    assert.deepEqual(
+      await page.locator('#counsel-focus').evaluate(element => ({
+        borderLeftColor: getComputedStyle(element).borderLeftColor,
+        borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+        borderTopWidth: getComputedStyle(element).borderTopWidth,
+      })),
+      {
+        borderLeftColor: 'rgb(106, 160, 200)',
+        borderLeftWidth: '3px',
+        borderTopWidth: '0px',
+      },
+    );
+    assert.equal(
+      await page.locator('[data-settings-sound]').evaluate(element => getComputedStyle(element).color),
+      'rgb(122, 181, 92)',
+    );
+    const toggleColors = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.cssText = 'background:var(--panel2);color:var(--ink);border-color:var(--green)';
+      document.body.append(probe);
+      const style = getComputedStyle(probe);
+      const colors = {
+        green: style.borderTopColor,
+        ink: style.color,
+        panel2: style.backgroundColor,
+      };
+      probe.remove();
+      return colors;
+    });
+    const toggleStyle = locator => locator.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderColor: style.borderColor,
+        boxShadow: style.boxShadow,
+        color: style.color,
+      };
+    });
+    const pointerOff = page.getByRole('button', { name: 'DAILY POINTER: OFF', exact: true });
+    const toggleOffStyle = await toggleStyle(pointerOff);
+    assert.equal(toggleOffStyle.backgroundColor, toggleColors.panel2);
+    assert.equal(toggleOffStyle.color, toggleColors.ink);
+    const soundOn = page.getByRole('button', { name: 'SOUND: ON', exact: true });
+    await soundOn.click();
+    const soundOff = page.getByRole('button', { name: 'SOUND: OFF', exact: true });
+    await page.mouse.move(0, 0);
+    assert.deepEqual(await toggleStyle(soundOff), toggleOffStyle);
+    assert.deepEqual(
+      await page.locator('[data-sound-btn]').evaluateAll(buttons => buttons.map(button => ({
+        green: button.classList.contains('green'),
+        toggle: button.classList.contains('toggle'),
+      }))),
+      [
+        { green: false, toggle: true },
+        { green: false, toggle: true },
+      ],
+    );
+    assert.equal(await page.locator('.toast').count(), 0);
+    await pointerOff.click();
+    const pointerOn = page.getByRole('button', { name: 'DAILY POINTER: ON', exact: true });
+    await pointerOn.waitFor();
+    const toggleOnStyle = await toggleStyle(pointerOn);
+    assert.equal(toggleOnStyle.color, toggleColors.green);
+
+    await page.getByRole('tab', { name: 'APIS' }).click();
+    await page.locator('#settings-apis').waitFor();
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.id),
+      'settings-tab-apis',
+    );
+    assert.match(
+      await page.locator('#settings-panel-apis').innerText(),
+      /intervals\.icu → Settings → Developer\./,
+    );
+    assert.equal(
+      await page.locator('.counsel-path').evaluate(element => getComputedStyle(element).whiteSpace),
+      'nowrap',
+    );
+    assert.deepEqual(
+      await page.locator('.settings-helper').evaluate(element => ({
+        borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+        color: getComputedStyle(element).color,
+      })),
+      { borderLeftWidth: '0px', color: 'rgb(149, 140, 168)' },
+    );
+    assert.deepEqual(
+      await page.locator('[data-settings-section]').evaluateAll(sections => sections.map(section => section.dataset.settingsSection)),
+      ['apis'],
+    );
+    assert.equal(await page.locator('#set-key').getAttribute('type'), 'password');
+    assert.equal(await page.locator('#set-key').inputValue(), '');
+    assert.equal(await page.locator('#set-key').getAttribute('placeholder'), '••••••••');
+    assert.equal(
+      await page.locator('.sync-status-panel').evaluate(
+        element => getComputedStyle(element).textWrap,
+      ),
+      'balance',
+    );
+
+    await page.getByRole('tab', { name: 'DEV' }).click();
+    await page.locator('#settings-dev').waitFor();
+    assert.deepEqual(
+      await page.locator('[data-settings-section]').evaluateAll(sections => sections.map(section => section.dataset.settingsSection)),
+      ['dev'],
+    );
+
+    await page.getByRole('tab', { name: 'GAME' }).click();
+    await page.locator('#settings-game').waitFor();
+
+    await page.locator('#set-counsel-primary').locator('..').locator('summary').click();
+    await page.getByRole('menuitemradio', { name: 'Run' }).click();
+    assert.equal(await page.locator('[data-counsel-secondary="run"]').isHidden(), true);
+    assert.equal(await page.locator('[data-counsel-secondary]:visible').count(), 4);
+    assert.equal(await page.locator('[data-counsel-secondary="iron"]').getAttribute('aria-pressed'), 'false');
+    assert.equal(
+      await page.locator('[data-counsel-secondary="iron"]').evaluate(
+        element => element.classList.contains('active'),
+      ),
+      false,
+    );
+    assert.deepEqual(
+      await toggleStyle(page.locator('[data-counsel-secondary="iron"]')),
+      toggleOffStyle,
+    );
+    assert.equal(
+      await page.locator('.counsel-focus-choices').evaluate(
+        element => getComputedStyle(element).justifyContent,
+      ),
+      'center',
+    );
+    await page.getByRole('button', { name: 'Iron' }).click();
+    assert.deepEqual(
+      await toggleStyle(page.locator('[data-counsel-secondary="iron"]')),
+      toggleOnStyle,
+    );
+    await page.getByRole('button', { name: 'SAVE FOCUS' }).click();
+    await page.locator('.toast').waitFor();
+
+    await page.locator('#set-counsel-mode').locator('..').locator('summary').click();
+    await page.getByRole('menuitemradio', { name: 'Choose-your-own' }).click();
+    await page.locator('#counsel-focus[disabled]').waitFor();
+    assert.equal(await page.locator('#counsel-focus').getAttribute('disabled'), '');
+    assert.equal(await page.locator('[data-counsel-secondary="run"]').isDisabled(), true);
+    const primarySummary = page.locator('#set-counsel-primary').locator('..').locator('summary');
+    assert.equal(await primarySummary.getAttribute('aria-disabled'), 'true');
+    assert.equal(await primarySummary.getAttribute('tabindex'), '-1');
+    assert.equal(
+      await page.locator('#counsel-focus').evaluate(element => getComputedStyle(element).opacity),
+      '1',
+    );
+    assert.equal(
+      await page.getByText('Secondary focuses (optional)', { exact: true }).evaluate(
+        element => getComputedStyle(element).opacity,
+      ),
+      '1',
+    );
+    assert.ok(
+      Number(await page.locator('[data-counsel-secondary="run"]').evaluate(
+        element => getComputedStyle(element).opacity,
+      )) >= 0.6,
+    );
+    assert.equal(
+      await page.locator('#counsel-focus-hint').evaluate(element => getComputedStyle(element).color),
+      'rgb(149, 140, 168)',
+    );
+    assert.match(await page.locator('#counsel-focus-hint').innerText(), /choosing freely; focus guides the counsel/i);
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_charter),
+      { primary: 'run', secondary: ['iron'] },
+    );
     assert.deepEqual(failures, []);
   } finally {
     await context.close();

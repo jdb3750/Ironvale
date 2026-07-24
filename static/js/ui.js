@@ -38,7 +38,7 @@ function showModal(html, { backdropClose = true } = {}) {
    dropdown the Menagerie's hat picker uses, generalized. Renders around a
    hidden input carrying the chosen value, so any code that already reads
    document.getElementById(id).value keeps working unchanged. */
-function pixelSelect(id, options, selected, ariaLabel, onChange, placeholder) {
+function pixelSelect(id, options, selected, ariaLabel, onChange, placeholder, disabled = false) {
   // Degrade gracefully on an empty option set (a native <select> would too),
   // rather than throwing on esc(current.label) and blanking the whole screen.
   // With a placeholder, an unmatched selection shows the prompt text and an
@@ -46,12 +46,14 @@ function pixelSelect(id, options, selected, ariaLabel, onChange, placeholder) {
   const current = options.find(o => o.value === selected)
     || (placeholder ? { value: '', label: placeholder } : options[0] || { value: '', label: '' });
   const onAttr = onChange ? ` data-onchange="${esc(onChange)}"` : '';
+  const disabledAttr = disabled ? ' aria-disabled="true" tabindex="-1"' : '';
+  const disabledInput = disabled ? ' disabled' : '';
   return `<details class="pixel-select"${onAttr}>
-    <summary class="btn small pixel-select-summary" aria-haspopup="menu" aria-label="${esc(ariaLabel)}"><span class="pixel-select-label">${esc(current.label)}</span></summary>
+    <summary class="btn small pixel-select-summary" aria-haspopup="menu" aria-label="${esc(ariaLabel)}"${disabledAttr}><span class="pixel-select-label">${esc(current.label)}</span></summary>
     <div class="pixel-select-menu" role="menu" aria-label="${esc(ariaLabel)}">
       ${options.map(o => `<button type="button" class="btn small pixel-option${o.value === current.value ? ' selected' : ''}" role="menuitemradio" aria-checked="${o.value === current.value}" data-value="${esc(o.value)}" onclick="G.pixelSelectPick(this)">${esc(o.label)}</button>`).join('')}
     </div>
-    <input type="hidden" id="${esc(id)}" value="${esc(current.value)}">
+    <input type="hidden" id="${esc(id)}" value="${esc(current.value)}"${disabledInput}>
   </details>`;
 }
 
