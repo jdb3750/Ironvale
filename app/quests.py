@@ -7,8 +7,9 @@ game.py imports neither this nor records/economy."""
 import json
 import math
 import random
+import sqlite3
 from datetime import datetime, timedelta
-from typing import Literal, NamedTuple, Optional, Tuple
+from typing import TYPE_CHECKING, Literal, NamedTuple, Optional, Tuple
 
 import pydantic
 
@@ -18,6 +19,9 @@ from .game import (
     ambition_mult, apply_xp, category, get_char, get_settings, last_weight,
     modality_history, muscle_recency, now, now_iso, run_history, save_char, today,
 )
+
+if TYPE_CHECKING:
+    from .counsel import Attribution
 
 # ---------------- quest generation ----------------
 
@@ -697,8 +701,37 @@ def _quest_row(r):
     }
 
 
+def create_quest_from_offer(
+    giver: str,
+    offer: dict[str, pydantic.JsonValue],
+    attribution: Optional["Attribution"] = None,
+) -> int:
+    from . import counsel
+
+    accepted_at = now_iso()
+    try:
+        cursor = db.q(
+            "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+            "VALUES (?,?,?,?, 'active', ?)",
+            (giver, offer["kind"], offer["title"], json.dumps(offer), accepted_at),
+        )
+        quest_id = cursor.lastrowid
+        if quest_id is None:
+            raise sqlite3.IntegrityError("quest insert did not return an id")
+        if attribution is not None:
+            counsel.insert_attribution(quest_id, accepted_at, attribution)
+        db.q(
+            "INSERT INTO ledger (ts, kind, text) VALUES (?, 'quest', ?)",
+            (now_iso(), f"Accepted quest: {offer['title']}"),
+        )
+        db.commit()
+    except (counsel.AttributionValidationError, sqlite3.DatabaseError):
+        db.rollback()
+        raise
+    return quest_id
+
+
 def accept_offer(giver, offer_id):
-    import json
     for q_ in active_quests():
         if q_["giver"] == giver:
             raise ValueError(f"You already carry a quest from {GIVERS[giver]['name']}. Finish or abandon it first.")
@@ -706,13 +739,7 @@ def accept_offer(giver, offer_id):
     offer = next((o for o in offers if o["offer_id"] == offer_id), None)
     if not offer:
         raise ValueError("That offer has faded.")
-    cur = db.q(
-        "INSERT INTO quests (giver, kind, title, details, status, accepted_at) VALUES (?,?,?,?, 'active', ?)",
-        (giver, offer["kind"], offer["title"], json.dumps(offer), now_iso()),
-    )
-    db.commit()
-    db.log_event(now_iso(), "quest", f"Accepted quest: {offer['title']}")
-    return cur.lastrowid
+    return create_quest_from_offer(giver, offer)
 
 
 def abandon_quest(quest_id):

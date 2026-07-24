@@ -48,6 +48,13 @@ CREATE TABLE IF NOT EXISTS quests (
     activity_id TEXT,
     rewards TEXT
 );
+CREATE TABLE IF NOT EXISTS counsel_attributions (
+    quest_id INTEGER PRIMARY KEY REFERENCES quests(id) ON DELETE CASCADE,
+    mode TEXT NOT NULL CHECK (mode IN ('counsel', 'self')),
+    accepted_at TEXT NOT NULL,
+    offered_option_keys TEXT NOT NULL,
+    chosen_option_key TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS activities (
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL,
@@ -117,6 +124,7 @@ def conn():
     if c is None:
         c = sqlite3.connect(path)
         c.row_factory = sqlite3.Row
+        c.execute("PRAGMA foreign_keys=ON")
         c.execute("PRAGMA journal_mode=WAL")
         c.executescript(SCHEMA)
         for _col, _decl in (("hat", "TEXT"), ("boss", "INTEGER DEFAULT 0")):
@@ -135,6 +143,10 @@ def q(sql, args=()):
 
 def commit():
     conn().commit()
+
+
+def rollback() -> None:
+    conn().rollback()
 
 
 def kv_get(key, default=None):
