@@ -150,9 +150,8 @@ get("/api/dungeon", keys=["state", "stats", "theme", "enter_cost"])
 # ---- quest lifecycle: accept -> matching deed -> completable -> complete --
 print("quest lifecycle:")
 offers = client.get("/api/offers/running").json()["offers"]
-# with run+ride+swim all in recent history, Fenn's board deals one of each
-ok("Fenn deals every practiced endurance modality",
-   {o.get("modality") for o in offers} == {"run", "ride", "swim"})
+ok("Fenn considers one owned endurance path",
+   len(offers) == 1 and offers[0].get("modality") in {"run", "ride", "swim"})
 bram_offers = client.get("/api/offers/strength").json()["offers"]
 grunhilda_offers = client.get("/api/offers/kettlebell").json()["offers"]
 iron_equipment = {
@@ -160,9 +159,13 @@ iron_equipment = {
     for offer in grunhilda_offers
     for row in offer.get("routine", [])
 }
-ok("Grunhilda deals every iron implement", iron_equipment == {"barbell", "dumbbell", "kettlebell"})
+ok("Grunhilda considers one owned Iron path",
+   len(grunhilda_offers) == 1
+   and len(iron_equipment) == 1
+   and iron_equipment <= {"barbell", "dumbbell", "kettlebell"})
 ok("Bram deals only the wall",
-   all(o.get("modality") == "climb" and o.get("target_minutes") for o in bram_offers))
+   len(bram_offers) == 1
+   and all(o.get("modality") == "climb" and o.get("target_minutes") for o in bram_offers))
 r = client.post("/api/quests/accept", json={"giver": "running", "offer_id": offers[0]["offer_id"]})
 ok("accept quest", r.status_code == 200)
 q = client.get("/api/state").json()["active_quests"]

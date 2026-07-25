@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -16,6 +16,48 @@ let browser;
 let dataDir;
 let server;
 let serverOutput = '';
+let giverProfileSequence = 0;
+
+const GIVER_BOARD_CASES = [
+  {
+    giver: 'running',
+    stateName: 'fenn-running',
+    identity: 'Old Fenn the Wayfarer',
+    portrait: 'fenn',
+    selfTiers: ['easy', 'steady', 'quality'],
+    warnedTier: 'quality',
+  },
+  {
+    giver: 'kettlebell',
+    stateName: 'grunhilda-kettlebell',
+    identity: 'Grunhilda Iron-Bell',
+    portrait: 'grunhilda',
+    selfTiers: ['volume', 'circuit', 'strength'],
+    warnedTier: 'strength',
+  },
+  {
+    giver: 'strength',
+    stateName: 'ser-bram-strength',
+    identity: 'Ser Bram the Unburdened',
+    portrait: 'bram',
+    selfTiers: ['technique', 'volume', 'limit-session'],
+    warnedTier: 'limit-session',
+  },
+  {
+    giver: 'mobility',
+    stateName: 'elowen-mobility',
+    identity: 'Sage Elowen of the Willow',
+    portrait: 'elowen',
+    selfTiers: ['restore', 'move', 'unwind'],
+    warnedTier: null,
+  },
+];
+
+const GIVER_VIEWPORTS = {
+  phone: { width: 375, height: 812 },
+  tablet: { width: 768, height: 1024 },
+  desktop: { width: 1280, height: 900 },
+};
 
 async function waitForServer() {
   const deadline = Date.now() + 15_000;
@@ -36,8 +78,8 @@ async function waitForServer() {
   );
 }
 
-async function openMainProfile(viewport) {
-  const context = await browser.newContext({ viewport });
+async function openMainProfile(viewport, options = {}) {
+  const context = await browser.newContext({ viewport, ...options });
   const page = await context.newPage();
   const failures = [];
   page.on('pageerror', error => failures.push(`page error: ${error.message}`));
@@ -48,6 +90,58 @@ async function openMainProfile(viewport) {
   await page.getByRole('button', { name: /Play as Adventurer/ }).click();
   await page.locator('.town-scene').waitFor();
   return { context, failures, page };
+}
+
+async function createGiverProfile(page, mode) {
+  giverProfileSequence += 1;
+  await page.evaluate(async ({ name, mode: counselMode }) => {
+    await api('/profiles', {
+      method: 'POST',
+      body: { name, pin: '1234' },
+    });
+    await api('/settings', {
+      method: 'POST',
+      body: { timezone: 'UTC', counsel_mode: counselMode },
+    });
+    await refreshState();
+  }, {
+    name: `Giver Browser ${giverProfileSequence}`,
+    mode,
+  });
+}
+
+async function setCounselMode(page, mode) {
+  await page.evaluate(async counselMode => {
+    await api('/settings', {
+      method: 'POST',
+      body: { counsel_mode: counselMode },
+    });
+    await refreshState();
+  }, mode);
+}
+
+async function openGiverBoard(page, giver) {
+  await page.evaluate(async giverKey => {
+    if (S.screen === 'giver' && S.params.giver === giverKey) {
+      await render();
+      return;
+    }
+    nav('giver', { giver: giverKey });
+  }, giver);
+  await page.waitForFunction(giverKey => (
+    document.querySelector('.giver-offer-board')?.dataset.giver === giverKey
+    || /Your Sworn (Quest|Writ)/.test(document.querySelector('.win-title')?.textContent || '')
+  ), giver);
+  await page.locator('.npc-head').waitFor();
+  await page.waitForFunction(() => {
+    const canvases = [
+      ...document.querySelectorAll('.hdr canvas[data-hero], .hdr canvas[data-monster], .hdr canvas[data-boss]'),
+    ];
+    return canvases.length > 0 && canvases.every(canvas => {
+      const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      return pixels.some((channel, index) => index % 4 === 3 && channel > 0);
+    });
+  });
 }
 
 before(async () => {
@@ -359,8 +453,11 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
       await toggleStyle(page.locator('[data-counsel-secondary="iron"]')),
       toggleOnStyle,
     );
+    const settingsBeforeSave = await page.locator('#settings-game').elementHandle();
     await page.getByRole('button', { name: 'SAVE FOCUS' }).click();
-    await page.locator('.toast').waitFor();
+    await page.getByText('Focus charter saved.', { exact: true }).waitFor();
+    await page.waitForFunction(previous => !previous.isConnected, settingsBeforeSave);
+    await page.locator('#settings-game').waitFor();
 
     await page.locator('#set-counsel-mode').locator('..').locator('summary').click();
     await page.getByRole('menuitemradio', { name: 'Choose-your-own' }).click();
@@ -394,6 +491,342 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
       await page.evaluate(() => S.state.settings.counsel_charter),
       { primary: 'run', secondary: ['iron'] },
     );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('giver characterization preserves identity, active continuation, and refusal toast behavior', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    let acceptPayload = null;
+    let acceptStatus = null;
+    page.on('request', request => {
+      if (request.method() === 'POST' && request.url().endsWith('/api/quests/accept')) {
+        acceptPayload = request.postDataJSON();
+      }
+    });
+    page.on('response', response => {
+      if (response.request().method() === 'POST' && response.url().endsWith('/api/quests/accept')) {
+        acceptStatus = response.status();
+      }
+    });
+
+    await openGiverBoard(page, 'running');
+    assert.match(await page.locator('.npc-name').innerText(), /Old Fenn the Wayfarer/);
+    assert.equal(await page.locator('[data-portrait="fenn"]').count(), 1);
+    assert.match(
+      await page.locator('[data-portrait="fenn"]').getAttribute('src'),
+      /old_fenn_portrait\.png$/,
+    );
+    assert.equal(await page.locator('.offer').count(), 1);
+
+    await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).click();
+    await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
+    assert.equal(acceptStatus, 200);
+    assert.deepEqual(Object.keys(acceptPayload).sort(), ['giver', 'offer_id']);
+    assert.equal(acceptPayload.giver, 'running');
+    assert.equal(Number.isInteger(acceptPayload.offer_id), true);
+    assert.equal(await page.evaluate(() => S.params.react), 'accept');
+    assert.match(await page.locator('.npc-name').innerText(), /Old Fenn the Wayfarer/);
+    assert.equal(await page.locator('[data-portrait="fenn"]').count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).count(), 0);
+    assert.equal(
+      await page.evaluate(async () => {
+        const state = await api('/state');
+        return state.active_quests.filter(quest => quest.giver === 'running').length;
+      }),
+      1,
+    );
+    assert.equal(await page.locator('.toast.err').count(), 0);
+
+    await page.evaluate(async () => {
+      try {
+        await api('/quests/accept', {
+          method: 'POST',
+          body: { giver: 'running', offer_id: -1 },
+        });
+      } catch {
+        // The shared api() helper owns the visible refusal toast.
+      }
+    });
+    const refusal = page.locator('.toast.err');
+    await refusal.waitFor();
+    assert.match(await refusal.innerText(), /already carry a quest/i);
+    assert.equal(
+      await page.evaluate(async () => {
+        const state = await api('/state');
+        return state.active_quests.filter(quest => quest.giver === 'running').length;
+      }),
+      1,
+    );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('giver counsel boards render deterministic one-or-three paths across responsive viewports', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  const matrix = [];
+  try {
+    await createGiverProfile(page, 'considered');
+    for (const mode of ['considered', 'self']) {
+      await setCounselMode(page, mode);
+      for (const giverCase of GIVER_BOARD_CASES) {
+        for (const [viewportName, viewport] of Object.entries(GIVER_VIEWPORTS)) {
+          await page.setViewportSize(viewport);
+          await openGiverBoard(page, giverCase.giver);
+
+          const board = page.locator('.giver-offer-board');
+          assert.equal(await board.count(), 1);
+          assert.equal(await board.getAttribute('data-counsel-mode'), mode);
+          assert.match(await page.locator('.npc-name').innerText(), new RegExp(giverCase.identity));
+          assert.equal(
+            await page.locator(`[data-portrait="${giverCase.portrait}"]`).count(),
+            1,
+          );
+
+          const expectedCount = mode === 'considered' ? 1 : giverCase.selfTiers.length;
+          const cards = page.locator('.counsel-path-card');
+          assert.equal(await cards.count(), expectedCount);
+          const tiers = (await page.locator('.counsel-tier-label').allTextContents())
+            .map(value => value.trim().toLowerCase());
+          if (mode === 'self') assert.deepEqual(tiers, giverCase.selfTiers);
+          else assert.equal(tiers.length, 1);
+
+          const firstOrder = await cards.evaluateAll(elements => (
+            elements.map(element => element.dataset.offerId)
+          ));
+          await openGiverBoard(page, giverCase.giver);
+          assert.deepEqual(
+            await page.locator('.counsel-path-card').evaluateAll(elements => (
+              elements.map(element => element.dataset.offerId)
+            )),
+            firstOrder,
+          );
+
+          const details = page.locator('.counsel-detail');
+          assert.equal(await details.count(), expectedCount);
+          assert.deepEqual(
+            await details.evaluateAll(elements => elements.map(element => element.open)),
+            Array(expectedCount).fill(viewportName !== 'phone'),
+          );
+          assert.equal(
+            await page.locator('.counsel-detail > summary').evaluateAll(elements => (
+              elements.every(element => /why this path/i.test(element.textContent))
+            )),
+            true,
+          );
+          assert.equal(
+            await page.locator('.counsel-source').evaluateAll(elements => (
+              elements.every(element => /intervals\.icu/i.test(element.textContent))
+            )),
+            true,
+          );
+          assert.deepEqual(
+            await page.locator('.giver-counsel-block').first().evaluate(element => ({
+              borderLeftColor: getComputedStyle(element).borderLeftColor,
+              borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+              borderTopWidth: getComputedStyle(element).borderTopWidth,
+            })),
+            {
+              borderLeftColor: 'rgb(106, 160, 200)',
+              borderLeftWidth: '3px',
+              borderTopWidth: '0px',
+            },
+          );
+
+          const warningTiers = (await page.locator(
+            '.counsel-path-card.has-wellness-warning .counsel-tier-label',
+          ).allTextContents()).map(value => value.trim().toLowerCase());
+          assert.deepEqual(
+            warningTiers,
+            mode === 'self' && giverCase.warnedTier ? [giverCase.warnedTier] : [],
+          );
+          assert.equal(await page.locator('[onclick*="reroll"]').count(), 0);
+          assert.equal(await page.getByText(/ask for different work/i).count(), 0);
+          assert.equal(
+            await page.locator('.giver-accept-row').evaluateAll(elements => (
+              elements.every(element => getComputedStyle(element).justifyContent === 'center')
+            )),
+            true,
+          );
+          assert.equal(
+            await page.locator('.giver-accept-row .btn').evaluateAll(elements => (
+              elements.every(element => element.getBoundingClientRect().height >= 44)
+            )),
+            true,
+          );
+          assert.equal(
+            await page.locator('.counsel-path-card').evaluateAll(elements => (
+              elements.every(element => {
+                const action = element.querySelector('.giver-accept-row');
+                const disclosure = element.querySelector('.counsel-detail');
+                return Boolean(
+                  action
+                  && disclosure
+                  && (action.compareDocumentPosition(disclosure) & Node.DOCUMENT_POSITION_FOLLOWING),
+                );
+              })
+            )),
+            true,
+          );
+          assert.equal(
+            await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+            true,
+          );
+
+          const state = `${mode}-${giverCase.stateName}`;
+          const screenshotPath = EVIDENCE_DIR
+            ? path.join(EVIDENCE_DIR, `${state}__${viewportName}.png`)
+            : null;
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.waitForFunction(() => window.scrollY === 0);
+          if (screenshotPath) await page.screenshot({ path: screenshotPath });
+          matrix.push({
+            state,
+            mode,
+            giver: giverCase.giver,
+            giverIdentity: giverCase.identity,
+            portrait: giverCase.portrait,
+            viewport: { name: viewportName, ...viewport },
+            screenshot: screenshotPath,
+            scrollY: await page.evaluate(() => window.scrollY),
+            offerCount: expectedCount,
+            tierLabels: tiers,
+            detailsOpen: viewportName !== 'phone',
+            warningTiers,
+            rerollCount: 0,
+            horizontalOverflow: false,
+            acceptTargetsAtLeast44px: true,
+          });
+        }
+      }
+    }
+    assert.equal(matrix.length, 24);
+    await page.setViewportSize(GIVER_VIEWPORTS.phone);
+    await openGiverBoard(page, 'running');
+    const hardWarningCard = page.locator('.counsel-path-card.has-wellness-warning');
+    await hardWarningCard.scrollIntoViewIfNeeded();
+    assert.equal(
+      (await hardWarningCard.locator('.counsel-tier-label').innerText()).toLowerCase(),
+      'quality',
+    );
+    assert.match(
+      await hardWarningCard.locator('.counsel-eligibility.warn').innerText(),
+      /remains yours to choose/i,
+    );
+    assert.equal(await hardWarningCard.getByRole('button', { name: 'ACCEPT QUEST' }).isEnabled(), true);
+    const hardWarningScreenshot = EVIDENCE_DIR
+      ? path.join(EVIDENCE_DIR, 'self-hard-warning-phone.png')
+      : null;
+    if (hardWarningScreenshot) await page.screenshot({ path: hardWarningScreenshot });
+    if (EVIDENCE_DIR) {
+      await writeFile(
+        path.join(EVIDENCE_DIR, 'giver-matrix-observables.json'),
+        `${JSON.stringify({
+          capturedAt: new Date().toISOString(),
+          baseUrl: BASE_URL,
+          dataDir,
+          node: process.version,
+          matrix,
+          hardWarning: {
+            state: 'self-fenn-running-quality',
+            selectable: true,
+            warningVisible: true,
+            screenshot: hardWarningScreenshot,
+          },
+        }, null, 2)}\n`,
+      );
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('giver accept confirms its commit while stale or malformed options cannot fake success', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    let acceptStatuses = [];
+    page.on('response', response => {
+      if (response.request().method() === 'POST' && response.url().endsWith('/api/quests/accept')) {
+        acceptStatuses.push(response.status());
+      }
+    });
+    await openGiverBoard(page, 'running');
+    await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).click();
+    await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
+    const successToast = page.locator('.toast:not(.err)');
+    await successToast.waitFor();
+    assert.match(await successToast.innerText(), /oath is inked/i);
+    assert.deepEqual(acceptStatuses, [200]);
+    assert.equal(
+      await page.evaluate(async () => {
+        const state = await api('/state');
+        return state.active_quests.filter(quest => quest.giver === 'running').length;
+      }),
+      1,
+    );
+    if (EVIDENCE_DIR) {
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'accept-continuation-phone.png'),
+      });
+    }
+
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'running');
+    const staleOfferId = Number(
+      await page.locator('.counsel-path-card').first().getAttribute('data-offer-id'),
+    );
+    await setCounselMode(page, 'self');
+    await page.evaluate(async offerId => {
+      try {
+        await api('/quests/accept', {
+          method: 'POST',
+          body: { giver: 'running', offer_id: offerId },
+        });
+      } catch {
+        // The error toast is the player-visible refusal.
+      }
+    }, staleOfferId);
+    await page.locator('.toast.err').waitFor();
+    assert.match(await page.locator('.toast.err').innerText(), /offer has faded/i);
+    assert.equal(await page.locator('.toast:not(.err)').count(), 0);
+    assert.equal(
+      await page.evaluate(async () => {
+        const state = await api('/state');
+        return state.active_quests.length;
+      }),
+      0,
+    );
+
+    await page.evaluate(async () => {
+      try {
+        await api('/quests/accept', {
+          method: 'POST',
+          body: { giver: 'running', option_key: { malformed: true } },
+        });
+      } catch {
+        // The error toast is the player-visible refusal.
+      }
+    });
+    assert.match(await page.locator('.toast.err').innerText(), /offer key is not recognized/i);
+    assert.equal(await page.locator('.toast:not(.err)').count(), 0);
+    assert.deepEqual(acceptStatuses, [200, 400, 400]);
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -448,6 +881,91 @@ test('Undercroft uses map movement with a single inventory control', async () =>
         await page.screenshot({
           path: path.join(EVIDENCE_DIR, `undercroft-${label}.png`),
           fullPage: true,
+        });
+      }
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('override paths: Iron doctrine and Rest Writ each render one path in both modes', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.desktop,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(async () => {
+      await api('/programs/select', {
+        method: 'POST',
+        body: { giver: 'kettlebell', key: 'starting_strength' },
+      });
+      await refreshState();
+    });
+    for (const mode of ['considered', 'self']) {
+      await setCounselMode(page, mode);
+      await openGiverBoard(page, 'kettlebell');
+      assert.equal(await page.locator('.counsel-path-card').count(), 1);
+      assert.equal(await page.locator('.counsel-path-card .chip.program').count(), 1);
+      assert.equal(await page.locator('.counsel-tier-label').count(), 1);
+      if (EVIDENCE_DIR) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `override-doctrine-grunhilda-${mode}.png`),
+        });
+      }
+    }
+
+    await createGiverProfile(page, 'considered');
+    const slug = await page.evaluate(async () => (await api('/profiles')).current);
+    const now = new Date();
+    const day = offset => new Date(now.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
+    const wellnessRows = [];
+    for (let ago = 20; ago > 6; ago--) wellnessRows.push([day(ago), 60, 50]);
+    for (let ago = 6; ago >= 0; ago--) wellnessRows.push([day(ago), 40, 56]);
+    const syncStatus = {
+      revision: 1,
+      activity: { revision: 1, newest_observation_date: day(0), field_as_of: { moving_time: day(0) } },
+      wellness: {
+        revision: 1,
+        succeeded_at: now.toISOString().slice(0, 19),
+        newest_observation_date: day(0),
+        field_as_of: { hrv: day(0), resting_hr: day(0) },
+      },
+    };
+    const seed = spawnSync(
+      path.join(ROOT, '.venv/bin/python'),
+      ['-c', `
+import json, sqlite3, sys
+connection = sqlite3.connect(sys.argv[1])
+for observed, hrv, resting_hr in json.loads(sys.argv[2]):
+    connection.execute(
+        "INSERT OR REPLACE INTO wellness (date, hrv, resting_hr) VALUES (?, ?, ?)",
+        (observed, hrv, resting_hr),
+    )
+connection.execute(
+    "INSERT OR REPLACE INTO kv (key, value) VALUES ('sync_status', ?)",
+    (sys.argv[3],),
+)
+connection.commit()
+connection.close()
+`, path.join(dataDir, `${slug}.db`), JSON.stringify(wellnessRows), JSON.stringify(syncStatus)],
+      { encoding: 'utf8' },
+    );
+    assert.equal(seed.status, 0, `Rest Writ seed failed: ${seed.stderr || seed.stdout}`);
+
+    for (const mode of ['considered', 'self']) {
+      await setCounselMode(page, mode);
+      await openGiverBoard(page, 'mobility');
+      assert.equal(await page.locator('.counsel-path-card').count(), 1);
+      assert.equal(await page.locator('.counsel-path-card.writ').count(), 1);
+      assert.equal(await page.locator('.counsel-path-card .chip.rest').count(), 1);
+      if (EVIDENCE_DIR) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `override-writ-elowen-${mode}.png`),
         });
       }
     }

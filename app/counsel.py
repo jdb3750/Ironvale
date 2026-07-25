@@ -1,19 +1,23 @@
-import json
 import math
 from datetime import date, datetime, timedelta
-from typing import Dict, Final, Literal, NamedTuple, Optional, Sequence, Tuple
+from typing import Dict, NamedTuple, Optional, Tuple
 
 import pydantic
 
-from . import db, exercises, game, syncing
+from . import counsel_candidates, db, exercises, game, quests, syncing
+from .counsel_attribution import (
+    Attribution as Attribution,
+    AttributionDataError as AttributionDataError,
+    AttributionRecord as AttributionRecord,
+    AttributionValidationError as AttributionValidationError,
+    get_attribution as get_attribution,
+    insert_attribution as insert_attribution,
+    validate_attribution as validate_attribution,
+)
 
 
-ACTIVITY_LOOKBACK_DAYS = 60
-LOWER_BODY_SET_GATE = 6
-TREND_PRIOR_MINIMUM = 14
-TREND_PRIOR_LIMIT = 28
-CounselMode = Literal["counsel", "self"]
-VALID_ATTRIBUTION_MODES: Final[Dict[str, CounselMode]] = {"counsel": "counsel", "self": "self"}
+ACTIVITY_LOOKBACK_DAYS, LOWER_BODY_SET_GATE, TREND_PRIOR_MINIMUM, TREND_PRIOR_LIMIT = 60, 6, 14, 28
+JsonMap = Dict[str, pydantic.JsonValue]
 
 
 class RuleState(NamedTuple):
@@ -23,106 +27,17 @@ class RuleState(NamedTuple):
     wellness_state: str
 
 
-class Attribution(NamedTuple):
-    mode: CounselMode
-    offered_option_keys: Tuple[str, ...]
-    chosen_option_key: str
+class OptionIdentity(NamedTuple):
+    option_key: Optional[str]
+    offer_id: Optional[int]
 
 
-class AttributionRecord(NamedTuple):
-    quest_id: int
-    mode: CounselMode
-    accepted_at: str
-    offered_option_keys: Tuple[str, ...]
-    chosen_option_key: str
+class OfferValidationError(ValueError):
+    pass
 
 
-class AttributionValidationError(ValueError):
-    field: str
-    detail: str
-
-    def __init__(self, field: str, detail: str) -> None:
-        self.field = field
-        self.detail = detail
-        super().__init__(f"{field}: {detail}")
-
-
-class AttributionDataError(ValueError):
-    quest_id: int
-    detail: str
-
-    def __init__(self, quest_id: int, detail: str) -> None:
-        self.quest_id = quest_id
-        self.detail = detail
-        super().__init__(f"quest {quest_id}: {detail}")
-
-
-def validate_attribution(
-    mode: str, offered_option_keys: Sequence[str], chosen_option_key: str
-) -> Attribution:
-    if not isinstance(mode, str):
-        raise AttributionValidationError("mode", "must be counsel or self")
-    try:
-        parsed_mode = VALID_ATTRIBUTION_MODES[mode]
-    except KeyError as exc:
-        raise AttributionValidationError("mode", "must be counsel or self") from exc
-    if isinstance(offered_option_keys, str):
-        raise AttributionValidationError("offered_option_keys", "must be a non-empty list")
-    keys = tuple(offered_option_keys)
-    if not keys:
-        raise AttributionValidationError("offered_option_keys", "must be a non-empty list")
-    if any(not isinstance(key, str) or not key.strip() for key in keys):
-        raise AttributionValidationError("offered_option_keys", "must contain only non-empty strings")
-    if len(keys) != len(set(keys)):
-        raise AttributionValidationError("offered_option_keys", "must be unique")
-    if not isinstance(chosen_option_key, str) or not chosen_option_key.strip():
-        raise AttributionValidationError("chosen_option_key", "must be a non-empty string")
-    if chosen_option_key not in keys:
-        raise AttributionValidationError("chosen_option_key", "must be one of the offered keys")
-    return Attribution(parsed_mode, keys, chosen_option_key)
-
-
-def insert_attribution(quest_id: int, accepted_at: str, attribution: Attribution) -> None:
-    parsed = validate_attribution(
-        attribution.mode, attribution.offered_option_keys, attribution.chosen_option_key
-    )
-    db.q(
-        "INSERT INTO counsel_attributions "
-        "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (
-            quest_id, parsed.mode, accepted_at,
-            json.dumps(list(parsed.offered_option_keys), separators=(",", ":")),
-            parsed.chosen_option_key,
-        ),
-    )
-
-
-def get_attribution(quest_id: int) -> Optional[AttributionRecord]:
-    row = db.q(
-        "SELECT quest_id, mode, accepted_at, offered_option_keys, chosen_option_key "
-        "FROM counsel_attributions WHERE quest_id=?",
-        (quest_id,),
-    ).fetchone()
-    if row is None:
-        return None
-    try:
-        raw_offered_keys = json.loads(row["offered_option_keys"])
-    except (json.JSONDecodeError, TypeError) as exc:
-        raise AttributionDataError(quest_id, "offered option keys are not valid JSON") from exc
-    if not isinstance(raw_offered_keys, list):
-        raise AttributionDataError(quest_id, "offered option keys are not a list")
-    try:
-        parsed = validate_attribution(row["mode"], raw_offered_keys, row["chosen_option_key"])
-    except AttributionValidationError as exc:
-        raise AttributionDataError(quest_id, str(exc)) from exc
-    accepted_at = row["accepted_at"]
-    if not isinstance(accepted_at, str) or not accepted_at:
-        raise AttributionDataError(quest_id, "accepted timestamp is missing")
-    return AttributionRecord(
-        row["quest_id"], parsed.mode, accepted_at,
-        parsed.offered_option_keys, parsed.chosen_option_key,
-    )
+def _sync_status() -> JsonMap:
+    return pydantic.parse_obj_as(JsonMap, syncing.get_sync_status())
 
 
 def _local_datetime(value: str, current: datetime) -> Optional[datetime]:
@@ -196,17 +111,22 @@ def _nearest_rank(values: Tuple[float, ...], quantile: float) -> float:
 
 
 def _wellness_trend(
-    sync: Dict[str, pydantic.JsonValue],
+    sync: JsonMap,
     current: datetime,
-) -> Dict[str, pydantic.JsonValue]:
-    wellness = sync["wellness"]
-    field_as_of = wellness["field_as_of"]
+) -> JsonMap:
+    wellness_value = sync.get("wellness")
+    wellness = wellness_value if isinstance(wellness_value, dict) else {}
+    field_value = wellness.get("field_as_of")
+    field_as_of = field_value if isinstance(field_value, dict) else {}
     freshness = {
         field: _wellness_field_is_fresh(wellness, field, current)
         for field in ("hrv", "resting_hr")
     }
     readings = {
-        field: _wellness_readings(field, field_as_of[field])
+        field: _wellness_readings(
+            field,
+            str(field_as_of.get(field)) if isinstance(field_as_of.get(field), str) else None,
+        )
         for field in ("hrv", "resting_hr")
     }
     enough_history = all(
@@ -227,29 +147,34 @@ def _wellness_trend(
         reason_codes.append("wellness_trend_high_resting_hr")
     if low_hrv and high_resting_hr:
         reason_codes.append("hard_suppressed_wellness_trend")
-    return {
-        "field_fresh": freshness,
-        "readings": {
+    freshness_payload: JsonMap = {field: value for field, value in freshness.items()}
+    readings_payload: JsonMap = {
             field: [{"date": observed_on, "value": value} for observed_on, value in readings[field]]
             for field in ("hrv", "resting_hr")
-        },
+    }
+    return {
+        "field_fresh": freshness_payload,
+        "readings": readings_payload,
         "reason_codes": reason_codes,
         "suppresses_hard": low_hrv and high_resting_hr,
     }
 
 
-def _wellness_state(sync: Dict[str, pydantic.JsonValue], trend: Dict[str, pydantic.JsonValue]) -> str:
-    aggregate = sync["wellness"]["freshness"]
+def _wellness_state(sync: JsonMap, trend: JsonMap) -> str:
+    wellness_value = sync.get("wellness")
+    wellness = wellness_value if isinstance(wellness_value, dict) else {}
+    aggregate = wellness.get("freshness")
     if aggregate in ("missing", "stale"):
         return aggregate
-    field_fresh = trend["field_fresh"]
-    if field_fresh["hrv"] and field_fresh["resting_hr"]:
+    field_value = trend.get("field_fresh")
+    field_fresh = field_value if isinstance(field_value, dict) else {}
+    if field_fresh.get("hrv") is True and field_fresh.get("resting_hr") is True:
         return "fresh"
     return "mixed"
 
 
 def _rule_state(current: datetime) -> RuleState:
-    sync = syncing.get_sync_status()
+    sync = _sync_status()
     trend = _wellness_trend(sync, current)
     wellness_state = _wellness_state(sync, trend)
     reason_codes = []
@@ -261,7 +186,9 @@ def _rule_state(current: datetime) -> RuleState:
             "mixed": "wellness_data_mixed",
         }[wellness_state])
         reason_codes.append("hard_suppressed_wellness_unknown")
-    reason_codes.extend(trend["reason_codes"])
+    trend_reasons = trend.get("reason_codes")
+    if isinstance(trend_reasons, list):
+        reason_codes.extend(reason for reason in trend_reasons if isinstance(reason, str))
     lower_body = _lower_body_proxy(current)
     lower_body_active = bool(lower_body["active"])
     if lower_body_active:
@@ -281,11 +208,80 @@ def rule_state(current: Optional[datetime] = None) -> RuleState:
 
 def source_disclosure(rules: Optional[RuleState] = None) -> Dict[str, pydantic.JsonValue]:
     state = rules or rule_state()
-    sync = syncing.get_sync_status()
+    sync = _sync_status()
+    activity_value = sync.get("activity")
+    activity = activity_value if isinstance(activity_value, dict) else {}
+    wellness_value = sync.get("wellness")
+    wellness = wellness_value if isinstance(wellness_value, dict) else {}
     return {
         "provider": "intervals.icu",
         "activity_source": "intervals.icu",
-        "activity_as_of": sync["activity"]["newest_observation_date"],
-        "wellness_as_of": sync["wellness"]["newest_observation_date"],
+        "activity_as_of": activity.get("newest_observation_date"),
+        "wellness_as_of": wellness.get("newest_observation_date"),
         "wellness_freshness": state.wellness_state,
     }
+
+
+def _game_mode() -> counsel_candidates.GameMode:
+    mode = game.get_settings()["counsel_mode"]
+    if mode == "considered":
+        return "considered"
+    if mode == "self":
+        return "self"
+    raise OfferValidationError("Choose one of the available game loops.")
+
+
+def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
+    if giver not in game.GIVER_ARCHETYPES:
+        raise OfferValidationError("No such quest-giver.")
+    mode = _game_mode()
+    rules = rule_state()
+    drafts = counsel_candidates.for_giver(giver)
+    hard_suppressed = False
+    if mode == "considered" and len(drafts) > 1:
+        eligible = drafts
+        if rules.suppresses_hard:
+            eligible = tuple(
+                draft
+                for draft in drafts
+                if draft.payload["intensity"] != "hard"
+            )
+            hard_suppressed = len(eligible) != len(drafts)
+        drafts = eligible[-1:]
+    context = counsel_candidates.OptionContext(
+        mode,
+        rules.reason_codes,
+        source_disclosure(rules),
+        rules.suppresses_hard,
+        hard_suppressed,
+    )
+    return tuple(counsel_candidates.finalize(draft, context) for draft in drafts)
+
+
+def accept_current_option(giver: str, identity: OptionIdentity) -> int:
+    if giver not in game.GIVER_ARCHETYPES:
+        raise OfferValidationError("No such quest-giver.")
+    for active in quests.active_quests():
+        if active["giver"] == giver:
+            name = game.GIVERS[giver]["name"]
+            raise OfferValidationError(
+                f"You already carry a quest from {name}. Finish or abandon it first.",
+            )
+    current = giver_options(giver)
+    chosen = next(
+        (
+            option
+            for option in current
+            if (identity.option_key is None or option["option_key"] == identity.option_key)
+            and (identity.offer_id is None or option["offer_id"] == identity.offer_id)
+        ),
+        None,
+    )
+    if chosen is None:
+        raise OfferValidationError("That offer has faded.")
+    attribution = validate_attribution(
+        "counsel" if _game_mode() == "considered" else "self",
+        tuple(str(option["option_key"]) for option in current),
+        str(chosen["option_key"]),
+    )
+    return quests.create_quest_from_offer(giver, chosen, attribution)

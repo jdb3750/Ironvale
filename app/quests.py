@@ -21,7 +21,7 @@ from .game import (
 )
 
 if TYPE_CHECKING:
-    from .counsel import Attribution
+    from .counsel_attribution import Attribution
 
 # ---------------- quest generation ----------------
 
@@ -706,7 +706,7 @@ def create_quest_from_offer(
     offer: dict[str, pydantic.JsonValue],
     attribution: Optional["Attribution"] = None,
 ) -> int:
-    from . import counsel
+    from . import counsel_attribution
 
     accepted_at = now_iso()
     try:
@@ -719,13 +719,13 @@ def create_quest_from_offer(
         if quest_id is None:
             raise sqlite3.IntegrityError("quest insert did not return an id")
         if attribution is not None:
-            counsel.insert_attribution(quest_id, accepted_at, attribution)
+            counsel_attribution.insert_attribution(quest_id, accepted_at, attribution)
         db.q(
             "INSERT INTO ledger (ts, kind, text) VALUES (?, 'quest', ?)",
             (now_iso(), f"Accepted quest: {offer['title']}"),
         )
         db.commit()
-    except (counsel.AttributionValidationError, sqlite3.DatabaseError):
+    except (counsel_attribution.AttributionValidationError, sqlite3.DatabaseError):
         db.rollback()
         raise
     return quest_id

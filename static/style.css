@@ -1550,6 +1550,79 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   background: var(--panel2);
 }
 
+.giver-offer-board,
+.counsel-path-card,
+.giver-counsel-block {
+  min-inline-size: 0;
+}
+.giver-board-intro {
+  margin: 4px 0 12px;
+  color: var(--dim-readable);
+  font-size: 17px;
+  line-height: 1.35;
+  text-align: center;
+}
+.offer.counsel-path-card:hover { border-color: #4a3d20; }
+.counsel-tier-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 4px;
+}
+.counsel-tier-label {
+  color: var(--blue);
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.counsel-tier-detail {
+  color: var(--ink);
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.counsel-eligibility {
+  margin: 8px 0 0;
+  color: var(--green);
+  font-size: 17px;
+}
+.counsel-eligibility.warn { color: var(--red); }
+.giver-accept-row,
+.giver-board-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.giver-accept-row { margin: 12px 0 8px; }
+.giver-board-actions { margin-top: 8px; }
+.giver-accept-row .btn { min-block-size: 44px; }
+.giver-counsel-block {
+  margin: 8px 0;
+  padding: 8px 12px;
+}
+.giver-counsel-block .counsel-label:first-child { margin-top: 0; }
+.counsel-reasons {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.35;
+}
+.counsel-reason + .counsel-reason { margin-top: 4px; }
+.counsel-source {
+  display: grid;
+  gap: 4px;
+  color: var(--dim-readable);
+  font-size: 17px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.giver-offer-lore {
+  margin-top: 8px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.giver-focus-map { margin: 8px 0 0; }
+
 .counsel-focus {
   margin: 12px 0 0;
   padding: 8px 10px 10px;
@@ -1896,6 +1969,10 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     gap: 6px;
   }
   .offer-primary .btn { align-self: stretch; }
+  .counsel-path-card { padding: 8px; }
+  .counsel-tier-row { display: block; }
+  .counsel-tier-detail { display: block; margin-top: 4px; }
+  .giver-accept-row .btn { width: 100%; }
   .offer-lore { margin-top: 8px; }
 
   .dungeon-gate {

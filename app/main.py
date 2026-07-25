@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
+from . import colosseum, counsel, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
 
 app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(lifts.router)
@@ -277,16 +277,10 @@ async def save_settings(request: Request):
 # ---------------- quests ----------------
 
 @app.get("/api/offers/{giver}")
-def offers(giver: str, reroll: bool = False):
+def offers(giver: str):
     if giver not in game.GIVERS:
         raise ValueError("No such quest-giver.")
-    if reroll:
-        c = game.get_char()
-        if c["gold"] < 10:
-            raise ValueError("A reroll costs 10 gold.")
-        c["gold"] -= 10
-        game.save_char(c)
-    out = quests.get_offers(giver, reroll=reroll)
+    out = counsel.giver_options(giver)
     active = next((q for q in quests.active_quests() if q["giver"] == giver), None)
     if active:
         ok, note, _ = quests.quest_completable(active)
@@ -297,7 +291,23 @@ def offers(giver: str, reroll: bool = False):
 @app.post("/api/quests/accept")
 async def accept(request: Request):
     body = await request.json()
-    qid = quests.accept_offer(body["giver"], body["offer_id"])
+    if not isinstance(body, dict):
+        raise counsel.OfferValidationError("That offer is not written in a recognized form.")
+    giver = body.get("giver")
+    option_key = body.get("option_key")
+    offer_id = body.get("offer_id")
+    if not isinstance(giver, str) or giver not in game.GIVERS:
+        raise counsel.OfferValidationError("No such quest-giver.")
+    if option_key is not None and (not isinstance(option_key, str) or not option_key):
+        raise counsel.OfferValidationError("That offer key is not recognized.")
+    if offer_id is not None and type(offer_id) is not int:
+        raise counsel.OfferValidationError("That offer number is not recognized.")
+    if option_key is None and offer_id is None:
+        raise counsel.OfferValidationError("Choose a current offer.")
+    qid = counsel.accept_current_option(
+        giver,
+        counsel.OptionIdentity(option_key, offer_id),
+    )
     return {"quest_id": qid}
 
 
