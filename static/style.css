@@ -2067,3 +2067,20 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   }
   .cursor-blink::after { animation: none !important; opacity: 1; }
 }
+
+/* ---- the council's daily pointer: a deed-style bubble on the giver's
+   building, marked as counsel by the blue rail rather than an overlay ---- */
+.fenn-bubble.counsel-nudge { border-left: 3px solid var(--blue); }
+/* The counsel bubble holds two controls inside one card: tapping the quote
+   walks you to the giver, and a quieter DISMISS underneath waves it off. The
+   card keeps .fenn-bubble's border and tail so it reads as the same idiom. */
+.fenn-bubble.counsel-nudge { cursor: default; }
+.counsel-nudge-go {
+  display: block; inline-size: 100%; box-sizing: border-box;
+  padding: 0; margin: 0; border: 0; background: none;
+  font: inherit; color: inherit; text-align: inherit; cursor: pointer;
+}
+.counsel-nudge-dismiss {
+  display: block; inline-size: 100%; box-sizing: border-box;
+  min-block-size: 44px; margin-top: 6px;
+}

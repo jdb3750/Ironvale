@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, counsel, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
+from . import colosseum, counsel, counsel_nudge, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
 
 app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(lifts.router)
@@ -190,6 +190,7 @@ def state():
         "needs_login": False,
         "unguided_pending": quests.unguided_pending(),
         "writ_notices": quests.writ_notices_pending(),
+        "counsel_nudge": counsel_nudge.daily_nudge(),
         "almanac_unread": records.almanac_unread(),
         "npc_notices": records.npc_notices(),
         "version": APP_VERSION,

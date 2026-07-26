@@ -208,12 +208,15 @@ SCREENS.town = async function () {
    auto-resolved by the server after a day passed), swap it out. ---- */
 function showFennBubbleIfQueued() {
   const next = S.fennQueue && S.fennQueue[0];
-  const shown = document.querySelector('.fenn-bubble-wrap:not(.willow-bubble-wrap)');
+  const shown = document.querySelector(
+    '.fenn-bubble-wrap:not(.willow-bubble-wrap):not(.counsel-nudge-wrap)',
+  );
   if (shown) {
     if (next && shown.dataset.activityId === String(next.activity_id)) return; // already correct
     shown.remove();
   }
   if (!next) return;
+  document.querySelectorAll('.counsel-nudge-wrap').forEach(element => element.remove());
   const deed = DEED_BUBBLES[next.giver] || DEED_BUBBLES.running;
   const anchor = document.getElementById(deed.anchor);
   if (!anchor) return;
@@ -262,6 +265,7 @@ function showWillowBubbleIfQueued() {
     shown.remove();
   }
   if (!next) return;
+  document.querySelectorAll('.counsel-nudge-wrap').forEach(element => element.remove());
   const anchor = document.getElementById('bld-elowen');
   if (!anchor) return;
   const kept = next.type === 'kept';
@@ -506,4 +510,83 @@ G.syncNow = async () => {
   } else {
     toast(`${r.new_activities} new deed(s) returned.`);
   }
+};
+
+/* ---- The daily pointer: the council's opt-in, once-a-day nudge toward one
+   giver's door. It borrows the deed-bubble idiom deliberately — a bubble on
+   that giver's building, not an overlay — so it never interrupts play: ignore
+   it and the town is still yours. Read-only by design: the server computes it
+   from practiced modalities only, showing it writes nothing, and tapping it is
+   plain navigation — acceptance at the board keeps its ordinary loop tag. The
+   once-per-local-day guard is client-local (localStorage, keyed by profile
+   slug) and marked on SHOW, so re-entering town stays quiet. ---- */
+const NUDGE_ANCHORS = {
+  running: 'bld-fenn',
+  kettlebell: 'bld-grun',
+  strength: 'bld-bram',
+  mobility: 'bld-elowen',
+};
+
+const counselNudgeSeenMemory = Object.create(null);
+
+function counselNudgeSeenState() {
+  const seen = Object.create(null);
+  try {
+    const raw = localStorage.getItem('iv_nudge');
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      Object.entries(parsed).forEach(([slug, day]) => {
+        if (typeof day === 'string') seen[slug] = day;
+      });
+    }
+  } catch (e) {}
+  Object.assign(seen, counselNudgeSeenMemory);
+  return seen;
+}
+
+function markCounselNudgeSeen(slug, day) {
+  const seen = counselNudgeSeenState();
+  seen[slug] = day;
+  counselNudgeSeenMemory[slug] = day;
+  try {
+    localStorage.setItem('iv_nudge', JSON.stringify(seen));
+  } catch (e) {}
+}
+
+function showCounselNudgeIfDue() {
+  if (S.screen !== 'town') return;
+  const nudge = S.state && S.state.counsel_nudge;
+  if (!nudge) return;
+  if (document.querySelector('.counsel-nudge-wrap')) return;
+  if (document.querySelector('.fenn-bubble-wrap:not(.counsel-nudge-wrap)')) return;
+  const anchor = document.getElementById(NUDGE_ANCHORS[nudge.giver]);
+  if (!anchor) return;
+  const slug = S.profileSlug || 'main';
+  const day = localToday();
+  const seen = counselNudgeSeenState();
+  if (seen[slug] === day) return;
+  markCounselNudgeSeen(slug, day);
+  anchor.insertAdjacentHTML('beforeend', `
+    <div class="fenn-bubble-wrap counsel-nudge-wrap" data-giver="${esc(nudge.giver)}">
+      <div class="fenn-bubble counsel-nudge">
+        <button type="button" class="counsel-nudge-go" aria-label="Follow the council's counsel to ${esc(nudge.giver_name)}" onclick="G.followCounselNudge('${esc(nudge.giver)}')">
+          <span class="fb-line" style="display:block">&ldquo;${esc(nudge.line)}&rdquo;</span>
+          <span class="btn small" aria-hidden="true" style="display:block;width:100%;box-sizing:border-box">THE COUNCIL'S COUNSEL</span>
+        </button>
+        <button type="button" class="btn small counsel-nudge-dismiss" aria-label="Dismiss the council's counsel" onclick="G.dismissCounselNudge(event)">DISMISS</button>
+      </div>
+    </div>`);
+}
+
+G.followCounselNudge = (giver) => {
+  document.querySelectorAll('.counsel-nudge-wrap').forEach(x => x.remove());
+  nav('giver', { giver });
+};
+
+/* Waving the counsel off is purely local: the day was already marked seen when
+   the bubble appeared, so dismissing writes nothing and it simply will not
+   return until tomorrow. */
+G.dismissCounselNudge = (event) => {
+  if (event) event.stopPropagation();
+  document.querySelectorAll('.counsel-nudge-wrap').forEach(x => x.remove());
 };

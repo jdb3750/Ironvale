@@ -16,7 +16,7 @@ from .counsel_attribution import (
 )
 
 
-ACTIVITY_LOOKBACK_DAYS, LOWER_BODY_SET_GATE, TREND_PRIOR_MINIMUM, TREND_PRIOR_LIMIT = 60, 6, 14, 28
+LOWER_BODY_SET_GATE, TREND_PRIOR_MINIMUM, TREND_PRIOR_LIMIT = 6, 14, 28
 JsonMap = Dict[str, pydantic.JsonValue]
 
 

@@ -314,7 +314,7 @@ async function syncClientTimezone() {
   if (S.state.settings.timezone === tz) return;
   try {
     await api('/settings', { method: 'POST', body: { timezone: tz } });
-    S.state.settings.timezone = tz;
+    await refreshState();
   } catch (e) { /* non-fatal */ }
 }
 
@@ -874,6 +874,7 @@ async function drainRenderQueue() {
       if (request.screen === 'town') {
         showFennBubbleIfQueued();
         showWillowBubbleIfQueued();
+        showCounselNudgeIfDue();
       }
     }
     root.style.visibility = '';
@@ -1106,6 +1107,7 @@ async function boot() {
     return; // login screen already shown on 401
   }
   if (thisBoot !== bootGeneration) return;
+  S.profileSlug = prof.current || null;
   if (!prof.current) {
     stopRouteActivity();
     clearRouteOverlays();

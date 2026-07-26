@@ -8,6 +8,16 @@ import { fileURLToPath } from 'node:url';
 
 import { chromium } from 'playwright';
 
+/* Two rules this file has been bitten by; keep them:
+   1. EVERY test must stand alone. All tests share one scratch server and one
+      DATA_DIR, so it is easy to lean on state an earlier test left behind —
+      and then a subset run (--test-name-pattern) lies about what passes.
+      Induce the state you assert on. Verify with:
+        node --test --test-name-pattern="<one test>" tests/frontend_browser.test.mjs
+   2. innerText vs textContent: innerText returns '' for an element that is not
+      rendered or is display:none (collapsed, inactive tab). Use innerText when the
+      claim really is "the user sees this" AND you have scrolled/opened it
+      first; use textContent when you only mean "the element says this". */
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_URL = 'http://127.0.0.1:8322';
 const EVIDENCE_DIR = process.env.IRON_VALE_VISUAL_QA_DIR;
@@ -108,6 +118,84 @@ async function createGiverProfile(page, mode) {
     name: `Giver Browser ${giverProfileSequence}`,
     mode,
   });
+}
+
+async function seedNudgeProfile(page, mode, activityId, daysAgo = 3) {
+  await createGiverProfile(page, mode);
+  const slug = await page.evaluate(async () => (await api('/profiles')).current);
+  const start = new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 19);
+  const seed = spawnSync(
+    path.join(ROOT, '.venv/bin/python'),
+    ['-c', `
+import sqlite3, sys
+connection = sqlite3.connect(sys.argv[1])
+connection.execute(
+    "INSERT INTO activities (id, source, start, type, name, moving_time) VALUES (?,?,?,?,?,?)",
+    (sys.argv[2], "test", sys.argv[3], "Run", "Road run", 1800),
+)
+connection.commit()
+connection.close()
+`, path.join(dataDir, `${slug}.db`), activityId, start],
+    { encoding: 'utf8' },
+  );
+  assert.equal(seed.status, 0, `Nudge practice seed failed: ${seed.stderr || seed.stdout}`);
+  await page.evaluate(async () => {
+    await api('/settings', {
+      method: 'POST',
+      body: {
+        counsel_nudge_enabled: true,
+        counsel_charter: { primary: 'run', secondary: [] },
+      },
+    });
+  });
+  return slug;
+}
+
+async function installNudgeStorageFault(context, mode) {
+  await context.addInitScript(storageMode => {
+    const storage = window.localStorage;
+    if (storageMode === 'null') {
+      Storage.prototype.setItem.call(storage, 'iv_nudge', 'null');
+    } else if (storageMode === 'invalid-json') {
+      Storage.prototype.setItem.call(storage, 'iv_nudge', '{not-json');
+    }
+    const proxy = new Proxy(storage, {
+      get(target, property) {
+        if (property === 'iv_nudge' && storageMode === 'getter-throw') {
+          throw new DOMException('Storage read denied', 'SecurityError');
+        }
+        if (property === 'getItem') {
+          return key => {
+            if (key === 'iv_nudge' && storageMode === 'getter-throw') {
+              throw new DOMException('Storage read denied', 'SecurityError');
+            }
+            return Storage.prototype.getItem.call(target, key);
+          };
+        }
+        if (property === 'setItem') {
+          return (key, value) => {
+            if (key === 'iv_nudge' && storageMode === 'setter-throw') {
+              throw new DOMException('Storage write denied', 'QuotaExceededError');
+            }
+            return Storage.prototype.setItem.call(target, key, value);
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+      set(target, property, value) {
+        if (property === 'iv_nudge' && storageMode === 'setter-throw') {
+          throw new DOMException('Storage write denied', 'QuotaExceededError');
+        }
+        Storage.prototype.setItem.call(target, String(property), String(value));
+        return true;
+      },
+    });
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: proxy,
+    });
+  }, mode);
 }
 
 async function setCounselMode(page, mode) {
@@ -258,6 +346,20 @@ test('a failed raven flight becomes a persistent visible status', async () => {
 test('phone Settings keeps the persistent raven status within the viewport', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
+    // Induce the failed flight here rather than inheriting it from the test
+    // above: each test must stand on its own, or running a subset lies.
+    await page.evaluate(async () => {
+      await api('/settings', {
+        method: 'POST',
+        body: { intervals_athlete_id: 'i-browser', intervals_api_key: 'raven-test-key' },
+      });
+      try {
+        await api('/sync', { method: 'POST' });
+      } catch (error) {
+        // The dead-port flight is expected to fail; the status is the subject.
+      }
+      await refreshState();
+    });
     await page.evaluate(() => nav('settings'));
     await page.getByRole('tab', { name: 'APIS' }).click();
     await page.locator('.sync-status-panel .sync-status-error').waitFor();
@@ -969,6 +1071,264 @@ connection.close()
         });
       }
     }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('daily pointer bubbles on its giver building, once per local day, never blocking play', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await seedNudgeProfile(page, 'considered', 'nudge-browser-1');
+
+    await page.reload();
+    await page.locator('.town-scene').waitFor();
+    const bubble = page.locator('.counsel-nudge-wrap');
+    await bubble.waitFor();
+    const follow = page.getByRole('button', {
+      name: "Follow the council's counsel to Old Fenn",
+      exact: true,
+    });
+    await follow.waitFor();
+
+    // It is a bubble on Fenn's building, not an overlay: the town stays live.
+    assert.equal(await page.locator('.overlay').count(), 0);
+    assert.equal(
+      await bubble.evaluate(element => element.closest('[id]')?.id),
+      'bld-fenn',
+    );
+    assert.match(
+      await bubble.evaluate(element => element.textContent),
+      /The path is chosen/,
+    );
+    assert.deepEqual(
+      await bubble.locator('.counsel-nudge').evaluate(element => ({
+        borderLeftColor: getComputedStyle(element).borderLeftColor,
+        borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+      })),
+      { borderLeftColor: 'rgb(106, 160, 200)', borderLeftWidth: '3px' },
+    );
+    assert.deepEqual(
+      await bubble
+        .locator('.counsel-nudge-go .btn, .counsel-nudge-dismiss')
+        .evaluateAll(elements => elements.map(element => getComputedStyle(element).color)),
+      ['rgb(240, 208, 128)', 'rgb(240, 208, 128)'],
+    );
+    for (const [viewportName, viewport] of Object.entries(GIVER_VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      await page.waitForFunction(() => (
+        [...document.querySelectorAll('.counsel-nudge-go, .counsel-nudge-dismiss')]
+          .every(element => element.getBoundingClientRect().height >= 44)
+      ));
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const controlSizes = await page
+        .locator('.counsel-nudge-go, .counsel-nudge-dismiss')
+        .evaluateAll(elements => elements.map(element => ({
+          name: element.className,
+          height: element.getBoundingClientRect().height,
+        })));
+      for (const control of controlSizes) {
+        assert.ok(
+          control.height >= 44,
+          `${viewportName} ${control.name} measured ${control.height}px`,
+        );
+      }
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `nudge-considered-${viewportName}.png`),
+        });
+      }
+    }
+    await page.setViewportSize(GIVER_VIEWPORTS.phone);
+
+    // Ignoring it costs nothing: another building is still reachable.
+    await page.evaluate(() => nav('giver', { giver: 'mobility' }));
+    await page.waitForFunction(() => (
+      document.querySelector('.giver-offer-board')?.dataset.giver === 'mobility'
+    ));
+    await page.evaluate(() => nav('town'));
+    await page.locator('.town-scene').waitFor();
+    assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
+    await page.reload();
+    await page.locator('.town-scene').waitFor();
+    assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
+
+    // The same local day remains eligible for a different profile slug.
+    await seedNudgeProfile(page, 'considered', 'nudge-browser-profile-2');
+    await page.reload();
+    await page.locator('.town-scene').waitFor();
+    await page.locator('.counsel-nudge-wrap').waitFor();
+
+    // A fresh profile in Choose-your-own speaks in its own, data-aware voice.
+    await seedNudgeProfile(page, 'self', 'nudge-browser-self');
+    await page.reload();
+    await page.locator('.town-scene').waitFor();
+    const selfBubble = page.locator('.counsel-nudge-wrap');
+    await selfBubble.waitFor();
+    const selfLine = await selfBubble.evaluate(element => element.textContent);
+    assert.match(selfLine, /day/);
+    assert.doesNotMatch(selfLine, /The path is chosen/);
+    if (EVIDENCE_DIR) {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'nudge-self-phone.png') });
+    }
+
+    // It can be waved off in place, and dismissing writes nothing.
+    await selfBubble.locator('.counsel-nudge-dismiss').click();
+    await page.waitForFunction(() => document.querySelector('.counsel-nudge-wrap') === null);
+    assert.equal(await page.locator('.town-scene').count(), 1);
+
+    // Tapping the bubble itself is navigation, nothing more.
+    await seedNudgeProfile(page, 'self', 'nudge-browser-follow');
+    await page.reload();
+    await page.locator('.town-scene').waitFor();
+    await page.getByRole('button', {
+      name: "Follow the council's counsel to Old Fenn",
+      exact: true,
+    }).click();
+    await page.waitForFunction(() => (
+      document.querySelector('.giver-offer-board')?.dataset.giver === 'running'
+    ));
+    assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('daily pointer storage fallbacks keep town visible and suppress same-session repeats', async () => {
+  for (const mode of ['null', 'invalid-json', 'getter-throw', 'setter-throw']) {
+    const { context, failures, page } = await openMainProfile(
+      GIVER_VIEWPORTS.phone,
+      { reducedMotion: 'reduce' },
+    );
+    try {
+      await seedNudgeProfile(page, 'considered', `nudge-storage-${mode}`);
+      await installNudgeStorageFault(context, mode);
+      await page.reload();
+      await page.waitForTimeout(250);
+      assert.deepEqual(
+        await page.locator('#app').evaluate(element => ({
+          busy: element.getAttribute('aria-busy'),
+          visibility: getComputedStyle(element).visibility,
+        })),
+        { busy: null, visibility: 'visible' },
+      );
+      await page.locator('.town-scene').waitFor();
+      await page.locator('.counsel-nudge-wrap').waitFor();
+      assert.equal(await page.locator('.counsel-nudge-wrap').count(), 1);
+
+      await page.evaluate(() => nav('giver', { giver: 'mobility' }));
+      await page.waitForFunction(() => (
+        document.querySelector('.giver-offer-board')?.dataset.giver === 'mobility'
+      ));
+      await page.evaluate(() => nav('town'));
+      await page.locator('.town-scene').waitFor();
+      assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test('boot refreshes counsel after synchronizing the profile timezone', async () => {
+  const timezone = 'America/New_York';
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce', timezoneId: timezone },
+  );
+  const stateTimezones = [];
+  try {
+    await seedNudgeProfile(page, 'considered', 'nudge-timezone-refresh');
+    page.on('response', async response => {
+      if (response.url().endsWith('/api/state') && response.ok()) {
+        stateTimezones.push((await response.json()).settings.timezone);
+      }
+    });
+
+    await page.reload();
+    await page.locator('.town-scene').waitFor();
+    await page.waitForFunction(expected => (
+      S.state?.settings?.timezone === expected
+    ), timezone);
+    assert.deepEqual(stateTimezones.slice(-2), ['UTC', timezone]);
+    await page.locator('.counsel-nudge-wrap').waitFor();
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('daily pointer yields the building bubble to an existing writ notice', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await seedNudgeProfile(page, 'considered', 'nudge-writ-precedence');
+    await page.evaluate(async () => {
+      localStorage.removeItem('iv_nudge');
+      await refreshState();
+      S.writQueue = [{
+        ts: new Date().toISOString(),
+        type: 'broken',
+        detail: 'Training',
+        rewards: {},
+      }];
+      await render();
+    });
+    await page.locator('.willow-bubble-wrap').waitFor();
+    assert.equal(await page.locator('.fenn-bubble-wrap').count(), 1);
+    assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
+
+    await page.evaluate(async () => {
+      S.writQueue = [];
+      await render();
+    });
+    await page.locator('.counsel-nudge-wrap').waitFor();
+    assert.equal(await page.locator('.willow-bubble-wrap').count(), 0);
+    assert.equal(await page.locator('.fenn-bubble-wrap').count(), 1);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('daily pointer yields the building bubble to an existing deed notice', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await seedNudgeProfile(page, 'considered', 'nudge-deed-precedence');
+    await page.evaluate(async () => {
+      await refreshState();
+      S.fennQueue = [{
+        activity_id: 'nudge-deed-precedence',
+        giver: 'running',
+        title: 'Road run',
+        minutes: 30,
+        xp: 10,
+        gold: 5,
+        vigor: 1,
+      }];
+      await render();
+    });
+    await page.locator('.fenn-bubble-wrap[data-activity-id]').waitFor();
+    assert.equal(await page.locator('.fenn-bubble-wrap').count(), 1);
+    assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
+
+    await page.evaluate(async () => {
+      S.fennQueue = [];
+      await render();
+    });
+    await page.locator('.counsel-nudge-wrap').waitFor();
+    assert.equal(await page.locator('.fenn-bubble-wrap[data-activity-id]').count(), 0);
+    assert.equal(await page.locator('.fenn-bubble-wrap').count(), 1);
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
