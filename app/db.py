@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS quests (
 );
 CREATE TABLE IF NOT EXISTS counsel_attributions (
     quest_id INTEGER PRIMARY KEY REFERENCES quests(id) ON DELETE CASCADE,
-    mode TEXT NOT NULL CHECK (mode IN ('counsel', 'self')),
+    mode TEXT NOT NULL CHECK (mode IN ('counsel', 'self', 'schedule')),
     accepted_at TEXT NOT NULL,
     offered_option_keys TEXT NOT NULL,
     chosen_option_key TEXT NOT NULL

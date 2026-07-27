@@ -205,8 +205,8 @@ def accept_security_and_attribution() -> None:
         json={
             "giver": "running",
             "offer_id": self_chosen.offer_id,
-            "mode": "counsel",
-            "tag": "counsel",
+            "mode": "schedule",
+            "tag": "schedule",
         },
     )
     assert forged_tag.status_code == 200

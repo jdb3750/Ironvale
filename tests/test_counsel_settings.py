@@ -58,11 +58,15 @@ try:
         valid_charter.status_code == 200 and settings_with_charter["counsel_charter"] == saved_charter,
     )
 
-    invalid_mode = client.post("/api/settings", json={"counsel_mode": "scheduled"})
+    invalid_modes = tuple(
+        client.post("/api/settings", json={"counsel_mode": mode})
+        for mode in ("schedule", "scheduled")
+    )
     after_invalid_mode = client.get("/api/state").json()["settings"]
     ok(
         "invalid loop rejects without mutating saved settings",
-        invalid_mode.status_code == 400 and after_invalid_mode == settings_with_charter,
+        all(response.status_code == 400 for response in invalid_modes)
+        and after_invalid_mode == settings_with_charter,
     )
 
     invalid_focus = client.post(
