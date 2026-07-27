@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -886,6 +886,160 @@ test('giver counsel boards render deterministic one-or-three paths across respon
         }, null, 2)}\n`,
       );
     }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('counsel hard warning and HARD chip meet WCAG AA contrast at all target viewports', async () => {
+  const { context, failures, page } = await openMainProfile(
+    { width: 375, height: 812 },
+    { reducedMotion: 'reduce' },
+  );
+  const viewports = [
+    ['phone', { width: 375, height: 812 }],
+    ['tablet', { width: 768, height: 1024 }],
+    ['desktop', { width: 1440, height: 900 }],
+  ];
+  const phase = process.env.IRON_VALE_CONTRAST_PHASE || 'green';
+  const observations = [];
+  const parseRgb = value => {
+    const channels = value.match(/rgba?\(([^)]+)\)/i)?.[1]
+      ?.split(',')
+      .slice(0, 3)
+      .map(channel => Number.parseFloat(channel.trim()));
+    assert.ok(channels?.length === 3 && channels.every(Number.isFinite), `Unexpected color: ${value}`);
+    return channels;
+  };
+  const luminance = channels => channels
+    .map(channel => channel / 255)
+    .map(channel => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
+    .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  const contrastRatio = (foreground, background) => {
+    const foregroundLuminance = luminance(foreground);
+    const backgroundLuminance = luminance(background);
+    return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+      / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+  };
+  try {
+    await createGiverProfile(page, 'self');
+    for (const [viewportName, viewport] of viewports) {
+      await page.setViewportSize(viewport);
+      await openGiverBoard(page, 'running');
+      const hardWarningCard = page.locator('.counsel-path-card.has-wellness-warning');
+      await hardWarningCard.waitFor();
+      await hardWarningCard.scrollIntoViewIfNeeded();
+      const capture = await hardWarningCard.evaluate((card) => {
+        const findOpaqueBackground = (element) => {
+          let current = element;
+          while (current) {
+            const background = getComputedStyle(current).backgroundColor;
+            if (!background.includes('rgba(0, 0, 0, 0)') && background !== 'transparent') {
+              return background;
+            }
+            current = current.parentElement;
+          }
+          return getComputedStyle(document.body).backgroundColor;
+        };
+        const describe = (element) => {
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          const background = findOpaqueBackground(element);
+          return {
+            text: element.textContent?.trim() || '',
+            foreground: style.color,
+            background,
+            rect: {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            },
+          };
+        };
+        const warning = card.querySelector('.counsel-eligibility.warn');
+        const chip = card.querySelector('.chip.hard');
+        const tier = card.querySelector('.counsel-tier-label');
+        const accept = card.querySelector('.giver-accept-row .btn');
+        if (!warning || !chip || !tier || !accept) throw new Error('Hard-warning anatomy is incomplete');
+        return {
+          warning: describe(warning),
+          chip: describe(chip),
+          tier: tier.textContent?.trim() || '',
+          accept: {
+            text: accept.textContent?.trim() || '',
+            rect: (() => {
+              const rect = accept.getBoundingClientRect();
+              return { width: rect.width, height: rect.height };
+            })(),
+          },
+          card: {
+            rect: (() => {
+              const rect = card.getBoundingClientRect();
+              return { width: rect.width, height: rect.height };
+            })(),
+          },
+          overflow: document.documentElement.scrollWidth > window.innerWidth,
+        };
+      });
+      observations.push({
+        viewport: { name: viewportName, ...viewport },
+        ...capture,
+        assetVersion: await page.locator('link[rel="stylesheet"]').evaluate(element => (
+          new URL(element.href).searchParams.get('v')
+        )),
+        warningRatio: contrastRatio(parseRgb(capture.warning.foreground), parseRgb(capture.warning.background)),
+        chipRatio: contrastRatio(parseRgb(capture.chip.foreground), parseRgb(capture.chip.background)),
+        screenshot: EVIDENCE_DIR ? path.join(EVIDENCE_DIR, `${phase}-${viewportName}.png`) : null,
+      });
+      if (EVIDENCE_DIR) {
+        await page.screenshot({ path: path.join(EVIDENCE_DIR, `${phase}-${viewportName}.png`) });
+      }
+    }
+    if (EVIDENCE_DIR) {
+      await writeFile(
+        path.join(EVIDENCE_DIR, `${phase}-computed.json`),
+        `${JSON.stringify({ capturedAt: new Date().toISOString(), phase, observations }, null, 2)}\n`,
+      );
+      const baselinePath = path.join(EVIDENCE_DIR, 'red-computed.json');
+      if (phase === 'green') {
+        try {
+          const baseline = JSON.parse(await readFile(baselinePath, 'utf8'));
+          assert.deepEqual(
+            observations.map(item => ({
+              viewport: item.viewport.name,
+              tier: item.tier,
+              warning: item.warning.text,
+              chip: item.chip.text,
+              accept: item.accept.text,
+              card: { width: item.card.rect.width, height: item.card.rect.height },
+              warningBox: { width: item.warning.rect.width, height: item.warning.rect.height },
+              chipBox: { width: item.chip.rect.width, height: item.chip.rect.height },
+              overflow: item.overflow,
+            })),
+            baseline.observations.map(item => ({
+              viewport: item.viewport.name,
+              tier: item.tier,
+              warning: item.warning.text,
+              chip: item.chip.text,
+              accept: item.accept.text,
+              card: { width: item.card.rect.width, height: item.card.rect.height },
+              warningBox: { width: item.warning.rect.width, height: item.warning.rect.height },
+              chipBox: { width: item.chip.rect.width, height: item.chip.rect.height },
+              overflow: item.overflow,
+            })),
+          );
+        } catch (error) {
+          if (error?.code !== 'ENOENT') throw error;
+        }
+      }
+    }
+    assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '94'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
   } finally {
     await context.close();

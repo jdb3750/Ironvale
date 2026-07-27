@@ -1563,6 +1563,16 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   text-align: center;
 }
 .offer.counsel-path-card:hover { border-color: #4a3d20; }
+.counsel-path-card.has-wellness-warning {
+  --counsel-warning: #dc7a72;
+}
+.counsel-path-card.has-wellness-warning .counsel-eligibility.warn {
+  color: var(--counsel-warning);
+}
+.counsel-path-card.has-wellness-warning .chip.hard {
+  border-color: var(--counsel-warning);
+  color: var(--counsel-warning);
+}
 .counsel-tier-row {
   display: flex;
   align-items: baseline;

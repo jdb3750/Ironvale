@@ -20,9 +20,10 @@ other hues carry status, rarity, and game meaning.
 
 ### Palette
 
-There is one dark theme. These are all 15 custom properties currently declared
-in `:root`; the stylesheet also contains raw, one-off colors that have not yet
-been promoted to tokens.
+There is one dark theme. These are the 16 custom properties currently declared
+in `:root`; the counsel hard-warning token is intentionally scoped to warned
+counsel cards rather than added to the global root ramp. The stylesheet also
+contains raw, one-off colors that have not yet been promoted to tokens.
 
 | Role | Token | Value | Current use |
 | --- | --- | --- | --- |
@@ -35,6 +36,7 @@ been promoted to tokens.
 | Gold accent | `--gold` | `#c9a24b` | Standard borders, controls, active fills |
 | Bright gold | `--gold-bright` | `#f0d080` | Titles, selected emphasis, important values |
 | Danger | `--red` | `#c85050` | Errors, danger controls, hostile/status emphasis |
+| Counsel warning (scoped) | `--counsel-warning` | `#dc7a72` | Hard-path warning text and HARD chip on `--panel2`; scoped to warned counsel cards |
 | Success | `--green` | `#7ab55c` | Success, completed states, restorative status |
 | Information | `--blue` | `#6aa0c8` | Informational and category emphasis |
 | Progress | `--purple` | `#a06ac8` | XP and reward emphasis |
@@ -53,6 +55,9 @@ been promoted to tokens.
   and controls; `--gold-bright` carries titles and stronger emphasis.
 - Red, green, blue, and purple already have game semantics. Rarity tokens are
   aliases by meaning even when their values match a status hue.
+- Counsel hard warnings use the scoped `--counsel-warning` token for enough
+  contrast on `--panel2`; the global `--red` token remains unchanged for
+  game-wide danger controls and status surfaces.
 - Raw colors remain common in scene art, gradients, specialized panels, and
   secondary borders. That inconsistency is current implementation debt; do not
   infer additional global tokens from it without updating the CSS contract.
