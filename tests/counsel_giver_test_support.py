@@ -146,6 +146,11 @@ def new_profile(label: str, mode: str = "considered") -> None:
 
 def write_fresh_sync() -> None:
     today = NOW.date().isoformat()
+    db.q(
+        "INSERT OR IGNORE INTO wellness (date, hrv, resting_hr) VALUES (?,?,?)",
+        (today, 61.0, 49.0),
+    )
+    db.commit()
     db.kv_set(
         "sync_status",
         {

@@ -173,6 +173,11 @@ ok("six lower-body sets trip the gate", "recent_lower_body_six_sets" in six_set_
 # Given: stale provider metadata. When: rules are evaluated. Then: hard work is
 # safely suppressed rather than treating stale wellness as current.
 stale_day = (NOW.date() - timedelta(days=3)).isoformat()
+db.q(
+    "INSERT INTO wellness (date, hrv, resting_hr) VALUES (?,?,?)",
+    (stale_day, 61.0, 49.0),
+)
+db.commit()
 write_sync_status(stale_day, stale_day, (NOW - timedelta(hours=49)).isoformat(timespec="seconds"))
 stale_rules = counsel.rule_state(NOW)
 ok("stale wellness suppresses hard selection", stale_rules.suppresses_hard and "wellness_data_stale" in stale_rules.reason_codes)

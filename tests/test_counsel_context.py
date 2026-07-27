@@ -135,6 +135,11 @@ def unchanged_characterization() -> None:
     # Given three valid runs and fresh wellness, normal sizing/tier behavior
     # remains pinned while the qualification seam moves.
     new_profile("characterization")
+    db.q(
+        "INSERT INTO wellness (date, hrv, resting_hr) VALUES (?,?,?)",
+        (NOW.date().isoformat(), 61.0, 49.0),
+    )
+    db.commit()
     for index, days_ago in enumerate((3, 2, 1), 1):
         activity(f"run-{index}", "Run", days_ago, 40)
     first_response = client.get("/api/offers/running")
