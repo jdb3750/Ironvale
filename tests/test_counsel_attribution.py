@@ -7,13 +7,16 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
+from fastapi.testclient import TestClient
+
 
 SCRATCH = tempfile.mkdtemp(prefix="iron-vale-counsel-attribution-")
 atexit.register(shutil.rmtree, SCRATCH, ignore_errors=True)
 os.environ["DATA_DIR"] = SCRATCH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import counsel, db, quests  # noqa: E402
+from app import counsel, db, game, profiles, quests  # noqa: E402
+from app.main import app  # noqa: E402
 
 
 ACCEPTED_AT = "2026-07-24T09:30:00+00:00"
@@ -55,6 +58,80 @@ def fresh_offer():
 
 def row_count(table):
     return db.q(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
+
+
+def mode_snapshot_acceptance_is_immutable():
+    # Given: a real HTTP acceptance starts in considered mode. When: the
+    # persisted setting flips to self immediately after the first mode read.
+    # Then: the quest payload and immutable attribution still agree on counsel.
+    client = TestClient(app)
+    profiles.ensure_index()
+    created = client.post(
+        "/api/profiles",
+        json={"name": "mode-snapshot-race", "pin": "1234"},
+    )
+    ok("mode snapshot creates a scratch profile", created.status_code == 200)
+    slug = created.json()["slug"]
+    path = profiles.path_for(slug)
+    ok("mode snapshot resolves its profile path", path is not None)
+    assert path is not None
+    settings = client.post(
+        "/api/settings",
+        json={"timezone": "UTC", "counsel_mode": "considered"},
+    )
+    ok("mode snapshot starts in considered mode", settings.status_code == 200)
+    offers = client.get("/api/offers/running")
+    ok("mode snapshot reads current offers", offers.status_code == 200)
+    selected = offers.json()["offers"][0]
+
+    original_mode = counsel._game_mode
+    mode_reads = []
+
+    def changing_mode():
+        mode = original_mode()
+        mode_reads.append(mode)
+        if len(mode_reads) == 1:
+            changed = game.get_settings()
+            changed["counsel_mode"] = "self"
+            db.kv_set("settings", changed)
+        return mode
+
+    counsel._game_mode = changing_mode
+    try:
+        accepted = client.post(
+            "/api/quests/accept",
+            json={"giver": "running", "option_key": selected["option_key"]},
+        )
+    finally:
+        counsel._game_mode = original_mode
+    ok("mode snapshot accepts the current option", accepted.status_code == 200)
+    payload = accepted.json()
+
+    token = db.set_profile(path)
+    try:
+        quest = db.q("SELECT details FROM quests WHERE id=?", (payload["quest_id"],)).fetchone()
+        details = json.loads(quest["details"])
+        record = counsel.get_attribution(payload["quest_id"])
+        saved_mode = game.get_settings()["counsel_mode"]
+    finally:
+        db.reset_profile(token)
+    emit("MODE SNAPSHOT", {
+        "quest_id": payload["quest_id"],
+        "mode_reads": mode_reads,
+        "quest_mode": details["counsel_mode"],
+        "attribution_mode": record.mode if record else None,
+        "saved_mode": saved_mode,
+    })
+    ok("mode snapshot reads mode exactly once", mode_reads == ["considered"])
+    ok(
+        "mode snapshot keeps quest and attribution on counsel",
+        details["counsel_mode"] == "considered"
+        and record is not None
+        and record.mode == "counsel"
+        and record.offered_option_keys == (selected["option_key"],)
+        and record.chosen_option_key == selected["option_key"],
+    )
+    ok("mode snapshot preserves the later self setting", saved_mode == "self")
 
 
 # Given: the existing offer-acceptance path with no counsel metadata.
@@ -295,6 +372,7 @@ run_scenario("malformed input rollback", malformed_inputs_leave_no_rows)
 run_scenario("duplicate attribution", duplicate_attribution_preserves_original)
 run_scenario("defensive query", malformed_stored_json_is_typed)
 run_scenario("insert rollback", attribution_insert_failure_rolls_back_quest)
+run_scenario("mode snapshot", mode_snapshot_acceptance_is_immutable)
 
 assert not SCENARIO_FAILURES, "\n".join(SCENARIO_FAILURES)
 print("COUNSEL ATTRIBUTION PASSED")

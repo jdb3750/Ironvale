@@ -40,10 +40,12 @@ def _game_mode() -> counsel_candidates.GameMode:
     raise OfferValidationError("Choose one of the available game loops.")
 
 
-def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
+def _giver_options(
+    giver: str,
+    mode: counsel_candidates.GameMode,
+) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
     if giver not in game.GIVER_ARCHETYPES:
         raise OfferValidationError("No such quest-giver.")
-    mode = _game_mode()
     snapshot = _sync_status()
     rules = counsel_rules.rule_state(snapshot=snapshot)
     drafts = counsel_candidates.for_giver(giver)
@@ -85,7 +87,14 @@ def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
     )
 
 
+def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
+    if giver not in game.GIVER_ARCHETYPES:
+        raise OfferValidationError("No such quest-giver.")
+    return _giver_options(giver, _game_mode())
+
+
 def accept_current_option(giver: str, identity: OptionIdentity) -> int:
+    mode = _game_mode()
     if giver not in game.GIVER_ARCHETYPES:
         raise OfferValidationError("No such quest-giver.")
     for active in quests.active_quests():
@@ -94,7 +103,7 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
             raise OfferValidationError(
                 f"You already carry a quest from {name}. Finish or abandon it first.",
             )
-    current = giver_options(giver)
+    current = _giver_options(giver, mode)
     chosen = next(
         (
             option
@@ -107,7 +116,7 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
     if chosen is None:
         raise OfferValidationError("That offer has faded.")
     attribution = validate_attribution(
-        "counsel" if _game_mode() == "considered" else "self",
+        "counsel" if mode == "considered" else "self",
         tuple(str(option["option_key"]) for option in current),
         str(chosen["option_key"]),
     )

@@ -32,7 +32,7 @@ CLIMB_TIERS: Final[Dict[str, TierMeta]] = {
     "session": TierMeta("limit-session", "Fresh attempts near the limit.", ("limit_attempts",)),
 }
 def _activity_provenance(history) -> counsel_rules.CandidateProvenance:
-    rows = history["rows"]
+    rows = tuple(row for row in history["rows"] if row["moving_time"])
     sources = tuple(
         dict.fromkeys(str(row["source"]) for row in rows if row["source"])
     )

@@ -66,6 +66,44 @@ const GIVER_ROLES = {
   mobility: 'Quests of Stillness',
 };
 
+let giverResponsiveQuery = null;
+let giverResponsiveListener = null;
+
+function giverPhoneLayout() {
+  if (giverResponsiveQuery) return giverResponsiveQuery.matches;
+  if (window.matchMedia) {
+    giverResponsiveQuery = window.matchMedia('(max-width: 719px)');
+    return giverResponsiveQuery.matches;
+  }
+  return window.innerWidth <= 719;
+}
+
+function syncGiverResponsiveLayout(phone = giverPhoneLayout()) {
+  const app = $app();
+  if (!app || S.screen !== 'giver') return;
+  const dialogue = app.querySelector('.giver-dialogue');
+  const panel = app.querySelector('.giver-offer-panel');
+  if (!dialogue || !panel || dialogue.parentNode !== panel.parentNode) return;
+
+  if (phone) {
+    if (panel.nextElementSibling !== dialogue) panel.parentNode.insertBefore(panel, dialogue);
+  } else if (dialogue.nextElementSibling !== panel) {
+    panel.parentNode.insertBefore(dialogue, panel);
+  }
+  panel.querySelectorAll('.phone-disclosure.offer-lore').forEach(detail => {
+    detail.open = !phone;
+  });
+}
+
+function bindGiverResponsiveListener() {
+  if (giverResponsiveListener || !window.matchMedia) return;
+  const media = giverResponsiveQuery || window.matchMedia('(max-width: 719px)');
+  giverResponsiveQuery = media;
+  giverResponsiveListener = () => syncGiverResponsiveLayout(media.matches);
+  if (media.addEventListener) media.addEventListener('change', giverResponsiveListener);
+  else if (media.addListener) media.addListener(giverResponsiveListener);
+}
+
 const COUNSEL_REASON_COPY = {
   cold_start: 'The counsel is still learning this trail, so the target begins gently.',
   no_iron_history: 'No Iron sessions are written in the ledger yet, so this is a generic starter.',
@@ -122,7 +160,7 @@ SCREENS.giver = async function () {
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
   const isLiftGiver = ['kettlebell', 'strength'].includes(key);
-  const revealOfferLore = !window.matchMedia('(max-width: 719px)').matches;
+  const revealOfferLore = !giverPhoneLayout();
 
   const rewardsLine = (o) => `<div class="o-rewards">reward: <b>+${o.xp} XP</b> &middot; <span class="g">&#9670;${o.gold}+</span> &middot; +${o.vigor} vigor${o.bonus_vigor ? ' (+1 bonus)' : ''}</div>`;
 
@@ -211,7 +249,7 @@ SCREENS.giver = async function () {
         <span class="counsel-tier-label">${esc(q.details.tier_label)}</span>
         <span class="counsel-tier-detail">${esc(q.details.tier_detail)}</span>
       </div>` : '';
-    body = `<div class="win"><span class="win-title">${isWrit ? 'Your Sworn Writ' : 'Your Sworn Quest'}</span>
+    body = `<div class="win giver-offer-panel"><span class="win-title">${isWrit ? 'Your Sworn Writ' : 'Your Sworn Quest'}</span>
       <div class="offer ${isWrit ? 'writ' : ''}">
         <div class="offer-primary">
           ${activeTier}
@@ -248,7 +286,7 @@ SCREENS.giver = async function () {
     const boardHelp = mode === 'self'
       ? 'The counsel lays out each eligible effort. The choice remains yours.'
       : 'One eligible path, chosen from this giver’s work for today.';
-    body = `<div class="win counsel-surface giver-offer-board" data-counsel-mode="${esc(mode)}" data-giver="${esc(key)}">
+    body = `<div class="win counsel-surface giver-offer-panel giver-offer-board" data-counsel-mode="${esc(mode)}" data-giver="${esc(key)}">
       <span class="win-title">${boardTitle}</span>
       <div class="giver-board-intro">${boardHelp}</div>
       ${data.offers.map(offerCard).join('')}
@@ -259,13 +297,15 @@ SCREENS.giver = async function () {
   }
 
   const dialogue = `
-    <div class="win">
+    <div class="win giver-dialogue">
       <div class="npc-head">
         ${portraitTag(g.sprite, 128)}
         <div class="dialog"><div class="npc-name">${esc(g.name)} ${esc(g.title)}</div><div id="dlg"></div></div>
       </div>
     </div>`;
+  bindGiverResponsiveListener();
   $app().innerHTML = shell(revealOfferLore ? `${dialogue}${body}` : `${body}${dialogue}`);
+  syncGiverResponsiveLayout();
   typewrite(document.getElementById('dlg'), line, 14, npcPortraitEl());
 };
 

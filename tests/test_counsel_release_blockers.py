@@ -81,6 +81,59 @@ def mixed_iron_gate_uses_all_routine_targets() -> None:
     assert six_set["intensity"] != "hard"
 
 
+def provenance_tracks_sizing_rows() -> None:
+    # Given: three positive-duration intervals rows on D1-D3. When: Fenn forms
+    # a path. Then: its target and disclosure are personalized from that run
+    # history.
+    new_profile("activity-provenance")
+    write_fresh_sync()
+    for number, days_ago in enumerate((3, 2, 1), 1):
+        db.q(
+            "INSERT INTO activities (id, source, start, type, name, moving_time) "
+            "VALUES (?,?,?,?,?,?)",
+            (
+                f"intervals-run-{number}",
+                "intervals.icu",
+                (NOW - timedelta(days=days_ago)).isoformat(timespec="seconds"),
+                "Run",
+                f"Intervals run {number}",
+                40 * 60,
+            ),
+        )
+    db.commit()
+
+    first_response = client.get("/api/offers/running")
+    assert first_response.status_code == 200
+    first = first_response.json()["offers"][0]
+    assert first["sizing"] == "personalized"
+    assert first["target_minutes"] == 35
+    assert first["source"]["activity_source"] == "intervals.icu"
+    assert first["source"]["activity_as_of"] == "2026-07-23"
+
+    # Given: a newer zero-duration manual row that is not admissible for
+    # sizing. When: the same board is read. Then: target and provenance stay
+    # pinned to the three positive-duration intervals rows.
+    db.q(
+        "INSERT INTO activities (id, source, start, type, name, moving_time) "
+        "VALUES (?,?,?,?,?,?)",
+        (
+            "manual-run-zero",
+            "manual",
+            NOW.isoformat(timespec="seconds"),
+            "Run",
+            "Manual run marker",
+            0,
+        ),
+    )
+    db.commit()
+    second_response = client.get("/api/offers/running")
+    assert second_response.status_code == 200
+    second = second_response.json()["offers"][0]
+    assert (second["sizing"], second["target_minutes"]) == ("personalized", 35)
+    assert second["source"]["activity_source"] == "intervals.icu"
+    assert second["source"]["activity_as_of"] == "2026-07-23"
+
+
 def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
     # Given: an unlinked profile whose only training record is a manual lift.
     # When: Grunhilda forms a path. Then: its disclosure names the local ledger,
@@ -142,5 +195,6 @@ def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
 
 lower_body_gate_is_targeted()
 mixed_iron_gate_uses_all_routine_targets()
+provenance_tracks_sizing_rows()
 disclosure_uses_candidate_provenance_and_one_snapshot()
 print("COUNSEL RELEASE BLOCKERS PASSED")

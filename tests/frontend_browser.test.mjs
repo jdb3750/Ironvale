@@ -19,7 +19,8 @@ import { chromium } from 'playwright';
       claim really is "the user sees this" AND you have scrolled/opened it
       first; use textContent when you only mean "the element says this". */
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const BASE_URL = 'http://127.0.0.1:8322';
+const BROWSER_PORT = Number(process.env.IRON_VALE_BROWSER_PORT || 8322);
+const BASE_URL = `http://127.0.0.1:${BROWSER_PORT}`;
 const EVIDENCE_DIR = process.env.IRON_VALE_VISUAL_QA_DIR;
 
 let browser;
@@ -232,12 +233,43 @@ async function openGiverBoard(page, giver) {
   });
 }
 
+async function readGiverResponsiveState(page) {
+  return page.evaluate(() => {
+    const wins = [...document.querySelectorAll('#app > .win')];
+    const dialogue = document.querySelector('.npc-head')?.closest('.win') || null;
+    const panel = wins.find(element => element !== dialogue) || null;
+    const details = panel
+      ? [...panel.querySelectorAll('.phone-disclosure.offer-lore')]
+      : [];
+    return {
+      order: wins.map(element => element === dialogue ? 'dialogue' : element === panel ? 'panel' : 'other'),
+      dialogueCount: document.querySelectorAll('.npc-head').length,
+      panelCount: panel ? 1 : 0,
+      detailsOpen: details.map(detail => detail.open),
+      activeTitle: panel?.querySelector('.win-title')?.textContent || '',
+    };
+  });
+}
+
+async function waitForGiverResponsiveState(page, phone) {
+  await page.waitForFunction(expectedPhone => {
+    const wins = [...document.querySelectorAll('#app > .win')];
+    const dialogue = document.querySelector('.npc-head')?.closest('.win') || null;
+    const panel = wins.find(element => element !== dialogue) || null;
+    if (!dialogue || !panel || wins.length !== 2) return false;
+    const expectedOrder = expectedPhone ? [panel, dialogue] : [dialogue, panel];
+    if (wins[0] !== expectedOrder[0] || wins[1] !== expectedOrder[1]) return false;
+    return [...panel.querySelectorAll('.phone-disclosure.offer-lore')]
+      .every(detail => detail.open === !expectedPhone);
+  }, phone);
+}
+
 before(async () => {
   dataDir = await mkdtemp(path.join(tmpdir(), 'iron-vale-browser-'));
   if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true });
   server = spawn(
     path.join(ROOT, '.venv/bin/uvicorn'),
-    ['app.main:app', '--host', '127.0.0.1', '--port', '8322'],
+    ['app.main:app', '--host', '127.0.0.1', '--port', String(BROWSER_PORT)],
     {
       cwd: ROOT,
       env: {
@@ -851,6 +883,85 @@ test('giver counsel boards render deterministic one-or-three paths across respon
             warningVisible: true,
             screenshot: hardWarningScreenshot,
           },
+        }, null, 2)}\n`,
+      );
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('an open giver board follows breakpoint changes without replacing its state', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  const observables = [];
+  try {
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'running');
+
+    const capture = async (label, phone) => {
+      await waitForGiverResponsiveState(page, phone);
+      const state = await readGiverResponsiveState(page);
+      assert.deepEqual(state.order, phone ? ['panel', 'dialogue'] : ['dialogue', 'panel']);
+      assert.equal(state.dialogueCount, 1);
+      assert.equal(state.panelCount, 1);
+      assert.ok(state.detailsOpen.every(open => open === !phone));
+      observables.push({ label, viewport: await page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      })), state });
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `giver-resize-${label}.png`),
+          fullPage: true,
+        });
+      }
+      return state;
+    };
+
+    await capture('phone-initial', true);
+    await page.setViewportSize(GIVER_VIEWPORTS.tablet);
+    await capture('tablet', false);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await capture('desktop', false);
+    await page.setViewportSize(GIVER_VIEWPORTS.phone);
+    await capture('phone-return', true);
+
+    await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).click();
+    await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
+    const activePhone = await capture('active-phone', true);
+    assert.match(activePhone.activeTitle, /Your Sworn Quest/);
+
+    await page.setViewportSize(GIVER_VIEWPORTS.tablet);
+    const activeTablet = await capture('active-tablet', false);
+    assert.match(activeTablet.activeTitle, /Your Sworn Quest/);
+    await page.setViewportSize(GIVER_VIEWPORTS.phone);
+    const activePhoneReturn = await capture('active-phone-return', true);
+    assert.match(activePhoneReturn.activeTitle, /Your Sworn Quest/);
+
+    await page.evaluate(() => nav('town'));
+    await page.locator('.town-scene').waitFor();
+    await openGiverBoard(page, 'running');
+    const afterNavigation = await readGiverResponsiveState(page);
+    assert.equal(afterNavigation.dialogueCount, 1);
+    assert.equal(afterNavigation.panelCount, 1);
+    assert.match(afterNavigation.activeTitle, /Your Sworn Quest/);
+    assert.deepEqual(afterNavigation.order, ['panel', 'dialogue']);
+    assert.ok(afterNavigation.detailsOpen.every(open => open === false));
+
+    if (EVIDENCE_DIR) {
+      await writeFile(
+        path.join(EVIDENCE_DIR, 'giver-resize-observables.json'),
+        `${JSON.stringify({
+          capturedAt: new Date().toISOString(),
+          baseUrl: BASE_URL,
+          dataDir,
+          node: process.version,
+          observables,
+          afterNavigation,
         }, null, 2)}\n`,
       );
     }

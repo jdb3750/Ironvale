@@ -275,7 +275,11 @@ be silently normalized during unrelated work.
 ### Counsel Guidance Surface And Settings Tabs
 
 - **Purpose:** this is the reusable presentation language for training guidance
-  in Settings, giver boards, and Hall reflection. It carries information and
+  in Settings and giver boards only. The proposed Hall/Maud counsel-outcome
+  reflection was permanently cut under `COUNCIL_REDESIGN.md §7b`: general
+  CTL/ATL/HRV movement cannot truthfully be attributed to a few counsel quests.
+  Do not rebuild or relocate that reflection, infer Body outcomes from it, or
+  use it as a selector feedback loop. This surface carries information and
   hierarchy only; it does not imply a new route, saved record, or Council
   feature.
 - **Four semantic colors:** gold is interactive and structural chrome; blue is
