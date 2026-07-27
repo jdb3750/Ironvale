@@ -132,7 +132,7 @@ import sqlite3, sys
 connection = sqlite3.connect(sys.argv[1])
 connection.execute(
     "INSERT INTO activities (id, source, start, type, name, moving_time) VALUES (?,?,?,?,?,?)",
-    (sys.argv[2], "test", sys.argv[3], "Run", "Road run", 1800),
+    (sys.argv[2], "intervals.icu", sys.argv[3], "Run", "Road run", 1800),
 )
 connection.commit()
 connection.close()

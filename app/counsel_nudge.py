@@ -1,19 +1,18 @@
-from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Final, Optional
 
 import pydantic
 
-from . import counsel, game
+from . import counsel_context, counsel_rules, game
 
 
-ACTIVITY_LOOKBACK_DAYS = 60
 PRIMARY_CADENCE_DAYS, SECONDARY_CADENCE_DAYS = 2, 4
-FOCUS_CATEGORY = {
+FOCUS_KIND: Final[Dict[str, counsel_context.TrainingKind]] = {
     "run": "run",
     "ride": "ride",
     "swim": "swim",
     "climb": "climb",
-    "iron": "strength",
+    "iron": "iron",
+    "recovery": "recovery",
 }
 JsonMap = Dict[str, pydantic.JsonValue]
 
@@ -28,28 +27,14 @@ def _giver_for_focus(focus: str) -> str:
     )
 
 
-def _local_datetime(value: str, current: datetime) -> Optional[datetime]:
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=current.tzinfo)
-    return parsed.astimezone(current.tzinfo)
-
-
-def _days_since_practice() -> Dict[str, int]:
-    current = game.now()
+def _days_since_practice(
+    context: counsel_context.QualifiedTrainingContext,
+) -> Dict[str, int]:
     days: Dict[str, int] = {}
-    categories = {**FOCUS_CATEGORY, "recovery": "mobility"}
-    for focus, category in categories.items():
-        observed = (
-            _local_datetime(row["start"], current)
-            for row in game.modality_history(category, days=ACTIVITY_LOOKBACK_DAYS)["rows"]
-        )
-        eligible = tuple(value for value in observed if value is not None and value <= current)
-        if eligible:
-            days[focus] = (current.date() - max(eligible).date()).days
+    for focus, training_kind in FOCUS_KIND.items():
+        latest = context.history(training_kind).latest_at
+        if latest is not None:
+            days[focus] = (context.current.date() - latest.date()).days
     return days
 
 
@@ -102,19 +87,23 @@ def _payload(
     }
 
 
-def daily_nudge() -> Optional[JsonMap]:
+def daily_nudge(
+    context: Optional[counsel_context.QualifiedTrainingContext] = None,
+) -> Optional[JsonMap]:
+    captured = context or counsel_context.assemble()
     settings = game.get_settings()
     if not settings["counsel_nudge_enabled"]:
         return None
     mode = settings["counsel_mode"]
-    practiced = _days_since_practice()
+    practiced = _days_since_practice(captured)
     focus_days = {
         focus: days
         for focus, days in practiced.items()
         if focus in game.COUNSEL_FOCUSES
     }
     if (
-        "hard_suppressed_wellness_trend" in counsel.rule_state().reason_codes
+        "hard_suppressed_wellness_trend"
+        in counsel_rules.rule_state(context=captured).reason_codes
         and "recovery" in practiced
     ):
         return _payload(mode, "recovery", practiced["recovery"], "strain", focus_days)

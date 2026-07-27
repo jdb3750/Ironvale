@@ -1,16 +1,16 @@
 import random
-from datetime import timedelta
 from typing import Dict, Final, NamedTuple, Optional, Tuple
 
-from . import counsel_rules, db, exercises, game, programs, quests
+from . import counsel_context, exercises, game, programs, quests
 from .counsel_options import OptionDraft, TierMeta, draft_option
 
 
 class IronHistory(NamedTuple):
     exercises: Tuple[str, ...]
     weights: Tuple[Optional[float], ...]
+    focus: Tuple[str, ...]
     session_count: int
-    provenance: counsel_rules.CandidateProvenance
+    provenance: counsel_context.CandidateProvenance
 
 
 IRON_TIERS: Final[Dict[str, TierMeta]] = {
@@ -41,58 +41,63 @@ RECOVERY_TIERS: Final[Tuple[TierMeta, ...]] = (
 )
 
 
-def _iron_exercises() -> IronHistory:
-    cutoff = (game.now() - timedelta(days=60)).date().isoformat()
-    rows = db.q(
-        "SELECT exercise, weight, ts FROM lift_sets WHERE ts >= ? "
-        "ORDER BY ts DESC, id DESC",
-        (cutoff,),
-    ).fetchall()
-    iron_rows = [
-        row
-        for row in rows
-        if row["exercise"] in exercises.EXERCISES
-        and exercises.EXERCISES[row["exercise"]]["equipment"]
-        in game.GIVER_ARCHETYPES["kettlebell"]["modalities"]
-    ]
+def _iron_exercises(
+    context: counsel_context.QualifiedTrainingContext,
+) -> IronHistory:
+    iron_rows = context.lift_movements
     equipment = (
-        exercises.EXERCISES[iron_rows[0]["exercise"]]["equipment"]
+        iron_rows[0].equipment
         if iron_rows
         else "kettlebell"
     )
     valid = [
         row
         for row in iron_rows
-        if exercises.EXERCISES[row["exercise"]]["equipment"] == equipment
+        if row.equipment == equipment
     ]
     names = []
     for row in valid:
-        if row["exercise"] not in names:
-            names.append(row["exercise"])
+        if row.exercise not in names:
+            names.append(row.exercise)
     names.extend(
         name
         for name, exercise in exercises.EXERCISES.items()
         if exercise["equipment"] == equipment and name not in names
     )
     chosen = tuple(names[:4])
-    weights = tuple(game.last_weight(name) for name in chosen)
+    weights = tuple(context.latest_weight(name) for name in chosen)
+    focus_source = (
+        tuple(group for row in valid for group in row.groups)
+        if valid
+        else tuple(
+            group
+            for name in chosen
+            for group in exercises.groups_for(name)
+        )
+    )
     return IronHistory(
         chosen,
         weights,
-        len({row["ts"][:10] for row in iron_rows}),
-        counsel_rules.CandidateProvenance(
+        tuple(dict.fromkeys(focus_source))[:3],
+        context.iron_session_count,
+        counsel_context.CandidateProvenance(
             (
                 ("Iron Vale lift ledger",)
                 if iron_rows
                 else ("Iron Vale starter guidance",)
             ),
-            str(iron_rows[0]["ts"])[:10] if iron_rows else None,
+            iron_rows[0].latest_at.date().isoformat() if iron_rows else None,
         ),
     )
 
 
-def iron() -> Tuple[OptionDraft, ...]:
-    program = programs.build_program_offer("kettlebell")
+def iron(
+    context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
+    program = programs.build_program_offer(
+        "kettlebell",
+        context.latest_weight,
+    )
     if program is not None:
         key = programs.active_program("kettlebell")
         progression = {
@@ -122,25 +127,18 @@ def iron() -> Tuple[OptionDraft, ...]:
                     ("progression",),
                 ),
                 target_groups,
-                counsel_rules.CandidateProvenance(("Iron Vale doctrine",), None),
+                counsel_context.CandidateProvenance(("Iron Vale doctrine",), None),
                 progression,
             ),
         )
-    history = _iron_exercises()
-    focus = tuple(
-        dict.fromkeys(
-            group
-            for name in history.exercises
-            for group in exercises.groups_for(name)
-        ),
-    )[:3]
+    history = _iron_exercises(context)
     return tuple(
         draft_option(
             quests.build_lift_candidate(
                 quests.LiftCandidateContext(
                     "kettlebell",
                     style,
-                    focus,
+                    history.focus,
                     history.exercises,
                     history.weights,
                     history.session_count,
@@ -153,7 +151,9 @@ def iron() -> Tuple[OptionDraft, ...]:
     )
 
 
-def mobility() -> Tuple[OptionDraft, ...]:
+def mobility(
+    _context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
     writ = quests.rest_writ_offer()
     if writ is not None:
         return (
@@ -166,7 +166,7 @@ def mobility() -> Tuple[OptionDraft, ...]:
                     ("rest",),
                 ),
                 (),
-                counsel_rules.CandidateProvenance(
+                counsel_context.CandidateProvenance(
                     ("Iron Vale Rest Writ",),
                     str(writ["writ_day"]),
                 ),
@@ -181,7 +181,7 @@ def mobility() -> Tuple[OptionDraft, ...]:
             offer,
             RECOVERY_TIERS[index],
             (),
-            counsel_rules.CandidateProvenance(
+            counsel_context.CandidateProvenance(
                 ("Iron Vale recovery archive",),
                 None,
             ),

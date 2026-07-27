@@ -173,7 +173,7 @@ def seed_activity(activity_type: str, days_ago: int, minutes: int) -> None:
         "VALUES (?,?,?,?,?,?)",
         (
             f"giver-loop-{activity_number}",
-            "test",
+            "intervals.icu",
             (NOW - timedelta(days=days_ago)).isoformat(timespec="seconds"),
             activity_type,
             activity_type,

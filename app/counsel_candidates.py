@@ -4,7 +4,7 @@ from typing import Dict, Final, Tuple
 
 import pydantic
 
-from . import counsel_rules, game, quests
+from . import counsel_context, game, quests
 from .counsel_options import (
     GameMode as GameMode,
     OptionContext as OptionContext,
@@ -31,77 +31,63 @@ CLIMB_TIERS: Final[Dict[str, TierMeta]] = {
     "volume": TierMeta("volume", "More sub-limit climbing.", ("sub_limit", "more_moves")),
     "session": TierMeta("limit-session", "Fresh attempts near the limit.", ("limit_attempts",)),
 }
-def _activity_provenance(history) -> counsel_rules.CandidateProvenance:
-    rows = tuple(row for row in history["rows"] if row["moving_time"])
-    sources = tuple(
-        dict.fromkeys(str(row["source"]) for row in rows if row["source"])
-    )
-    latest = max(
-        (str(row["start"])[:10] for row in rows if row["start"]),
-        default=None,
-    )
-    return counsel_rules.CandidateProvenance(
-        sources or ("Iron Vale starter guidance",),
-        latest,
-    )
 
 
-def _endurance_modality() -> quests.EnduranceModality:
+def _endurance_modality(
+    context: counsel_context.QualifiedTrainingContext,
+) -> quests.EnduranceModality:
     histories = {
-        modality: game.modality_history(
-            modality,
-            default_median=int(quests.STARTER_MEDIANS[modality]),
-        )
+        modality: context.history(modality)
         for modality in ENDURANCE_MODALITIES
     }
     practiced: list[quests.EnduranceModality] = [
         modality
         for modality in ENDURANCE_MODALITIES
-        if histories[modality]["n"] > 0
+        if histories[modality].session_count > 0
     ]
     if not practiced:
         return "run"
     return min(
         practiced,
-        key=lambda modality: histories[modality]["rows"][-1]["start"],
+        key=lambda modality: histories[modality].latest_at or context.current,
     )
 
 
-def _endurance() -> Tuple[OptionDraft, ...]:
-    modality = _endurance_modality()
-    history = game.modality_history(
-        modality,
-        default_median=int(quests.STARTER_MEDIANS[modality]),
-    )
+def _endurance(
+    context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
+    modality = _endurance_modality(context)
+    history = context.history(modality)
     candidates = quests.build_endurance_candidates(
         modality,
         quests.CandidateHistory(
-            history["n"],
-            history["median"],
-            history["p80"],
+            history.session_count,
+            history.median_minutes,
+            history.p80_minutes,
         ),
-        game.ambition_mult(),
+        context.ambition_multiplier,
     )
-    provenance = _activity_provenance(history)
     easy = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_easy"))
     steady = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_steady"))
     quality = next(candidate for candidate in candidates if candidate.payload["intensity"] == "hard")
     return (
-        draft_option(easy, ENDURANCE_TIERS["easy"], provenance),
-        draft_option(steady, ENDURANCE_TIERS["steady"], provenance),
-        draft_option(quality, ENDURANCE_TIERS["quality"], provenance),
+        draft_option(easy, ENDURANCE_TIERS["easy"], history.provenance),
+        draft_option(steady, ENDURANCE_TIERS["steady"], history.provenance),
+        draft_option(quality, ENDURANCE_TIERS["quality"], history.provenance),
     )
 
 
-def _climb() -> Tuple[OptionDraft, ...]:
-    history = game.modality_history("climb", default_median=60)
+def _climb(
+    context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
+    history = context.history("climb")
     candidates = quests.build_climb_candidates(
         quests.CandidateHistory(
-            history["n"],
-            history["median"],
-            history["p80"],
+            history.session_count,
+            history.median_minutes,
+            history.p80_minutes,
         ),
-        game.ambition_mult(),
+        context.ambition_multiplier,
     )
     by_variant = {
         str(candidate.payload["kind"]).split("_", 1)[1]: candidate
@@ -111,13 +97,16 @@ def _climb() -> Tuple[OptionDraft, ...]:
         draft_option(
             by_variant[variant],
             CLIMB_TIERS[variant],
-            _activity_provenance(history),
+            history.provenance,
         )
         for variant in ("technique", "volume", "session")
     )
 
 
-def for_giver(giver: str) -> Tuple[OptionDraft, ...]:
+def for_giver(
+    giver: str,
+    context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
     from . import counsel_specialists
 
     builder = {
@@ -126,7 +115,7 @@ def for_giver(giver: str) -> Tuple[OptionDraft, ...]:
         "Skill": _climb,
         "Recovery": counsel_specialists.mobility,
     }[game.GIVER_ARCHETYPES[giver]["archetype"]]
-    return builder()
+    return builder(context)
 
 
 def finalize(draft: OptionDraft, context: OptionContext) -> Dict[str, pydantic.JsonValue]:

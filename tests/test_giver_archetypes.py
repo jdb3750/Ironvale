@@ -9,10 +9,11 @@ atexit.register(shutil.rmtree, SCRATCH, ignore_errors=True)
 os.environ["DATA_DIR"] = SCRATCH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import counsel_candidates, db, game, programs  # noqa: E402
+from app import counsel_candidates, counsel_context, db, game, programs  # noqa: E402
 
 
 db.set_profile(db.DB_PATH)
+context = counsel_context.assemble()
 expected_titles = {
     "running": ("Old Fenn", "the Wayfarer"),
     "kettlebell": ("Grunhilda", "Iron-Bell"),
@@ -27,7 +28,7 @@ for giver, (name, title) in expected_titles.items():
     assert game.GIVERS[giver] == ownership["display"]
     assert all(
         option.payload["giver"] == giver
-        for option in counsel_candidates.for_giver(giver)
+        for option in counsel_candidates.for_giver(giver, context)
     )
 assert all(
     programs.PROGRAMS[key]["giver"] == "kettlebell"

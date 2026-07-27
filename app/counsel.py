@@ -2,7 +2,7 @@ from typing import Dict, NamedTuple, Optional, Tuple
 
 import pydantic
 
-from . import counsel_candidates, counsel_rules, game, quests
+from . import counsel_candidates, counsel_context, counsel_rules, game, quests
 from .counsel_rules import (
     RuleState as RuleState,
     rule_state as rule_state,
@@ -28,9 +28,6 @@ class OfferValidationError(ValueError):
     pass
 
 
-_sync_status = counsel_rules.sync_status
-
-
 def _game_mode() -> counsel_candidates.GameMode:
     mode = game.get_settings()["counsel_mode"]
     if mode == "considered":
@@ -43,12 +40,12 @@ def _game_mode() -> counsel_candidates.GameMode:
 def _giver_options(
     giver: str,
     mode: counsel_candidates.GameMode,
+    context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
     if giver not in game.GIVER_ARCHETYPES:
         raise OfferValidationError("No such quest-giver.")
-    snapshot = _sync_status()
-    rules = counsel_rules.rule_state(snapshot=snapshot)
-    drafts = counsel_candidates.for_giver(giver)
+    rules = counsel_rules.rule_state(context=context)
+    drafts = counsel_candidates.for_giver(giver, context)
     hard_suppressed = False
     if mode == "considered" and len(drafts) > 1:
         eligible = tuple(
@@ -76,7 +73,7 @@ def _giver_options(
                 rules.reason_codes,
                 counsel_rules.source_disclosure(
                     rules,
-                    snapshot,
+                    context,
                     draft.provenance,
                 ),
                 rules.suppresses_hard,
@@ -90,7 +87,7 @@ def _giver_options(
 def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
     if giver not in game.GIVER_ARCHETYPES:
         raise OfferValidationError("No such quest-giver.")
-    return _giver_options(giver, _game_mode())
+    return _giver_options(giver, _game_mode(), counsel_context.assemble())
 
 
 def accept_current_option(giver: str, identity: OptionIdentity) -> int:
@@ -103,7 +100,8 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
             raise OfferValidationError(
                 f"You already carry a quest from {name}. Finish or abandon it first.",
             )
-    current = _giver_options(giver, mode)
+    context = counsel_context.assemble()
+    current = _giver_options(giver, mode, context)
     chosen = next(
         (
             option

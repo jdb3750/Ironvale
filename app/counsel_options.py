@@ -2,7 +2,7 @@ from typing import Dict, Literal, NamedTuple, Optional, Tuple
 
 import pydantic
 
-from . import counsel_rules, quests
+from . import counsel_context, quests
 
 
 GameMode = Literal["considered", "self"]
@@ -19,7 +19,7 @@ class OptionDraft(NamedTuple):
     payload: Dict[str, pydantic.JsonValue]
     tier: TierMeta
     target_groups: Tuple[str, ...]
-    provenance: counsel_rules.CandidateProvenance
+    provenance: counsel_context.CandidateProvenance
     progression: Optional[Dict[str, pydantic.JsonValue]] = None
 
 
@@ -34,7 +34,7 @@ class OptionContext(NamedTuple):
 def draft_option(
     candidate: quests.QuestCandidate,
     tier: TierMeta,
-    provenance: counsel_rules.CandidateProvenance,
+    provenance: counsel_context.CandidateProvenance,
 ) -> OptionDraft:
     return OptionDraft(
         candidate.candidate_key,

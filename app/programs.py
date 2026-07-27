@@ -4,6 +4,7 @@ When a doctrine is active for a lift giver, that giver's first quest offer is
 the program's next session, with linear-progression weight suggestions.
 """
 import uuid
+from typing import Callable, Dict, NamedTuple, Optional
 
 from . import db, exercises, game, quests
 
@@ -122,26 +123,37 @@ def advance(key):
     db.kv_set("program_state", state)
 
 
-def _suggest(exercise, inc_map, program_key):
-    """Last logged weight, plus the program increment if the last program session
-    containing this lift was completed."""
-    last = game.last_weight(exercise)
+class ProgramWeightContext(NamedTuple):
+    increments: Dict[str, float]
+    program_key: str
+    weight_for: Callable[[str], Optional[float]]
+
+
+def _suggest(exercise, context):
+    last = context.weight_for(exercise)
     if last is None:
         return None
-    inc = inc_map.get(exercise, inc_map.get("default", 0.0))
+    inc = context.increments.get(
+        exercise,
+        context.increments.get("default", 0.0),
+    )
     if not inc:
         return last
     row = db.q(
         "SELECT status FROM quests WHERE kind=? AND details LIKE ? ORDER BY id DESC LIMIT 1",
-        (f"program:{program_key}", f'%{exercise}%'),
+        (f"program:{context.program_key}", f'%{exercise}%'),
     ).fetchone()
     if row and row["status"] == "done":
         return round(last + inc, 1)
     return last
 
 
-def build_program_offer(giver):
+def build_program_offer(
+    giver,
+    weight_for=None,
+):
     """The doctrine's next session as a quest offer, or None."""
+    lookup = weight_for or game.last_weight
     key = active_program(giver)
     if not key:
         return None
@@ -151,7 +163,7 @@ def build_program_offer(giver):
             return None
         routine = [{
             "exercise": e["exercise"], "sets": e["sets"], "reps": e["reps"], "unit": "reps",
-            "suggest_weight": game.last_weight(e["exercise"]),
+            "suggest_weight": lookup(e["exercise"]),
             "groups": exercises.groups_for(e["exercise"]),
         } for e in r["exercises"]]
         title, label, kind = r["name"], "your routine", f"program:{key}"
@@ -161,7 +173,10 @@ def build_program_offer(giver):
         sess = p["sessions"][_session_index(key) % len(p["sessions"])]
         routine = [{
             "exercise": name, "sets": sets, "reps": reps, "unit": "reps",
-            "suggest_weight": _suggest(name, p["inc"], key),
+            "suggest_weight": _suggest(
+                name,
+                ProgramWeightContext(p["inc"], key, lookup),
+            ),
             "groups": exercises.groups_for(name),
         } for name, sets, reps in sess["exercises"]]
         title, label, kind = f"{p['name']} — {sess['label']}", p["name"], f"program:{key}"

@@ -10,6 +10,7 @@ from counsel_giver_test_support import (
     seed_activity,
     write_fresh_sync,
 )
+from app import counsel_context, sync_status
 
 
 def lower_body_gate_is_targeted() -> None:
@@ -153,40 +154,62 @@ def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
     # immutable snapshot, so the card cannot mix missing and fresh states.
     new_profile("single-snapshot")
     today = NOW.date().isoformat()
-    missing = {
+    missing: sync_status.SyncStatus = {
         "revision": 1,
-        "activity": {"revision": 1},
-        "wellness": {"revision": 1, "freshness": "missing"},
+        "activity": {
+            "revision": 1,
+            "attempted_at": None,
+            "succeeded_at": None,
+            "newest_observation_date": None,
+            "field_as_of": {},
+            "error": None,
+        },
+        "wellness": {
+            "revision": 1,
+            "attempted_at": None,
+            "succeeded_at": None,
+            "newest_observation_date": None,
+            "field_as_of": {"hrv": None, "resting_hr": None},
+            "error": None,
+            "freshness": "missing",
+        },
     }
-    fresh = {
+    fresh: sync_status.SyncStatus = {
         "revision": 2,
         "activity": {
             "revision": 2,
+            "attempted_at": None,
+            "succeeded_at": NOW.isoformat(timespec="seconds"),
             "newest_observation_date": today,
+            "field_as_of": {},
+            "error": None,
         },
         "wellness": {
             "revision": 2,
+            "attempted_at": None,
             "succeeded_at": NOW.isoformat(timespec="seconds"),
             "newest_observation_date": today,
             "field_as_of": {"hrv": today, "resting_hr": today},
+            "error": None,
             "freshness": "fresh",
         },
     }
-    snapshots = [missing, fresh]
+    snapshots: list[sync_status.SyncStatus] = [missing, fresh]
     reads: list[int] = []
-    original_sync_status = counsel._sync_status
+    original_sync_status = counsel_context.intervals.get_sync_status
 
-    def changing_sync_status():
+    def changing_sync_status() -> sync_status.SyncStatus:
         index = min(len(reads), len(snapshots) - 1)
         reads.append(index)
         return snapshots[index]
 
-    counsel._sync_status = changing_sync_status
+    counsel_context.intervals.get_sync_status = changing_sync_status
     try:
         selected = counsel.giver_options("running")[0]
     finally:
-        counsel._sync_status = original_sync_status
+        counsel_context.intervals.get_sync_status = original_sync_status
     source = selected["source"]
+    assert isinstance(source, dict)
     assert len(reads) == 1
     assert selected["intensity"] != "hard"
     assert source["wellness_freshness"] == "missing"
