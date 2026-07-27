@@ -329,7 +329,10 @@ def build_lift_candidate(context: LiftCandidateContext) -> QuestCandidate:
         f"{entry['exercise']}:{entry['suggest_weight']}" for entry in routine
     )
     key = f"{context.giver}:{payload['kind']}:{'-'.join(context.focus)}:{routine_key}"
-    return QuestCandidate(key, payload, context.focus)
+    target_groups = tuple(
+        dict.fromkeys(group for entry in routine for group in entry["groups"]),
+    )
+    return QuestCandidate(key, payload, target_groups)
 
 
 def build_climb_candidates(

@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from counsel_giver_test_support import (
     NOW,
     counsel,
+    client,
     db,
     new_profile,
     offers,
@@ -35,6 +38,47 @@ def lower_body_gate_is_targeted() -> None:
     assert six_sets.intensity != "hard"
     assert non_lower_body.modality == "swim"
     assert non_lower_body.intensity == "hard"
+
+
+def mixed_iron_gate_uses_all_routine_targets() -> None:
+    # Given: upper-body history whose routine also contains a lower-body lift,
+    # with fresh wellness and the same five/six-set boundary.
+    new_profile("mixed-iron-gate")
+    write_fresh_sync()
+    older = (NOW - timedelta(hours=1)).isoformat(timespec="seconds")
+    for _ in range(5):
+        db.q(
+            "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
+            (older, "Kettlebell Deadlift", 24.0, 8),
+        )
+    for exercise in ("Turkish Get-Up", "Kettlebell Floor Press", "Kettlebell Row"):
+        db.q(
+            "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
+            (NOW.isoformat(timespec="seconds"), exercise, 24.0, 8),
+        )
+    db.commit()
+
+    five_set = client.get("/api/offers/kettlebell").json()["offers"][0]
+    assert five_set["intensity"] == "hard"
+    assert five_set["focus"][:3] == ["back", "arms", "chest"]
+    assert [row["exercise"] for row in five_set["routine"]] == [
+        "Kettlebell Row",
+        "Kettlebell Floor Press",
+        "Turkish Get-Up",
+        "Kettlebell Deadlift",
+    ]
+    assert any(
+        set(row["groups"]) & {"legs", "posterior"}
+        for row in five_set["routine"]
+    )
+
+    db.q(
+        "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
+        (older, "Kettlebell Deadlift", 24.0, 8),
+    )
+    db.commit()
+    six_set = client.get("/api/offers/kettlebell").json()["offers"][0]
+    assert six_set["intensity"] != "hard"
 
 
 def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
@@ -97,5 +141,6 @@ def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
 
 
 lower_body_gate_is_targeted()
+mixed_iron_gate_uses_all_routine_targets()
 disclosure_uses_candidate_provenance_and_one_snapshot()
 print("COUNSEL RELEASE BLOCKERS PASSED")
