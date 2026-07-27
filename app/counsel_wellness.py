@@ -33,15 +33,27 @@ def qualified_recovery_days(
         "WHERE date >= ? ORDER BY date",
         ((current - timedelta(days=60)).date().isoformat(),),
     ).fetchall()
-    return tuple(
-        RecoveryWellnessDay(
-            str(row["date"]),
-            _finite_number(row["hrv"]),
-            _finite_number(row["resting_hr"]),
-            _finite_number(row["sleep_secs"]),
+    current_day = current.date()
+    qualified = []
+    for row in rows:
+        raw_observed_on = row["date"]
+        if not isinstance(raw_observed_on, str):
+            continue
+        try:
+            observed_on = date.fromisoformat(raw_observed_on)
+        except ValueError:
+            continue
+        if observed_on > current_day:
+            continue
+        qualified.append(
+            RecoveryWellnessDay(
+                observed_on.isoformat(),
+                _finite_number(row["hrv"]),
+                _finite_number(row["resting_hr"]),
+                _finite_number(row["sleep_secs"]),
+            ),
         )
-        for row in rows
-    )
+    return tuple(qualified)
 
 
 def _field_is_fresh(

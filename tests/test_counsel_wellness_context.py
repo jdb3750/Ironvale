@@ -35,8 +35,19 @@ class OfferSource(pydantic.BaseModel):
 
 
 class MobilityOffer(pydantic.BaseModel):
+    kind: str
+    title: str
+    blurb: str
+    structure: str
+    xp: int
+    gold: int
+    vigor: int
+    bonus_vigor: int
     option_key: str
+    tier_label: str
     source: OfferSource
+    writ_day: Optional[str] = None
+    reasons: Tuple[str, ...] = ()
 
 
 class MobilityPayload(pydantic.BaseModel):
@@ -338,6 +349,92 @@ def malformed_rhr_mobility_with_nudge_enabled_is_missing() -> None:
     )
 
 
+def seed_recovery_sleep(observed_on: str, sleep_secs: float) -> None:
+    db.q(
+        "INSERT INTO wellness (date, sleep_secs) VALUES (?,?) "
+        "ON CONFLICT(date) DO UPDATE SET sleep_secs=excluded.sleep_secs",
+        (observed_on, sleep_secs),
+    )
+    db.commit()
+
+
+def assert_inadmissible_recovery_date_keeps_mobility(
+    label: str,
+    observed_on: str,
+) -> None:
+    # Given: ordinary current-day mobility followed by an inadmissible short-sleep row.
+    new_profile(label)
+    seed_wellness(NOW.date().isoformat(), 60.0, 50.0)
+    baseline_status, baseline_body, _ = request_mobility_with_context()
+    baseline = MobilityPayload.model_validate_json(baseline_body)
+    assert baseline_status == 200
+    assert baseline.offers and all(offer.kind == "mobility" for offer in baseline.offers)
+    seed_recovery_sleep(observed_on, 3600.0)
+
+    # When: the real public route is read repeatedly.
+    first_status, first_body, first_contexts = request_mobility_with_context()
+    second_status, second_body, second_contexts = request_mobility_with_context()
+
+    # Then: the inadmissible row cannot alter recovery context or response bytes.
+    assert first_status == second_status == 200
+    assert first_body == second_body == baseline_body
+    assert len(first_contexts) == len(second_contexts) == 1
+    assert all(
+        day.observed_on != observed_on
+        for context in first_contexts + second_contexts
+        for day in context.wellness.recovery_days
+    )
+
+
+def tomorrow_short_sleep_cannot_create_rest_writ() -> None:
+    assert_inadmissible_recovery_date_keeps_mobility(
+        "future-recovery-date",
+        (NOW.date() + timedelta(days=1)).isoformat(),
+    )
+
+
+def malformed_date_short_sleep_cannot_create_rest_writ() -> None:
+    assert_inadmissible_recovery_date_keeps_mobility(
+        "malformed-recovery-date",
+        "not-a-date",
+    )
+
+
+def current_day_short_sleep_preserves_rest_writ_exactly() -> None:
+    # Given: one valid current-day short-sleep observation.
+    new_profile("valid-current-recovery-date")
+    observed_on = NOW.date().isoformat()
+    seed_wellness(observed_on, 60.0, 50.0)
+    seed_recovery_sleep(observed_on, 3600.0)
+
+    # When: Elowen's public route is read twice.
+    first_status, first_body, first_contexts = request_mobility_with_context()
+    second_status, second_body, second_contexts = request_mobility_with_context()
+    payload = MobilityPayload.model_validate_json(first_body)
+
+    # Then: valid Rest Writ selection, copy, rewards, and bytes remain exact.
+    assert first_status == second_status == 200
+    assert first_body == second_body
+    assert len(first_contexts) == len(second_contexts) == 1
+    assert tuple(
+        day.observed_on
+        for day in first_contexts[0].wellness.recovery_days
+    ) == (observed_on,)
+    assert len(payload.offers) == 1
+    offer = payload.offers[0]
+    assert offer.kind == "rest"
+    assert offer.title == "The Rest Writ"
+    assert offer.blurb == "Some quests are carried. This one is set down."
+    assert offer.structure == (
+        "From acceptance until dawn: no hard training. Walks, stretches "
+        "and sleep are the whole of the quest."
+    )
+    assert (offer.xp, offer.gold, offer.vigor, offer.bonus_vigor) == (45, 20, 2, 1)
+    assert offer.writ_day == observed_on
+    assert offer.reasons == ("last night gave you only 1.0 hours of sleep",)
+    assert offer.tier_label == "rest-writ"
+
+
 def one_midnight_clock_owns_recovery_options() -> None:
     # Given: a request captured one second before midnight.
     boundary = datetime(2026, 7, 27, 23, 59, 59, tzinfo=timezone.utc)
@@ -442,6 +539,18 @@ for label, scenario in (
     (
         "mobility malformed RHR, nudge enabled",
         malformed_rhr_mobility_with_nudge_enabled_is_missing,
+    ),
+    (
+        "tomorrow short sleep cannot create a Rest Writ",
+        tomorrow_short_sleep_cannot_create_rest_writ,
+    ),
+    (
+        "malformed-date short sleep cannot create a Rest Writ",
+        malformed_date_short_sleep_cannot_create_rest_writ,
+    ),
+    (
+        "current-day short sleep preserves Rest Writ exactly",
+        current_day_short_sleep_preserves_rest_writ_exactly,
     ),
     ("one midnight clock owns recovery options", one_midnight_clock_owns_recovery_options),
     ("one request clock owns aggregate and fields", one_request_clock_owns_all_freshness),
