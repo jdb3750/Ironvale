@@ -730,7 +730,11 @@ test('giver counsel boards render deterministic one-or-three paths across respon
           );
           assert.equal(
             await page.locator('.counsel-source').evaluateAll(elements => (
-              elements.every(element => /intervals\.icu/i.test(element.textContent))
+              elements.every((element) => {
+                const provider = element.querySelector('span')?.textContent
+                  ?.split(':', 2)[1]?.trim();
+                return Boolean(provider && provider !== 'not recorded');
+              })
             )),
             true,
           );

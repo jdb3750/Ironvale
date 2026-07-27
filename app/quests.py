@@ -107,7 +107,8 @@ def _endurance_candidate(
     payload: dict[str, pydantic.JsonValue],
     sizing: str,
 ) -> QuestCandidate:
-    variant = payload["kind"].split("_", 1)[1]
+    kind = str(payload["kind"])
+    variant = kind.split("_", 1)[1]
     complete = {
         **payload,
         "modality": modality,
@@ -118,7 +119,7 @@ def _endurance_candidate(
     }
     _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
     target_groups = ("legs", "posterior") if modality in ("run", "ride") else ("back", "shoulders")
-    return QuestCandidate(payload["kind"], complete, target_groups)
+    return QuestCandidate(kind, complete, target_groups)
 
 
 def build_endurance_candidates(
@@ -358,7 +359,8 @@ def build_climb_candidates(
     ]
     candidates = []
     for payload in pool:
-        variant = payload["kind"].split("_", 1)[1]
+        kind = str(payload["kind"])
+        variant = kind.split("_", 1)[1]
         complete = {
             **payload,
             "modality": "climb",
@@ -366,7 +368,7 @@ def build_climb_candidates(
             "title": CLIMB_FLAVOR[variant][0],
         }
         _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
-        candidates.append(QuestCandidate(payload["kind"], complete, ("back", "arms", "core")))
+        candidates.append(QuestCandidate(kind, complete, ("back", "arms", "core")))
     return tuple(candidates)
 
 
@@ -382,7 +384,7 @@ def gen_climb_offers(rng):
     rng.shuffle(offers)
     for o in offers:
         o["giver"] = "strength"
-        o["title"] = rng.choice(CLIMB_FLAVOR[o["kind"].split("_")[1]])
+        o["title"] = rng.choice(CLIMB_FLAVOR[str(o["kind"]).split("_")[1]])
         _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
     return offers
 

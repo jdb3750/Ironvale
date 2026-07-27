@@ -1,41 +1,24 @@
 import hashlib
 import json
-import random
-from datetime import timedelta
-from typing import Dict, Final, Literal, NamedTuple, Optional, Tuple
+from typing import Dict, Final, Tuple
 
 import pydantic
 
-from . import db, exercises, game, programs, quests
+from . import counsel_rules, game, quests
+from .counsel_options import (
+    GameMode as GameMode,
+    OptionContext as OptionContext,
+    OptionDraft as OptionDraft,
+    TierMeta as TierMeta,
+    draft_option as draft_option,
+)
 
 
-GameMode = Literal["considered", "self"]
 ENDURANCE_MODALITIES: Final[Tuple[quests.EnduranceModality, ...]] = (
     "run",
     "ride",
     "swim",
 )
-
-
-class TierMeta(NamedTuple):
-    label: str
-    detail: str
-    cues: Tuple[str, ...]
-
-
-class OptionDraft(NamedTuple):
-    candidate_key: str
-    payload: Dict[str, pydantic.JsonValue]
-    tier: TierMeta
-    progression: Optional[Dict[str, pydantic.JsonValue]] = None
-
-
-class OptionContext(NamedTuple):
-    mode: GameMode
-    rule_reasons: Tuple[str, ...]
-    source: Dict[str, pydantic.JsonValue]
-    rules_suppress_hard: bool
-    hard_was_suppressed: bool
 
 
 ENDURANCE_TIERS: Final[Dict[str, TierMeta]] = {
@@ -48,20 +31,19 @@ CLIMB_TIERS: Final[Dict[str, TierMeta]] = {
     "volume": TierMeta("volume", "More sub-limit climbing.", ("sub_limit", "more_moves")),
     "session": TierMeta("limit-session", "Fresh attempts near the limit.", ("limit_attempts",)),
 }
-IRON_TIERS: Final[Dict[str, TierMeta]] = {
-    "volume": TierMeta("volume", "Lighter loads and higher repetitions.", ("lighter_load", "higher_reps")),
-    "circuit": TierMeta("circuit", "Brisk transitions with moderate loads.", ("brisk_transitions", "moderate_load")),
-    "strength": TierMeta("strength", "Heavy loads and low repetitions.", ("heavy_load", "low_reps")),
-}
-RECOVERY_TIERS: Final[Tuple[TierMeta, ...]] = (
-    TierMeta("restore", "Restore range and breath.", ("gentle_recovery",)),
-    TierMeta("move", "Easy movement without a training demand.", ("easy_movement",)),
-    TierMeta("unwind", "Unwind what training tightened.", ("mobility",)),
-)
-
-
-def _draft(candidate: quests.QuestCandidate, tier: TierMeta) -> OptionDraft:
-    return OptionDraft(candidate.candidate_key, dict(candidate.payload), tier)
+def _activity_provenance(history) -> counsel_rules.CandidateProvenance:
+    rows = history["rows"]
+    sources = tuple(
+        dict.fromkeys(str(row["source"]) for row in rows if row["source"])
+    )
+    latest = max(
+        (str(row["start"])[:10] for row in rows if row["start"]),
+        default=None,
+    )
+    return counsel_rules.CandidateProvenance(
+        sources or ("Iron Vale starter guidance",),
+        latest,
+    )
 
 
 def _endurance_modality() -> quests.EnduranceModality:
@@ -100,13 +82,14 @@ def _endurance() -> Tuple[OptionDraft, ...]:
         ),
         game.ambition_mult(),
     )
+    provenance = _activity_provenance(history)
     easy = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_easy"))
     steady = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_steady"))
     quality = next(candidate for candidate in candidates if candidate.payload["intensity"] == "hard")
     return (
-        _draft(easy, ENDURANCE_TIERS["easy"]),
-        _draft(steady, ENDURANCE_TIERS["steady"]),
-        _draft(quality, ENDURANCE_TIERS["quality"]),
+        draft_option(easy, ENDURANCE_TIERS["easy"], provenance),
+        draft_option(steady, ENDURANCE_TIERS["steady"], provenance),
+        draft_option(quality, ENDURANCE_TIERS["quality"], provenance),
     )
 
 
@@ -125,118 +108,24 @@ def _climb() -> Tuple[OptionDraft, ...]:
         for candidate in candidates
     }
     return tuple(
-        _draft(by_variant[variant], CLIMB_TIERS[variant])
+        draft_option(
+            by_variant[variant],
+            CLIMB_TIERS[variant],
+            _activity_provenance(history),
+        )
         for variant in ("technique", "volume", "session")
     )
 
 
-def _iron_exercises() -> Tuple[Tuple[str, ...], Tuple[Optional[float], ...], int]:
-    cutoff = (game.now() - timedelta(days=60)).date().isoformat()
-    rows = db.q(
-        "SELECT exercise, weight, ts FROM lift_sets WHERE ts >= ? "
-        "ORDER BY ts DESC, id DESC",
-        (cutoff,),
-    ).fetchall()
-    iron_rows = [
-        row
-        for row in rows
-        if row["exercise"] in exercises.EXERCISES
-        and exercises.EXERCISES[row["exercise"]]["equipment"]
-        in game.GIVER_ARCHETYPES["kettlebell"]["modalities"]
-    ]
-    equipment = (
-        exercises.EXERCISES[iron_rows[0]["exercise"]]["equipment"]
-        if iron_rows
-        else "kettlebell"
-    )
-    valid = [
-        row
-        for row in iron_rows
-        if exercises.EXERCISES[row["exercise"]]["equipment"] == equipment
-    ]
-    names = []
-    for row in valid:
-        if row["exercise"] not in names:
-            names.append(row["exercise"])
-    names.extend(
-        name
-        for name, exercise in exercises.EXERCISES.items()
-        if exercise["equipment"] == equipment and name not in names
-    )
-    chosen = tuple(names[:4])
-    weights = tuple(game.last_weight(name) for name in chosen)
-    return chosen, weights, len({row["ts"][:10] for row in iron_rows})
-
-
-def _iron() -> Tuple[OptionDraft, ...]:
-    program = programs.build_program_offer("kettlebell")
-    if program is not None:
-        key = programs.active_program("kettlebell")
-        progression = {"source": "doctrine", "key": key, "session": program["title"]}
-        return (
-            OptionDraft(
-                f"doctrine:{key}",
-                program,
-                TierMeta("doctrine", "The selected doctrine's next session.", ("progression",)),
-                progression,
-            ),
-        )
-    names, weights, session_count = _iron_exercises()
-    focus = tuple(
-        dict.fromkeys(
-            group
-            for name in names
-            for group in exercises.groups_for(name)
-        )
-    )[:3]
-    return tuple(
-        _draft(
-            quests.build_lift_candidate(
-                quests.LiftCandidateContext(
-                    "kettlebell",
-                    style,
-                    focus,
-                    names,
-                    weights,
-                    session_count,
-                ),
-            ),
-            IRON_TIERS[style],
-        )
-        for style in ("volume", "circuit", "strength")
-    )
-
-
-def _mobility() -> Tuple[OptionDraft, ...]:
-    writ = quests.rest_writ_offer()
-    if writ is not None:
-        return (
-            OptionDraft(
-                f"rest:{writ['writ_day']}",
-                writ,
-                TierMeta("rest-writ", "Keep the existing Rest Writ.", ("rest",)),
-            ),
-        )
-    generated = quests.gen_mobility_offers(
-        random.Random(f"counsel:mobility:{game.today()}"),
-    )
-    return tuple(
-        OptionDraft(
-            f"mobility:{index}:{offer['target_minutes']}:{offer['structure']}",
-            offer,
-            RECOVERY_TIERS[index],
-        )
-        for index, offer in enumerate(generated)
-    )
-
-
 def for_giver(giver: str) -> Tuple[OptionDraft, ...]:
+    from . import counsel_specialists
+
     builder = {
-        "running": _endurance,
-        "kettlebell": _iron,
-        "strength": _climb,
-        "mobility": _mobility,
-    }[giver]
+        "Endurance": _endurance,
+        "Iron": counsel_specialists.iron,
+        "Skill": _climb,
+        "Recovery": counsel_specialists.mobility,
+    }[game.GIVER_ARCHETYPES[giver]["archetype"]]
     return builder()
 
 

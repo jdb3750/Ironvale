@@ -15,14 +15,17 @@ FOCUS_CATEGORY = {
     "climb": "climb",
     "iron": "strength",
 }
-FOCUS_GIVER = {
-    "run": "running",
-    "ride": "running",
-    "swim": "running",
-    "climb": "strength",
-    "iron": "kettlebell",
-}
 JsonMap = Dict[str, pydantic.JsonValue]
+
+
+def _giver_for_focus(focus: str) -> str:
+    modality = "climbing" if focus == "climb" else focus
+    return next(
+        giver
+        for giver, ownership in game.GIVER_ARCHETYPES.items()
+        if modality in ownership["modalities"]
+        or focus.casefold() == ownership["archetype"].casefold()
+    )
 
 
 def _local_datetime(value: str, current: datetime) -> Optional[datetime]:
@@ -57,7 +60,7 @@ def _line(
     reason: str,
     focus_days: Dict[str, int],
 ) -> str:
-    giver = "mobility" if focus == "recovery" else FOCUS_GIVER[focus]
+    giver = "mobility" if focus == "recovery" else _giver_for_focus(focus)
     name = game.GIVERS[giver]["name"]
     if reason == "strain":
         return f"The omens counsel rest today. {name}'s willow shades the way."
@@ -88,7 +91,7 @@ def _payload(
     reason: str,
     focus_days: Dict[str, int],
 ) -> JsonMap:
-    giver = "mobility" if focus == "recovery" else FOCUS_GIVER[focus]
+    giver = "mobility" if focus == "recovery" else _giver_for_focus(focus)
     return {
         "focus": focus,
         "giver": giver,

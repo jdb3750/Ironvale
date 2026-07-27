@@ -11,11 +11,11 @@ A background task in main.py re-syncs every 15 minutes.
 """
 import os
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 import httpx
 
-from . import db, game
+from . import db, game, sync_status
 
 # Overridable so tests can aim the ravens at a dead port instead of the internet.
 BASE = os.environ.get("INTERVALS_BASE_URL", "https://intervals.icu/api/v1")
@@ -67,37 +67,18 @@ def activity_start(a):
     return conv or utc or ""
 
 
-def _revision(value):
-    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+def get_sync_status() -> sync_status.SyncStatus:
+    return sync_status.normalize(
+        db.kv_get(SYNC_STATUS_KEY),
+        ACTIVITY_FIELDS,
+        WELLNESS_FIELDS,
+    )
 
 
-def get_sync_status():
-    saved = db.kv_get(SYNC_STATUS_KEY)
-    if not isinstance(saved, dict):
-        saved = {}
-    status = {"revision": _revision(saved.get("revision"))}
-    for stream, fields in (("activity", ACTIVITY_FIELDS), ("wellness", WELLNESS_FIELDS)):
-        source = saved.get(stream)
-        if not isinstance(source, dict):
-            source = {}
-        field_as_of = source.get("field_as_of")
-        if not isinstance(field_as_of, dict):
-            field_as_of = {}
-        status[stream] = {
-            "revision": _revision(source.get("revision")),
-            "attempted_at": source.get("attempted_at") if isinstance(source.get("attempted_at"), str) else None,
-            "succeeded_at": source.get("succeeded_at") if isinstance(source.get("succeeded_at"), str) else None,
-            "newest_observation_date": source.get("newest_observation_date") if isinstance(source.get("newest_observation_date"), str) else None,
-            "field_as_of": {
-                field: field_as_of.get(field) if isinstance(field_as_of.get(field), str) else None
-                for field in fields
-            },
-            "error": source.get("error") if isinstance(source.get("error"), str) else None,
-        }
-    return status
-
-
-def _update_sync_status(stream, changes):
+def _update_sync_status(
+    stream: sync_status.StreamName,
+    changes,
+) -> None:
     status = get_sync_status()
     current = status[stream]
     current.update(changes)

@@ -38,11 +38,15 @@ def seed_activity(activity_id, days_ago, activity_type, minutes):
     )
 
 
-def quoted_reward(offer):
-    factor = {"low": 1.0, "moderate": 1.35, "hard": 1.7}[offer["intensity"]]
-    minutes = offer["target_minutes"] if "target_minutes" in offer else offer["total_sets"] * 3
-    expected_xp = int(minutes * factor * 2.2)
-    return offer["xp"] == expected_xp and offer["gold"] == int(expected_xp * 0.45)
+def offer_contract(offer):
+    return (
+        offer["kind"],
+        offer.get("target_minutes"),
+        offer.get("total_sets"),
+        offer["intensity"],
+        offer["xp"],
+        offer["gold"],
+    )
 
 
 db.set_profile(db.DB_PATH)
@@ -55,11 +59,27 @@ db.commit()
 endurance = quests.gen_endurance_offers(random.Random("counsel-baseline"))
 ok("Fenn retains one offer for each practiced endurance modality",
    {offer["modality"] for offer in endurance} == {"run", "ride", "swim"})
-ok("Fenn retains reward pricing from each offer target", all(quoted_reward(offer) for offer in endurance))
+ok(
+    "Fenn retains the characterized offers and rewards",
+    {offer_contract(offer) for offer in endurance}
+    == {
+        ("ride_steady", 45, None, "moderate", 133, 59),
+        ("swim_easy", 15, None, "low", 33, 14),
+        ("run_intervals", 35, None, "hard", 130, 58),
+    },
+)
 
 climb = quests.gen_climb_offers(random.Random("counsel-baseline"))
 ok("Bram retains three climb offers", len(climb) == 3 and all(offer["modality"] == "climb" for offer in climb))
-ok("Bram retains reward pricing from each offer target", all(quoted_reward(offer) for offer in climb))
+ok(
+    "Bram retains the characterized offers and rewards",
+    {offer_contract(offer) for offer in climb}
+    == {
+        ("climb_session", 65, None, "hard", 243, 109),
+        ("climb_technique", 40, None, "low", 88, 39),
+        ("climb_volume", 60, None, "moderate", 178, 80),
+    },
+)
 
 iron = quests.gen_lift_offers(random.Random("counsel-baseline"))
 equipment = {
@@ -68,6 +88,14 @@ equipment = {
     for row in offer["routine"]
 }
 ok("Grunhilda retains all iron equipment", equipment == {"barbell", "dumbbell", "kettlebell"})
-ok("Grunhilda retains three separately priced routines", len(iron) == 3 and all(quoted_reward(offer) for offer in iron))
+ok(
+    "Grunhilda retains the characterized routines and rewards",
+    {offer_contract(offer) for offer in iron}
+    == {
+        ("lift_strength", None, 16, "hard", 179, 80),
+        ("lift_circuit", None, 9, "moderate", 80, 36),
+        ("lift_volume", None, 12, "moderate", 106, 47),
+    },
+)
 
 print("COUNSEL BASELINE PASSED")

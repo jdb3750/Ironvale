@@ -223,6 +223,7 @@ async def save_settings(request: Request):
         raise ValueError("Choose one of the available game loops.")
     if "counsel_nudge_enabled" in body and type(body["counsel_nudge_enabled"]) is not bool:
         raise ValueError("The daily pointer must be set to on or off.")
+    charter = None
     if "counsel_charter" in body:
         charter = body["counsel_charter"]
         if charter is not None:

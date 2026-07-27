@@ -26,6 +26,7 @@ class SourceDisclosure(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore", frozen=True)
 
     provider: str
+    activity_source: str
     activity_as_of: Optional[str]
     wellness_as_of: Optional[str]
     wellness_freshness: str
@@ -213,7 +214,8 @@ def offers(giver: str) -> list[QuestOption]:
 def assert_option_contract(option: QuestOption) -> None:
     assert option.option_key and type(option.offer_id) is int
     assert option.tier_label and option.tier_detail
-    assert option.source.provider == "intervals.icu"
+    assert option.source.provider
+    assert option.source.activity_source == option.source.provider
     assert option.source.wellness_freshness in {"missing", "stale", "mixed", "fresh"}
 
 
