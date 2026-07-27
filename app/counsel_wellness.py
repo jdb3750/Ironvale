@@ -4,6 +4,7 @@ from typing import Final, Optional, Tuple
 
 from . import db, sync_status
 from .counsel_context_model import (
+    RecoveryWellnessDay,
     WellnessField,
     WellnessFieldName,
     WellnessReading,
@@ -12,6 +13,35 @@ from .counsel_context_model import (
 
 
 TREND_PRIOR_LIMIT: Final[int] = 28
+
+
+def _finite_number(value: object) -> Optional[float]:
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+    ):
+        return None
+    numeric = float(value)
+    return numeric if math.isfinite(numeric) else None
+
+
+def qualified_recovery_days(
+    current: datetime,
+) -> Tuple[RecoveryWellnessDay, ...]:
+    rows = db.q(
+        "SELECT date, hrv, resting_hr, sleep_secs FROM wellness "
+        "WHERE date >= ? ORDER BY date",
+        ((current - timedelta(days=60)).date().isoformat(),),
+    ).fetchall()
+    return tuple(
+        RecoveryWellnessDay(
+            str(row["date"]),
+            _finite_number(row["hrv"]),
+            _finite_number(row["resting_hr"]),
+            _finite_number(row["sleep_secs"]),
+        )
+        for row in rows
+    )
 
 
 def _field_is_fresh(
@@ -129,4 +159,5 @@ def build_wellness_snapshot(
         "missing" if metadata_gap else _aggregate_freshness(status, current),
         status["newest_observation_date"],
         tuple(fields),
+        qualified_recovery_days(current),
     )

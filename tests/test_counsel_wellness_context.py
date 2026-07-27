@@ -4,8 +4,9 @@ import shutil
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, NamedTuple, Optional, Tuple, Union
 
+import pydantic
 
 SCRATCH = tempfile.mkdtemp(prefix="iron-vale-counsel-wellness-")
 atexit.register(shutil.rmtree, SCRATCH, ignore_errors=True)
@@ -27,6 +28,27 @@ client = TestClient(app)
 assert client.get("/api/profiles").status_code == 200
 profile_number = 0
 WellnessValue = Union[float, str]
+
+
+class OfferSource(pydantic.BaseModel):
+    wellness_freshness: str
+
+
+class MobilityOffer(pydantic.BaseModel):
+    option_key: str
+    source: OfferSource
+
+
+class MobilityPayload(pydantic.BaseModel):
+    offers: Tuple[MobilityOffer, ...]
+
+
+class MobilityClockResult(NamedTuple):
+    status: int
+    body: bytes
+    game_calls: Tuple[datetime, ...]
+    quest_now_calls: Tuple[datetime, ...]
+    quest_today_calls: Tuple[str, ...]
 
 
 def new_profile(label: str, nudge: bool = False) -> None:
@@ -101,6 +123,70 @@ def request_state_with_context() -> Tuple[
     finally:
         counsel_context.assemble = original
     return response.status_code, response.content, tuple(contexts)
+
+
+def request_mobility_with_context() -> Tuple[
+    int,
+    bytes,
+    Tuple[counsel_context.QualifiedTrainingContext, ...],
+]:
+    contexts: List[counsel_context.QualifiedTrainingContext] = []
+    original = counsel_context.assemble
+
+    def capture(
+        current: Optional[datetime] = None,
+    ) -> counsel_context.QualifiedTrainingContext:
+        context = original(current)
+        contexts.append(context)
+        return context
+
+    counsel_context.assemble = capture
+    try:
+        response = client.get("/api/offers/mobility")
+    finally:
+        counsel_context.assemble = original
+    return response.status_code, response.content, tuple(contexts)
+
+
+def mobility_at_midnight(boundary: datetime) -> MobilityClockResult:
+    after_midnight = boundary + timedelta(seconds=2)
+    game_calls: List[datetime] = []
+    quest_now_calls: List[datetime] = []
+    quest_today_calls: List[str] = []
+    original_game_now = game.now
+    original_quest_now = quests.now
+    original_quest_today = quests.today
+
+    def adversarial_game_now() -> datetime:
+        current = boundary if not game_calls else after_midnight
+        game_calls.append(current)
+        return current
+
+    def adversarial_quest_now() -> datetime:
+        quest_now_calls.append(after_midnight)
+        return after_midnight
+
+    def adversarial_quest_today() -> str:
+        current = after_midnight.date().isoformat()
+        quest_today_calls.append(current)
+        return current
+
+    game.now = adversarial_game_now
+    quests.now = adversarial_quest_now
+    quests.today = adversarial_quest_today
+    try:
+        response = client.get("/api/offers/mobility")
+    finally:
+        game.now = original_game_now
+        quests.now = original_quest_now
+        quests.today = original_quest_today
+    return MobilityClockResult(
+        response.status_code,
+        response.content,
+        tuple(game_calls),
+        tuple(quest_now_calls),
+        tuple(quest_today_calls),
+    )
 
 
 def numeric_control_is_fresh() -> None:
@@ -185,6 +271,91 @@ def malformed_rhr_with_nudge_enabled_is_missing() -> None:
     )
 
 
+def assert_malformed_mobility_route(
+    label: str,
+    nudge: bool,
+    hrv: WellnessValue,
+    resting_hr: WellnessValue,
+    malformed_field: WellnessFieldName,
+) -> None:
+    # Given: malformed persisted recovery data and either nudge setting.
+    new_profile(label, nudge)
+    seed_wellness(NOW.date().isoformat(), hrv, resting_hr)
+
+    # When: Elowen's real public offer route constructs recovery options.
+    status, body, contexts = request_mobility_with_context()
+
+    # Then: recovery shares the qualified missing state instead of reparsing.
+    assert status == 200, {"status": status, "body": body.decode()}
+    assert len(contexts) == 1
+    field = contexts[0].wellness_field(malformed_field)
+    assert field.fresh is False and field.readings == ()
+    payload = MobilityPayload.model_validate_json(body)
+    assert payload.offers
+    assert all(
+        option.source.wellness_freshness == "missing"
+        for option in payload.offers
+    )
+
+
+def malformed_hrv_mobility_with_nudge_disabled_is_missing() -> None:
+    assert_malformed_mobility_route(
+        "mobility-bad-hrv-disabled",
+        False,
+        "malformed-hrv",
+        60.0,
+        "hrv",
+    )
+
+
+def malformed_hrv_mobility_with_nudge_enabled_is_missing() -> None:
+    assert_malformed_mobility_route(
+        "mobility-bad-hrv-enabled",
+        True,
+        "malformed-hrv",
+        60.0,
+        "hrv",
+    )
+
+
+def malformed_rhr_mobility_with_nudge_disabled_is_missing() -> None:
+    assert_malformed_mobility_route(
+        "mobility-bad-rhr-disabled",
+        False,
+        60.0,
+        "malformed-rhr",
+        "resting_hr",
+    )
+
+
+def malformed_rhr_mobility_with_nudge_enabled_is_missing() -> None:
+    assert_malformed_mobility_route(
+        "mobility-bad-rhr-enabled",
+        True,
+        60.0,
+        "malformed-rhr",
+        "resting_hr",
+    )
+
+
+def one_midnight_clock_owns_recovery_options() -> None:
+    # Given: a request captured one second before midnight.
+    boundary = datetime(2026, 7, 27, 23, 59, 59, tzinfo=timezone.utc)
+    new_profile("mobility-midnight")
+    seed_wellness(NOW.date().isoformat(), 60.0, 50.0)
+
+    # When: every later ambient clock would report the following day.
+    first = mobility_at_midnight(boundary)
+    second = mobility_at_midnight(boundary)
+
+    # Then: one captured clock owns Rest Writ checks, seed, and option identity.
+    assert first.status == second.status == 200
+    assert first.game_calls == second.game_calls == (boundary,)
+    assert first.quest_now_calls == second.quest_now_calls == ()
+    assert first.quest_today_calls == second.quest_today_calls == ()
+    assert first.body == second.body
+
+
 def one_request_clock_owns_all_freshness() -> None:
     # Given: metadata exactly on both 48-hour and two-day boundaries.
     boundary = NOW
@@ -256,6 +427,23 @@ for label, scenario in (
     ("malformed HRV, nudge enabled", malformed_hrv_with_nudge_enabled_is_missing),
     ("malformed RHR, nudge disabled", malformed_rhr_with_nudge_disabled_is_missing),
     ("malformed RHR, nudge enabled", malformed_rhr_with_nudge_enabled_is_missing),
+    (
+        "mobility malformed HRV, nudge disabled",
+        malformed_hrv_mobility_with_nudge_disabled_is_missing,
+    ),
+    (
+        "mobility malformed HRV, nudge enabled",
+        malformed_hrv_mobility_with_nudge_enabled_is_missing,
+    ),
+    (
+        "mobility malformed RHR, nudge disabled",
+        malformed_rhr_mobility_with_nudge_disabled_is_missing,
+    ),
+    (
+        "mobility malformed RHR, nudge enabled",
+        malformed_rhr_mobility_with_nudge_enabled_is_missing,
+    ),
+    ("one midnight clock owns recovery options", one_midnight_clock_owns_recovery_options),
     ("one request clock owns aggregate and fields", one_request_clock_owns_all_freshness),
     ("supplied clock owns aggregate and fields", supplied_clock_owns_all_freshness),
 ):

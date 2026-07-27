@@ -68,6 +68,13 @@ class WellnessReading(NamedTuple):
     value: float
 
 
+class RecoveryWellnessDay(NamedTuple):
+    observed_on: str
+    hrv: Optional[float]
+    resting_hr: Optional[float]
+    sleep_secs: Optional[float]
+
+
 class WellnessField(NamedTuple):
     name: WellnessFieldName
     as_of: Optional[str]
@@ -79,6 +86,7 @@ class WellnessSnapshot(NamedTuple):
     aggregate_freshness: str
     newest_observation_date: Optional[str]
     fields: Tuple[WellnessField, ...]
+    recovery_days: Tuple[RecoveryWellnessDay, ...]
 
 
 class QualifiedTrainingContext(NamedTuple):

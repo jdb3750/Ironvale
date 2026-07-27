@@ -13,10 +13,14 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, Optional, Tuple
 
 import pydantic
 
-from . import db, exercises, intervals, items, raid
+from . import counsel_wellness, db, exercises, items, raid
+from .counsel_context_model import (
+    RecoveryWellnessDay,
+    WellnessSnapshot,
+)
 from .game import (
-    AMBITION, CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVER_ARCHETYPES, GIVERS, RUN_TYPES,
-    ambition_mult, apply_xp, category, get_char, get_settings, last_weight,
+    CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVER_ARCHETYPES, GIVERS, RUN_TYPES,
+    ambition_mult, apply_xp, category, get_char, last_weight,
     modality_history, muscle_recency, now, now_iso, run_history, save_char, today,
 )
 
@@ -479,37 +483,26 @@ WRIT_HARD_MIN_SECONDS = 15 * 60
 WRIT_HARD_MIN_SETS = 6
 
 
-def rest_writ_signal():
-    """Read the omens. Returns a list of in-world reason strings when recovery
-    data says today should be a rest day, else None.
-
-    Fires on any ONE strong signal or TWO weak ones:
-      HRV week-avg vs prior baseline:  strong <= -8%,  weak <= -5%
-      RHR week-avg vs prior baseline:  strong >= +4bpm, weak >= +2.5bpm
-      sleep: last night < 5h (strong); 7-night avg < 6h (strong) / < 6.5h (weak)
-
-    Requires a wellness reading within the last 2 days — no writ without
-    fresh evidence (stale data must never spawn writs forever)."""
-    rows = db.q(
-        "SELECT * FROM wellness WHERE date >= ? ORDER BY date",
-        ((now() - timedelta(days=60)).date().isoformat(),),
-    ).fetchall()
+def _rest_writ_signal(
+    rows: Tuple[RecoveryWellnessDay, ...],
+    current: datetime,
+) -> Optional[list[str]]:
     if not rows:
         return None
-    if rows[-1]["date"] < (now().date() - timedelta(days=2)).isoformat():
+    if rows[-1].observed_on < (
+        current.date() - timedelta(days=2)
+    ).isoformat():
         return None
 
     week, before = rows[-7:], rows[:-7]
 
-    def vals(field, src):
-        return [r[field] for r in src if r[field] is not None]
-
-    def avg(v):
-        return sum(v) / len(v) if v else None
+    def avg(values: Tuple[float, ...]) -> Optional[float]:
+        return sum(values) / len(values) if values else None
 
     strong, weak, reasons = 0, 0, []
 
-    hrv_w, hrv_b = avg(vals("hrv", week)), avg(vals("hrv", before))
+    hrv_w = avg(tuple(row.hrv for row in week if row.hrv is not None))
+    hrv_b = avg(tuple(row.hrv for row in before if row.hrv is not None))
     if hrv_w and hrv_b:
         delta = (hrv_w - hrv_b) / hrv_b * 100
         if delta <= -8:
@@ -519,18 +512,23 @@ def rest_writ_signal():
             weak += 1
             reasons.append(f"your heart's rhythm runs {abs(delta):.0f}% quiet")
 
-    rhr_w, rhr_b = avg(vals("resting_hr", week)), avg(vals("resting_hr", before))
+    rhr_w = avg(tuple(row.resting_hr for row in week if row.resting_hr is not None))
+    rhr_b = avg(tuple(row.resting_hr for row in before if row.resting_hr is not None))
     if rhr_w and rhr_b:
-        d = rhr_w - rhr_b
-        if d >= 4:
+        delta = rhr_w - rhr_b
+        if delta >= 4:
             strong += 1
-            reasons.append(f"your resting pulse runs {d:.0f} beats hot")
-        elif d >= 2.5:
+            reasons.append(f"your resting pulse runs {delta:.0f} beats hot")
+        elif delta >= 2.5:
             weak += 1
-            reasons.append(f"your resting pulse is {d:.1f} beats above its wont")
+            reasons.append(f"your resting pulse is {delta:.1f} beats above its wont")
 
-    last_sleep = vals("sleep_secs", rows[-1:])
-    sleep_w = avg(vals("sleep_secs", week))
+    last_sleep = tuple(
+        row.sleep_secs for row in rows[-1:] if row.sleep_secs is not None
+    )
+    sleep_w = avg(
+        tuple(row.sleep_secs for row in week if row.sleep_secs is not None),
+    )
     if last_sleep and last_sleep[0] < 5 * 3600:
         strong += 1
         reasons.append(f"last night gave you only {last_sleep[0]/3600:.1f} hours of sleep")
@@ -546,6 +544,59 @@ def rest_writ_signal():
     return None
 
 
+def rest_writ_signal():
+    """Read the omens. Returns a list of in-world reason strings when recovery
+    data says today should be a rest day, else None.
+
+    Fires on any ONE strong signal or TWO weak ones:
+      HRV week-avg vs prior baseline:  strong <= -8%,  weak <= -5%
+      RHR week-avg vs prior baseline:  strong >= +4bpm, weak >= +2.5bpm
+      sleep: last night < 5h (strong); 7-night avg < 6h (strong) / < 6.5h (weak)
+
+    Requires a wellness reading within the last 2 days — no writ without
+    fresh evidence (stale data must never spawn writs forever)."""
+    current = now()
+    return _rest_writ_signal(
+        counsel_wellness.qualified_recovery_days(current),
+        current,
+    )
+
+
+def _rest_writ_offer(
+    reasons: Optional[list[str]],
+    writ_day: str,
+):
+    if not reasons:
+        return None
+    rng = random.Random(f"writ:{writ_day}")
+    return {
+        "kind": "rest", "giver": "mobility",
+        "title": REST_WRIT_TITLE,
+        "intensity": "low",
+        "writ_day": writ_day,
+        "reasons": reasons,
+        "blurb": rng.choice(REST_WRIT_BLURBS),
+        "structure": "From acceptance until dawn: no hard training. Walks, stretches and sleep are the whole of the quest.",
+        "xp": 45, "gold": 20, "vigor": 2, "bonus_vigor": 1,
+    }
+
+
+def rest_writ_offer_for_context(
+    wellness: WellnessSnapshot,
+    current: datetime,
+):
+    writ_day = current.date().isoformat()
+    if db.q(
+        "SELECT 1 FROM quests WHERE kind='rest' AND accepted_at LIKE ? LIMIT 1",
+        (writ_day + "%",),
+    ).fetchone():
+        return None
+    return _rest_writ_offer(
+        _rest_writ_signal(wellness.recovery_days, current),
+        writ_day,
+    )
+
+
 def rest_writ_offer():
     """Elowen's leading offer when the omens call for rest, else None.
     At most one writ per calendar day, in ANY status — an abandoned or broken
@@ -556,19 +607,8 @@ def rest_writ_offer():
     ).fetchone():
         return None
     reasons = rest_writ_signal()
-    if not reasons:
-        return None
-    rng = random.Random(f"writ:{today()}")
-    return {
-        "kind": "rest", "giver": "mobility",
-        "title": REST_WRIT_TITLE,
-        "intensity": "low",
-        "writ_day": today(),
-        "reasons": reasons,
-        "blurb": rng.choice(REST_WRIT_BLURBS),
-        "structure": "From acceptance until dawn: no hard training. Walks, stretches and sleep are the whole of the quest.",
-        "xp": 45, "gold": 20, "vigor": 2, "bonus_vigor": 1,
-    }
+    writ_day = today()
+    return _rest_writ_offer(reasons, writ_day)
 
 
 def _writ_hard_activity(quest):

@@ -1,7 +1,7 @@
 import random
 from typing import Dict, Final, NamedTuple, Optional, Tuple
 
-from . import counsel_context, exercises, game, programs, quests
+from . import counsel_context, exercises, programs, quests
 from .counsel_options import OptionDraft, TierMeta, draft_option
 
 
@@ -152,9 +152,12 @@ def iron(
 
 
 def mobility(
-    _context: counsel_context.QualifiedTrainingContext,
+    context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[OptionDraft, ...]:
-    writ = quests.rest_writ_offer()
+    writ = quests.rest_writ_offer_for_context(
+        context.wellness,
+        context.current,
+    )
     if writ is not None:
         return (
             OptionDraft(
@@ -173,7 +176,9 @@ def mobility(
             ),
         )
     generated = quests.gen_mobility_offers(
-        random.Random(f"counsel:mobility:{game.today()}"),
+        random.Random(
+            f"counsel:mobility:{context.current.date().isoformat()}",
+        ),
     )
     return tuple(
         OptionDraft(

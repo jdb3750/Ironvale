@@ -4,7 +4,9 @@ import shutil
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
+from typing import Optional, Tuple
 
+import pydantic
 
 SCRATCH = tempfile.mkdtemp(prefix="iron-vale-counsel-engine-")
 atexit.register(shutil.rmtree, SCRATCH, ignore_errors=True)
@@ -16,6 +18,20 @@ from app import db, game, intervals, quests, syncing  # noqa: E402
 
 NOW = datetime(2026, 7, 23, 12, tzinfo=timezone.utc)
 game.now = lambda: NOW
+
+
+class EnduranceCandidatePayload(pydantic.BaseModel):
+    sizing: str
+    reason_codes: Tuple[str, ...]
+
+
+class LiftRoutineRow(pydantic.BaseModel):
+    suggest_weight: Optional[float]
+
+
+class LiftCandidatePayload(pydantic.BaseModel):
+    reason_codes: Tuple[str, ...]
+    routine: Tuple[LiftRoutineRow, ...]
 
 
 def ok(label, condition):
@@ -65,19 +81,27 @@ reset_profile("candidate")
 history = quests.CandidateHistory(session_count=2, median_minutes=47.0, p80_minutes=55.0)
 first = quests.build_endurance_candidates("run", history, 1.0)
 second = quests.build_endurance_candidates("run", history, 1.0)
+first_payloads = tuple(
+    EnduranceCandidatePayload.model_validate(candidate.payload)
+    for candidate in first
+)
 ok("candidate order is repeatable", first == second)
 ok("two-session endurance is a generic starter",
-   all(candidate.payload["sizing"] == "generic_starter" for candidate in first))
+   all(payload.sizing == "generic_starter" for payload in first_payloads))
 ok("two-session endurance carries the cold-start reason",
-   all("cold_start" in candidate.payload["reason_codes"] for candidate in first))
+   all("cold_start" in payload.reason_codes for payload in first_payloads))
 
 # Given: an established modality. When: it reaches three sessions. Then: the
 # builder no longer presents generic starter sizing.
 established = quests.build_endurance_candidates(
     "run", quests.CandidateHistory(session_count=3, median_minutes=47.0, p80_minutes=55.0), 1.0
 )
+established_payloads = tuple(
+    EnduranceCandidatePayload.model_validate(candidate.payload)
+    for candidate in established
+)
 ok("three sessions enable personalized endurance sizing",
-   all(candidate.payload["sizing"] == "personalized" for candidate in established))
+   all(payload.sizing == "personalized" for payload in established_payloads))
 
 # Given: Iron routines using different implements. When: candidates are built.
 # Then: their keys retain routine identity and zero history never invents weight.
@@ -91,11 +115,13 @@ logged_iron = quests.LiftCandidateContext(
 )
 zero_candidate = quests.build_lift_candidate(zero_iron)
 logged_candidate = quests.build_lift_candidate(logged_iron)
-ok("zero Iron history remains explicit", zero_candidate.payload["reason_codes"] == ["no_iron_history"])
+zero_payload = LiftCandidatePayload.model_validate(zero_candidate.payload)
+logged_payload = LiftCandidatePayload.model_validate(logged_candidate.payload)
+ok("zero Iron history remains explicit", zero_payload.reason_codes == ("no_iron_history",))
 ok("zero Iron history has no fabricated working weight",
-   all(row["suggest_weight"] is None for row in zero_candidate.payload["routine"]))
+   all(row.suggest_weight is None for row in zero_payload.routine))
 ok("first Iron session keeps logged working weight",
-   logged_candidate.payload["routine"][0]["suggest_weight"] == 82.5)
+   logged_payload.routine[0].suggest_weight == 82.5)
 ok("Iron candidate keys distinguish routines", zero_candidate.candidate_key != logged_candidate.candidate_key)
 
 # Given: normal per-field provider metadata. When: status is read. Then: the
@@ -105,7 +131,7 @@ write_sync_status(today, today)
 status = syncing.get_sync_status()
 ok("sync status has wellness field metadata",
    status["wellness"]["field_as_of"]["hrv"] == today and status["wellness"]["field_as_of"]["resting_hr"] == today)
-ok("sync status reports fresh wellness", status["wellness"]["freshness"] == "fresh")
+ok("sync status reports fresh wellness", status["wellness"].get("freshness") == "fresh")
 ok("intervals status retains stream revisions", intervals.get_sync_status()["revision"] == 4)
 
 from app import counsel  # noqa: E402
