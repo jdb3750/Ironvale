@@ -48,12 +48,6 @@ const REACTIONS = {
     strength: ['Setting down a burden is sometimes wisdom. Sometimes. Not always.', 'The oath is released. Do not make a habit of it.'],
     mobility: ['No shame in it, dear. Come back when the body agrees.', 'Even rivers change course. Go gently.'],
   },
-  reroll: {
-    running: ['Picky, are we? Very well — other roads exist.', 'Ten gold to reshuffle fate. The road shrugs.'],
-    kettlebell: ['Not iron enough for you? Let me dig deeper in the pile.', 'Coin for choices. Grandmother would approve of the haggling.'],
-    strength: ['The lady or the lord demands variety. As you wish.', 'Very well — different burdens, same gravity.'],
-    mobility: ['Of course. The body wants what it wants.', 'Let us find a gentler shape for the day.'],
-  },
 };
 
 /* word travels: every NPC congratulates a fresh quest completion */
@@ -71,6 +65,64 @@ const GIVER_ROLES = {
   strength: 'Quests of Iron',
   mobility: 'Quests of Stillness',
 };
+
+let giverResponsiveQuery = null;
+let giverResponsiveListener = null;
+
+function giverPhoneLayout() {
+  if (giverResponsiveQuery) return giverResponsiveQuery.matches;
+  if (window.matchMedia) {
+    giverResponsiveQuery = window.matchMedia('(max-width: 719px)');
+    return giverResponsiveQuery.matches;
+  }
+  return window.innerWidth <= 719;
+}
+
+function syncGiverResponsiveLayout(phone = giverPhoneLayout()) {
+  const app = $app();
+  if (!app || S.screen !== 'giver') return;
+  const dialogue = app.querySelector('.giver-dialogue');
+  const panel = app.querySelector('.giver-offer-panel');
+  if (!dialogue || !panel || dialogue.parentNode !== panel.parentNode) return;
+
+  if (phone) {
+    if (panel.nextElementSibling !== dialogue) panel.parentNode.insertBefore(panel, dialogue);
+  } else if (dialogue.nextElementSibling !== panel) {
+    panel.parentNode.insertBefore(dialogue, panel);
+  }
+  panel.querySelectorAll('.phone-disclosure.offer-lore').forEach(detail => {
+    detail.open = !phone;
+  });
+}
+
+function bindGiverResponsiveListener() {
+  if (giverResponsiveListener || !window.matchMedia) return;
+  const media = giverResponsiveQuery || window.matchMedia('(max-width: 719px)');
+  giverResponsiveQuery = media;
+  giverResponsiveListener = () => syncGiverResponsiveLayout(media.matches);
+  if (media.addEventListener) media.addEventListener('change', giverResponsiveListener);
+  else if (media.addListener) media.addListener(giverResponsiveListener);
+}
+
+const COUNSEL_REASON_COPY = {
+  cold_start: 'The counsel is still learning this trail, so the target begins gently.',
+  no_iron_history: 'No Iron sessions are written in the ledger yet, so this is a generic starter.',
+  wellness_data_missing: 'No current wellness omens have reached the Vale.',
+  wellness_data_stale: 'The latest wellness omens are too old to guide a hard path.',
+  wellness_data_mixed: 'Only part of the latest wellness record is current.',
+  hard_suppressed_wellness_unknown: 'Without clear omens, the counsel favors a steadier path.',
+  wellness_trend_low_hrv: 'Today’s recovery measure sits below its recent range.',
+  wellness_trend_high_resting_hr: 'Today’s resting pulse sits above its recent range.',
+  hard_suppressed_wellness_trend: 'Together, those omens steer the counsel away from hard work.',
+  recent_lower_body_six_sets: 'Recent lower-body Iron still weighs on the legs.',
+  hard_option_suppressed: 'A harder path was set aside for today.',
+  hard_option_wellness_warning: 'This harder path remains yours to choose, but the omens advise caution.',
+};
+
+function counselReasonText(code) {
+  return COUNSEL_REASON_COPY[code]
+    || String(code || '').replaceAll('_', ' ').replace(/^./, letter => letter.toUpperCase());
+}
 
 /* ---- fresh-completion tracking for congratulations ---- */
 function lastQuestDone() {
@@ -108,7 +160,7 @@ SCREENS.giver = async function () {
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
   const isLiftGiver = ['kettlebell', 'strength'].includes(key);
-  const revealOfferLore = !window.matchMedia('(max-width: 719px)').matches;
+  const revealOfferLore = !giverPhoneLayout();
 
   const rewardsLine = (o) => `<div class="o-rewards">reward: <b>+${o.xp} XP</b> &middot; <span class="g">&#9670;${o.gold}+</span> &middot; +${o.vigor} vigor${o.bonus_vigor ? ' (+1 bonus)' : ''}</div>`;
 
@@ -124,11 +176,52 @@ SCREENS.giver = async function () {
       ${d.reasons.map(r => `<div class="omen-line">&#9656; ${esc(r)}</div>`).join('')}
     </div>` : '';
 
+  const counselDetails = (o) => {
+    const reasonCodes = Array.isArray(o.reason_codes) ? o.reason_codes : [];
+    const reasons = reasonCodes.length
+      ? reasonCodes.map(code => `<div class="counsel-reason">&#9656; ${esc(counselReasonText(code))}</div>`).join('')
+      : '<div class="counsel-reason">No extra caution was attached to this path.</div>';
+    const source = o.source && typeof o.source === 'object' ? o.source : {};
+    const provider = source.provider || source.activity_source || 'not recorded';
+    const activityAsOf = source.activity_as_of || 'no synced activity yet';
+    const wellnessAsOf = source.wellness_as_of || 'no wellness reading yet';
+    const freshness = source.wellness_freshness
+      ? String(source.wellness_freshness).replaceAll('_', ' ')
+      : 'not recorded';
+    return `<details class="phone-disclosure offer-lore counsel-detail" ${revealOfferLore ? 'open' : ''}>
+      <summary>WHY THIS PATH</summary>
+      <div class="phone-disclosure-content">
+        <div class="counsel-block giver-counsel-block">
+          <span class="counsel-label">WHY THIS PATH</span>
+          <div class="counsel-reasons">${reasons}</div>
+          <span class="counsel-label">PROVIDER &amp; AS-OF</span>
+          <div class="counsel-source">
+            <span>provider: ${esc(provider)}</span>
+            <span>activity as of: ${esc(activityAsOf)}</span>
+            <span>wellness as of: ${esc(wellnessAsOf)}</span>
+            <span>wellness record: ${esc(freshness)}</span>
+          </div>
+        </div>
+        ${o.blurb ? `<div class="giver-offer-lore muted">&ldquo;${esc(o.blurb)}&rdquo;</div>` : ''}
+        ${o.kind === 'rest' ? omensBlock(o) : ''}
+        ${o.focus ? `<div class="center giver-focus-map">${bodyMapTag(o.focus, 78)}</div>` : ''}
+      </div>
+    </details>`;
+  };
+
   const offerCard = (o) => {
     const routine = o.routine ? `<div class="o-struct">${o.routine.map(routineLine).join('<br>')}</div>` : '';
     const isWrit = o.kind === 'rest';
-    return `<div class="offer ${isWrit ? 'writ' : ''}">
+    const warning = o.wellness_warning
+      ? '<div class="counsel-eligibility warn" role="note">The omens do not favor hard work today. This path remains yours to choose.</div>'
+      : '<div class="counsel-eligibility">Eligible today.</div>';
+    return `<div class="offer counsel-path-card ${isWrit ? 'writ' : ''} ${o.wellness_warning ? 'has-wellness-warning' : ''}"
+        data-offer-id="${Number(o.offer_id)}" data-tier-label="${esc(o.tier_label)}">
       <div class="offer-primary">
+        <div class="counsel-tier-row">
+          <span class="counsel-tier-label">${esc(o.tier_label)}</span>
+          <span class="counsel-tier-detail">${esc(o.tier_detail)}</span>
+        </div>
         <div><span class="o-title">${esc(o.title)}</span>
           ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
           ${modalityChip(o.modality, o.giver, o.program)}
@@ -138,15 +231,11 @@ SCREENS.giver = async function () {
         ${routine}
         ${rewardsLine(o)}
         ${isWrit ? '<div class="o-rewards" style="color:var(--green)">and the streak keeps itself tonight — rest counts</div>' : ''}
-        <details class="phone-disclosure offer-lore" ${revealOfferLore ? 'open' : ''}>
-          <summary>READ THE SIGNS</summary>
-          <div class="phone-disclosure-content">
-            <div class="muted" style="font-size:18px">&ldquo;${esc(o.blurb)}&rdquo;</div>
-            ${isWrit ? omensBlock(o) : ''}
-            ${o.focus ? `<div style="margin:4px 0">${bodyMapTag(o.focus, 78)}</div>` : ''}
-          </div>
-        </details>
-        <button class="btn green" onclick="G.accept('${key}',${o.offer_id})">${isWrit ? 'SWEAR THE WRIT' : 'ACCEPT QUEST'}</button>
+        ${warning}
+        <div class="giver-accept-row">
+          <button class="btn" onclick="G.accept('${key}',${Number(o.offer_id)})">${isWrit ? 'SWEAR THE WRIT' : 'ACCEPT QUEST'}</button>
+        </div>
+        ${counselDetails(o)}
       </div>
     </div>`;
   };
@@ -155,9 +244,15 @@ SCREENS.giver = async function () {
   if (data.active) {
     const q = data.active;
     const isWrit = q.kind === 'rest';
-    body = `<div class="win"><span class="win-title">${isWrit ? 'Your Sworn Writ' : 'Your Sworn Quest'}</span>
+    const activeTier = q.details.tier_label ? `
+      <div class="counsel-tier-row">
+        <span class="counsel-tier-label">${esc(q.details.tier_label)}</span>
+        <span class="counsel-tier-detail">${esc(q.details.tier_detail)}</span>
+      </div>` : '';
+    body = `<div class="win giver-offer-panel"><span class="win-title">${isWrit ? 'Your Sworn Writ' : 'Your Sworn Quest'}</span>
       <div class="offer ${isWrit ? 'writ' : ''}">
         <div class="offer-primary">
+          ${activeTier}
           <div><span class="o-title">${esc(q.title)}</span>
             ${isWrit ? '' : modalityChip(q.details.modality, q.giver, q.details.program)}
             ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${q.details.intensity}">${q.details.intensity}</span>`}</div>
@@ -175,8 +270,9 @@ SCREENS.giver = async function () {
                 : `<button class="btn" onclick="G.completeHonor(${q.id})">COMPLETE ON HONOR</button>`}
             <button class="btn danger small" style="min-width:0" onclick="G.abandon(${q.id}, '${key}')">${isWrit ? 'set the writ aside' : 'abandon'}</button>
           </div>
+          ${q.details.counsel_mode ? counselDetails(q.details) : ''}
         </div>
-        ${isWrit && q.details.reasons && q.details.reasons.length ? `<details class="phone-disclosure offer-lore" ${revealOfferLore ? 'open' : ''}>
+        ${isWrit && !q.details.counsel_mode && q.details.reasons && q.details.reasons.length ? `<details class="phone-disclosure offer-lore" ${revealOfferLore ? 'open' : ''}>
           <summary>READ THE SIGNS</summary>
           <div class="phone-disclosure-content">
             ${omensBlock(q.details)}
@@ -185,23 +281,31 @@ SCREENS.giver = async function () {
       </div>
     </div>`;
   } else {
-    body = `<div class="win"><span class="win-title">Quests Offered Today</span>
+    const mode = data.offers[0]?.counsel_mode || S.state.settings?.counsel_mode || 'considered';
+    const boardTitle = mode === 'self' ? 'Choose Your Path' : 'Today’s Considered Path';
+    const boardHelp = mode === 'self'
+      ? 'The counsel lays out each eligible effort. The choice remains yours.'
+      : 'One eligible path, chosen from this giver’s work for today.';
+    body = `<div class="win counsel-surface giver-offer-panel giver-offer-board" data-counsel-mode="${esc(mode)}" data-giver="${esc(key)}">
+      <span class="win-title">${boardTitle}</span>
+      <div class="giver-board-intro">${boardHelp}</div>
       ${data.offers.map(offerCard).join('')}
-      <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn small" style="min-width:0" onclick="G.reroll('${key}')">ask for different work (&#9670;10)</button>
+      <div class="giver-board-actions">
         ${isLiftGiver ? `<button class="btn small" style="min-width:0" onclick="nav('doctrines',{giver:'${key}'})">DOCTRINES &amp; ROUTINES</button>` : ''}
       </div>
     </div>`;
   }
 
   const dialogue = `
-    <div class="win">
+    <div class="win giver-dialogue">
       <div class="npc-head">
         ${portraitTag(g.sprite, 128)}
         <div class="dialog"><div class="npc-name">${esc(g.name)} ${esc(g.title)}</div><div id="dlg"></div></div>
       </div>
     </div>`;
+  bindGiverResponsiveListener();
   $app().innerHTML = shell(revealOfferLore ? `${dialogue}${body}` : `${body}${dialogue}`);
+  syncGiverResponsiveLayout();
   typewrite(document.getElementById('dlg'), line, 14, npcPortraitEl());
 };
 
@@ -213,15 +317,7 @@ G.accept = async (giver, offerId) => {
   SFX.accept();
   S.params = { giver, react: 'accept' };
   render();
-};
-
-G.reroll = async (giver) => {
-  const token = captureRouteToken();
-  await api(`/offers/${giver}?reroll=true`);
-  await refreshState();
-  if (!isRouteTokenCurrent(token)) return;
-  S.params = { giver, react: 'reroll' };
-  render();
+  toast('The oath is inked. Your quest is sworn.');
 };
 
 G.abandon = async (id, giver) => {

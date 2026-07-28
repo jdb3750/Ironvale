@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import colosseum, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
+from . import colosseum, counsel, counsel_nudge, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
 
 app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(lifts.router)
@@ -190,6 +190,7 @@ def state():
         "needs_login": False,
         "unguided_pending": quests.unguided_pending(),
         "writ_notices": quests.writ_notices_pending(),
+        "counsel_nudge": counsel_nudge.daily_nudge(),
         "almanac_unread": records.almanac_unread(),
         "npc_notices": records.npc_notices(),
         "version": APP_VERSION,
@@ -212,8 +213,34 @@ async def save_appearance(request: Request):
 @app.post("/api/settings")
 async def save_settings(request: Request):
     body = await request.json()
+    if not isinstance(body, dict):
+        raise ValueError("The settings scroll is malformed.")
     if "weight_unit" in body and body["weight_unit"] not in ("kg", "lb"):
         raise ValueError("Choose kilograms or pounds for the weight measure.")
+    if "units" in body and body["units"] not in ("km", "mi"):
+        raise ValueError("Choose kilometres or miles for the road measure.")
+    if "counsel_mode" in body and body["counsel_mode"] not in game.COUNSEL_MODES:
+        raise ValueError("Choose one of the available game loops.")
+    if "counsel_nudge_enabled" in body and type(body["counsel_nudge_enabled"]) is not bool:
+        raise ValueError("The daily pointer must be set to on or off.")
+    charter = None
+    if "counsel_charter" in body:
+        charter = body["counsel_charter"]
+        if charter is not None:
+            if not isinstance(charter, dict) or set(charter) - {"primary", "secondary"}:
+                raise ValueError("The focus charter is not written in a recognized form.")
+            primary = charter.get("primary")
+            secondary = charter.get("secondary", [])
+            if not isinstance(primary, str) or primary not in game.COUNSEL_FOCUSES:
+                raise ValueError("Choose a primary focus from the live paths.")
+            if not isinstance(secondary, list) or any(
+                not isinstance(focus, str) or focus not in game.COUNSEL_FOCUSES
+                for focus in secondary
+            ):
+                raise ValueError("Choose secondary focuses from the live paths.")
+            if primary in secondary or len(secondary) != len(set(secondary)):
+                raise ValueError("A focus may be named only once in the charter.")
+            charter = {"primary": primary, "secondary": secondary}
     s = game.get_settings()
     if "timezone" in body:
         name = body["timezone"]
@@ -230,6 +257,11 @@ async def save_settings(request: Request):
     for k in ("ambition", "units", "weight_unit", "intervals_athlete_id", "dev_mode"):
         if k in body:
             s[k] = body[k]
+    for k in ("counsel_mode", "counsel_nudge_enabled"):
+        if k in body:
+            s[k] = body[k]
+    if "counsel_charter" in body:
+        s["counsel_charter"] = charter
     if body.get("intervals_api_key"):
         s["intervals_api_key"] = body["intervals_api_key"]
     db.kv_set("settings", s)
@@ -247,16 +279,10 @@ async def save_settings(request: Request):
 # ---------------- quests ----------------
 
 @app.get("/api/offers/{giver}")
-def offers(giver: str, reroll: bool = False):
+def offers(giver: str):
     if giver not in game.GIVERS:
         raise ValueError("No such quest-giver.")
-    if reroll:
-        c = game.get_char()
-        if c["gold"] < 10:
-            raise ValueError("A reroll costs 10 gold.")
-        c["gold"] -= 10
-        game.save_char(c)
-    out = quests.get_offers(giver, reroll=reroll)
+    out = counsel.giver_options(giver)
     active = next((q for q in quests.active_quests() if q["giver"] == giver), None)
     if active:
         ok, note, _ = quests.quest_completable(active)
@@ -267,7 +293,23 @@ def offers(giver: str, reroll: bool = False):
 @app.post("/api/quests/accept")
 async def accept(request: Request):
     body = await request.json()
-    qid = quests.accept_offer(body["giver"], body["offer_id"])
+    if not isinstance(body, dict):
+        raise counsel.OfferValidationError("That offer is not written in a recognized form.")
+    giver = body.get("giver")
+    option_key = body.get("option_key")
+    offer_id = body.get("offer_id")
+    if not isinstance(giver, str) or giver not in game.GIVERS:
+        raise counsel.OfferValidationError("No such quest-giver.")
+    if option_key is not None and (not isinstance(option_key, str) or not option_key):
+        raise counsel.OfferValidationError("That offer key is not recognized.")
+    if offer_id is not None and type(offer_id) is not int:
+        raise counsel.OfferValidationError("That offer number is not recognized.")
+    if option_key is None and offer_id is None:
+        raise counsel.OfferValidationError("Choose a current offer.")
+    qid = counsel.accept_current_option(
+        giver,
+        counsel.OptionIdentity(option_key, offer_id),
+    )
     return {"quest_id": qid}
 
 

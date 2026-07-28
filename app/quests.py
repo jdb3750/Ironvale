@@ -7,14 +7,25 @@ game.py imports neither this nor records/economy."""
 import json
 import math
 import random
+import sqlite3
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Literal, NamedTuple, Optional, Tuple
 
-from . import db, exercises, intervals, items, raid
+import pydantic
+
+from . import counsel_wellness, db, exercises, items, raid
+from .counsel_context_model import (
+    RecoveryWellnessDay,
+    WellnessSnapshot,
+)
 from .game import (
-    AMBITION, CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVERS, RUN_TYPES,
-    ambition_mult, apply_xp, category, get_char, get_settings, last_weight,
+    CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVER_ARCHETYPES, GIVERS, RUN_TYPES,
+    ambition_mult, apply_xp, category, get_char, last_weight,
     modality_history, muscle_recency, now, now_iso, run_history, save_char, today,
 )
+
+if TYPE_CHECKING:
+    from .counsel_attribution import Attribution
 
 # ---------------- quest generation ----------------
 
@@ -48,7 +59,6 @@ RIDE_FLAVOR = {
     "long":      ["The Far Village Errand", "Beyond the Watchtower", "The Century's Apprentice"],
 }
 
-# Ser Bram counts the wall as iron that fights back (see gen_lift_offers).
 CLIMB_FLAVOR = {
     "session":   ["The Wall's Interrogation", "Trial of Grip and Nerve", "The Vertical Court"],
     "volume":    ["Laps on the Old Face", "The Ant's Ascent", "Stonework"],
@@ -58,131 +68,171 @@ CLIMB_FLAVOR = {
 ENDURANCE_MODALITIES = ("run", "ride", "swim")
 ENDURANCE_FLAVOR = {"run": RUN_FLAVOR, "ride": RIDE_FLAVOR, "swim": SWIM_FLAVOR}
 
-LIFT_FLAVOR = {
-    "kettlebell": ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning", "The Bell Tolls for Thee", "Rites of the Forge-Daughter"],
-    "strength":   ["The Loadbearer's Oath", "Trial of Heavy Things", "The Squire's Burden", "Steel Shall Be Answered", "The Weight of Duty"],
-}
+LIFT_FLAVOR = ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning", "The Bell Tolls for Thee", "Rites of the Forge-Daughter"]
 
 MOBILITY_FLAVOR = ["The Willow's Lesson", "Unknotting the Rope", "The Patient Root", "Stillwater Rites", "The Long Exhale"]
 
+EnduranceModality = Literal["run", "ride", "swim"]
+LiftStyle = Literal["strength", "volume", "circuit"]
+STARTER_MEDIANS = {"run": 20.0, "ride": 40.0, "swim": 20.0}
+
+
+class CandidateHistory(NamedTuple):
+    session_count: int
+    median_minutes: float
+    p80_minutes: float
+
+
+class QuestCandidate(NamedTuple):
+    candidate_key: str
+    payload: dict[str, pydantic.JsonValue]
+    target_groups: Tuple[str, ...]
+
+
+class LiftCandidateContext(NamedTuple):
+    giver: str
+    style: LiftStyle
+    focus: Tuple[str, ...]
+    exercises: Tuple[str, ...]
+    weights: Tuple[Optional[float], ...]
+    iron_session_count: int
+
+
+def _history_context(history) -> CandidateHistory:
+    return CandidateHistory(
+        session_count=history["n"],
+        median_minutes=history["median"],
+        p80_minutes=history["p80"],
+    )
+
+
+def _endurance_candidate(
+    modality: EnduranceModality,
+    payload: dict[str, pydantic.JsonValue],
+    sizing: str,
+) -> QuestCandidate:
+    kind = str(payload["kind"])
+    variant = kind.split("_", 1)[1]
+    complete = {
+        **payload,
+        "modality": modality,
+        "giver": "running",
+        "title": ENDURANCE_FLAVOR[modality][variant][0],
+        "sizing": sizing,
+        "reason_codes": ["cold_start"] if sizing == "generic_starter" else [],
+    }
+    _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
+    target_groups = ("legs", "posterior") if modality in ("run", "ride") else ("back", "shoulders")
+    return QuestCandidate(kind, complete, target_groups)
+
+
+def build_endurance_candidates(
+    modality: EnduranceModality,
+    history: CandidateHistory,
+    ambition: float,
+) -> Tuple[QuestCandidate, ...]:
+    sizing = "personalized" if history.session_count >= 3 else "generic_starter"
+    med = history.median_minutes if sizing == "personalized" else STARTER_MEDIANS[modality]
+    pool = []
+    easy_minutes = _r5(med * 0.75 * ambition)
+    pool.append({
+        "kind": f"{modality}_easy", "intensity": "low", "target_minutes": easy_minutes,
+        "structure": {
+            "run": f"Run {easy_minutes} minutes at an easy, conversational pace. Nose-breathing easy.",
+            "ride": f"Ride {easy_minutes} minutes at an easy spin. Light gears, light heart.",
+            "swim": f"Swim {easy_minutes} minutes relaxed. Long strokes, long exhales, no clock-watching.",
+        }[modality],
+        "blurb": {
+            "run": "The roads are quiet. Keep them company.",
+            "ride": "The meadows roll. Let the wheels roll with them.",
+            "swim": "The water argues less when you stop arguing back.",
+        }[modality],
+    })
+    steady_minutes = _r5(med * ambition)
+    pool.append({
+        "kind": f"{modality}_steady", "intensity": "moderate", "target_minutes": steady_minutes,
+        "structure": {
+            "run": f"Run {steady_minutes} minutes at a steady, comfortable effort.",
+            "ride": f"Ride {steady_minutes} minutes at a steady, comfortable effort.",
+            "swim": f"Swim {steady_minutes} minutes continuous at a comfortable, steady effort.",
+        }[modality],
+        "blurb": {
+            "run": "A courier's pace: not hurried, never idle.",
+            "ride": "A courier's wage is earned in the turning, not the sprinting.",
+            "swim": "A ferryman crosses in all weather. So do you.",
+        }[modality],
+    })
+    if modality == "run":
+        tempo_work = _r5(max(10, med * 0.5 * ambition), lo=8)
+        repetitions = max(4, min(8, int(med / 4)))
+        pool.extend((
+            {
+                "kind": "run_tempo", "intensity": "hard", "target_minutes": tempo_work + 15,
+                "structure": f"10 min easy warm-up, {tempo_work} min at tempo (comfortably hard, ~85%), 5 min cool-down.",
+                "blurb": "Something is gaining on you. Do not let it.",
+            },
+            {
+                "kind": "run_intervals", "intensity": "hard", "target_minutes": 10 + repetitions * 4 + 5,
+                "structure": f"10 min warm-up, then {repetitions} x (2 min hard / 2 min easy jog), 5 min cool-down.",
+                "blurb": "Strike like lightning. Rest like rain. Repeat.",
+            },
+            {
+                "kind": "run_hills", "intensity": "hard", "target_minutes": 10 + repetitions * 3 + 5,
+                "structure": f"10 min warm-up, then {repetitions} x (45-60 sec uphill hard, walk down), 5 min cool-down.",
+                "blurb": "The hill was here first. Show it respect, then defeat it.",
+            },
+        ))
+    elif modality == "swim":
+        repetitions = max(4, min(10, int(med / 3)))
+        pool.append({
+            "kind": "swim_intervals", "intensity": "hard", "target_minutes": 5 + repetitions * 3 + 5,
+            "structure": f"5 min easy warm-up, then {repetitions} x (2 min strong / 1 min easy), 5 min easy cool-down.",
+            "blurb": "Somewhere below, a pike is pacing you. Outswim it.",
+        })
+    elif modality == "ride":
+        repetitions = max(3, min(8, int(med / 10)))
+        pool.append({
+            "kind": "ride_hills", "intensity": "hard", "target_minutes": 15 + repetitions * 5 + 5,
+            "structure": f"15 min easy warm-up, then {repetitions} x (3 min hard climb or big-gear grind, easy spin down), 5 min cool-down.",
+            "blurb": "The pass does not lower itself. Rise to it.",
+        })
+    if sizing == "personalized":
+        long_minutes = _r5(min(max(history.p80_minutes * 1.15, med * 1.35) * ambition, med * 2.0))
+        pool.append({
+            "kind": f"{modality}_long", "intensity": "moderate", "target_minutes": long_minutes,
+            "structure": {
+                "run": f"Run {long_minutes} minutes at an easy-to-steady effort. Slow is fine. Stopping is not.",
+                "ride": f"Ride {long_minutes} minutes at an easy-to-steady effort. Bring water; the watchtower is farther than it looks.",
+                "swim": f"Swim {long_minutes} minutes at an easy-to-steady effort. The far shore is patient.",
+            }[modality],
+            "blurb": {
+                "run": "The far cairn will not visit itself.",
+                "ride": "Past the last fence, the Vale keeps going. Go see.",
+                "swim": "Every crossing worth telling of started as too far.",
+            }[modality],
+        })
+    return tuple(_endurance_candidate(modality, payload, sizing) for payload in pool)
+
 
 def _run_pool(rng):
-    h = run_history()
-    amb = ambition_mult()
-    med = h["median"]
-    pool = []
-    ez = _r5(med * 0.75 * amb)
-    pool.append({
-        "kind": "run_easy", "intensity": "low", "target_minutes": ez,
-        "structure": f"Run {ez} minutes at an easy, conversational pace. Nose-breathing easy.",
-        "blurb": "The roads are quiet. Keep them company.",
-    })
-    st = _r5(med * amb)
-    pool.append({
-        "kind": "run_steady", "intensity": "moderate", "target_minutes": st,
-        "structure": f"Run {st} minutes at a steady, comfortable effort.",
-        "blurb": "A courier's pace: not hurried, never idle.",
-    })
-    tempo_work = _r5(max(10, med * 0.5 * amb), lo=8)
-    tempo_total = tempo_work + 15
-    pool.append({
-        "kind": "run_tempo", "intensity": "hard", "target_minutes": tempo_total,
-        "structure": f"10 min easy warm-up, {tempo_work} min at tempo (comfortably hard, ~85%), 5 min cool-down.",
-        "blurb": "Something is gaining on you. Do not let it.",
-    })
-    reps = max(4, min(8, int(med / 4)))
-    ivl_total = 10 + reps * 4 + 5
-    pool.append({
-        "kind": "run_intervals", "intensity": "hard", "target_minutes": ivl_total,
-        "structure": f"10 min warm-up, then {reps} x (2 min hard / 2 min easy jog), 5 min cool-down.",
-        "blurb": "Strike like lightning. Rest like rain. Repeat.",
-    })
-    if h["n"] >= 3:
-        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
-        pool.append({
-            "kind": "run_long", "intensity": "moderate", "target_minutes": lng,
-            "structure": f"Run {lng} minutes at an easy-to-steady effort. Slow is fine. Stopping is not.",
-            "blurb": "The far cairn will not visit itself.",
-        })
-    hill_reps = max(4, min(8, int(med / 4)))
-    pool.append({
-        "kind": "run_hills", "intensity": "hard", "target_minutes": 10 + hill_reps * 3 + 5,
-        "structure": f"10 min warm-up, then {hill_reps} x (45-60 sec uphill hard, walk down), 5 min cool-down.",
-        "blurb": "The hill was here first. Show it respect, then defeat it.",
-    })
-    for o in pool:
-        o["modality"] = "run"
-    return pool
+    del rng
+    return [dict(candidate.payload) for candidate in build_endurance_candidates(
+        "run", _history_context(run_history()), ambition_mult()
+    )]
 
 
 def _swim_pool(rng):
-    h = modality_history("swim", default_median=20)
-    amb = ambition_mult()
-    med = h["median"]
-    pool = []
-    ez = _r5(med * 0.75 * amb)
-    pool.append({
-        "kind": "swim_easy", "intensity": "low", "target_minutes": ez,
-        "structure": f"Swim {ez} minutes relaxed. Long strokes, long exhales, no clock-watching.",
-        "blurb": "The water argues less when you stop arguing back.",
-    })
-    st = _r5(med * amb)
-    pool.append({
-        "kind": "swim_steady", "intensity": "moderate", "target_minutes": st,
-        "structure": f"Swim {st} minutes continuous at a comfortable, steady effort.",
-        "blurb": "A ferryman crosses in all weather. So do you.",
-    })
-    reps = max(4, min(10, int(med / 3)))
-    pool.append({
-        "kind": "swim_intervals", "intensity": "hard", "target_minutes": 5 + reps * 3 + 5,
-        "structure": f"5 min easy warm-up, then {reps} x (2 min strong / 1 min easy), 5 min easy cool-down.",
-        "blurb": "Somewhere below, a pike is pacing you. Outswim it.",
-    })
-    if h["n"] >= 3:
-        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
-        pool.append({
-            "kind": "swim_long", "intensity": "moderate", "target_minutes": lng,
-            "structure": f"Swim {lng} minutes at an easy-to-steady effort. The far shore is patient.",
-            "blurb": "Every crossing worth telling of started as too far.",
-        })
-    for o in pool:
-        o["modality"] = "swim"
-    return pool
+    del rng
+    return [dict(candidate.payload) for candidate in build_endurance_candidates(
+        "swim", _history_context(modality_history("swim", default_median=20)), ambition_mult()
+    )]
 
 
 def _ride_pool(rng):
-    h = modality_history("ride", default_median=40)
-    amb = ambition_mult()
-    med = h["median"]
-    pool = []
-    ez = _r5(med * 0.75 * amb)
-    pool.append({
-        "kind": "ride_easy", "intensity": "low", "target_minutes": ez,
-        "structure": f"Ride {ez} minutes at an easy spin. Light gears, light heart.",
-        "blurb": "The meadows roll. Let the wheels roll with them.",
-    })
-    st = _r5(med * amb)
-    pool.append({
-        "kind": "ride_steady", "intensity": "moderate", "target_minutes": st,
-        "structure": f"Ride {st} minutes at a steady, comfortable effort.",
-        "blurb": "A courier's wage is earned in the turning, not the sprinting.",
-    })
-    hill_reps = max(3, min(8, int(med / 10)))
-    pool.append({
-        "kind": "ride_hills", "intensity": "hard", "target_minutes": 15 + hill_reps * 5 + 5,
-        "structure": f"15 min easy warm-up, then {hill_reps} x (3 min hard climb or big-gear grind, easy spin down), 5 min cool-down.",
-        "blurb": "The pass does not lower itself. Rise to it.",
-    })
-    if h["n"] >= 3:
-        lng = _r5(min(max(h["p80"] * 1.15, med * 1.35) * amb, med * 2.0))
-        pool.append({
-            "kind": "ride_long", "intensity": "moderate", "target_minutes": lng,
-            "structure": f"Ride {lng} minutes at an easy-to-steady effort. Bring water; the watchtower is farther than it looks.",
-            "blurb": "Past the last fence, the Vale keeps going. Go see.",
-        })
-    for o in pool:
-        o["modality"] = "ride"
-    return pool
+    del rng
+    return [dict(candidate.payload) for candidate in build_endurance_candidates(
+        "ride", _history_context(modality_history("ride", default_median=40)), ambition_mult()
+    )]
 
 
 def _endurance_mix():
@@ -239,102 +289,143 @@ def _pick_exercises(rng, names, focus_groups, count=4):
     return chosen[:count]
 
 
-def _build_routine(rng, chosen, style):
+def build_lift_candidate(context: LiftCandidateContext) -> QuestCandidate:
     routine = []
-    for name in chosen:
-        unit, lo, hi = exercises.EXERCISES[name]["scheme"]
-        if style == "strength":
-            sets, reps = 4, lo
-        elif style == "volume":
-            sets, reps = 3, hi
-        else:  # circuit
-            sets, reps = 3, int((lo + hi) / 2)
-        w = last_weight(name)
+    for index, name in enumerate(context.exercises):
+        unit, low_reps, high_reps = exercises.EXERCISES[name]["scheme"]
+        if context.style == "strength":
+            sets, reps = 4, low_reps
+        elif context.style == "volume":
+            sets, reps = 3, high_reps
+        else:
+            sets, reps = 3, int((low_reps + high_reps) / 2)
         routine.append({
-            "exercise": name, "sets": sets, "reps": reps, "unit": unit,
-            "suggest_weight": w,
+            "exercise": name,
+            "sets": sets,
+            "reps": reps,
+            "unit": unit,
+            "suggest_weight": context.weights[index],
             "groups": exercises.EXERCISES[name]["groups"],
         })
-    return routine
-
-
-def _climb_pool(rng):
-    """Ser Bram's climbing offers — the wall is iron that fights back. Time
-    at the wall is the target (a synced climb session completes it); grades
-    and crags are a later chapter (see issue #57)."""
-    h = modality_history("climb", default_median=60)
-    amb = ambition_mult()
-    med = h["median"]
-    sess = _r5(med * amb, lo=30)
-    vol = _r5(med * 0.9 * amb, lo=30)
-    tech = _r5(max(30, med * 0.7), lo=30)
-    pool = [
-        {
-            "kind": "climb_session", "intensity": "hard", "target_minutes": sess,
-            "structure": f"{sess} minutes at the wall. Warm up on easy ground, then push attempts near your limit while fresh.",
-            "blurb": "The wall asks its questions plainly. Answer with your hands.",
-        },
-        {
-            "kind": "climb_volume", "intensity": "moderate", "target_minutes": vol,
-            "structure": f"{vol} minutes of mileage: many routes or problems well below your limit, minimal rest between.",
-            "blurb": "A soldier drills the easy strikes ten hundred times. So does a climber.",
-        },
-        {
-            "kind": "climb_technique", "intensity": "low", "target_minutes": tech,
-            "structure": f"{tech} minutes climbing deliberately easy: silent feet, straight arms, no rushed moves.",
-            "blurb": "Strength wins moves. Footwork wins walls.",
-        },
-    ]
-    for o in pool:
-        o["modality"] = "climb"
-    return pool
-
-
-def gen_lift_offers(rng, giver):
-    names = exercises.KB_NAMES if giver == "kettlebell" else exercises.GYM_NAMES
-    rec = muscle_recency()
-    # stale-first: groups untrained the longest get priority
-    ranked = sorted(exercises.GROUPS, key=lambda g: -rec[g]["days_since"])
-    offers = []
-    styles = ["strength", "volume", "circuit"]
-    rng.shuffle(styles)
-    focus_sets = [ranked[0:2], ranked[1:3], [ranked[0], ranked[3]]]
     style_desc = {
         "strength": "Heavy and low. Rest well between sets.",
         "volume": "Lighter, more reps. Chase the burn.",
         "circuit": "Move briskly between exercises, minimal rest.",
     }
-    # a climber's board trades lift slots for wall sessions: one slot with
-    # any climbing in the last 28 days, two when the wall is their habit
-    climb_slots = 0
-    if giver == "strength":
-        climb_n = modality_history("climb", days=28)["n"]
-        climb_slots = 2 if climb_n >= 6 else (1 if climb_n >= 1 else 0)
-        if climb_slots:
-            for o in rng.sample(_climb_pool(rng), climb_slots):
-                o["giver"] = giver
-                o["title"] = rng.choice(CLIMB_FLAVOR[o["kind"].split("_")[1]])
-                _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
-                offers.append(o)
-    for i in range(3 - climb_slots):
+    total_sets = sum(entry["sets"] for entry in routine)
+    has_history = context.iron_session_count > 0
+    payload = {
+        "kind": f"lift_{context.style}",
+        "giver": context.giver,
+        "title": LIFT_FLAVOR[0],
+        "intensity": "hard" if context.style == "strength" else "moderate",
+        "focus": list(context.focus),
+        "style": context.style,
+        "routine": routine,
+        "structure": style_desc[context.style],
+        "blurb": f"Focus: {', '.join(context.focus)}. {style_desc[context.style]}",
+        "total_sets": total_sets,
+        "sizing": "personalized" if has_history else "generic_starter",
+        "reason_codes": [] if has_history else ["no_iron_history"],
+    }
+    _price_offer(payload, minutes=total_sets * 3, intensity=payload["intensity"])
+    routine_key = "|".join(
+        f"{entry['exercise']}:{entry['suggest_weight']}" for entry in routine
+    )
+    key = f"{context.giver}:{payload['kind']}:{'-'.join(context.focus)}:{routine_key}"
+    target_groups = tuple(
+        dict.fromkeys(group for entry in routine for group in entry["groups"]),
+    )
+    return QuestCandidate(key, payload, target_groups)
+
+
+def build_climb_candidates(
+    history: CandidateHistory,
+    ambition: float,
+) -> Tuple[QuestCandidate, ...]:
+    median_minutes = history.median_minutes
+    session_minutes = _r5(median_minutes * ambition, lo=30)
+    volume_minutes = _r5(median_minutes * 0.9 * ambition, lo=30)
+    technique_minutes = _r5(max(30, median_minutes * 0.7), lo=30)
+    pool = [
+        {
+            "kind": "climb_session", "intensity": "hard", "target_minutes": session_minutes,
+            "structure": f"{session_minutes} minutes at the wall. Warm up on easy ground, then push attempts near your limit while fresh.",
+            "blurb": "The wall asks its questions plainly. Answer with your hands.",
+        },
+        {
+            "kind": "climb_volume", "intensity": "moderate", "target_minutes": volume_minutes,
+            "structure": f"{volume_minutes} minutes of mileage: many routes or problems well below your limit, minimal rest between.",
+            "blurb": "A soldier drills the easy strikes ten hundred times. So does a climber.",
+        },
+        {
+            "kind": "climb_technique", "intensity": "low", "target_minutes": technique_minutes,
+            "structure": f"{technique_minutes} minutes climbing deliberately easy: silent feet, straight arms, no rushed moves.",
+            "blurb": "Strength wins moves. Footwork wins walls.",
+        },
+    ]
+    candidates = []
+    for payload in pool:
+        kind = str(payload["kind"])
+        variant = kind.split("_", 1)[1]
+        complete = {
+            **payload,
+            "modality": "climb",
+            "giver": "strength",
+            "title": CLIMB_FLAVOR[variant][0],
+        }
+        _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
+        candidates.append(QuestCandidate(kind, complete, ("back", "arms", "core")))
+    return tuple(candidates)
+
+
+def _climb_pool(rng):
+    del rng
+    return [dict(candidate.payload) for candidate in build_climb_candidates(
+        _history_context(modality_history("climb", default_median=60)), ambition_mult()
+    )]
+
+
+def gen_climb_offers(rng):
+    offers = _climb_pool(rng)
+    rng.shuffle(offers)
+    for o in offers:
+        o["giver"] = "strength"
+        o["title"] = rng.choice(CLIMB_FLAVOR[str(o["kind"]).split("_")[1]])
+        _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
+    return offers
+
+
+def gen_lift_offers(rng):
+    rec = muscle_recency()
+    # stale-first: groups untrained the longest get priority
+    ranked = sorted(exercises.GROUPS, key=lambda g: -rec[g]["days_since"])
+    offers = []
+    styles: list[LiftStyle] = ["strength", "volume", "circuit"]
+    rng.shuffle(styles)
+    focus_sets = [ranked[0:2], ranked[1:3], [ranked[0], ranked[3]]]
+    iron_session_count = len(db.q(
+        "SELECT DISTINCT substr(ts, 1, 10) AS day FROM lift_sets WHERE ts >= ?",
+        ((now() - timedelta(days=60)).date().isoformat(),),
+    ).fetchall())
+    for i, equipment in enumerate(GIVER_ARCHETYPES["kettlebell"]["modalities"]):
         style = styles[i % len(styles)]
         focus = focus_sets[i]
+        names = [
+            name for name, exercise in exercises.EXERCISES.items()
+            if exercise["equipment"] == equipment
+        ]
         chosen = _pick_exercises(rng, names, focus)
-        routine = _build_routine(rng, chosen, style)
-        total_sets = sum(r["sets"] for r in routine)
-        o = {
-            "kind": f"lift_{style}",
-            "giver": giver,
-            "title": rng.choice(LIFT_FLAVOR[giver]),
-            "intensity": "hard" if style == "strength" else "moderate",
-            "focus": focus,
-            "style": style,
-            "routine": routine,
-            "structure": style_desc[style],
-            "blurb": f"Focus: {', '.join(focus)}. {style_desc[style]}",
-            "total_sets": total_sets,
-        }
-        _price_offer(o, minutes=total_sets * 3, intensity=o["intensity"])
+        candidate = build_lift_candidate(LiftCandidateContext(
+            giver="kettlebell",
+            style=style,
+            focus=tuple(focus),
+            exercises=tuple(chosen),
+            weights=tuple(last_weight(name) for name in chosen),
+            iron_session_count=iron_session_count,
+        ))
+        o = dict(candidate.payload)
+        o["title"] = rng.choice(LIFT_FLAVOR)
         offers.append(o)
     return offers
 
@@ -392,37 +483,26 @@ WRIT_HARD_MIN_SECONDS = 15 * 60
 WRIT_HARD_MIN_SETS = 6
 
 
-def rest_writ_signal():
-    """Read the omens. Returns a list of in-world reason strings when recovery
-    data says today should be a rest day, else None.
-
-    Fires on any ONE strong signal or TWO weak ones:
-      HRV week-avg vs prior baseline:  strong <= -8%,  weak <= -5%
-      RHR week-avg vs prior baseline:  strong >= +4bpm, weak >= +2.5bpm
-      sleep: last night < 5h (strong); 7-night avg < 6h (strong) / < 6.5h (weak)
-
-    Requires a wellness reading within the last 2 days — no writ without
-    fresh evidence (stale data must never spawn writs forever)."""
-    rows = db.q(
-        "SELECT * FROM wellness WHERE date >= ? ORDER BY date",
-        ((now() - timedelta(days=60)).date().isoformat(),),
-    ).fetchall()
+def _rest_writ_signal(
+    rows: Tuple[RecoveryWellnessDay, ...],
+    current: datetime,
+) -> Optional[list[str]]:
     if not rows:
         return None
-    if rows[-1]["date"] < (now().date() - timedelta(days=2)).isoformat():
+    if rows[-1].observed_on < (
+        current.date() - timedelta(days=2)
+    ).isoformat():
         return None
 
     week, before = rows[-7:], rows[:-7]
 
-    def vals(field, src):
-        return [r[field] for r in src if r[field] is not None]
-
-    def avg(v):
-        return sum(v) / len(v) if v else None
+    def avg(values: Tuple[float, ...]) -> Optional[float]:
+        return sum(values) / len(values) if values else None
 
     strong, weak, reasons = 0, 0, []
 
-    hrv_w, hrv_b = avg(vals("hrv", week)), avg(vals("hrv", before))
+    hrv_w = avg(tuple(row.hrv for row in week if row.hrv is not None))
+    hrv_b = avg(tuple(row.hrv for row in before if row.hrv is not None))
     if hrv_w and hrv_b:
         delta = (hrv_w - hrv_b) / hrv_b * 100
         if delta <= -8:
@@ -432,18 +512,23 @@ def rest_writ_signal():
             weak += 1
             reasons.append(f"your heart's rhythm runs {abs(delta):.0f}% quiet")
 
-    rhr_w, rhr_b = avg(vals("resting_hr", week)), avg(vals("resting_hr", before))
+    rhr_w = avg(tuple(row.resting_hr for row in week if row.resting_hr is not None))
+    rhr_b = avg(tuple(row.resting_hr for row in before if row.resting_hr is not None))
     if rhr_w and rhr_b:
-        d = rhr_w - rhr_b
-        if d >= 4:
+        delta = rhr_w - rhr_b
+        if delta >= 4:
             strong += 1
-            reasons.append(f"your resting pulse runs {d:.0f} beats hot")
-        elif d >= 2.5:
+            reasons.append(f"your resting pulse runs {delta:.0f} beats hot")
+        elif delta >= 2.5:
             weak += 1
-            reasons.append(f"your resting pulse is {d:.1f} beats above its wont")
+            reasons.append(f"your resting pulse is {delta:.1f} beats above its wont")
 
-    last_sleep = vals("sleep_secs", rows[-1:])
-    sleep_w = avg(vals("sleep_secs", week))
+    last_sleep = tuple(
+        row.sleep_secs for row in rows[-1:] if row.sleep_secs is not None
+    )
+    sleep_w = avg(
+        tuple(row.sleep_secs for row in week if row.sleep_secs is not None),
+    )
     if last_sleep and last_sleep[0] < 5 * 3600:
         strong += 1
         reasons.append(f"last night gave you only {last_sleep[0]/3600:.1f} hours of sleep")
@@ -459,6 +544,59 @@ def rest_writ_signal():
     return None
 
 
+def rest_writ_signal():
+    """Read the omens. Returns a list of in-world reason strings when recovery
+    data says today should be a rest day, else None.
+
+    Fires on any ONE strong signal or TWO weak ones:
+      HRV week-avg vs prior baseline:  strong <= -8%,  weak <= -5%
+      RHR week-avg vs prior baseline:  strong >= +4bpm, weak >= +2.5bpm
+      sleep: last night < 5h (strong); 7-night avg < 6h (strong) / < 6.5h (weak)
+
+    Requires a wellness reading within the last 2 days — no writ without
+    fresh evidence (stale data must never spawn writs forever)."""
+    current = now()
+    return _rest_writ_signal(
+        counsel_wellness.qualified_recovery_days(current),
+        current,
+    )
+
+
+def _rest_writ_offer(
+    reasons: Optional[list[str]],
+    writ_day: str,
+):
+    if not reasons:
+        return None
+    rng = random.Random(f"writ:{writ_day}")
+    return {
+        "kind": "rest", "giver": "mobility",
+        "title": REST_WRIT_TITLE,
+        "intensity": "low",
+        "writ_day": writ_day,
+        "reasons": reasons,
+        "blurb": rng.choice(REST_WRIT_BLURBS),
+        "structure": "From acceptance until dawn: no hard training. Walks, stretches and sleep are the whole of the quest.",
+        "xp": 45, "gold": 20, "vigor": 2, "bonus_vigor": 1,
+    }
+
+
+def rest_writ_offer_for_context(
+    wellness: WellnessSnapshot,
+    current: datetime,
+):
+    writ_day = current.date().isoformat()
+    if db.q(
+        "SELECT 1 FROM quests WHERE kind='rest' AND accepted_at LIKE ? LIMIT 1",
+        (writ_day + "%",),
+    ).fetchone():
+        return None
+    return _rest_writ_offer(
+        _rest_writ_signal(wellness.recovery_days, current),
+        writ_day,
+    )
+
+
 def rest_writ_offer():
     """Elowen's leading offer when the omens call for rest, else None.
     At most one writ per calendar day, in ANY status — an abandoned or broken
@@ -469,19 +607,8 @@ def rest_writ_offer():
     ).fetchone():
         return None
     reasons = rest_writ_signal()
-    if not reasons:
-        return None
-    rng = random.Random(f"writ:{today()}")
-    return {
-        "kind": "rest", "giver": "mobility",
-        "title": REST_WRIT_TITLE,
-        "intensity": "low",
-        "writ_day": today(),
-        "reasons": reasons,
-        "blurb": rng.choice(REST_WRIT_BLURBS),
-        "structure": "From acceptance until dawn: no hard training. Walks, stretches and sleep are the whole of the quest.",
-        "xp": 45, "gold": 20, "vigor": 2, "bonus_vigor": 1,
-    }
+    writ_day = today()
+    return _rest_writ_offer(reasons, writ_day)
 
 
 def _writ_hard_activity(quest):
@@ -562,7 +689,7 @@ def ack_writ_notice(ts=None):
 
 
 def get_offers(giver, reroll=False):
-    key = f"offers:{giver}:{today()}"
+    key = f"offers:archetype-v2:{giver}:{today()}"
     bump_key = f"offerbump:{giver}:{today()}"
     bump = db.kv_get(bump_key, 0)
     if reroll:
@@ -574,8 +701,10 @@ def get_offers(giver, reroll=False):
         rng = random.Random(f"{giver}:{today()}:{bump}")
         if giver == "running":
             cached = gen_endurance_offers(rng)
-        elif giver in ("kettlebell", "strength"):
-            cached = gen_lift_offers(rng, giver)
+        elif giver == "kettlebell":
+            cached = gen_lift_offers(rng)
+        elif giver == "strength":
+            cached = gen_climb_offers(rng)
         elif giver == "mobility":
             cached = gen_mobility_offers(rng)
         else:
@@ -584,7 +713,7 @@ def get_offers(giver, reroll=False):
             o["offer_id"] = i
         db.kv_set(key, cached)
     # an active doctrine's next session leads the offers (built fresh — weights progress)
-    if giver in ("kettlebell", "strength"):
+    if giver == "kettlebell":
         from . import programs
         po = programs.build_program_offer(giver)
         if po:
@@ -617,8 +746,37 @@ def _quest_row(r):
     }
 
 
+def create_quest_from_offer(
+    giver: str,
+    offer: dict[str, pydantic.JsonValue],
+    attribution: Optional["Attribution"] = None,
+) -> int:
+    from . import counsel_attribution
+
+    accepted_at = now_iso()
+    try:
+        cursor = db.q(
+            "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+            "VALUES (?,?,?,?, 'active', ?)",
+            (giver, offer["kind"], offer["title"], json.dumps(offer), accepted_at),
+        )
+        quest_id = cursor.lastrowid
+        if quest_id is None:
+            raise sqlite3.IntegrityError("quest insert did not return an id")
+        if attribution is not None:
+            counsel_attribution.insert_attribution(quest_id, accepted_at, attribution)
+        db.q(
+            "INSERT INTO ledger (ts, kind, text) VALUES (?, 'quest', ?)",
+            (now_iso(), f"Accepted quest: {offer['title']}"),
+        )
+        db.commit()
+    except (counsel_attribution.AttributionValidationError, sqlite3.DatabaseError):
+        db.rollback()
+        raise
+    return quest_id
+
+
 def accept_offer(giver, offer_id):
-    import json
     for q_ in active_quests():
         if q_["giver"] == giver:
             raise ValueError(f"You already carry a quest from {GIVERS[giver]['name']}. Finish or abandon it first.")
@@ -626,13 +784,7 @@ def accept_offer(giver, offer_id):
     offer = next((o for o in offers if o["offer_id"] == offer_id), None)
     if not offer:
         raise ValueError("That offer has faded.")
-    cur = db.q(
-        "INSERT INTO quests (giver, kind, title, details, status, accepted_at) VALUES (?,?,?,?, 'active', ?)",
-        (giver, offer["kind"], offer["title"], json.dumps(offer), now_iso()),
-    )
-    db.commit()
-    db.log_event(now_iso(), "quest", f"Accepted quest: {offer['title']}")
-    return cur.lastrowid
+    return create_quest_from_offer(giver, offer)
 
 
 def abandon_quest(quest_id):
@@ -943,18 +1095,12 @@ UNGUIDED_STAT_BY_CATEGORY = {
     "climb": "str", "strength": "str", "mobility": "spr", "other": "con",
 }
 
-# Which giver notices an unsworn deed: the archetype that owns the effort,
-# not one catch-all NPC. Endurance roads (wet ones included) are Fenn's;
-# iron and rock are Ser Bram's; ballistic chaos is Grunhilda's; stillness
-# is Elowen's; anything unclassifiable reaches Wick's ledger. "wick" is not
-# a quest giver — it's an attribution target the town knows how to anchor.
 DEED_GIVER_BY_CATEGORY = {
     "run": "running", "ride": "running", "walk": "running", "swim": "running",
-    "climb": "strength", "strength": "strength",
+    "climb": "strength", "strength": "kettlebell",
     "mobility": "mobility",
     "other": "wick",
 }
-GRUNHILDA_TYPES = ("Crossfit", "HIIT")  # filed under "strength", but her kind of bedlam
 
 DEED_NOTES = {
     "running": [
@@ -968,9 +1114,9 @@ DEED_NOTES = {
         "The forge does not ask who ordered the fire. Well struck.",
     ],
     "strength": [
-        "Iron moved is iron moved, sworn or not. Ser Bram settles his debts.",
-        "You trained without orders. Good. Initiative suits you.",
-        "The keep watched you work. A knight pays what honor owes.",
+        "The wall remembers every move, sworn or not. Ser Bram settles his debts.",
+        "You climbed without orders. Good. Initiative suits you.",
+        "The keep watched you on the stone. A knight pays what honor owes.",
     ],
     "mobility": [
         "Stillness taken unbidden is stillness all the same.",
@@ -986,8 +1132,6 @@ DEED_NOTES = {
 
 
 def deed_giver(activity_type):
-    if activity_type in GRUNHILDA_TYPES:
-        return "kettlebell"
     return DEED_GIVER_BY_CATEGORY.get(category(activity_type), "wick")
 
 

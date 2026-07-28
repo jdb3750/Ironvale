@@ -235,10 +235,31 @@ G.crank = async (useToken) => {
 
 /* ================= SETTINGS ================= */
 
+let settingsTab = 'game';
+const SETTINGS_TABS = Object.freeze([
+  { id: 'game', label: 'GAME' },
+  { id: 'apis', label: 'APIS' },
+  { id: 'dev', label: 'DEV' },
+]);
+
+RESETS.push(() => {
+  settingsTab = 'game';
+});
+
+G.setSettingsTab = (id) => {
+  if (!SETTINGS_TABS.some(tab => tab.id === id) || settingsTab === id) return;
+  settingsTab = id;
+  render();
+  document.getElementById(`settings-tab-${id}`)?.focus({ preventScroll: true });
+};
+
 SCREENS.settings = function () {
   const s = S.state.settings;
   const c = S.state.character;
   const amb = S.state.ambition_levels;
+  const charter = s.counsel_charter || { primary: '', secondary: [] };
+  const secondary = charter.secondary || [];
+  const selfDirected = s.counsel_mode === 'self';
   const siegeTz = S.state.siege_timezone || 'UTC';
   const siegeTzOptions = [
     { value: 'UTC', label: 'Siege Bell Timezone: UTC' },
@@ -257,32 +278,28 @@ SCREENS.settings = function () {
     { value: 'kg', label: 'Weight Unit: kg' },
     { value: 'lb', label: 'Weight Unit: lb' },
   ];
-  $app().innerHTML = shell(`
-    <section aria-labelledby="settings-common">
-    <div class="win"><span class="win-title" id="settings-common">At Hand</span>
-      <div class="formrow">
-        <button type="button" class="btn wide btn-fit" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
-      </div>
-      <div class="formrow">
-        <button type="button" class="btn wide btn-fit" onclick="G.syncNow()">Send ravens (sync)</button>
-      </div>
-      <div class="formrow">
-        ${pixelSelect('set-wu', weightOpts, s.weight_unit, 'weight unit', 'saveWeightUnit')}
-      </div>
-      <div class="formrow">
-        ${pixelSelect('set-siege-tz', siegeTzOptions, siegeTz, 'siege timezone', 'saveSiegeTimezone')}
-      </div>
-      <hr class="rule">
-      <span class="muted" style="display:block;text-transform:uppercase;letter-spacing:1px">ambition</span>
-      <div class="muted" style="margin-bottom:8px">how hard the quest-givers push you</div>
-      ${amb.map((a, i) => `<button class="btn" style="margin:3px;${s.ambition === i ? 'background:var(--gold);color:var(--bg)' : ''}"
-        onclick="G.setAmbition(${i})">
-        ${esc(a.name)}</button>`).join('')}
-      <div class="muted" style="margin-top:6px">${esc(amb[s.ambition].desc)}</div>
-    </div>
-    </section>
-    <section aria-labelledby="settings-account">
-    <div class="win"><span class="win-title" id="settings-account">Adventurer &amp; Account</span>
+  const unitOpts = [
+    { value: 'km', label: 'Road Unit: km' },
+    { value: 'mi', label: 'Road Unit: mi' },
+  ];
+  const loopOpts = [
+    { value: 'considered', label: 'Considered' },
+    { value: 'self', label: 'Choose-your-own' },
+  ];
+  const focusOpts = [
+    { value: 'run', label: 'Run' },
+    { value: 'ride', label: 'Ride' },
+    { value: 'swim', label: 'Swim' },
+    { value: 'climb', label: 'Climb' },
+    { value: 'iron', label: 'Iron' },
+  ];
+  const focusHint = selfDirected
+    ? "You're choosing freely; focus guides the counsel."
+    : 'Optional. Focus only guides the daily pointer; every giver remains available.';
+  const settingsPanels = {
+    game: `
+    <section id="settings-panel-game" data-settings-section="game" role="tabpanel" aria-labelledby="settings-tab-game">
+    <div class="win counsel-surface settings-surface"><span class="win-title" id="settings-game">Game</span>
       <div class="formrow"><label for="set-name">name</label>
         <div style="display:flex;gap:6px">
           <input type="text" id="set-name" value="${esc(c.name)}" style="flex:1" onkeydown="if(event.key==='Enter')G.saveName()">
@@ -290,35 +307,82 @@ SCREENS.settings = function () {
         </div>
       </div>
       <div class="muted" style="font-size:16px;margin:6px 0">to change your look, tap your portrait at the top of any page</div>
-      <hr class="rule">
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
         <button class="btn small" style="min-width:0" onclick="G.setPinPrompt()">SET / CHANGE PIN</button>
         <button class="btn small" style="min-width:0" onclick="G.switchProfile()">SWITCH ADVENTURER</button>
       </div>
+      <hr class="rule">
+      <div class="formrow">
+        <button type="button" class="btn wide btn-fit toggle ${SFX.muted ? '' : 'green'}" data-sound-btn data-settings-sound onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
+      </div>
+      <div class="formrow">
+        ${pixelSelect('set-units', unitOpts, s.units, 'road unit', 'saveUnits')}
+      </div>
+      <div class="formrow">
+        ${pixelSelect('set-wu', weightOpts, s.weight_unit, 'weight unit', 'saveWeightUnit')}
+      </div>
+      <div class="formrow"><span class="counsel-label">timezone</span><div>${esc(s.timezone || 'Automatic from this device')}</div></div>
+      <div class="formrow">
+        ${pixelSelect('set-siege-tz', siegeTzOptions, siegeTz, 'siege timezone', 'saveSiegeTimezone')}
+      </div>
+      <hr class="rule">
+      <span class="counsel-label">ambition</span>
+      <div class="muted" style="margin-bottom:8px">how hard the quest-givers push you</div>
+      ${amb.map((a, i) => `<button class="btn" style="margin:3px;${s.ambition === i ? 'background:var(--gold);color:var(--bg)' : ''}"
+        onclick="G.setAmbition(${i})">
+        ${esc(a.name)}</button>`).join('')}
+      <div class="muted" style="margin-top:6px">${esc(amb[s.ambition].desc)}</div>
+      <hr class="rule">
+      <div class="formrow">
+        <span class="counsel-label">game loop style</span>
+        ${pixelSelect('set-counsel-mode', loopOpts, s.counsel_mode, 'game loop style', 'saveCounselMode')}
+      </div>
+      <button type="button" class="btn small toggle ${s.counsel_nudge_enabled ? 'green' : ''}" aria-pressed="${s.counsel_nudge_enabled ? 'true' : 'false'}" onclick="G.toggleCounselNudge()">DAILY POINTER: ${s.counsel_nudge_enabled ? 'ON' : 'OFF'}</button>
+      <fieldset id="counsel-focus" class="counsel-focus counsel-block" aria-describedby="counsel-focus-hint" ${selfDirected ? 'disabled' : ''}>
+        <legend>Focus</legend>
+        <span class="counsel-label">Primary focus</span>
+        <div class="formrow">
+          ${pixelSelect('set-counsel-primary', focusOpts, charter.primary, 'Primary focus (optional)', 'setCounselPrimaryDraft', 'Primary focus (optional)', selfDirected)}
+        </div>
+        <span class="counsel-label">Secondary focuses (optional)</span>
+        <div class="counsel-focus-choices" aria-label="Secondary focuses (optional)">
+          ${focusOpts.map(focus => `<button type="button" class="btn toggle ${secondary.includes(focus.value) && focus.value !== charter.primary ? 'active' : ''}" data-counsel-secondary="${focus.value}" aria-pressed="${secondary.includes(focus.value) && focus.value !== charter.primary ? 'true' : 'false'}" onclick="G.toggleCounselSecondary('${focus.value}')" ${focus.value === charter.primary ? 'hidden' : ''} ${selfDirected ? 'disabled' : ''}>${focus.label}</button>`).join('')}
+        </div>
+        <button type="button" class="btn small" style="margin-top:8px" onclick="G.saveCounselCharter()" ${selfDirected ? 'disabled' : ''}>SAVE FOCUS</button>
+        <div id="counsel-focus-hint" class="counsel-help">${focusHint}</div>
+      </fieldset>
     </div>
-    </section>
-    <section aria-labelledby="settings-ravens">
-    <div class="win"><span class="win-title" id="settings-ravens">The Ravens (intervals.icu)</span>
+    </section>`,
+    apis: `
+    <section id="settings-panel-apis" data-settings-section="apis" role="tabpanel" aria-labelledby="settings-tab-apis">
+    <div class="win counsel-surface settings-surface"><span class="win-title" id="settings-apis">APIs</span>
       <div class="sync-status-panel">${syncStatusHTML(S.state)}</div>
-      <div class="muted" style="font-size:17px;margin-bottom:8px">
+      <div class="muted settings-helper">
         Runs, climbs, lifts and wellness sync from intervals.icu — which itself syncs from Garmin,
         Strava, Coros, etc. First sync fetches ~400 days; after that the ravens fly every 15 minutes
         and completed workouts turn in quests automatically.
-        Athlete ID and API key: intervals.icu &rarr; Settings &rarr; Developer.</div>
+        Athlete ID and API key: intervals.icu &rarr; <span class="counsel-path">Settings &rarr; Developer.</span></div>
       <div class="formrow"><label for="set-aid">athlete id (e.g. i12345)</label><input type="text" id="set-aid" value="${esc(s.intervals_athlete_id)}"></div>
       <div class="formrow"><label for="set-key">api key ${s.intervals_api_key ? '(saved — leave blank to keep)' : ''}</label><input type="password" id="set-key" placeholder="${s.intervals_api_key ? '••••••••' : ''}"></div>
-      <button class="btn wide btn-fit" onclick="G.saveSettings(true)">SAVE &amp; SEND RAVENS</button>
+      <button class="btn wide btn-fit" onclick="G.saveRavens()">SAVE &amp; SEND RAVENS</button>
     </div>
-    </section>
-    <section aria-labelledby="settings-dev">
-    <div class="win"><span class="win-title" id="settings-dev">Developer</span>
-      <div class="muted" style="font-size:17px;margin-bottom:6px">for testing features without living an entire second life</div>
+    </section>`,
+    dev: `
+    <section id="settings-panel-dev" data-settings-section="dev" role="tabpanel" aria-labelledby="settings-tab-dev">
+    <div class="win counsel-surface settings-surface"><span class="win-title" id="settings-dev">Dev</span>
+      <div class="muted settings-helper">for testing features without living an entire second life</div>
       <button class="btn ${s.dev_mode ? 'danger' : ''}" onclick="G.toggleDev(${s.dev_mode ? 'false' : 'true'})">
         ${s.dev_mode ? 'DISABLE DEV MODE' : 'ENABLE DEV MODE'}</button>
       ${s.dev_mode ? '<button class="btn wide btn-fit" style="margin-top:10px" onclick="G.openDevConsole()">OPEN DEV CONSOLE</button>' : ''}
     </div>
-    </section>
-  `);
+    </section>`,
+  };
+  const tabs = `<nav class="settings-tabs" aria-label="Settings sections">
+    <div class="hall-nav-buttons" role="tablist">
+      ${SETTINGS_TABS.map(tab => `<button type="button" id="settings-tab-${tab.id}" class="btn small ${settingsTab === tab.id ? 'active' : ''}" role="tab" aria-selected="${settingsTab === tab.id ? 'true' : 'false'}" aria-controls="settings-panel-${tab.id}" onclick="G.setSettingsTab('${tab.id}')">${tab.label}</button>`).join('')}
+    </div>
+  </nav>`;
+  $app().innerHTML = shell(`${tabs}${settingsPanels[settingsTab]}`);
 };
 
 G.saveName = async () => {
@@ -386,12 +450,81 @@ G.setAmbition = async (i) => {
   render();
 };
 
-G.saveSettings = async (sync) => {
+G.saveUnits = async (value) => {
+  try {
+    await api('/settings', { method: 'POST', body: { units: value } });
+    if (S.state?.settings) S.state.settings.units = value;
+    SFX.accept();
+    toast('Road unit set.');
+  } catch (e) { /* api already toast */ }
+};
+
+G.saveCounselMode = async (value) => {
+  const token = captureRouteToken();
+  await api('/settings', { method: 'POST', body: { counsel_mode: value } });
+  await refreshState();
+  if (!isRouteTokenCurrent(token)) return;
+  SFX.accept();
+  toast(value === 'considered' ? 'Considered path chosen.' : 'Choose-your-own path chosen.');
+  render();
+};
+
+G.toggleCounselNudge = async () => {
+  const token = captureRouteToken();
+  const enabled = !S.state.settings.counsel_nudge_enabled;
+  await api('/settings', { method: 'POST', body: { counsel_nudge_enabled: enabled } });
+  await refreshState();
+  if (!isRouteTokenCurrent(token)) return;
+  SFX.accept();
+  toast(enabled ? 'Daily pointer enabled.' : 'Daily pointer silenced.');
+  render();
+};
+
+G.toggleCounselSecondary = (focus) => {
+  const button = document.querySelector(`[data-counsel-secondary="${focus}"]`);
+  const selected = button.getAttribute('aria-pressed') === 'true';
+  button.setAttribute('aria-pressed', String(!selected));
+  button.classList.toggle('active', !selected);
+};
+
+G.setCounselPrimaryDraft = (focus) => {
+  document.querySelectorAll('[data-counsel-secondary]').forEach(button => {
+    const isPrimary = button.dataset.counselSecondary === focus;
+    button.hidden = isPrimary;
+    if (isPrimary) {
+      button.setAttribute('aria-pressed', 'false');
+      button.classList.remove('active');
+    }
+  });
+};
+
+G.saveCounselCharter = async () => {
+  const token = captureRouteToken();
+  const primary = document.getElementById('set-counsel-primary').value;
+  const secondary = Array.from(document.querySelectorAll('[data-counsel-secondary]'))
+    .filter(button => button.getAttribute('aria-pressed') === 'true')
+    .map(button => button.dataset.counselSecondary);
+  if (!primary && secondary.length) {
+    toast('Choose a primary focus before naming a secondary.', true);
+    return;
+  }
+  if (secondary.includes(primary)) {
+    toast('A primary focus cannot also be secondary.', true);
+    return;
+  }
+  const counsel_charter = primary ? { primary, secondary } : null;
+  await api('/settings', { method: 'POST', body: { counsel_charter } });
+  await refreshState();
+  if (!isRouteTokenCurrent(token)) return;
+  SFX.accept();
+  toast(primary ? 'Focus charter saved.' : 'Focus charter cleared.');
+  render();
+};
+
+G.saveRavens = async () => {
   const token = captureRouteToken();
   const body = {
-    name: document.getElementById('set-name').value,
     intervals_athlete_id: document.getElementById('set-aid').value,
-    weight_unit: document.getElementById('set-wu') ? document.getElementById('set-wu').value : undefined,
   };
   const key = document.getElementById('set-key').value;
   if (key) body.intervals_api_key = key;
@@ -399,7 +532,7 @@ G.saveSettings = async (sync) => {
   await refreshState();
   if (!isRouteTokenCurrent(token)) return;
   toast('Scrolls updated.');
-  if (sync) await G.syncNow();
+  await G.syncNow();
   if (!isRouteTokenCurrent(token)) return;
   render();
 };

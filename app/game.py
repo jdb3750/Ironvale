@@ -52,12 +52,33 @@ AMBITION = [
     {"name": "Conquer", "mult": 1.25, "desc": "Push hard. Quests demand more."},
 ]
 
-GIVERS = {
-    "running":  {"name": "Old Fenn",            "title": "the Wayfarer",   "sprite": "fenn"},
-    "kettlebell": {"name": "Grunhilda",         "title": "Iron-Bell",      "sprite": "grunhilda"},
-    "strength": {"name": "Ser Bram",            "title": "the Loadbearer", "sprite": "bram"},
-    "mobility": {"name": "Sage Elowen",         "title": "of the Willow",  "sprite": "elowen"},
+GIVER_ARCHETYPES = {
+    "running": {
+        "archetype": "Endurance",
+        "display": {"name": "Old Fenn", "title": "the Wayfarer", "sprite": "fenn"},
+        "modalities": ("run", "ride", "swim"),
+    },
+    "kettlebell": {
+        "archetype": "Iron",
+        "display": {"name": "Grunhilda", "title": "Iron-Bell", "sprite": "grunhilda"},
+        "modalities": ("barbell", "dumbbell", "kettlebell"),
+    },
+    "strength": {
+        "archetype": "Skill",
+        "display": {"name": "Ser Bram", "title": "the Unburdened", "sprite": "bram"},
+        "modalities": ("climbing", "calisthenics", "plyometrics", "sprints"),
+    },
+    "mobility": {
+        "archetype": "Recovery",
+        "display": {"name": "Sage Elowen", "title": "of the Willow", "sprite": "elowen"},
+        "modalities": ("mobility", "stretch", "easy movement", "rest"),
+    },
 }
+
+GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.items()}
+
+COUNSEL_MODES = ("considered", "self")
+COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "iron")
 
 
 def profile_tz():
@@ -141,14 +162,42 @@ def save_char(c):
     db.kv_set("character", c)
 
 
+def _normalize_counsel_charter(value):
+    if not isinstance(value, dict) or set(value) - {"primary", "secondary"}:
+        return None
+    primary = value.get("primary")
+    secondary = value.get("secondary", [])
+    if not isinstance(primary, str) or primary not in COUNSEL_FOCUSES:
+        return None
+    if not isinstance(secondary, list):
+        return None
+    if any(
+        not isinstance(focus, str) or focus not in COUNSEL_FOCUSES
+        for focus in secondary
+    ):
+        return None
+    if primary in secondary or len(secondary) != len(set(secondary)):
+        return None
+    return {"primary": primary, "secondary": secondary}
+
+
 def get_settings():
-    s = db.kv_get("settings") or {}
+    stored = db.kv_get("settings")
+    s = stored if isinstance(stored, dict) else {}
     s.setdefault("ambition", 2)
     s.setdefault("units", "km")
     s.setdefault("intervals_athlete_id", "")
     s.setdefault("intervals_api_key", "")
     s.setdefault("weight_unit", "kg")
     s.setdefault("timezone", "")
+    s.setdefault("counsel_mode", "considered")
+    s.setdefault("counsel_nudge_enabled", False)
+    s.setdefault("counsel_charter", None)
+    if s["counsel_mode"] not in COUNSEL_MODES:
+        s["counsel_mode"] = "considered"
+    if type(s["counsel_nudge_enabled"]) is not bool:
+        s["counsel_nudge_enabled"] = False
+    s["counsel_charter"] = _normalize_counsel_charter(s["counsel_charter"])
     return s
 
 

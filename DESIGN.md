@@ -20,9 +20,10 @@ other hues carry status, rarity, and game meaning.
 
 ### Palette
 
-There is one dark theme. These are all 15 custom properties currently declared
-in `:root`; the stylesheet also contains raw, one-off colors that have not yet
-been promoted to tokens.
+There is one dark theme. These are the 16 custom properties currently declared
+in `:root`; the counsel hard-warning token is intentionally scoped to warned
+counsel cards rather than added to the global root ramp. The stylesheet also
+contains raw, one-off colors that have not yet been promoted to tokens.
 
 | Role | Token | Value | Current use |
 | --- | --- | --- | --- |
@@ -31,9 +32,11 @@ been promoted to tokens.
 | Secondary panel | `--panel2` | `#191928` | Buttons, cards, rows, secondary contained surfaces |
 | Primary text | `--ink` | `#d8cfa8` | Body copy and form text |
 | Muted text | `--dim` | `#776f8e` | Labels, metadata, disabled-looking copy |
+| Readable muted text | `--dim-readable` | `#958ca8` | Small helper copy and enabled muted controls on panels |
 | Gold accent | `--gold` | `#c9a24b` | Standard borders, controls, active fills |
 | Bright gold | `--gold-bright` | `#f0d080` | Titles, selected emphasis, important values |
 | Danger | `--red` | `#c85050` | Errors, danger controls, hostile/status emphasis |
+| Counsel warning (scoped) | `--counsel-warning` | `#dc7a72` | Hard-path warning text and HARD chip on `--panel2`; scoped to warned counsel cards |
 | Success | `--green` | `#7ab55c` | Success, completed states, restorative status |
 | Information | `--blue` | `#6aa0c8` | Informational and category emphasis |
 | Progress | `--purple` | `#a06ac8` | XP and reward emphasis |
@@ -46,10 +49,15 @@ been promoted to tokens.
 
 - Use `--bg`, `--panel`, and `--panel2` as the core tonal hierarchy.
 - Use `--ink` for readable copy and `--dim` for supporting information.
+  Small helper copy and enabled muted controls use `--dim-readable` so their
+  supporting role remains distinct without falling below the AA contrast target.
 - Gold is both structural and interactive: `--gold` outlines ordinary windows
   and controls; `--gold-bright` carries titles and stronger emphasis.
 - Red, green, blue, and purple already have game semantics. Rarity tokens are
   aliases by meaning even when their values match a status hue.
+- Counsel hard warnings use the scoped `--counsel-warning` token for enough
+  contrast on `--panel2`; the global `--red` token remains unchanged for
+  game-wide danger controls and status surfaces.
 - Raw colors remain common in scene art, gradients, specialized panels, and
   secondary borders. That inconsistency is current implementation debt; do not
   infer additional global tokens from it without updating the CSS contract.
@@ -268,6 +276,49 @@ be silently normalized during unrelated work.
   unread state adds a bright-gold pulsing border and dot. Empty data states are
   rendered by each Hall destination; stale optional endpoints degrade to the
   available base view.
+
+### Counsel Guidance Surface And Settings Tabs
+
+- **Purpose:** this is the reusable presentation language for training guidance
+  in Settings and giver boards only. The proposed Hall/Maud counsel-outcome
+  reflection was permanently cut under `COUNCIL_REDESIGN.md §7b`: general
+  CTL/ATL/HRV movement cannot truthfully be attributed to a few counsel quests.
+  Do not rebuild or relocate that reflection, infer Body outcomes from it, or
+  use it as a selector feedback loop. This surface carries information and
+  hierarchy only; it does not imply a new route, saved record, or Council
+  feature.
+- **Four semantic colors:** gold is interactive and structural chrome; blue is
+  the counsel's informational voice in short labels and explanatory snippets;
+  green is a live/on boolean state; muted is fine print, helper copy, and
+  generic onboarding prose. Selection is always gold, never blue.
+- **Structure:** `.counsel-surface` wraps the live screen content.
+  `.counsel-help` and `.counsel-label` provide muted help text and compact blue
+  field labels. `.counsel-block` marks only a block where the counsel speaks
+  with a three-pixel blue left rail. Generic prose uses `.settings-helper`
+  without an information rail.
+- **Appearance:** all pieces stay within the existing tonal pixel-window
+  system. They use `--panel2` for the contained surface, `--dim-readable` for
+  small helper prose and enabled muted controls, `--blue` for labels and the
+  counsel rail, gold for actions and single-select choices, and green only for
+  live/on boolean state. They add no raw feature color, soft radius, or
+  floating-card shadow.
+- **Settings tabs:** `.settings-tabs` composes the existing
+  `.hall-nav-buttons` grid with three semantic tab buttons. Exactly one panel
+  is present at a time; the selected tab is exposed with `aria-selected` and
+  a filled-gold interactive state. Adding a future Settings area means adding one
+  tab descriptor and its keyed panel, not another navigation implementation.
+- **States:** tab default, hover, pressed, focus-visible, and selected states
+  reuse `.btn`. Guidance controls retain their ordinary enabled behavior.
+  Secondary focuses, the daily pointer, and sound are raised on/off toggles:
+  the current primary is excluded from secondary focuses, on is green-lit, and
+  off is an unlit panel-toned gray-blue with readable text. Danger toggles keep
+  their danger color when enabled. Disabled focus guidance dims its controls
+  while keeping the explanatory help readable; labels and control roles remain
+  visible so the retained charter is understandable.
+- **Responsive:** the tab grid remains three equal tracks at phone, tablet,
+  and desktop widths because the labels are short. Guidance copy wraps
+  anywhere, controls wrap without horizontal page overflow, and phone targets
+  keep the shared 44px minimum.
 
 ### Compact Phone Dock — required contract
 
