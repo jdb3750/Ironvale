@@ -1037,7 +1037,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '94'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '97'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
@@ -1340,6 +1340,150 @@ connection.close()
         });
       }
     }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test("Grunhilda's iron selector is closed by default and hides implement choices", async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.desktop,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'kettlebell');
+
+    const selector = page.locator('.iron-today-control .pixel-select');
+    assert.equal(await selector.count(), 1);
+    assert.equal(await selector.evaluate(element => element.open), false);
+    assert.equal(
+      await selector.locator('.pixel-select-summary').textContent(),
+      'any iron',
+    );
+    assert.equal(
+      await selector.locator('.pixel-select-summary').getAttribute('aria-label'),
+      'Iron available today: any iron',
+    );
+    assert.equal(
+      await selector.locator('.pixel-select-summary').evaluate(element => (
+        getComputedStyle(element, '::before').content
+      )),
+      '"within reach today: "',
+    );
+    assert.deepEqual(
+      await selector.locator('.pixel-select-summary').evaluate(element => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderTopStyle: style.borderTopStyle,
+          boxShadow: style.boxShadow,
+          textDecorationLine: style.textDecorationLine,
+        };
+      }),
+      {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        borderTopStyle: 'none',
+        boxShadow: 'none',
+        textDecorationLine: 'underline',
+      },
+    );
+    for (const equipment of ['barbell', 'dumbbell', 'kettlebell']) {
+      assert.equal(
+        await selector.locator(`.pixel-option[data-value="${equipment}"]`).isVisible(),
+        false,
+      );
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test("Grunhilda's collapsed iron selector shows today's active override", async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.desktop,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(async () => {
+      const current = await api('/today');
+      await api('/settings', {
+        method: 'POST',
+        body: {
+          counsel_iron_today: {
+            date: current.today,
+            equipment: 'kettlebell',
+          },
+        },
+      });
+      await refreshState();
+    });
+    await openGiverBoard(page, 'kettlebell');
+
+    const selector = page.locator('.iron-today-control .pixel-select');
+    assert.equal(await selector.evaluate(element => element.open), false);
+    assert.equal(
+      await selector.locator('.pixel-select-summary').textContent(),
+      'kettlebell',
+    );
+    assert.equal(
+      await selector.locator('.pixel-select-summary').getAttribute('aria-label'),
+      'Iron available today: kettlebell',
+    );
+    assert.equal(
+      await selector.locator('.pixel-option[data-value="kettlebell"]').isVisible(),
+      false,
+    );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test("Grunhilda's iron selector persists a pick and refreshes her offer", async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.desktop,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'kettlebell');
+    assert.equal(
+      await page.getByText('Grunhilda kept this path to the iron you named for today.').count(),
+      0,
+    );
+
+    const selector = page.locator('.iron-today-control .pixel-select');
+    await selector.locator('.pixel-select-summary').click();
+    assert.equal(await selector.evaluate(element => element.open), true);
+    const settingsWrite = page.waitForResponse(response => (
+      response.request().method() === 'POST'
+      && response.url().endsWith('/api/settings')
+    ));
+    await selector.locator('.pixel-option[data-value="dumbbell"]').click();
+    assert.equal((await settingsWrite).status(), 200);
+    await page.waitForFunction(() => (
+      document.querySelector('.iron-today-control .pixel-select-label')?.textContent === 'dumbbell'
+      && S.state.settings?.counsel_iron_today?.equipment === 'dumbbell'
+    ));
+
+    const refreshedSelector = page.locator('.iron-today-control .pixel-select');
+    assert.equal(await refreshedSelector.evaluate(element => element.open), false);
+    assert.equal(
+      await refreshedSelector.locator('.pixel-select-summary').textContent(),
+      'dumbbell',
+    );
+    assert.equal(
+      await refreshedSelector.locator('.pixel-select-summary').getAttribute('aria-label'),
+      'Iron available today: dumbbell',
+    );
+    assert.equal(
+      await page.getByText('Grunhilda kept this path to the iron you named for today.').count(),
+      1,
+    );
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
