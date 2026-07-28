@@ -109,7 +109,14 @@ def main() -> None:
         newest: StatusDate,
         hrv_as_of: StatusDate,
         resting_hr_as_of: StatusDate,
+        succeeded_at: StatusDate = NOW.isoformat(timespec="seconds"),
+        extra_field_dates: Tuple[Tuple[str, StatusDate], ...] = (),
     ) -> None:
+        field_as_of = {
+            "hrv": hrv_as_of,
+            "resting_hr": resting_hr_as_of,
+        }
+        field_as_of.update(extra_field_dates)
         db.kv_set(
             "sync_status",
             {
@@ -117,12 +124,9 @@ def main() -> None:
                 "activity": {"revision": 1},
                 "wellness": {
                     "revision": 1,
-                    "succeeded_at": NOW.isoformat(timespec="seconds"),
+                    "succeeded_at": succeeded_at,
                     "newest_observation_date": newest,
-                    "field_as_of": {
-                        "hrv": hrv_as_of,
-                        "resting_hr": resting_hr_as_of,
-                    },
+                    "field_as_of": field_as_of,
                 },
             },
         )
@@ -338,6 +342,236 @@ def main() -> None:
             "6819b4808eb72c10b07a52cc29b88725ed958090a1376a2c5b524079f3b31f8e",
         )
 
+    def extreme_succeeded_at_degrades_to_missing() -> None:
+        # Given: finite current readings with a parseable offset that overflows.
+        new_profile("extreme-succeeded-at", nudge=True)
+        seed_row(TODAY, 61.0, 49.0)
+        write_status(
+            TODAY,
+            TODAY,
+            TODAY,
+            succeeded_at="9999-12-31T23:59:59-23:59",
+        )
+
+        # When: context, nudge, running, and mobility traverse public routes.
+        captured = counsel_context.assemble(NOW)
+        state = client.get("/api/state")
+        running_status, _, running_source = source("/api/offers/running")
+        mobility_status, _, mobility_source = source("/api/offers/mobility")
+
+        # Then: the timestamp is missing evidence, never a server error.
+        assert state.status_code == running_status == mobility_status == 200
+        assert captured.wellness.aggregate_freshness == "missing"
+        assert all(field.fresh is False for field in captured.wellness.fields)
+        assert counsel_rules.rule_state(context=captured).wellness_state == "missing"
+        for disclosure in (running_source, mobility_source):
+            assert disclosure.wellness_as_of == TODAY
+            assert disclosure.wellness_freshness == "missing"
+
+    def fresh_weight_with_stale_trend_fields_stays_mixed() -> None:
+        # Given: the parent-characterized partial-valid wellness snapshot.
+        new_profile("partial-valid")
+        stale_day = (NOW.date() - timedelta(days=3)).isoformat()
+        seed_row(stale_day, 61.0, 49.0)
+        db.q(
+            "INSERT INTO wellness (date, weight) VALUES (?,?)",
+            (TODAY, 180.0),
+        )
+        db.commit()
+        write_status(
+            TODAY,
+            stale_day,
+            stale_day,
+            extra_field_dates=(("weight", TODAY),),
+        )
+
+        # When: typed context and the three real public surfaces render.
+        captured = counsel_context.assemble(NOW)
+        rules = counsel_rules.rule_state(context=captured)
+        state = client.get("/api/state")
+        running = client.get("/api/offers/running")
+        mobility = client.get("/api/offers/mobility")
+
+        # Then: aggregate freshness and exact parent public behavior stay mixed.
+        assert state.status_code == running.status_code == mobility.status_code == 200
+        assert captured.wellness.aggregate_freshness == "fresh"
+        assert tuple(
+            (field.name, field.as_of, field.fresh, field.readings)
+            for field in captured.wellness.fields
+        ) == (
+            ("hrv", stale_day, False, ((stale_day, 61.0),)),
+            ("resting_hr", stale_day, False, ((stale_day, 49.0),)),
+        )
+        assert rules.wellness_state == "mixed"
+        assert rules.reason_codes == (
+            "wellness_data_mixed",
+            "hard_suppressed_wellness_unknown",
+        )
+        assert (
+            len(running.content),
+            hashlib.sha256(running.content).hexdigest(),
+        ) == (
+            883,
+            "5df0e294bb14c593deb92a18057ad96af17826ecb921cb1c3cb4f1997218637b",
+        )
+        assert (
+            len(mobility.content),
+            hashlib.sha256(mobility.content).hexdigest(),
+        ) == (
+            922,
+            "b21ae30a0535d5be34702a26bcad770ee0678e6705ee09d1ed7d88c8c15e3fec",
+        )
+        for response in (running, mobility):
+            payload = OfferPayload.model_validate_json(response.content)
+            assert payload.offers[0].source.wellness_as_of == TODAY
+            assert payload.offers[0].source.wellness_freshness == "mixed"
+
+    def concurrent_appends_stop_at_one_statement_snapshot() -> None:
+        # Given: more than one batch of persisted rows and a missing recent day.
+        new_profile("append-high-water")
+        for days_ago in range(29, 1, -1):
+            observed_on = (NOW.date() - timedelta(days=days_ago)).isoformat()
+            seed_row(observed_on, 60.0, 50.0)
+        seed_row(TODAY, 40.0, 70.0)
+        for index in range(40):
+            seed_row(f"malformed-initial-{index:02d}", 100.0, 20.0)
+        write_status(TODAY, TODAY, TODAY)
+        expected_dates = (TODAY,) + tuple(
+            (NOW.date() - timedelta(days=days_ago)).isoformat()
+            for days_ago in range(2, 30)
+        )
+        original_q = db.q
+        snapshot_calls = 0
+
+        def append_between_batches(sql: str, params=()):
+            nonlocal snapshot_calls
+            cursor = original_q(sql, params)
+            if "FROM WELLNESS" not in sql.upper():
+                return cursor
+            snapshot_calls += 1
+
+            class SnapshotCursor:
+                def fetchall(self):
+                    rows = cursor.fetchall()
+                    assert snapshot_calls == 1
+                    original_q(
+                        "INSERT INTO wellness (date, hrv, resting_hr) "
+                        "VALUES (?,?,?)",
+                        (YESTERDAY, 39.0, 71.0),
+                    )
+                    for index in range(63):
+                        original_q(
+                            "INSERT INTO wellness (date, hrv, resting_hr) "
+                            "VALUES (?,?,?)",
+                            (
+                                f"concurrent-{index:02d}",
+                                100.0,
+                                20.0,
+                            ),
+                        )
+                    db.commit()
+                    return rows
+
+            return SnapshotCursor()
+
+        # When: rows are appended immediately after the single statement fetch.
+        db.q = append_between_batches
+        try:
+            captured = counsel_context.assemble(NOW)
+        finally:
+            db.q = original_q
+
+        # Then: one statement bounds both fields and excludes every append.
+        assert snapshot_calls == 1
+        assert tuple(
+            reading.observed_on
+            for reading in captured.wellness_field("hrv").readings
+        ) == expected_dates
+        assert tuple(
+            reading.observed_on
+            for reading in captured.wellness_field("resting_hr").readings
+        ) == expected_dates
+        assert YESTERDAY not in expected_dates
+
+    def rowid_reuse_after_statement_capture_is_excluded_everywhere() -> None:
+        # Given: a valid current row followed by a removable maximum rowid.
+        new_profile("rowid-reuse")
+        seed_row(TODAY, 61.0, 49.0)
+        seed_row("capture-placeholder", 99.0, 20.0)
+        write_status(TODAY, TODAY, TODAY)
+        captured_max = db.q(
+            "SELECT MAX(rowid) AS max_rowid FROM wellness",
+        ).fetchone()["max_rowid"]
+        post_capture_day = (NOW.date() - timedelta(days=7)).isoformat()
+        original_q = db.q
+        wellness_queries = 0
+        mutation_fired = False
+        reused_rowid = None
+
+        def delete_max_and_reuse_rowid() -> None:
+            nonlocal mutation_fired, reused_rowid
+            if mutation_fired:
+                return
+            mutation_fired = True
+            original_q(
+                "DELETE FROM wellness WHERE rowid = ?",
+                (captured_max,),
+            )
+            original_q(
+                "INSERT INTO wellness (date, hrv, resting_hr, sleep_secs) "
+                "VALUES (?,?,?,?)",
+                (post_capture_day, 39.0, 71.0, 18000.0),
+            )
+            db.commit()
+            reused_rowid = original_q(
+                "SELECT rowid AS wellness_rowid FROM wellness WHERE date = ?",
+                (post_capture_day,),
+            ).fetchone()["wellness_rowid"]
+
+        class CaptureCursor:
+            def __init__(self, cursor) -> None:
+                self.cursor = cursor
+
+            def fetchall(self):
+                rows = self.cursor.fetchall()
+                delete_max_and_reuse_rowid()
+                return rows
+
+        def capture_then_mutate(sql: str, params=()):
+            nonlocal wellness_queries
+            if "FROM WELLNESS" in sql.upper():
+                wellness_queries += 1
+            cursor = original_q(sql, params)
+            normalized = sql.upper()
+            is_snapshot = "SLEEP_SECS" in normalized
+            is_trend_scan = "SELECT ROWID AS WELLNESS_ROWID" in normalized
+            if not mutation_fired and (is_snapshot or is_trend_scan):
+                return CaptureCursor(cursor)
+            return cursor
+
+        # When: the database changes after the captured statement is fetched.
+        db.q = capture_then_mutate
+        try:
+            captured = counsel_context.assemble(NOW)
+        finally:
+            db.q = original_q
+
+        # Then: rowid reuse is excluded from trends and recovery, with one query.
+        assert mutation_fired is True, "statement capture did not trigger mutation"
+        assert reused_rowid == captured_max, (reused_rowid, captured_max)
+        assert wellness_queries == 1, wellness_queries
+        assert captured.wellness_field("hrv").readings == ((TODAY, 61.0),), captured.wellness_field("hrv").readings
+        assert captured.wellness_field("resting_hr").readings == ((TODAY, 49.0),), captured.wellness_field("resting_hr").readings
+        assert all(
+            day.observed_on != post_capture_day
+            for day in captured.wellness.recovery_days
+        ), captured.wellness.recovery_days
+        print(
+            "  observed rowid reuse: "
+            f"queries={wellness_queries} captured={captured_max} "
+            f"reused={reused_rowid} recovery_excluded={post_capture_day not in tuple(day.observed_on for day in captured.wellness.recovery_days)}",
+        )
+
     scenarios: List[Tuple[str, Callable[[], None]]] = [
         ("ordinary valid public bytes are exact", ordinary_valid_public_bytes_are_exact),
         (
@@ -361,6 +595,22 @@ def main() -> None:
         (
             "hostile then valid transition is clean",
             hostile_then_valid_transition_has_no_stale_leak,
+        ),
+        (
+            "extreme succeeded_at degrades to missing",
+            extreme_succeeded_at_degrades_to_missing,
+        ),
+        (
+            "fresh weight with stale trend fields stays mixed",
+            fresh_weight_with_stale_trend_fields_stays_mixed,
+        ),
+        (
+            "concurrent appends stop at one statement snapshot",
+            concurrent_appends_stop_at_one_statement_snapshot,
+        ),
+        (
+            "rowid reuse after statement capture is excluded everywhere",
+            rowid_reuse_after_statement_capture_is_excluded_everywhere,
         ),
     ]
     field_names: Tuple[WellnessFieldName, ...] = ("hrv", "resting_hr")
@@ -390,7 +640,13 @@ def main() -> None:
         try:
             scenario()
             print(f"  ok  {label}")
-        except (AssertionError, KeyError, TypeError, ValueError) as error:
+        except (
+            AssertionError,
+            KeyError,
+            OverflowError,
+            TypeError,
+            ValueError,
+        ) as error:
             failure = f"{label}: {type(error).__name__}: {error}"
             failures.append(failure)
             print(f"  RED {failure}")
