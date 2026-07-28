@@ -1,8 +1,9 @@
 import random
+from datetime import timedelta
 from typing import Dict, Final, NamedTuple, Optional, Tuple
 
 from . import counsel_context, exercises, programs, quests
-from .counsel_options import OptionDraft, TierMeta, draft_option
+from .counsel_options import OptionDraft, TierMeta, draft_option, with_reason
 
 
 class IronHistory(NamedTuple):
@@ -45,16 +46,15 @@ def _iron_exercises(
     context: counsel_context.QualifiedTrainingContext,
 ) -> IronHistory:
     iron_rows = context.lift_movements
-    equipment = (
-        iron_rows[0].equipment
-        if iron_rows
-        else "kettlebell"
+    equipment = context.iron_equipment or (
+        iron_rows[0].equipment if iron_rows else "kettlebell"
     )
     valid = [
         row
         for row in iron_rows
         if row.equipment == equipment
     ]
+    source_rows = valid if context.iron_equipment else iron_rows
     names = []
     for row in valid:
         if row.exercise not in names:
@@ -75,18 +75,30 @@ def _iron_exercises(
             for group in exercises.groups_for(name)
         )
     )
+    session_count = context.iron_session_count
+    if context.iron_equipment is not None:
+        cutoff = context.current - timedelta(
+            days=counsel_context.ACTIVITY_LOOKBACK_DAYS,
+        )
+        session_count = len(
+            {
+                row.occurred_at.date()
+                for row in context.lift_sets
+                if row.occurred_at >= cutoff and row.equipment == equipment
+            },
+        )
     return IronHistory(
         chosen,
         weights,
         tuple(dict.fromkeys(focus_source))[:3],
-        context.iron_session_count,
+        session_count,
         counsel_context.CandidateProvenance(
             (
                 ("Iron Vale lift ledger",)
-                if iron_rows
+                if source_rows
                 else ("Iron Vale starter guidance",)
             ),
-            iron_rows[0].latest_at.date().isoformat() if iron_rows else None,
+            source_rows[0].latest_at.date().isoformat() if source_rows else None,
         ),
     )
 
@@ -97,9 +109,13 @@ def iron(
     program = programs.build_program_offer(
         "kettlebell",
         context.latest_weight,
+        context.current.date().isoformat(),
     )
     if program is not None:
-        key = programs.active_program("kettlebell")
+        key = programs.active_program(
+            "kettlebell",
+            context.current.date().isoformat(),
+        )
         progression = {
             "source": "doctrine",
             "key": key,
@@ -112,13 +128,23 @@ def iron(
             for row in routine
             if isinstance(row, dict) and isinstance(row.get("exercise"), str)
         )
+        doctrine_matches_today = True
+        if context.iron_equipment is not None:
+            # Today's implement plus bodyweight are performable; an unknown
+            # movement cannot be promised and waits with the doctrine.
+            available_today = {context.iron_equipment, "bodyweight"}
+            doctrine_matches_today = all(
+                exercises.EXERCISES.get(name, {}).get("equipment")
+                in available_today
+                for name in names
+            )
         target_groups = tuple(
             dict.fromkeys(
                 group for name in names for group in exercises.groups_for(name)
             ),
         )
-        return (
-            OptionDraft(
+        if doctrine_matches_today:
+            draft = OptionDraft(
                 f"doctrine:{key}",
                 program,
                 TierMeta(
@@ -129,10 +155,14 @@ def iron(
                 target_groups,
                 counsel_context.CandidateProvenance(("Iron Vale doctrine",), None),
                 progression,
-            ),
-        )
+            )
+            return (
+                with_reason(draft, "equipment_today")
+                if context.iron_equipment
+                else draft,
+            )
     history = _iron_exercises(context)
-    return tuple(
+    drafts = tuple(
         draft_option(
             quests.build_lift_candidate(
                 quests.LiftCandidateContext(
@@ -148,6 +178,15 @@ def iron(
             history.provenance,
         )
         for style in ("volume", "circuit", "strength")
+    )
+    if context.iron_equipment is None:
+        return drafts
+    narrowed = tuple(with_reason(draft, "equipment_today") for draft in drafts)
+    if program is None:
+        return narrowed
+    return tuple(
+        with_reason(draft, "doctrine_equipment_mismatch")
+        for draft in narrowed
     )
 
 

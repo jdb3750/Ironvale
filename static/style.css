@@ -1562,6 +1562,29 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   line-height: 1.35;
   text-align: center;
 }
+.iron-today-control {
+  margin: 8px 0 12px;
+  padding: 8px 10px 10px;
+  border: 2px solid var(--gold);
+  background: var(--panel2);
+  text-align: center;
+}
+.iron-today-control .counsel-label { margin-top: 0; }
+.iron-today-options {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.iron-today-options .btn {
+  min-block-size: 44px;
+}
+.iron-today-options .btn.active {
+  border-color: var(--gold-bright);
+  background: var(--gold);
+  color: var(--bg);
+}
 .offer.counsel-path-card:hover { border-color: #4a3d20; }
 .counsel-path-card.has-wellness-warning {
   --counsel-warning: #dc7a72;

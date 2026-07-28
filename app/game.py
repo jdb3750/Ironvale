@@ -82,7 +82,8 @@ COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "iron")
 
 
 def profile_tz():
-    name = get_settings().get("timezone")
+    stored = db.kv_get("settings")
+    name = stored.get("timezone") if isinstance(stored, dict) else None
     if isinstance(name, str) and name:
         try:
             return ZoneInfo(name)
@@ -181,7 +182,19 @@ def _normalize_counsel_charter(value):
     return {"primary": primary, "secondary": secondary}
 
 
-def get_settings():
+def _normalize_counsel_iron_today(value, current_date):
+    if not isinstance(value, dict) or set(value) != {"date", "equipment"}:
+        return None
+    equipment = value.get("equipment")
+    if (
+        value.get("date") != current_date
+        or equipment not in GIVER_ARCHETYPES["kettlebell"]["modalities"]
+    ):
+        return None
+    return {"date": current_date, "equipment": equipment}
+
+
+def get_settings(current_date=None):
     stored = db.kv_get("settings")
     s = stored if isinstance(stored, dict) else {}
     s.setdefault("ambition", 2)
@@ -193,11 +206,19 @@ def get_settings():
     s.setdefault("counsel_mode", "considered")
     s.setdefault("counsel_nudge_enabled", False)
     s.setdefault("counsel_charter", None)
+    s.setdefault("counsel_iron_today", None)
     if s["counsel_mode"] not in COUNSEL_MODES:
         s["counsel_mode"] = "considered"
     if type(s["counsel_nudge_enabled"]) is not bool:
         s["counsel_nudge_enabled"] = False
     s["counsel_charter"] = _normalize_counsel_charter(s["counsel_charter"])
+    # This declaration is eligible only for one profile-local day; persisted
+    # stale or malformed state must become absent at the settings boundary.
+    if s["counsel_iron_today"] is not None:
+        s["counsel_iron_today"] = _normalize_counsel_iron_today(
+            s["counsel_iron_today"],
+            current_date or today(),
+        )
     return s
 
 
@@ -215,8 +236,8 @@ def apply_xp(c, amount):
     return levels
 
 
-def ambition_mult():
-    s = get_settings()
+def ambition_mult(settings=None):
+    s = settings if settings is not None else get_settings()
     return AMBITION[max(0, min(3, s["ambition"]))]["mult"]
 
 

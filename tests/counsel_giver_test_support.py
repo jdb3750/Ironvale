@@ -69,6 +69,7 @@ class OfferResponse(BaseModel):
 
     offers: list[QuestOption]
     active: Optional[ActiveQuest]
+    modalities: list[str] = Field(default_factory=list)
 
 
 class AcceptanceResponse(BaseModel):

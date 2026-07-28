@@ -91,7 +91,7 @@ def daily_nudge(
     context: Optional[counsel_context.QualifiedTrainingContext] = None,
 ) -> Optional[JsonMap]:
     captured = context or counsel_context.assemble()
-    settings = game.get_settings()
+    settings = game.get_settings(captured.current.date().isoformat())
     if not settings["counsel_nudge_enabled"]:
         return None
     mode = settings["counsel_mode"]

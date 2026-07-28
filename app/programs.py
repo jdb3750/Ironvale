@@ -96,8 +96,8 @@ def delete_routine(rid):
         db.kv_set("settings", s)
 
 
-def active_program(giver):
-    return game.get_settings().get(f"program_{giver}")
+def active_program(giver, current_date=None):
+    return game.get_settings(current_date).get(f"program_{giver}")
 
 
 def select_program(giver, key):
@@ -151,10 +151,11 @@ def _suggest(exercise, context):
 def build_program_offer(
     giver,
     weight_for=None,
+    current_date=None,
 ):
     """The doctrine's next session as a quest offer, or None."""
     lookup = weight_for or game.last_weight
-    key = active_program(giver)
+    key = active_program(giver, current_date)
     if not key:
         return None
     if key.startswith("custom:"):

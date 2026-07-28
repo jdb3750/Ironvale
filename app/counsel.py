@@ -28,13 +28,17 @@ class OfferValidationError(ValueError):
     pass
 
 
-def _game_mode() -> counsel_candidates.GameMode:
-    mode = game.get_settings()["counsel_mode"]
+def _game_mode_for_date(current_date: Optional[str]) -> counsel_candidates.GameMode:
+    mode = game.get_settings(current_date)["counsel_mode"]
     if mode == "considered":
         return "considered"
     if mode == "self":
         return "self"
     raise OfferValidationError("Choose one of the available game loops.")
+
+
+def _game_mode() -> counsel_candidates.GameMode:
+    return _game_mode_for_date(None)
 
 
 def _giver_options(
@@ -87,7 +91,12 @@ def _giver_options(
 def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
     if giver not in game.GIVER_ARCHETYPES:
         raise OfferValidationError("No such quest-giver.")
-    return _giver_options(giver, _game_mode(), counsel_context.assemble())
+    context = counsel_context.assemble()
+    return _giver_options(
+        giver,
+        _game_mode_for_date(context.current.date().isoformat()),
+        context,
+    )
 
 
 def accept_current_option(giver: str, identity: OptionIdentity) -> int:

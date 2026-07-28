@@ -241,6 +241,22 @@ async def save_settings(request: Request):
             if primary in secondary or len(secondary) != len(set(secondary)):
                 raise ValueError("A focus may be named only once in the charter.")
             charter = {"primary": primary, "secondary": secondary}
+    iron_today = None
+    if "counsel_iron_today" in body:
+        iron_today = body["counsel_iron_today"]
+        if iron_today is not None:
+            if (
+                not isinstance(iron_today, dict)
+                or set(iron_today) != {"date", "equipment"}
+            ):
+                raise ValueError("Name today's iron as one day and one available implement.")
+            if iron_today["date"] != game.today():
+                raise ValueError("Today's iron must be sworn for the current day.")
+            if (
+                iron_today["equipment"]
+                not in game.GIVER_ARCHETYPES["kettlebell"]["modalities"]
+            ):
+                raise ValueError("Grunhilda does not know that implement.")
     s = game.get_settings()
     if "timezone" in body:
         name = body["timezone"]
@@ -262,6 +278,8 @@ async def save_settings(request: Request):
             s[k] = body[k]
     if "counsel_charter" in body:
         s["counsel_charter"] = charter
+    if "counsel_iron_today" in body:
+        s["counsel_iron_today"] = iron_today
     if body.get("intervals_api_key"):
         s["intervals_api_key"] = body["intervals_api_key"]
     db.kv_set("settings", s)
@@ -287,7 +305,13 @@ def offers(giver: str):
     if active:
         ok, note, _ = quests.quest_completable(active)
         active = {**active, "completable": ok, "progress_note": note}
-    return {"offers": out, "active": active}
+    response = {
+        "offers": out,
+        "active": active,
+    }
+    if giver == "kettlebell":
+        response["modalities"] = list(game.GIVER_ARCHETYPES[giver]["modalities"])
+    return response
 
 
 @app.post("/api/quests/accept")
