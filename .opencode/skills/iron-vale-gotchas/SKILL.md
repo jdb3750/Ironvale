@@ -181,3 +181,29 @@ non-obvious way. Check the relevant group before touching that area.
   it requires a careful manual JSON edit under the same care as any other
   live-data mutation (per CRITICAL SAFETY RULES: additive, log to
   `db.log_event`, tell Joe exactly what changed).
+
+## The Council's defect family: claiming more than the data supports
+
+Almost every Council defect has been the same shape — code asserting knowledge it
+had not verified against the underlying data. Real examples, all shipped-then-caught:
+
+- an availability answer collected and stored but never read by any rule;
+- specific barbell movements named from a generic `WeightTraining` activity, with
+  no logged lift behind them;
+- `provider: intervals.icu` hardcoded, so a profile training on hand-logged lifts
+  was told its data came from a service it never linked;
+- a lower-body gate that recorded its reason code while nothing acted on it;
+- an iron routine whose *declared focus* omitted legs while its actual exercises
+  loaded them, hiding leg work from that gate;
+- recency counting zero-duration rows that sizing had already discarded;
+- future-dated and unparseable wellness rows manufacturing a Rest Writ;
+- a wellness field reported "fresh" with no finite value behind it.
+
+**When reviewing anything that advises the player, ask of every assertion: does
+the data actually support this claim?** Not "does it run" — "is it true." The
+structural defence is the one qualified Council snapshot (see AGENTS.md
+"Game-design invariants"); the human defence is this question.
+
+A useful tell: if a value is derived from a *label* (a declared focus, a
+hardcoded constant, a requested group) rather than from the underlying facts, it
+will drift from the facts eventually.

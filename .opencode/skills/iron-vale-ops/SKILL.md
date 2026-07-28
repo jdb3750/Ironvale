@@ -125,3 +125,45 @@ SSH). Push with plain `git push` / `git push -u origin <branch>`; SSH auth is
 already configured. To open the PR itself, see the global skill
 `codeberg-pr` (the `tea` CLI, its `tea pulls create` verb, and a curl
 fallback).
+
+## Reciprocal review — by risk, not by default
+
+Two agents reviewing each other caught defects neither found in its own work:
+one found the other's, and the second found a `/api/state` 400 already sitting in
+a tree BOTH had called release-ready. But universal reciprocal review is real
+cost. Require it for:
+
+- health-adjacent rules (anything that advises training, gates intensity, or
+  reads wellness);
+- persistence and schema work, migrations, authentication;
+- cross-domain refactors (anything that moves an invariant between modules);
+- release gates before merging to `main`.
+
+For smaller contained changes, behavioural tests plus direct surface
+verification are enough.
+
+**The reviewer re-runs the claims; it does not read the report.** Each agent's
+own measurement was wrong at least once this phase — a stale `.venv` symlink
+produced phantom type errors, and two review lanes contradicted each other on
+control sizing (both wrong; one measured a superseded build, one measured only
+one viewport). Verify, including verifying yourself.
+
+## Verifying a seam
+
+- **Use the real surface.** UI → drive the browser and capture screenshots;
+  API → real HTTP requests; data behaviour → end-to-end fixtures. Tests alone
+  did not catch either of this phase's biggest corrections — cutting the Maud
+  reflection and finding that focus never filtered a giver's offer both came
+  from opening the running app.
+- **Evidence needs provenance.** Record the exact SHA, branch, working
+  directory, running server version, and who owns the harness. Mixed-version
+  screenshots or a stale server can "prove" contradictory claims, and an
+  evidence packet whose hashes don't match is a claim, not evidence.
+- **Own your resources and clean them up.** Parallel reviewers interfere through
+  shared ports, scratch dirs, symlinks and mutable files. Remove the symlinks and
+  pycache dirs you created; leave the worktree as you found it.
+- **Never let critical work, decisions or evidence exist only in a disposable
+  worktree.** `/private/tmp` gets cleaned — one worktree vanished mid-project.
+  Commit authorized seams promptly, record lasting decisions in tracked
+  `DESIGN.md` (not scratch planning docs), and preserve evidence outside temp
+  directories until merge.

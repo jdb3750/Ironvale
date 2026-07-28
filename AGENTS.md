@@ -240,6 +240,37 @@ quests_done, appearance {skin,hair,hair_color,shirt,pants}.
 - Quest offers cache per day but are invalidated when a sync brings new data.
 - Every quest giver reacts in-dialog (REACTIONS) and congratulates completions
   of OTHER givers' quests only (thanked map in localStorage iv_lastq).
+- **One qualified Council snapshot.** Every Council evaluation uses one
+  immutable, request-scoped qualified context, assembled once with one captured
+  clock. Selection, sizing, recency, gates, nudges, recovery and disclosure
+  consume only that context. Consumers may narrow it for their modality but may
+  never query raw training data or relax its admissibility rules. An activity
+  excluded for invalid source, non-positive duration, lookback or future time
+  cannot influence any Council conclusion. Wellness requires admissible dates and
+  finite values; malformed persisted data degrades to unknown and must never stop
+  `/api/state` loading. Several reads stitched together is NOT a snapshot — one
+  clock, one capture. (Known scaling debt: the snapshot is assembled per request;
+  revisit if profiles grow large. Do not weaken the invariant to optimise.)
+
+## Briefing an agent (and yourself)
+
+- **State non-goals with the goals.** For an AI, what a feature *sounds like*
+  shapes what gets built as much as what you asked for. Iron Vale is a game: it
+  does not diagnose, predict injury, prove its advice, or stand in for a
+  professional. Say so — a feature that sounds medical or safety-critical
+  attracts audit trails, tamper-evidence and disclaimer prose nobody asked for.
+  (This is not hypothetical: the first Council pass spent ~2,200 lines of app
+  code, a similar budget to what shipped, on making advice *provable* rather than
+  useful.)
+- **Scope to one seam, and say what NOT to do.** The out-of-scope list does more
+  work than the spec. Require build → verify → **stop and report** → wait for an
+  explicit "commit that seam." Never let one task roll into the next.
+- **"If you find a surprise, report it rather than deciding."** That single line
+  surfaced two real defects that would otherwise have been quietly resolved.
+- **Name invariants in a comment at the boundary they protect.** Structure alone
+  does not survive a port: the original Council assembled one qualified context,
+  a refactor dissolved it, and five truthfulness defects followed because nothing
+  wrote the rule down.
 
 ## Testing recipe
 
@@ -247,6 +278,24 @@ Test backend against a scratch `DATA_DIR` with TestClient (select a profile
 cookie first); test frontend on port 8322 with a scratch `DATA_DIR` launch
 config (`iron-vale-test`). See skill `iron-vale-ops` for the full recipe and
 TestClient/profile-routing gotchas.
+
+**Write tests that could fail.** Two rules, both learned the hard way:
+
+- **Assert player-observable outcomes, not artifacts.** A test that checks a
+  reason code, flag or label was produced proves the code ran, not that it
+  worked — 15 browser tests and 221 smoke checks were green while the lower-body
+  gate logged its reason and suppressed nothing. Assert what the player would
+  notice: the hard option is *absent*, the 6th set changes the offer, an unlinked
+  profile is *not* told its data came from intervals.icu. Where a rule has a
+  boundary, test both sides (5 sets AND 6). Behaviour preservation includes
+  intermediate states, not just the final recommendation.
+- **Every test must stand alone.** Browser tests share one server and one
+  `DATA_DIR`, so it is easy to lean on state an earlier test left behind — and
+  then a subset run reports green while proving nothing. Verify with
+  `node --test --test-name-pattern="<one test>" tests/frontend_browser.test.mjs`.
+- **Persisted data is untrusted input.** Malformed rows, non-finite values and
+  inadmissible dates must degrade to unknown, never raise. `/api/state` is the
+  boot endpoint; a 400 there means the game does not load.
 
 **Regression net**: `.venv/bin/python tests/smoke.py` — 215 checks over every
 read endpoint plus the quest/dungeon/gacha/scrivener lifecycles on a throwaway
