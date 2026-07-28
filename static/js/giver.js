@@ -60,9 +60,9 @@ const CONGRATS = {
 };
 
 const GIVER_ROLES = {
-  running: 'Quests of the Road',
-  kettlebell: 'Quests of the Bell',
-  strength: 'Quests of Iron',
+  running: 'Quests of the Long Way',
+  kettlebell: 'Quests of the Iron',
+  strength: 'Quests of the Unburdened',
   mobility: 'Quests of Stillness',
 };
 
@@ -117,6 +117,8 @@ const COUNSEL_REASON_COPY = {
   recent_lower_body_six_sets: 'Recent lower-body Iron still weighs on the legs.',
   hard_option_suppressed: 'A harder path was set aside for today.',
   hard_option_wellness_warning: 'This harder path remains yours to choose, but the omens advise caution.',
+  equipment_today: 'Grunhilda kept this path to the iron you named for today.',
+  doctrine_equipment_mismatch: 'Your selected doctrine calls for other iron, so it waits unchanged for another day.',
 };
 
 function counselReasonText(code) {
@@ -160,6 +162,7 @@ SCREENS.giver = async function () {
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
   const isLiftGiver = ['kettlebell', 'strength'].includes(key);
+  const isIronGiver = key === 'kettlebell';
   const revealOfferLore = !giverPhoneLayout();
 
   const rewardsLine = (o) => `<div class="o-rewards">reward: <b>+${o.xp} XP</b> &middot; <span class="g">&#9670;${o.gold}+</span> &middot; +${o.vigor} vigor${o.bonus_vigor ? ' (+1 bonus)' : ''}</div>`;
@@ -286,9 +289,26 @@ SCREENS.giver = async function () {
     const boardHelp = mode === 'self'
       ? 'The counsel lays out each eligible effort. The choice remains yours.'
       : 'One eligible path, chosen from this giver’s work for today.';
+    const selectedIron = S.state.settings?.counsel_iron_today?.equipment || '';
+    const ironTodayControl = isIronGiver ? `
+      <div class="iron-today-control">
+        <span class="counsel-label">TODAY’S IRON</span>
+        <div class="counsel-help">Name only what is within reach today. The mark fades at dawn.</div>
+        <div class="iron-today-options" role="group" aria-label="Iron available today">
+          <button type="button" class="btn small ${selectedIron ? '' : 'active'}"
+            data-equipment="" aria-pressed="${selectedIron ? 'false' : 'true'}"
+            onclick="G.setIronToday(this.dataset.equipment)">ANY IRON</button>
+          ${(Array.isArray(data.modalities) ? data.modalities : []).map(equipment => `
+            <button type="button" class="btn small ${selectedIron === equipment ? 'active' : ''}"
+              data-equipment="${esc(equipment)}" aria-pressed="${selectedIron === equipment ? 'true' : 'false'}"
+              onclick="G.setIronToday(this.dataset.equipment)">${esc(equipment)}</button>
+          `).join('')}
+        </div>
+      </div>` : '';
     body = `<div class="win counsel-surface giver-offer-panel giver-offer-board" data-counsel-mode="${esc(mode)}" data-giver="${esc(key)}">
       <span class="win-title">${boardTitle}</span>
       <div class="giver-board-intro">${boardHelp}</div>
+      ${ironTodayControl}
       ${data.offers.map(offerCard).join('')}
       <div class="giver-board-actions">
         ${isLiftGiver ? `<button class="btn small" style="min-width:0" onclick="nav('doctrines',{giver:'${key}'})">DOCTRINES &amp; ROUTINES</button>` : ''}
@@ -318,6 +338,25 @@ G.accept = async (giver, offerId) => {
   S.params = { giver, react: 'accept' };
   render();
   toast('The oath is inked. Your quest is sworn.');
+};
+
+G.setIronToday = async (equipment) => {
+  const token = captureRouteToken();
+  let declaration = null;
+  if (equipment) {
+    const current = await api('/today');
+    declaration = { date: current.today, equipment };
+  }
+  await api('/settings', {
+    method: 'POST',
+    body: { counsel_iron_today: declaration },
+  });
+  await refreshState();
+  if (!isRouteTokenCurrent(token)) return;
+  render();
+  toast(equipment
+    ? `Grunhilda has marked ${equipment} for today.`
+    : 'Grunhilda may choose from every iron again.');
 };
 
 G.abandon = async (id, giver) => {

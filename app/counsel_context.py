@@ -124,23 +124,31 @@ def _qualified_lifts(current: datetime) -> Tuple[QualifiedLiftSet, ...]:
     return tuple(qualified)
 
 
-def declared_focuses() -> Tuple[str, ...]:
+def declared_focuses(settings=None) -> Tuple[str, ...]:
     """The charter's focuses, primary first, as an ordinary preference.
 
     Focus is deliberately optional (COUNCIL_REDESIGN §3): an unset charter
     returns nothing and every caller falls back to practiced history rather
     than refusing to offer. This never gates — it only narrows.
     """
-    charter = game.get_settings()["counsel_charter"]
+    current_settings = settings if settings is not None else game.get_settings()
+    charter = current_settings["counsel_charter"]
     if not charter:
         return ()
     return tuple(dict.fromkeys((charter["primary"], *charter["secondary"])))
+
+
+def declared_iron_equipment(settings=None) -> Optional[str]:
+    current_settings = settings if settings is not None else game.get_settings()
+    declaration = current_settings["counsel_iron_today"]
+    return declaration["equipment"] if declaration else None
 
 
 def assemble(
     current: Optional[datetime] = None,
 ) -> QualifiedTrainingContext:
     captured = current or game.now()
+    settings = game.get_settings(captured.date().isoformat())
     activities = _qualified_activities(captured)
     lifts = _qualified_lifts(captured)
     movements, weights, sessions, lower_body = summarize_lifts(
@@ -151,8 +159,9 @@ def assemble(
     return QualifiedTrainingContext(
         captured,
         str(captured.tzinfo),
-        game.ambition_mult(),
-        declared_focuses(),
+        game.ambition_mult(settings),
+        declared_focuses(settings),
+        declared_iron_equipment(settings),
         activities,
         tuple(
             build_history(
