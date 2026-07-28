@@ -18,6 +18,18 @@ skills under `.opencode/skills/`, loaded on demand:
 - `iron-vale-ops` — redeploy/restart procedure, full testing recipe,
   live-data correction playbook, opening PRs.
 
+Two tracked design documents sit alongside this one:
+
+- `DOCTRINE.md` — the science behind the Council's numbers. Every constant in the
+  recommendation engine is either traced to a cited source or honestly labelled a
+  game-design choice. **Read it before changing any training constant, and update
+  it in the same commit** — a number that drifts from its rationale is how the
+  science becomes a black box again.
+- `COUNCIL_REDESIGN.md` — the Council's implementation charter: the archetype
+  roster, the UI design language (§3b), what was deliberately cut and why (§7b),
+  and the open follow-ups (§3, §8). Read §7b before rebuilding anything that
+  correlates counsel with fitness outcomes.
+
 This file holds only the always-true rules and quick-reference tables.
 
 ## CRITICAL SAFETY RULES
