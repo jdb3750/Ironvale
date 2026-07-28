@@ -93,6 +93,7 @@ class QualifiedTrainingContext(NamedTuple):
     current: datetime
     timezone: str
     ambition_multiplier: float
+    declared_focuses: Tuple[str, ...]
     activities: Tuple[QualifiedActivity, ...]
     histories: Tuple[ActivityHistory, ...]
     lift_sets: Tuple[QualifiedLiftSet, ...]

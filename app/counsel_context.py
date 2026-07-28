@@ -124,6 +124,19 @@ def _qualified_lifts(current: datetime) -> Tuple[QualifiedLiftSet, ...]:
     return tuple(qualified)
 
 
+def declared_focuses() -> Tuple[str, ...]:
+    """The charter's focuses, primary first, as an ordinary preference.
+
+    Focus is deliberately optional (COUNCIL_REDESIGN §3): an unset charter
+    returns nothing and every caller falls back to practiced history rather
+    than refusing to offer. This never gates — it only narrows.
+    """
+    charter = game.get_settings()["counsel_charter"]
+    if not charter:
+        return ()
+    return tuple(dict.fromkeys((charter["primary"], *charter["secondary"])))
+
+
 def assemble(
     current: Optional[datetime] = None,
 ) -> QualifiedTrainingContext:
@@ -139,6 +152,7 @@ def assemble(
         captured,
         str(captured.tzinfo),
         game.ambition_mult(),
+        declared_focuses(),
         activities,
         tuple(
             build_history(

@@ -31,6 +31,17 @@ class OptionContext(NamedTuple):
     hard_was_suppressed: bool
 
 
+def with_reason(draft: OptionDraft, code: str) -> OptionDraft:
+    """Record why the field of offers was narrowed, so 'why this path' can say so."""
+    existing = draft.payload.get("reason_codes", [])
+    codes = list(existing) if isinstance(existing, list) else []
+    if code in codes:
+        return draft
+    return draft._replace(
+        payload={**draft.payload, "reason_codes": [*codes, code]},
+    )
+
+
 def draft_option(
     candidate: quests.QuestCandidate,
     tier: TierMeta,

@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import Dict, Final, Tuple
+from typing import Dict, Final, NamedTuple, Tuple
 
 import pydantic
 
@@ -11,6 +11,7 @@ from .counsel_options import (
     OptionDraft as OptionDraft,
     TierMeta as TierMeta,
     draft_option as draft_option,
+    with_reason as with_reason,
 )
 
 
@@ -33,9 +34,21 @@ CLIMB_TIERS: Final[Dict[str, TierMeta]] = {
 }
 
 
+class _EnduranceChoice(NamedTuple):
+    modality: quests.EnduranceModality
+    narrowed_by_focus: bool
+
+
 def _endurance_modality(
     context: counsel_context.QualifiedTrainingContext,
-) -> quests.EnduranceModality:
+) -> _EnduranceChoice:
+    """Pick the one endurance road Fenn offers today.
+
+    Walking to Fenn's hut asks for endurance, not for a specific modality, so
+    the charter decides which of run/ride/swim he may name. Without a charter —
+    or when it names none of the roads actually practiced — this falls back to
+    the least-recently-practiced road, because focus narrows and never gates.
+    """
     histories = {
         modality: context.history(modality)
         for modality in ENDURANCE_MODALITIES
@@ -46,17 +59,26 @@ def _endurance_modality(
         if histories[modality].session_count > 0
     ]
     if not practiced:
-        return "run"
-    return min(
-        practiced,
-        key=lambda modality: histories[modality].latest_at or context.current,
+        return _EnduranceChoice("run", False)
+    declared: list[quests.EnduranceModality] = [
+        modality
+        for modality in practiced
+        if modality in context.declared_focuses
+    ]
+    eligible: list[quests.EnduranceModality] = declared or practiced
+    return _EnduranceChoice(
+        min(
+            eligible,
+            key=lambda modality: histories[modality].latest_at or context.current,
+        ),
+        len(eligible) != len(practiced),
     )
 
 
 def _endurance(
     context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[OptionDraft, ...]:
-    modality = _endurance_modality(context)
+    modality, narrowed = _endurance_modality(context)
     history = context.history(modality)
     candidates = quests.build_endurance_candidates(
         modality,
@@ -70,11 +92,14 @@ def _endurance(
     easy = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_easy"))
     steady = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_steady"))
     quality = next(candidate for candidate in candidates if candidate.payload["intensity"] == "hard")
-    return (
+    drafts = (
         draft_option(easy, ENDURANCE_TIERS["easy"], history.provenance),
         draft_option(steady, ENDURANCE_TIERS["steady"], history.provenance),
         draft_option(quality, ENDURANCE_TIERS["quality"], history.provenance),
     )
+    if not narrowed:
+        return drafts
+    return tuple(with_reason(draft, "focus_charter") for draft in drafts)
 
 
 def _climb(
