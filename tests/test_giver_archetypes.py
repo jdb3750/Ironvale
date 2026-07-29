@@ -21,11 +21,15 @@ expected_titles = {
     "mobility": ("Sage Elowen", "of the Willow"),
 }
 assert tuple(game.GIVER_ARCHETYPES) == tuple(expected_titles)
+assert tuple(game.GIVERS) == tuple(expected_titles)
+assert game.OFFERABLE_GIVERS == ("running", "kettlebell", "mobility")
+assert game.GIVER_ARCHETYPES["running"]["modalities"] == counsel_candidates.FENN_MODALITIES
 for giver, (name, title) in expected_titles.items():
     ownership = game.GIVER_ARCHETYPES[giver]
     assert ownership["display"]["name"] == name
     assert ownership["display"]["title"] == title
     assert game.GIVERS[giver] == ownership["display"]
+for giver in game.OFFERABLE_GIVERS:
     assert all(
         option.payload["giver"] == giver
         for option in counsel_candidates.for_giver(giver, context)

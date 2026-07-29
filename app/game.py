@@ -56,7 +56,7 @@ GIVER_ARCHETYPES = {
     "running": {
         "archetype": "Endurance",
         "display": {"name": "Old Fenn", "title": "the Wayfarer", "sprite": "fenn"},
-        "modalities": ("run", "ride", "swim"),
+        "modalities": ("run", "ride", "swim", "climb"),
     },
     "kettlebell": {
         "archetype": "Strength",
@@ -76,6 +76,9 @@ GIVER_ARCHETYPES = {
 }
 
 GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.items()}
+# Historical giver identity is permanent; only this smaller live roster may
+# generate or accept new quests.
+OFFERABLE_GIVERS = ("running", "kettlebell", "mobility")
 
 COUNSEL_MODES = ("considered", "self")
 COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "strength")
@@ -83,7 +86,7 @@ COUNSEL_FOCUS_GIVERS = {
     "run": "running",
     "ride": "running",
     "swim": "running",
-    "climb": "strength",
+    "climb": "running",
     "strength": "kettlebell",
 }
 

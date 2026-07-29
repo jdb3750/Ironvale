@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import Dict, Final, NamedTuple, Tuple
+from typing import Dict, Final, Literal, NamedTuple, Tuple
 
 import pydantic
 
@@ -15,10 +15,12 @@ from .counsel_options import (
 )
 
 
-ENDURANCE_MODALITIES: Final[Tuple[quests.EnduranceModality, ...]] = (
+FennModality = Literal["run", "ride", "swim", "climb"]
+FENN_MODALITIES: Final[Tuple[FennModality, ...]] = (
     "run",
     "ride",
     "swim",
+    "climb",
 )
 
 
@@ -34,39 +36,39 @@ CLIMB_TIERS: Final[Dict[str, TierMeta]] = {
 }
 
 
-class _EnduranceChoice(NamedTuple):
-    modality: quests.EnduranceModality
+class _FennChoice(NamedTuple):
+    modality: FennModality
     narrowed_by_focus: bool
 
 
 def _endurance_modality(
     context: counsel_context.QualifiedTrainingContext,
-) -> _EnduranceChoice:
-    """Pick the one endurance road Fenn offers today.
+) -> _FennChoice:
+    """Pick the one activity-shaped road Fenn offers today.
 
-    Walking to Fenn's hut asks for endurance, not for a specific modality, so
-    the charter decides which of run/ride/swim he may name. Without a charter —
+    Walking to Fenn's hut asks for his work, not for a specific modality, so
+    the charter decides which of run/ride/swim/climb he may name. Without one —
     or when it names none of the roads actually practiced — this falls back to
     the least-recently-practiced road, because focus narrows and never gates.
     """
     histories = {
         modality: context.history(modality)
-        for modality in ENDURANCE_MODALITIES
+        for modality in FENN_MODALITIES
     }
-    practiced: list[quests.EnduranceModality] = [
+    practiced: list[FennModality] = [
         modality
-        for modality in ENDURANCE_MODALITIES
+        for modality in FENN_MODALITIES
         if histories[modality].session_count > 0
     ]
     if not practiced:
-        return _EnduranceChoice("run", False)
-    declared: list[quests.EnduranceModality] = [
+        return _FennChoice("run", False)
+    declared: list[FennModality] = [
         modality
         for modality in practiced
         if modality in context.declared_focuses
     ]
-    eligible: list[quests.EnduranceModality] = declared or practiced
-    return _EnduranceChoice(
+    eligible: list[FennModality] = declared or practiced
+    return _FennChoice(
         min(
             eligible,
             key=lambda modality: histories[modality].latest_at or context.current,
@@ -79,6 +81,20 @@ def _endurance(
     context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[OptionDraft, ...]:
     modality, narrowed = _endurance_modality(context)
+    drafts = (
+        _climb(context)
+        if modality == "climb"
+        else _endurance_road(context, modality)
+    )
+    if not narrowed:
+        return drafts
+    return tuple(with_reason(draft, "focus_charter") for draft in drafts)
+
+
+def _endurance_road(
+    context: counsel_context.QualifiedTrainingContext,
+    modality: quests.EnduranceModality,
+) -> Tuple[OptionDraft, ...]:
     history = context.history(modality)
     candidates = quests.build_endurance_candidates(
         modality,
@@ -92,14 +108,11 @@ def _endurance(
     easy = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_easy"))
     steady = next(candidate for candidate in candidates if str(candidate.payload["kind"]).endswith("_steady"))
     quality = next(candidate for candidate in candidates if candidate.payload["intensity"] == "hard")
-    drafts = (
+    return (
         draft_option(easy, ENDURANCE_TIERS["easy"], history.provenance),
         draft_option(steady, ENDURANCE_TIERS["steady"], history.provenance),
         draft_option(quality, ENDURANCE_TIERS["quality"], history.provenance),
     )
-    if not narrowed:
-        return drafts
-    return tuple(with_reason(draft, "focus_charter") for draft in drafts)
 
 
 def _climb(
@@ -113,6 +126,16 @@ def _climb(
             history.p80_minutes,
         ),
         context.ambition_multiplier,
+    )
+    # The dead legacy generator keeps Bram's historical payload; only live
+    # Council climb offers cross this ownership boundary to Fenn.
+    candidates = tuple(
+        quests.QuestCandidate(
+            candidate.candidate_key,
+            {**candidate.payload, "giver": "running"},
+            candidate.target_groups,
+        )
+        for candidate in candidates
     )
     by_variant = {
         str(candidate.payload["kind"]).split("_", 1)[1]: candidate
@@ -134,10 +157,11 @@ def for_giver(
 ) -> Tuple[OptionDraft, ...]:
     from . import counsel_specialists
 
+    if giver not in game.OFFERABLE_GIVERS:
+        raise ValueError(f"{game.GIVERS[giver]['name']} no longer sets quests.")
     builder = {
         "Endurance": _endurance,
         "Strength": counsel_specialists.iron,
-        "Skill": _climb,
         "Recovery": counsel_specialists.mobility,
     }[game.GIVER_ARCHETYPES[giver]["archetype"]]
     return builder(context)
