@@ -109,6 +109,20 @@ something verified, with the reason it matters.
 
 **Defects (behaviour is wrong today)**
 
+- **The workout logger's empty state still names a retired giver.**
+  `static/js/giver.js:758` reads "No quest in hand. Accept one from Grunhilda or
+  Ser Bram first." Bram has offered nothing since v0.22.0, so the copy sends a
+  player to a giver who cannot help them. A one-line fix, but it needs a `?v=`
+  bump because it touches `static/`, so fold it into the next task that already
+  changes a static asset rather than spending a bump on it alone.
+- **A browser-suite helper can report navigation complete before the DOM
+  settles.** Observed while adding retired-giver coverage: the helper's
+  completion can race the render when screenshot writing shifts timing. Nothing
+  fails today, but a helper that returns early produces intermittent failures
+  that get blamed on whatever change happens to be in flight. Worth hardening
+  before it costs someone a debugging session — this suite already burned one
+  today through a port collision.
+
 - **A weighted pull-up loses its load.** `counsel_specialists._iron_exercises`
   suppresses the suggested weight for anything tagged `bodyweight`, because
   `lift_sets.weight` is `NOT NULL` and an unloaded rep stores `0.0` (which would
