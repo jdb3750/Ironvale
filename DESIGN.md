@@ -208,7 +208,9 @@ be silently normalized during unrelated work.
 - **Layout:** the menu floats above ordinary page content and never changes
   document flow. It opens below when the list fits, flips above when the lower
   viewport edge or compact phone dock would cover it, and scrolls within a
-  `230px` maximum block size.
+  `230px` maximum block size. Its inline size is at least the trigger width and
+  expands to its widest option, then shifts within an eight-pixel viewport
+  boundary when that content-sized panel would cross an edge.
 - **Layering:** floating menus sit above ordinary page surfaces but below the
   compact dock, overlays, and toasts. An overlay scroll window clips absolute
   descendants, so any future select placed inside one must retain the shared
@@ -219,6 +221,9 @@ be silently normalized during unrelated work.
 - **States:** summary default, hover, pressed, focus, open, and disabled states
   reuse the pixel-button contract. Options preserve their selected, hover, and
   `menuitemradio` semantics; floating changes placement only.
+- **Contextual prose:** a lead-in and its compact trigger form one unbreakable
+  phrase. The phrase may wrap as a unit, but the lead-in never ends one line
+  while its current value starts another.
 
 ### Scrollable Surfaces
 

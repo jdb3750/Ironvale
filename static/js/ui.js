@@ -64,7 +64,10 @@ const FLOATING_PICKER_MAX_HEIGHT = 230;
 function resetFloatingPicker(root) {
   root.classList.remove('picker-opens-up');
   const menu = root.querySelector(FLOATING_PICKER_MENU_SELECTOR);
-  if (menu) menu.style.removeProperty('max-block-size');
+  if (menu) {
+    menu.style.removeProperty('max-block-size');
+    menu.style.removeProperty('--floating-picker-inline-offset');
+  }
 }
 
 function layoutFloatingPicker(root) {
@@ -92,6 +95,16 @@ function layoutFloatingPicker(root) {
 
   root.classList.toggle('picker-opens-up', opensUp);
   menu.style.maxBlockSize = `${Math.min(FLOATING_PICKER_MAX_HEIGHT, availableHeight)}px`;
+  menu.style.removeProperty('--floating-picker-inline-offset');
+  const menuRect = menu.getBoundingClientRect();
+  let inlineOffset = 0;
+  if (menuRect.right > window.innerWidth - edge) {
+    inlineOffset = window.innerWidth - edge - menuRect.right;
+  }
+  if (menuRect.left + inlineOffset < edge) {
+    inlineOffset += edge - menuRect.left - inlineOffset;
+  }
+  menu.style.setProperty('--floating-picker-inline-offset', `${inlineOffset}px`);
 }
 
 function layoutOpenFloatingPickers() {

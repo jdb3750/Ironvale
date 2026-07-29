@@ -578,9 +578,10 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   background: #000; border: 2px solid #3a3450; padding: 10px;
   font-size: 18px; line-height: 1.25; text-align: left;
 }
-/* Shared scrollable panels use one square, token-driven scrollbar treatment.
-   The document scrollbar stays native; its stable gutter is a separate
-   page-layout contract. */
+/* Shared scrollable surfaces use one square, token-driven scrollbar treatment.
+   The document keeps its stable gutter; only its scrollbar paint joins the
+   panel contract. */
+html,
 .pixel-select-menu,
 .hat-picker-menu,
 .dlog,
@@ -589,6 +590,7 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   scrollbar-width: thin;
   scrollbar-color: var(--gold) var(--panel2);
 }
+html::-webkit-scrollbar,
 .pixel-select-menu::-webkit-scrollbar,
 .hat-picker-menu::-webkit-scrollbar,
 .dlog::-webkit-scrollbar,
@@ -597,11 +599,13 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   width: 8px;
   height: 8px;
 }
+html::-webkit-scrollbar-track,
 .pixel-select-menu::-webkit-scrollbar-track,
 .hat-picker-menu::-webkit-scrollbar-track,
 .dlog::-webkit-scrollbar-track,
 .dev-console-output::-webkit-scrollbar-track,
 .overlay .win::-webkit-scrollbar-track,
+html::-webkit-scrollbar-corner,
 .pixel-select-menu::-webkit-scrollbar-corner,
 .hat-picker-menu::-webkit-scrollbar-corner,
 .dlog::-webkit-scrollbar-corner,
@@ -609,6 +613,7 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 .overlay .win::-webkit-scrollbar-corner {
   background: var(--panel2);
 }
+html::-webkit-scrollbar-thumb,
 .pixel-select-menu::-webkit-scrollbar-thumb,
 .hat-picker-menu::-webkit-scrollbar-thumb,
 .dlog::-webkit-scrollbar-thumb,
@@ -1507,7 +1512,11 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   position: absolute;
   z-index: 80;
   inset-block-start: 100%;
-  inset-inline: 0;
+  inset-inline-start: var(--floating-picker-inline-offset, 0px);
+  inset-inline-end: auto;
+  inline-size: max-content;
+  min-inline-size: 100%;
+  max-inline-size: calc(100vw - 16px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -1519,10 +1528,11 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   max-block-size: 230px;
   overflow-y: auto;
 }
-/* No pixelSelect currently renders inside an overlay. .overlay .win owns
-   scrolling and clips absolute descendants; any future overlay caller must
-   keep layoutFloatingPicker's overlay clamp (as the phone hat picker does)
-   or portal its menu outside that scroll owner. */
+/* Floating menus grow to their widest option but remain viewport-clamped by
+   layoutFloatingPicker. No pixelSelect currently renders inside an overlay:
+   .overlay .win clips absolute descendants, so any future overlay caller must
+   keep that clamp (as the phone hat picker does) or portal its menu outside
+   the scroll owner. */
 .hat-picker.picker-opens-up > .hat-picker-menu,
 .pixel-select.picker-opens-up > .pixel-select-menu {
   inset-block-start: auto;
@@ -1622,9 +1632,8 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   text-align: center;
 }
 .iron-today-control {
-  max-inline-size: 360px;
-  margin: 0 auto 12px;
-  text-align: center;
+  display: inline;
+  white-space: nowrap;
 }
 .iron-today-control .pixel-select {
   display: inline-block;
@@ -1647,9 +1656,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   text-transform: none;
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-.iron-today-control .pixel-select-summary::before {
-  content: 'within reach today: ';
 }
 .offer.counsel-path-card:hover { border-color: #4a3d20; }
 .counsel-path-card.has-wellness-warning {

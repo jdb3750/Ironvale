@@ -307,8 +307,8 @@ SCREENS.giver = async function () {
       ...(Array.isArray(data.modalities) ? data.modalities : [])
         .map(equipment => ({ value: equipment, label: equipment })),
     ];
-    const ironTodayControl = isIronGiver ? `
-      <div class="iron-today-control">
+    const ironTodayControl = isIronGiver ? ` <div class="iron-today-control">
+        <span class="iron-today-lead">within reach today: </span>
         ${pixelSelect(
           'iron-today-equipment',
           ironTodayOptions,
@@ -319,8 +319,7 @@ SCREENS.giver = async function () {
       </div>` : '';
     body = `<div class="win counsel-surface giver-offer-panel giver-offer-board" data-counsel-mode="${esc(mode)}" data-giver="${esc(key)}">
       <span class="win-title">${boardTitle}</span>
-      <div class="giver-board-intro">${boardHelp}</div>
-      ${ironTodayControl}
+      <div class="giver-board-intro">${boardHelp}${ironTodayControl}</div>
       ${data.offers.map(offerCard).join('')}
       <div class="giver-board-actions">
         ${isLiftGiver ? `<button class="btn small" style="min-width:0" onclick="nav('doctrines',{giver:'${key}'})">DOCTRINES &amp; ROUTINES</button>` : ''}
