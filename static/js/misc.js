@@ -291,7 +291,7 @@ SCREENS.settings = function () {
     { value: 'ride', label: 'Ride' },
     { value: 'swim', label: 'Swim' },
     { value: 'climb', label: 'Climb' },
-    { value: 'iron', label: 'Iron' },
+    { value: 'strength', label: 'Strength' },
   ];
   const focusHint = selfDirected
     ? "You're choosing freely; focus guides the counsel."

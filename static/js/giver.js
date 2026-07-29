@@ -61,7 +61,7 @@ const CONGRATS = {
 
 const GIVER_ROLES = {
   running: 'Quests of the Long Way',
-  kettlebell: 'Quests of the Iron',
+  kettlebell: 'Quests of Strength',
   strength: 'Quests of the Unburdened',
   mobility: 'Quests of Stillness',
 };

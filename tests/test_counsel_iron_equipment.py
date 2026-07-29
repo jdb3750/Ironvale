@@ -12,7 +12,7 @@ from counsel_giver_test_support import (
     offers,
     write_fresh_sync,
 )
-from app import programs
+from app import counsel_context, programs
 
 
 def option_equipment(current) -> set[str]:
@@ -27,6 +27,14 @@ def seed_recent_barbell() -> None:
     db.q(
         "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
         (NOW.isoformat(timespec="seconds"), "Back Squat", 82.5, 5),
+    )
+    db.commit()
+
+
+def seed_recent_pull_up() -> None:
+    db.q(
+        "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
+        (NOW.isoformat(timespec="seconds"), "Pull-Up", 0, 6),
     )
     db.commit()
 
@@ -276,6 +284,94 @@ def bodyweight_does_not_block_matching_iron_doctrine() -> None:
     }
 
 
+def logged_bodyweight_movement_is_offered_without_a_load() -> None:
+    # Given: Grunhilda's only recorded work is a bodyweight Pull-Up session.
+    new_profile("strength-bodyweight-movement")
+    write_fresh_sync()
+    seed_recent_pull_up()
+
+    # When: her ordinary board is generated without an equipment override.
+    current = offers("kettlebell")
+
+    # Then: the recorded movement leads each routine and invents no external load.
+    assert current
+    assert all(option.routine[0].exercise == "Pull-Up" for option in current)
+    assert all(option.routine[0].suggest_weight is None for option in current)
+    assert option_equipment(current) == {"bodyweight"}
+
+
+def bodyweight_session_counts_as_strength_history() -> None:
+    # Given: a bodyweight-only ledger day.
+    new_profile("strength-bodyweight-history")
+    write_fresh_sync()
+    seed_recent_pull_up()
+
+    # When: the qualified snapshot and offers are assembled.
+    context = counsel_context.assemble(NOW)
+    current = offers("kettlebell")
+
+    # Then: the day personalizes Strength instead of reporting a cold start.
+    assert context.iron_session_count == 1
+    assert all(option.sizing == "personalized" for option in current)
+    assert all("no_iron_history" not in option.reason_codes for option in current)
+
+
+def bodyweight_is_a_valid_today_declaration() -> None:
+    # Given: Grunhilda's board exposes its declared modalities.
+    new_profile("strength-bodyweight-option")
+    write_fresh_sync()
+    response = offer_response("kettlebell")
+
+    # Then: bodyweight is offered by the server and accepted as today's constraint.
+    assert "bodyweight" in response.modalities
+    set_iron_today("bodyweight")
+    assert game.get_settings()["counsel_iron_today"] == {
+        "date": NOW.date().isoformat(),
+        "equipment": "bodyweight",
+    }
+    assert option_equipment(offers("kettlebell")) == {"bodyweight"}
+
+
+def bodyweight_only_day_obeys_doctrine_equipment() -> None:
+    # Given: a barbell doctrine is selected.
+    new_profile("strength-bodyweight-barbell-doctrine")
+    write_fresh_sync()
+    selected = client.post(
+        "/api/programs/select",
+        json={"giver": "kettlebell", "key": "starting_strength"},
+    )
+    assert selected.status_code == 200
+
+    # When: only bodyweight resistance is available today.
+    set_iron_today("bodyweight")
+    mismatched = offers("kettlebell")
+
+    # Then: the barbell doctrine waits and pure bodyweight work replaces it.
+    assert option_equipment(mismatched) == {"bodyweight"}
+    assert all(option.program is False for option in mismatched)
+    assert all(
+        "doctrine_equipment_mismatch" in option.reason_codes
+        for option in mismatched
+    )
+    assert programs.active_program("kettlebell") == "starting_strength"
+
+    # Given: a pure-bodyweight doctrine is selected on another profile.
+    new_profile("strength-bodyweight-pure-doctrine")
+    write_fresh_sync()
+    routine_id = create_iron_routine("The Hanging Rite", ["Pull-Up", "Push-Up"])
+
+    # When: the same bodyweight-only declaration is made.
+    set_iron_today("bodyweight")
+    matched = offers("kettlebell")
+
+    # Then: every movement is performable, so the doctrine remains offered.
+    assert len(matched) == 1
+    assert matched[0].program is True
+    assert matched[0].progression is not None
+    assert matched[0].progression.key == f"custom:{routine_id}"
+    assert option_equipment(matched) == {"bodyweight"}
+
+
 def override_sizing_uses_only_matching_implement_history() -> None:
     # Given: the ledger has barbell history but no kettlebell history.
     new_profile("iron-equipment-truthful-sizing", "self")
@@ -384,6 +480,22 @@ for label, scenario in (
     (
         "bodyweight remains compatible with matching iron",
         bodyweight_does_not_block_matching_iron_doctrine,
+    ),
+    (
+        "logged bodyweight movement is offered without a load",
+        logged_bodyweight_movement_is_offered_without_a_load,
+    ),
+    (
+        "bodyweight session counts as strength history",
+        bodyweight_session_counts_as_strength_history,
+    ),
+    (
+        "bodyweight is a valid today declaration",
+        bodyweight_is_a_valid_today_declaration,
+    ),
+    (
+        "bodyweight-only day obeys doctrine equipment",
+        bodyweight_only_day_obeys_doctrine_equipment,
     ),
     (
         "override sizing uses matching implement history",

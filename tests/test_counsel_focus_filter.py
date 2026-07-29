@@ -28,12 +28,12 @@ def seed_three_endurance_roads() -> None:
 
 def charter_narrows_the_road() -> None:
     # Given: run, ride and swim all practiced, swim the stalest. When: the
-    # charter names run and iron. Then: Fenn offers run, not the stale swim.
+    # charter names run and strength. Then: Fenn offers run, not the stale swim.
     new_profile("focus-considered")
     write_fresh_sync()
     seed_three_endurance_roads()
     assert offers("running")[0].modality == "swim"
-    set_charter("run", ["iron"])
+    set_charter("run", ["strength"])
     narrowed = offers("running")
     assert len(narrowed) == 1
     assert narrowed[0].modality == "run"
@@ -60,7 +60,7 @@ def focus_narrows_but_never_gates() -> None:
     new_profile("focus-disjoint")
     write_fresh_sync()
     seed_three_endurance_roads()
-    set_charter("climb", ["iron"])
+    set_charter("climb", ["strength"])
     fallback = offers("running")
     assert len(fallback) == 1
     assert fallback[0].modality == "swim"

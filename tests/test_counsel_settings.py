@@ -50,7 +50,7 @@ try:
         and settings_without_charter["counsel_charter"] is None,
     )
 
-    saved_charter = {"primary": "run", "secondary": ["iron", "climb"]}
+    saved_charter = {"primary": "run", "secondary": ["strength", "climb"]}
     valid_charter = client.post("/api/settings", json={"counsel_charter": saved_charter})
     settings_with_charter = client.get("/api/state").json()["settings"]
     ok(
@@ -73,7 +73,7 @@ try:
         "/api/settings",
         json={
             "counsel_mode": "considered",
-            "counsel_charter": {"primary": "run", "secondary": ["iron", "sprints"]},
+            "counsel_charter": {"primary": "run", "secondary": ["strength", "sprints"]},
         },
     )
     after_invalid_focus = client.get("/api/state").json()["settings"]

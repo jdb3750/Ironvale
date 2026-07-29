@@ -565,15 +565,15 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
     await page.getByRole('menuitemradio', { name: 'Run' }).click();
     assert.equal(await page.locator('[data-counsel-secondary="run"]').isHidden(), true);
     assert.equal(await page.locator('[data-counsel-secondary]:visible').count(), 4);
-    assert.equal(await page.locator('[data-counsel-secondary="iron"]').getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.locator('[data-counsel-secondary="strength"]').getAttribute('aria-pressed'), 'false');
     assert.equal(
-      await page.locator('[data-counsel-secondary="iron"]').evaluate(
+      await page.locator('[data-counsel-secondary="strength"]').evaluate(
         element => element.classList.contains('active'),
       ),
       false,
     );
     assert.deepEqual(
-      await toggleStyle(page.locator('[data-counsel-secondary="iron"]')),
+      await toggleStyle(page.locator('[data-counsel-secondary="strength"]')),
       toggleOffStyle,
     );
     assert.equal(
@@ -582,9 +582,9 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
       ),
       'center',
     );
-    await page.getByRole('button', { name: 'Iron' }).click();
+    await page.getByRole('button', { name: 'Strength' }).click();
     assert.deepEqual(
-      await toggleStyle(page.locator('[data-counsel-secondary="iron"]')),
+      await toggleStyle(page.locator('[data-counsel-secondary="strength"]')),
       toggleOnStyle,
     );
     const settingsBeforeSave = await page.locator('#settings-game').elementHandle();
@@ -623,7 +623,7 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
     assert.match(await page.locator('#counsel-focus-hint').innerText(), /choosing freely; focus guides the counsel/i);
     assert.deepEqual(
       await page.evaluate(() => S.state.settings.counsel_charter),
-      { primary: 'run', secondary: ['iron'] },
+      { primary: 'run', secondary: ['strength'] },
     );
     assert.deepEqual(failures, []);
   } finally {
@@ -1037,7 +1037,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '97'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '98'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
@@ -1389,7 +1389,7 @@ test("Grunhilda's iron selector is closed by default and hides implement choices
         textDecorationLine: 'underline',
       },
     );
-    for (const equipment of ['barbell', 'dumbbell', 'kettlebell']) {
+    for (const equipment of ['barbell', 'dumbbell', 'kettlebell', 'bodyweight']) {
       assert.equal(
         await selector.locator(`.pixel-option[data-value="${equipment}"]`).isVisible(),
         false,

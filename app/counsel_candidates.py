@@ -136,7 +136,7 @@ def for_giver(
 
     builder = {
         "Endurance": _endurance,
-        "Iron": counsel_specialists.iron,
+        "Strength": counsel_specialists.iron,
         "Skill": _climb,
         "Recovery": counsel_specialists.mobility,
     }[game.GIVER_ARCHETYPES[giver]["archetype"]]
