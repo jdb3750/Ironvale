@@ -57,6 +57,64 @@ function pixelSelect(id, options, selected, ariaLabel, onChange, placeholder, di
   </details>`;
 }
 
+const FLOATING_PICKER_SELECTOR = '.pixel-select, .hat-picker';
+const FLOATING_PICKER_MENU_SELECTOR = '.pixel-select-menu, .hat-picker-menu';
+const FLOATING_PICKER_MAX_HEIGHT = 230;
+
+function resetFloatingPicker(root) {
+  root.classList.remove('picker-opens-up');
+  const menu = root.querySelector(FLOATING_PICKER_MENU_SELECTOR);
+  if (menu) menu.style.removeProperty('max-block-size');
+}
+
+function layoutFloatingPicker(root) {
+  if (!root.open) {
+    resetFloatingPicker(root);
+    return;
+  }
+  const summary = root.querySelector('summary');
+  const menu = root.querySelector(FLOATING_PICKER_MENU_SELECTOR);
+  if (!summary || !menu) return;
+
+  const edge = 8;
+  const summaryRect = summary.getBoundingClientRect();
+  const dock = document.querySelector('.phone-dock');
+  const dockRect = dock?.getBoundingClientRect();
+  const dockTop = dockRect && dockRect.height > 0 ? dockRect.top : window.innerHeight;
+  const overlayRect = root.closest('.overlay .win')?.getBoundingClientRect();
+  const topLimit = Math.max(edge, overlayRect?.top ?? edge);
+  const bottomLimit = Math.min(dockTop - edge, overlayRect?.bottom ?? window.innerHeight - edge);
+  const spaceAbove = Math.max(0, summaryRect.top - topLimit);
+  const spaceBelow = Math.max(0, bottomLimit - summaryRect.bottom);
+  const wantedHeight = Math.min(FLOATING_PICKER_MAX_HEIGHT, menu.scrollHeight + 4);
+  const opensUp = spaceBelow < wantedHeight && spaceAbove > spaceBelow;
+  const availableHeight = opensUp ? spaceAbove : spaceBelow;
+
+  root.classList.toggle('picker-opens-up', opensUp);
+  menu.style.maxBlockSize = `${Math.min(FLOATING_PICKER_MAX_HEIGHT, availableHeight)}px`;
+}
+
+function layoutOpenFloatingPickers() {
+  document.querySelectorAll('.pixel-select[open], .hat-picker[open]').forEach(layoutFloatingPicker);
+}
+
+if (typeof MutationObserver === 'function') {
+  const floatingPickerObserver = new MutationObserver(records => {
+    records.forEach(record => {
+      if (record.target.matches?.(FLOATING_PICKER_SELECTOR)) {
+        requestAnimationFrame(() => layoutFloatingPicker(record.target));
+      }
+    });
+  });
+  floatingPickerObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['open'],
+    subtree: true,
+  });
+}
+window.addEventListener('resize', layoutOpenFloatingPickers, { passive: true });
+window.addEventListener('scroll', layoutOpenFloatingPickers, { capture: true, passive: true });
+
 G.pixelSelectPick = (btn) => {
   const root = btn.closest('.pixel-select');
   root.querySelector('input[type="hidden"]').value = btn.dataset.value;

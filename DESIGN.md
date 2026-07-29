@@ -198,6 +198,23 @@ be silently normalized during unrelated work.
 - **Loading / empty / error:** no generic loading or empty state exists. Error
   meaning is expressed by `.danger`; callers own loading and empty behavior.
 
+### Pixel Select (`.pixel-select`, `.hat-picker`)
+
+- **Structure:** a native `details`/`summary` disclosure contains the existing
+  chunky option buttons and a hidden value input where the caller needs form
+  compatibility. The Menagerie hat picker shares the same menu-row language.
+- **Layout:** the menu floats above ordinary page content and never changes
+  document flow. It opens below when the list fits, flips above when the lower
+  viewport edge or compact phone dock would cover it, and scrolls within a
+  `230px` maximum block size.
+- **Layering:** floating menus sit above ordinary page surfaces but below the
+  compact dock, overlays, and toasts. An overlay scroll window clips absolute
+  descendants, so any future select placed inside one must retain the shared
+  overlay-boundary clamp or portal its menu outside the scroll owner.
+- **States:** summary default, hover, pressed, focus, open, and disabled states
+  reuse the pixel-button contract. Options preserve their selected, hover, and
+  `menuitemradio` semantics; floating changes placement only.
+
 ### NPC Portrait And Dialogue (`.npc-head`, `.dialog`)
 
 - **Structure:** a flex `.npc-head` containing a pixelated portrait image (with

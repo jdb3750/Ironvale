@@ -1435,7 +1435,10 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
    inset rows so they clearly belong to the dropdown — unlike the standalone
    buttons (UNBUDDY etc.) below it. */
 .hat-picker,
-.pixel-select { min-inline-size: 0; }
+.pixel-select {
+  position: relative;
+  min-inline-size: 0;
+}
 .hat-picker > summary,
 .pixel-select > summary {
   display: block;
@@ -1462,6 +1465,11 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pixel-select[open] > .pixel-select-summary::after { content: ' \25b4'; color: var(--gold); }
 .hat-picker-menu,
 .pixel-select-menu {
+  position: absolute;
+  z-index: 80;
+  inset-block-start: 100%;
+  inset-inline: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1469,8 +1477,20 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   border-top: 0;
   background: #0b0b14;
   padding: 5px;
+  max-block-size: 230px;
+  overflow-y: auto;
 }
-.pixel-select-menu { max-block-size: 230px; overflow-y: auto; }
+/* No pixelSelect currently renders inside an overlay. .overlay .win owns
+   scrolling and clips absolute descendants; any future overlay caller must
+   keep layoutFloatingPicker's overlay clamp (as the phone hat picker does)
+   or portal its menu outside that scroll owner. */
+.hat-picker.picker-opens-up > .hat-picker-menu,
+.pixel-select.picker-opens-up > .pixel-select-menu {
+  inset-block-start: auto;
+  inset-block-end: 100%;
+  border-top: 2px solid var(--gold);
+  border-bottom: 0;
+}
 .hat-picker-menu .hat-option,
 .pixel-select-menu .pixel-option {
   width: 100%;
