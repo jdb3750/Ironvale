@@ -37,11 +37,12 @@ bounded.)
   Built on the Phase 0 config, and **ports the surviving engine** from the old
   `feat/council-training-adviser` branch (§4) — additive, not a removal pass.
   First step is a **port plan for approval** (§6), not a build.
-- **Phase 1.5 — the three-giver collapse (§0c).** IN PROGRESS as of 2026-07-28.
-  Grunhilda absorbs bodyweight, climbing moves to Fenn, Bram retires from the
-  offerable roster. Do this before Phase 2: Scheduled slots are modality-level and
-  route to givers through the archetype config, so building the weekly plan on the
-  old four-giver roster would force a rework.
+- **Phase 1.5 — the three-giver collapse (§0c). LANDED 2026-07-28, v0.22.0.**
+  Grunhilda absorbed bodyweight (v0.21.0); climbing moved to Fenn and Bram retired
+  from the offerable roster (v0.22.0). It went before Phase 2 deliberately:
+  Scheduled slots are modality-level and route to givers through the archetype
+  config, so building the weekly plan on the old four-giver roster would have
+  forced a rework. See §0d for what it left behind.
 - **Phase 2 — Scheduled mode (§5b). THE NEXT PHASE after §0c lands.** The
   player-authored weekly plan. Prioritized because it fits how the app is actually
   used (see §7c) — and because plan adherence is the one honest counsel metric
@@ -161,6 +162,34 @@ name from the registry, so:
 
 Bram's next life is sketched in `ROADMAP.md` (the capability/plugin surface);
 nothing there is approved to build.
+
+## 0d. Loose ends left by the collapse (small, tracked, not blocking)
+
+Found in review as §0c landed. None break anything today; all are the kind of
+stale-declaration or half-truth that becomes an expensive surprise later.
+
+- **`GIVER_ARCHETYPES["strength"]` still lies.** Bram's entry declares
+  `archetype: "Skill"` and `modalities: ("climbing", "calisthenics",
+  "plyometrics", "sprints")`, but the Skill archetype is dissolved, climbing is
+  Fenn's, and Bram owns nothing. It is inert only because `for_giver` gates on
+  `OFFERABLE_GIVERS` and `"Skill"` is no longer in the dispatch map. **This is the
+  same species of stale declaration that orphaned every bodyweight movement in the
+  first place** — zero the modalities out or mark him retired in the config.
+- **Bram's title contradicts his subtitle.** He is displayed as "the Unburdened",
+  a name earned under the dissolved Skill archetype, while his town subtitle now
+  reads "The Old Knight at Rest". He carries nothing at all now; pick one voice.
+- **A weighted pull-up loses its load.** `counsel_specialists._iron_exercises`
+  suppresses the suggested weight for anything tagged `bodyweight`, because
+  `lift_sets.weight` is `NOT NULL` and an unloaded rep stores `0.0`, which would
+  otherwise render as "@ 0". The rule cannot tell *unloaded* from *loaded*, so a
+  Pull-Up logged at 10 kg offers no weight. Suppress on a falsy weight instead of
+  on the equipment tag.
+- **The dead legacy offer path.** `get_offers`, `accept_offer`,
+  `gen_lift_offers`, `gen_endurance_offers` and `gen_climb_offers` are reachable
+  only from tests — verified caller-by-caller. `gen_mobility_offers` is the sole
+  exception and is LIVE, because mobility never got a `build_*_candidates`
+  function and `counsel_specialists.mobility` calls the legacy generator directly.
+  Deleting the dead five is its own task; do not do it incidentally.
 
 ## 1. What the player experiences (decided)
 
