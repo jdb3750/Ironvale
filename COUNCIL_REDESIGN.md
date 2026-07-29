@@ -37,14 +37,24 @@ bounded.)
   Built on the Phase 0 config, and **ports the surviving engine** from the old
   `feat/council-training-adviser` branch (§4) — additive, not a removal pass.
   First step is a **port plan for approval** (§6), not a build.
-- **Phase 2 — Scheduled mode (§5b).** NEXT UP, promoted out of deferred. The
+- **Phase 1.5 — the three-giver collapse (§0c).** IN PROGRESS as of 2026-07-28.
+  Grunhilda absorbs bodyweight, climbing moves to Fenn, Bram retires from the
+  offerable roster. Do this before Phase 2: Scheduled slots are modality-level and
+  route to givers through the archetype config, so building the weekly plan on the
+  old four-giver roster would force a rework.
+- **Phase 2 — Scheduled mode (§5b). THE NEXT PHASE after §0c lands.** The
   player-authored weekly plan. Prioritized because it fits how the app is actually
   used (see §7c) — and because plan adherence is the one honest counsel metric
-  (§7b).
+  (§7b). The `counsel_attributions` CHECK constraint was already widened to accept
+  `'schedule'`, so no table rebuild is needed.
 - **Deferred — tracked separately (§8).** Not this work: key rename, equipment
   awareness, new Skill-archetype content, Garmin-suggestion import.
 
 ## 0b. Givers as archetypes — the roster (Phase 0; the Council's spine)
+
+> **AMENDED 2026-07-28 — the roster collapses to THREE offering givers.** The
+> four-archetype table below is the *historical* Phase 0 decision; read it for
+> context, then read §0c, which supersedes it. The Skill archetype is dissolved.
 
 A giver embodies a **KIND of effort (an archetype)**, not one workout. Four
 archetypes, mapped onto the existing cast — **all four characters already exist
@@ -94,6 +104,63 @@ its one pick is the modality among the ones it owns that is most "due" for you
 focuses, the nudge, the considered pick — operates over this archetype/ownership
 config, not the old scattered modality→giver mapping.** This reorientation is the
 core of Phase 1.
+
+## 0c. The three-giver collapse (decided 2026-07-28 — supersedes §0b's roster)
+
+**An archetype is defined by how the work is RECORDED, not by what it feels
+like.** That single rule replaces the four-archetype split, because the old
+Skill archetype could not survive it: it owned one live modality (climbing) and
+several movements that refuse to sit on one side of any line — a muscle-up is
+attempts or sets depending on the day, sprints look more like running than
+climbing.
+
+| Giver | Owns | Recorded as | DB key (still FROZEN) |
+|---|---|---|---|
+| **Old Fenn** | run, ride, swim, **climb** | a timed activity, sized from activity history | `running` |
+| **Grunhilda** | barbell, dumbbell, kettlebell, **bodyweight** | sets/reps/holds in the lift ledger, whatever supplies the resistance | `kettlebell` |
+| **Sage Elowen** | mobility, stretch, easy movement, rest | recovery | `mobility` |
+
+- **Grunhilda's domain is the load, not the implement:** work performed in sets,
+  reps, holds or loaded carries, whether the resistance is iron, a band, rings or
+  your own body. Pull-ups and bench press are therefore ONE quest, which the
+  four-archetype split made impossible.
+- **Climbing belongs to Fenn** because it is stored and sized exactly like
+  running: an activity with a duration, through `CandidateHistory` and
+  `build_climb_candidates`. Putting it under Grunhilda would make her host two
+  incommensurable generators — the exact conceptual exception this collapse
+  exists to remove. Offers keep climbing-specific titles and tiers.
+- **Consequence, accepted:** climbing and running share Fenn's one active-quest
+  slot. This costs a second *quest*, not a second effort — `raid.py` deals boss
+  damage from every synced activity independent of quests, so both sessions are
+  still tracked and still hit the boss.
+- **`GYM_NAMES` in `exercises.py` was right all along.** It groups barbell +
+  dumbbell + bodyweight and is currently dead code; the Phase 0 regroup orphaned
+  bodyweight movements so that NO giver could offer them. This collapse restores
+  that grouping.
+
+**Ser Bram is retired from quest-giving, NOT deleted.** His `strength` key holds
+real completed quests on the live table and several call sites resolve a display
+name from the registry, so:
+
+- **Identity is permanent** — `running`, `kettlebell`, `strength`, `mobility` all
+  keep resolving forever, for historical quests, chronicle/ledger rendering, and
+  his sprite and title.
+- **Offerability is a separate, smaller roster** — `running`, `kettlebell`,
+  `mobility`. Only these generate offers, accept quests, own focuses, or receive
+  nudges.
+- Today the registry conflates the two: `game.GIVERS` gates offers
+  (`main.py:301`, `main.py:325`) *and* is shipped whole to the client to draw the
+  town (`main.py:179`), while dispatch reads `GIVER_ARCHETYPES` directly
+  (`counsel_candidates.py:137`). **Split these two concepts explicitly at the
+  registry boundary** — do not fake retirement by letting Bram's generator return
+  nothing.
+- **Transition case:** if Bram holds an active quest when this ships it must stay
+  completable and abandonable; his endpoint returns that active quest with no new
+  offers. Old climbing quests keep saying Bram; new ones say Fenn. That is
+  truthful history, not an inconsistency, and it needs NO data migration.
+
+Bram's next life is sketched in `ROADMAP.md` (the capability/plugin surface);
+nothing there is approved to build.
 
 ## 1. What the player experiences (decided)
 
