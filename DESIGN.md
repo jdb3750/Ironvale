@@ -202,11 +202,15 @@ be silently normalized during unrelated work.
 
 - **Structure:** a native `details`/`summary` disclosure contains the existing
   chunky option buttons and a hidden value input where the caller needs form
-  compatibility. The Menagerie hat picker shares the same menu-row language.
+  compatibility. Contextual prose such as Grunhilda's day constraint stays in
+  ordinary DOM text outside the clickable summary. The Menagerie hat picker
+  shares the same menu-row language.
 - **Layout:** the menu floats above ordinary page content and never changes
   document flow. It opens below when the list fits, flips above when the lower
   viewport edge or compact phone dock would cover it, and scrolls within a
-  `230px` maximum block size.
+  `230px` maximum block size. Its inline size is at least the trigger width and
+  expands to its widest option, then shifts within an eight-pixel viewport
+  boundary when that content-sized panel would cross an edge.
 - **Layering:** floating menus sit above ordinary page surfaces but below the
   compact dock, overlays, and toasts. An overlay scroll window clips absolute
   descendants, so any future select placed inside one must retain the shared
@@ -217,12 +221,15 @@ be silently normalized during unrelated work.
 - **States:** summary default, hover, pressed, focus, open, and disabled states
   reuse the pixel-button contract. Options preserve their selected, hover, and
   `menuitemradio` semantics; floating changes placement only.
+- **Contextual prose:** a lead-in and its compact trigger form one unbreakable
+  phrase. The phrase may wrap as a unit, but the lead-in never ends one line
+  while its current value starts another.
 
-### Scrollable Panels
+### Scrollable Surfaces
 
 - **Scope:** menus (`.pixel-select-menu`, `.hat-picker-menu`), `.dlog`,
-  `.dev-console-output`, and overlay windows share the panel scrollbar. The
-  document scrollbar remains native and retains its stable gutter.
+  `.dev-console-output`, overlay windows, and the document share the scrollbar
+  treatment. The document retains its stable gutter.
 - **Appearance:** Firefox uses `scrollbar-width: thin` and
   `scrollbar-color`; Chromium/WebKit use the matching pseudo-elements. Both
   render a square `--gold` thumb on a `--panel2` track, with no rounded corners
@@ -492,6 +499,41 @@ Specialized scenes and reward moments use gradients, glows, and raw colors,
 but shared windows and controls remain square-edged and border-led. The mix of
 tokenized core surfaces with raw feature colors is an existing inconsistency;
 it may be consolidated only as a separate, explicitly approved change.
+
+### PROPOSED — elevation for overlaid surfaces (NOT implemented)
+
+A design direction recorded for a later, explicitly approved pass. **Nothing
+below is built; do not implement it as a side effect of other work.**
+
+**The principle:** a surface drawn *on top of* other elements is physically
+closer to the viewer. If the light source sits at the viewer's point of view —
+which the existing south-shine bevels already imply — then closer should mean
+**lighter**, and the raised surface should **cast a shadow onto what it
+covers**. Depth would then be readable rather than decorative: you could tell
+what floats above what without reading borders.
+
+**Today the system is inverted.** The floating picker menu paints `#0b0b14`,
+darker than both `--panel` (`#121220`) and `--panel2` (`#191928`) and near
+page-ground `--bg`. The surface nearest the viewer is the darkest on screen. It
+separates from its surroundings by a gold border alone, which is the same
+device every ordinary window uses — so a menu reads as another bordered box
+rather than as something hovering above the page.
+
+**What a pass would change:** a lighter raised surface; a distinct border
+treatment (a bevel, or a more restrained outline) so elevation is not signalled
+by the same 2px gold rule that marks everything else; and a genuine cast shadow
+on the content beneath, consistent with one light direction.
+
+**The tension to resolve deliberately, not paper over:** §7 currently states
+that shadows read as *pixel construction rather than soft physical elevation*.
+This proposal introduces real elevation logic. That is a considered evolution
+of the depth language, and it must be applied as a **system rule for every
+overlaid surface** — menus, overlays, toasts, modals — or it becomes one more
+one-off. Adopting it means updating this section, not contradicting it.
+
+**Scope note:** the menu's `#0b0b14` is itself a raw, un-promoted color of the
+kind flagged above, so this pass is the natural moment to tokenize the
+elevation surfaces.
 
 ## 8. Navigation and History Contract
 

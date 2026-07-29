@@ -85,6 +85,14 @@ sketches. Neither is scoped.
   muscle-group targeting. Unverified: nobody has checked its licence, shape or
   fit against `exercises.py`. Needs a small spike before anyone estimates it.
 
+- **Elevation for overlaid surfaces** — floating menus, overlays and toasts should
+  read as *closer to the viewer*: lighter, distinctly bordered, casting a shadow
+  on what they cover. Today the topmost surface is the darkest on screen, and a
+  menu is bordered exactly like an ordinary window. Full rationale and the
+  tension it resolves are in `DESIGN.md` §7 ("PROPOSED — elevation for overlaid
+  surfaces"). **Queued next after the dropdown width/wrap fix**, as a system-wide
+  pass rather than a menu-only tweak.
+
 ## 3. Sweep-up backlog
 
 Known defects and cleanups, deliberately deferred to a single sweep **at the end

@@ -641,11 +641,20 @@ test('shared pixelSelect menus float without shifting content and still select',
     const followingTop = () => selector.evaluate(element => (
       element.closest('.formrow').nextElementSibling.getBoundingClientRect().top
     ));
+    const summaryWidth = await selector.locator('.pixel-select-summary')
+      .evaluate(element => element.getBoundingClientRect().width);
     const beforeOpen = await followingTop();
     await selector.locator('.pixel-select-summary').click();
     assert.equal(await selector.evaluate(element => element.open), true);
     assert.equal(await followingTop(), beforeOpen);
     assert.equal(await selector.locator('.pixel-select-menu').isVisible(), true);
+    assert.ok(
+      Math.abs(
+        await selector.locator('.pixel-select-menu')
+          .evaluate(element => element.getBoundingClientRect().width)
+        - summaryWidth,
+      ) <= 1,
+    );
 
     const settingsWrite = page.waitForResponse(response => (
       response.request().method() === 'POST'
@@ -1354,7 +1363,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '101'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '102'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
@@ -1672,8 +1681,21 @@ test("Grunhilda's iron selector is closed by default and hides implement choices
     await createGiverProfile(page, 'considered');
     await openGiverBoard(page, 'kettlebell');
 
+    const intro = page.locator('.giver-board-intro');
     const selector = page.locator('.iron-today-control .pixel-select');
     assert.equal(await selector.count(), 1);
+    assert.equal(
+      await intro.evaluate(element => element.innerText.replace(/\s+/g, ' ').trim()),
+      'One eligible path, chosen from this giver’s work for today. within reach today: any iron',
+    );
+    assert.equal(
+      await selector.evaluate(element => element.parentElement?.parentElement?.classList.contains('giver-board-intro')),
+      true,
+    );
+    assert.equal(
+      await page.locator('.iron-today-lead').textContent(),
+      'within reach today: ',
+    );
     assert.equal(await selector.evaluate(element => element.open), false);
     assert.equal(
       await selector.locator('.pixel-select-summary').textContent(),
@@ -1687,7 +1709,7 @@ test("Grunhilda's iron selector is closed by default and hides implement choices
       await selector.locator('.pixel-select-summary').evaluate(element => (
         getComputedStyle(element, '::before').content
       )),
-      '"within reach today: "',
+      'none',
     );
     assert.deepEqual(
       await selector.locator('.pixel-select-summary').evaluate(element => {
@@ -1715,6 +1737,221 @@ test("Grunhilda's iron selector is closed by default and hides implement choices
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
+  }
+});
+
+test("Grunhilda's inline iron selector floats without displacing her offer", async () => {
+  for (const name of ['phone', 'desktop']) {
+    const { context, failures, page } = await openMainProfile(
+      GIVER_VIEWPORTS[name],
+      { reducedMotion: 'reduce' },
+    );
+    try {
+      await createGiverProfile(page, 'considered');
+      await openGiverBoard(page, 'kettlebell');
+
+      const intro = page.locator('.giver-board-intro');
+      const control = intro.locator('.iron-today-control');
+      const selector = control.locator('.pixel-select');
+      assert.equal(
+        await control.evaluate(element => getComputedStyle(element).display),
+        'inline',
+      );
+      assert.equal(
+        await selector.evaluate(element => element.closest('.giver-board-intro') !== null),
+        true,
+      );
+      const lineBoxes = await control.evaluate(element => {
+        const leadText = element.querySelector('.iron-today-lead')?.firstChild;
+        const valueText = element.querySelector('.pixel-select-label')?.firstChild;
+        if (!leadText || !valueText) throw new Error('Iron phrase text is incomplete');
+        const leadRange = document.createRange();
+        const valueRange = document.createRange();
+        leadRange.selectNodeContents(leadText);
+        valueRange.selectNodeContents(valueText);
+        const lead = leadRange.getBoundingClientRect();
+        const value = valueRange.getBoundingClientRect();
+        return {
+          leadBottom: lead.bottom,
+          leadTop: lead.top,
+          valueBottom: value.bottom,
+          valueTop: value.top,
+        };
+      });
+      assert.ok(
+        Math.max(lineBoxes.leadTop, lineBoxes.valueTop)
+          < Math.min(lineBoxes.leadBottom, lineBoxes.valueBottom),
+        JSON.stringify(lineBoxes),
+      );
+
+      const followingTop = () => page.locator('.counsel-path-card').first()
+        .evaluate(element => element.getBoundingClientRect().top);
+      const beforeOpen = await followingTop();
+      await selector.locator('.pixel-select-summary').click();
+      await selector.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+      assert.equal(await followingTop(), beforeOpen);
+      assert.equal(await selector.locator('.pixel-select-menu').isVisible(), true);
+      const geometry = await selector.evaluate(element => {
+        const summary = element.querySelector('.pixel-select-summary').getBoundingClientRect();
+        const menu = element.querySelector('.pixel-select-menu').getBoundingClientRect();
+        return {
+          menuBottom: menu.bottom,
+          menuLeft: menu.left,
+          menuPosition: getComputedStyle(element.querySelector('.pixel-select-menu')).position,
+          menuRight: menu.right,
+          menuTop: menu.top,
+          summaryBottom: summary.bottom,
+          summaryTop: summary.top,
+          viewportHeight: window.innerHeight,
+          viewportWidth: window.innerWidth,
+        };
+      });
+      assert.equal(geometry.menuPosition, 'absolute');
+      assert.ok(
+        Math.min(
+          Math.abs(geometry.menuTop - geometry.summaryBottom),
+          Math.abs(geometry.menuBottom - geometry.summaryTop),
+        ) <= 1,
+        JSON.stringify(geometry),
+      );
+      assert.ok(geometry.menuTop >= 8, JSON.stringify(geometry));
+      assert.ok(geometry.menuBottom <= geometry.viewportHeight, JSON.stringify(geometry));
+      assert.ok(geometry.menuLeft >= 8, JSON.stringify(geometry));
+      assert.ok(geometry.menuRight <= geometry.viewportWidth - 8, JSON.stringify(geometry));
+      if (EVIDENCE_DIR) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `iron-selector-open-${name}.png`),
+        });
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test("Grunhilda's floating menu renders every option label without clipping", async () => {
+  for (const name of ['phone', 'desktop']) {
+    const { context, failures, page } = await openMainProfile(
+      GIVER_VIEWPORTS[name],
+      { reducedMotion: 'reduce' },
+    );
+    try {
+      await createGiverProfile(page, 'considered');
+      await openGiverBoard(page, 'kettlebell');
+      const selector = page.locator('.iron-today-control .pixel-select');
+      await selector.locator('.pixel-select-summary').click();
+      await selector.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+
+      const menuGeometry = await selector.locator('.pixel-select-menu').evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return {
+          left: rect.left,
+          right: rect.right,
+          viewportWidth: window.innerWidth,
+        };
+      });
+      assert.ok(menuGeometry.left >= 8, JSON.stringify(menuGeometry));
+      assert.ok(menuGeometry.right <= menuGeometry.viewportWidth - 8, JSON.stringify(menuGeometry));
+
+      const optionText = await selector.locator('.pixel-option').evaluateAll(options => (
+        options.map(option => {
+          const textNode = [...option.childNodes]
+            .find(node => node.nodeType === Node.TEXT_NODE);
+          if (!textNode) throw new Error('Pixel option has no text node');
+          const range = document.createRange();
+          range.selectNodeContents(textNode);
+          const text = range.getBoundingClientRect();
+          const button = option.getBoundingClientRect();
+          return {
+            clientWidth: option.clientWidth,
+            label: textNode.textContent,
+            optionLeft: button.left,
+            optionRight: button.right,
+            textLeft: text.left,
+            textRight: text.right,
+            textWidth: text.width,
+          };
+        })
+      ));
+      for (const option of optionText) {
+        assert.ok(option.textWidth <= option.clientWidth, JSON.stringify(option));
+        assert.ok(option.textLeft >= option.optionLeft, JSON.stringify(option));
+        assert.ok(option.textRight <= option.optionRight, JSON.stringify(option));
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test("only Grunhilda's giver intro contains the iron selector", async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.desktop,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    for (const giver of ['running', 'mobility']) {
+      await openGiverBoard(page, giver);
+      const intro = page.locator('.giver-board-intro');
+      assert.equal(
+        await intro.evaluate(element => element.textContent.replace(/\s+/g, ' ').trim()),
+        'One eligible path, chosen from this giver’s work for today.',
+      );
+      assert.equal(await intro.locator('.iron-today-control').count(), 0);
+      assert.doesNotMatch(await intro.textContent(), /within reach today/i);
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('the page scrollbar uses the shared token-driven treatment', async () => {
+  for (const name of ['phone', 'desktop']) {
+    const { context, failures, page } = await openMainProfile(GIVER_VIEWPORTS[name]);
+    try {
+      await createGiverProfile(page, 'considered');
+      await page.evaluate(() => nav('settings'));
+      await page.locator('#settings-game').waitFor();
+      const scrollbar = await page.evaluate(() => {
+        const root = document.documentElement;
+        const style = getComputedStyle(root);
+        const thumb = getComputedStyle(root, '::-webkit-scrollbar-thumb');
+        const track = getComputedStyle(root, '::-webkit-scrollbar-track');
+        return {
+          gold: style.getPropertyValue('--gold').trim(),
+          gutter: style.scrollbarGutter,
+          isScrollable: root.scrollHeight > window.innerHeight,
+          panel2: style.getPropertyValue('--panel2').trim(),
+          scrollbarColor: style.scrollbarColor,
+          scrollbarWidth: style.scrollbarWidth,
+          thumbBackground: thumb.backgroundColor,
+          thumbRadius: thumb.borderRadius,
+          trackBackground: track.backgroundColor,
+        };
+      });
+      assert.equal(scrollbar.isScrollable, true);
+      assert.equal(scrollbar.gutter, 'stable');
+      assert.equal(scrollbar.scrollbarWidth, 'thin');
+      assert.equal(scrollbar.scrollbarColor, 'rgb(201, 162, 75) rgb(25, 25, 40)');
+      assert.equal(scrollbar.thumbBackground, 'rgb(201, 162, 75)');
+      assert.equal(scrollbar.thumbRadius, '0px');
+      assert.equal(scrollbar.trackBackground, 'rgb(25, 25, 40)');
+
+      if (EVIDENCE_DIR) {
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `page-scrollbar-${name}.png`),
+        });
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
   }
 });
 
