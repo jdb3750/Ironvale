@@ -107,6 +107,12 @@ of the current phase** rather than being smuggled into feature seams. Add to thi
 list as things are found; do not let it become a wishlist — every entry should be
 something verified, with the reason it matters.
 
+**Standing policy.** Every bug, glitch, error or surprise gets written here **the
+moment it is found**, even when it is not fixed in that seam — a report in a chat
+window is not a record. **Dead code counts as a defect, not a curiosity:** junk
+code is resolved so the codebase stays steady. Nothing on this list is "parked";
+entries are open work with the removal path worked out.
+
 **Defects (behaviour is wrong today)**
 
 - **The workout logger's empty state still names a retired giver.**
@@ -151,21 +157,29 @@ something verified, with the reason it matters.
 
 **Dead code**
 
-- **The legacy offer path — PARKED, do not delete on sight.** `get_offers`,
-  `accept_offer`, `gen_lift_offers`, `gen_endurance_offers`, `gen_climb_offers`
-  are reachable only from tests (verified caller-by-caller).
-  **`gen_mobility_offers` is LIVE** and must never be deleted by association:
-  mobility never got a `build_*_candidates` function, so
-  `counsel_specialists.mobility` calls the legacy generator directly.
+- **The legacy offer path — REMOVE IT.** `get_offers`, `accept_offer`,
+  `gen_lift_offers`, `gen_endurance_offers`, `gen_climb_offers` are reachable only
+  from tests (verified caller-by-caller). **`gen_mobility_offers` is LIVE** and must
+  never be deleted by association: mobility never got a `build_*_candidates`
+  function, so `counsel_specialists.mobility` calls the legacy generator directly.
 
-  Reviewed 2026-07-29 and deliberately left in place.
-  `test_counsel_engine_baseline.py` is a **characterization suite** pinning exact
-  historical offer shapes and reward values through these generators, and
-  `test_counsel_attribution.py` uses `accept_offer` to prove a non-Council quest
-  carries no attribution row. Deleting the code deletes that golden-master data
-  and makes the attribution invariant vacuous. The code costs nothing sitting
-  still; removing it costs real test surgery and historical evidence. Revisit
-  only if it starts obstructing a change.
+  *(I briefly argued for parking this because two suites reach through it. Joe
+  overruled it — dead code is junk code, and steadiness beats convenience. He is
+  right, and the removal is cleaner than I claimed.)*
+
+  The two dependent suites both have honest live replacements:
+  - `test_counsel_engine_baseline.py` characterizes the **legacy** generators'
+    offer shapes and reward values. Repoint it at the Council path, which is what
+    actually runs — better coverage than pinning dead output.
+  - `test_counsel_attribution.py` uses `accept_offer` to prove a quest can exist
+    with **no attribution row**. That invariant is NOT vacuous: it is live and
+    exercised by `_record_unguided_completion` (`app/quests.py:1219`), which inserts
+    an unguided-activity quest with no attribution every time a player trains
+    without one. Repoint the test there.
+
+  Also worth tightening once the dead caller is gone: `create_quest_from_offer`'s
+  `attribution` parameter defaults to `None` only because `accept_offer` needed it.
+  Afterwards `counsel.py` is the sole caller and always passes one.
 
 **Legibility**
 
