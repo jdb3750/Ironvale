@@ -64,9 +64,10 @@ GIVER_ARCHETYPES = {
         "modalities": ("barbell", "dumbbell", "kettlebell", "bodyweight"),
     },
     "strength": {
-        "archetype": "Skill",
-        "display": {"name": "Ser Bram", "title": "the Unburdened", "sprite": "bram"},
-        "modalities": ("climbing", "calisthenics", "plyometrics", "sprints"),
+        # Historical identity remains registered; retirement owns no live modalities.
+        "archetype": "Retired",
+        "display": {"name": "Ser Bram", "title": "the Old Knight at Rest", "sprite": "bram"},
+        "modalities": (),
     },
     "mobility": {
         "archetype": "Recovery",

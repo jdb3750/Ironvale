@@ -31,11 +31,17 @@ def seed_recent_barbell() -> None:
     db.commit()
 
 
-def seed_recent_pull_up() -> None:
-    db.q(
-        "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
-        (NOW.isoformat(timespec="seconds"), "Pull-Up", 0, 6),
-    )
+def seed_recent_pull_up(weight: float = 0.0, sessions: int = 1) -> None:
+    for day in range(sessions):
+        db.q(
+            "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
+            (
+                (NOW - timedelta(days=day)).isoformat(timespec="seconds"),
+                "Pull-Up",
+                weight,
+                6,
+            ),
+        )
     db.commit()
 
 
@@ -300,6 +306,21 @@ def logged_bodyweight_movement_is_offered_without_a_load() -> None:
     assert option_equipment(current) == {"bodyweight"}
 
 
+def loaded_bodyweight_movement_keeps_its_weight() -> None:
+    # Given: three recent Pull-Up sessions all carry a real external load.
+    new_profile("strength-weighted-bodyweight-movement")
+    write_fresh_sync()
+    seed_recent_pull_up(10.0, sessions=3)
+
+    # When: Grunhilda builds the ordinary Strength offer.
+    current = offers("kettlebell")
+
+    # Then: the catalog's bodyweight tag does not erase the recorded load.
+    assert current
+    assert all(option.routine[0].exercise == "Pull-Up" for option in current)
+    assert all(option.routine[0].suggest_weight == 10.0 for option in current)
+
+
 def bodyweight_session_counts_as_strength_history() -> None:
     # Given: a bodyweight-only ledger day.
     new_profile("strength-bodyweight-history")
@@ -406,6 +427,7 @@ def no_override_preserves_current_behavior() -> None:
     before = offers("kettlebell")
     assert option_equipment(before) == {"barbell"}
     assert all(option.sizing == "personalized" for option in before)
+    assert all(option.routine[0].suggest_weight == 82.5 for option in before)
 
     # When: the optional declaration is explicitly clear.
     set_iron_today(None)
@@ -484,6 +506,10 @@ for label, scenario in (
     (
         "logged bodyweight movement is offered without a load",
         logged_bodyweight_movement_is_offered_without_a_load,
+    ),
+    (
+        "loaded bodyweight movement keeps its weight",
+        loaded_bodyweight_movement_keeps_its_weight,
     ),
     (
         "bodyweight session counts as strength history",

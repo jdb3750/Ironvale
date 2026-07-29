@@ -65,11 +65,9 @@ def _iron_exercises(
         if exercise["equipment"] == equipment and name not in names
     )
     chosen = tuple(names[:4])
-    # Bodyweight history sizes Strength but never implies an external load.
+    # Zero is the ledger sentinel for unloaded work; real load is implement-agnostic.
     weights = tuple(
-        None
-        if exercises.EXERCISES[name]["equipment"] == "bodyweight"
-        else context.latest_weight(name)
+        context.latest_weight(name) or None
         for name in chosen
     )
     focus_source = (
