@@ -18,7 +18,7 @@ skills under `.opencode/skills/`, loaded on demand:
 - `iron-vale-ops` — redeploy/restart procedure, full testing recipe,
   live-data correction playbook, opening PRs.
 
-Two tracked design documents sit alongside this one:
+Three tracked design documents sit alongside this one:
 
 - `DOCTRINE.md` — the science behind the Council's numbers. Every constant in the
   recommendation engine is either traced to a cited source or honestly labelled a
@@ -28,7 +28,11 @@ Two tracked design documents sit alongside this one:
 - `COUNCIL_REDESIGN.md` — the Council's implementation charter: the archetype
   roster, the UI design language (§3b), what was deliberately cut and why (§7b),
   and the open follow-ups (§3, §8). Read §7b before rebuilding anything that
-  correlates counsel with fitness outcomes.
+  correlates counsel with fitness outcomes. **§0c supersedes §0b's four-giver
+  roster** — three givers offer quests; Bram is retired but never deleted.
+- `ROADMAP.md` — app-wide direction beyond the Council: the capability/plugin
+  surface and its deliberate non-goals. Nothing in it is approved to build; read
+  it before proposing an architecture that would overlap it.
 
 This file holds only the always-true rules and quick-reference tables.
 
