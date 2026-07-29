@@ -109,12 +109,16 @@ something verified, with the reason it matters.
   logged at 10 kg offers no weight — and weighted pull-ups and dips are the
   natural progression once bodyweight reps get easy. Fix: suppress on a falsy
   weight, not on the equipment tag. *(Verified by probe.)*
-- **`save_routine` accepts off-catalog exercise names.** `programs.py` stores any
-  non-empty string as an exercise. The *readers* were hardened after this crashed
-  Grunhilda's board with a `KeyError`, but the writer is still unvalidated, so new
-  unreadable routines can still be created. Decide whether to validate on write or
-  to keep tolerating them by contract — but decide, rather than leaving it
-  accidental.
+- ~~**`save_routine` accepts off-catalog exercise names.**~~ **RESOLVED as
+  intended behaviour, 2026-07-29.** Traced every direct `EXERCISES[...]` index in
+  app code: five sit in `quests.py`'s lift builder where the names come *from* the
+  catalog, and one is the bodyweight-weight check — all fed catalog names, none
+  reachable with user input. The only reader that ever saw a user-supplied name
+  was the doctrine-equipment derivation, already hardened. So the permissive
+  writer is a **feature**: it lets a player name a movement the catalog lacks (a
+  sandbag, a ring variation). Validating on write would remove that to fix a crash
+  that no longer exists. **The contract is: the writer accepts any name; readers
+  must tolerate unknown ones.** Documented here rather than enforced in code.
 
 **Stale declarations (inert now, traps later)**
 
@@ -126,18 +130,26 @@ something verified, with the reason it matters.
 
 **Dead code**
 
-- **The legacy offer path** — `get_offers`, `accept_offer`, `gen_lift_offers`,
-  `gen_endurance_offers`, `gen_climb_offers` are reachable only from tests
-  (verified caller-by-caller). **`gen_mobility_offers` is LIVE** and must not be
-  deleted by association: mobility never got a `build_*_candidates` function, so
-  `counsel_specialists.mobility` calls the legacy generator directly. Removing the
-  dead five means rewriting the tests that reach through them.
+- **The legacy offer path — PARKED, do not delete on sight.** `get_offers`,
+  `accept_offer`, `gen_lift_offers`, `gen_endurance_offers`, `gen_climb_offers`
+  are reachable only from tests (verified caller-by-caller).
+  **`gen_mobility_offers` is LIVE** and must never be deleted by association:
+  mobility never got a `build_*_candidates` function, so
+  `counsel_specialists.mobility` calls the legacy generator directly.
+
+  Reviewed 2026-07-29 and deliberately left in place.
+  `test_counsel_engine_baseline.py` is a **characterization suite** pinning exact
+  historical offer shapes and reward values through these generators, and
+  `test_counsel_attribution.py` uses `accept_offer` to prove a non-Council quest
+  carries no attribution row. Deleting the code deletes that golden-master data
+  and makes the attribution invariant vacuous. The code costs nothing sitting
+  still; removing it costs real test surgery and historical evidence. Revisit
+  only if it starts obstructing a change.
 
 **Legibility**
 
-- **Copy living in CSS.** The lead-in string `within reach today: ` is a
-  `content:` rule in `style.css` rather than the template — the only user-visible
-  string in the codebase kept in the stylesheet.
+- ~~**Copy living in CSS.**~~ **DONE in v0.22.3** — the `within reach today:`
+  lead-in moved from a `content:` rule into the `giver.js` template.
 - **`strength` means two things.** In `COUNSEL_FOCUS_GIVERS` it is both a focus
   value (-> Grunhilda) and a giver key (Bram). Correct but hostile to read; it
   resolves itself with the DB key rename in §2.
