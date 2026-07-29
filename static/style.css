@@ -578,6 +578,45 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   background: #000; border: 2px solid #3a3450; padding: 10px;
   font-size: 18px; line-height: 1.25; text-align: left;
 }
+/* Shared scrollable panels use one square, token-driven scrollbar treatment.
+   The document scrollbar stays native; its stable gutter is a separate
+   page-layout contract. */
+.pixel-select-menu,
+.hat-picker-menu,
+.dlog,
+.dev-console-output,
+.overlay .win {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold) var(--panel2);
+}
+.pixel-select-menu::-webkit-scrollbar,
+.hat-picker-menu::-webkit-scrollbar,
+.dlog::-webkit-scrollbar,
+.dev-console-output::-webkit-scrollbar,
+.overlay .win::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.pixel-select-menu::-webkit-scrollbar-track,
+.hat-picker-menu::-webkit-scrollbar-track,
+.dlog::-webkit-scrollbar-track,
+.dev-console-output::-webkit-scrollbar-track,
+.overlay .win::-webkit-scrollbar-track,
+.pixel-select-menu::-webkit-scrollbar-corner,
+.hat-picker-menu::-webkit-scrollbar-corner,
+.dlog::-webkit-scrollbar-corner,
+.dev-console-output::-webkit-scrollbar-corner,
+.overlay .win::-webkit-scrollbar-corner {
+  background: var(--panel2);
+}
+.pixel-select-menu::-webkit-scrollbar-thumb,
+.hat-picker-menu::-webkit-scrollbar-thumb,
+.dlog::-webkit-scrollbar-thumb,
+.dev-console-output::-webkit-scrollbar-thumb,
+.overlay .win::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 0;
+}
 .dev-console-line { white-space: pre-wrap; overflow-wrap: anywhere; }
 .dev-console-line.title { color: var(--green); }
 .dev-console-line.muted { color: var(--dim); }
@@ -1435,7 +1474,10 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
    inset rows so they clearly belong to the dropdown — unlike the standalone
    buttons (UNBUDDY etc.) below it. */
 .hat-picker,
-.pixel-select { min-inline-size: 0; }
+.pixel-select {
+  position: relative;
+  min-inline-size: 0;
+}
 .hat-picker > summary,
 .pixel-select > summary {
   display: block;
@@ -1462,6 +1504,11 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pixel-select[open] > .pixel-select-summary::after { content: ' \25b4'; color: var(--gold); }
 .hat-picker-menu,
 .pixel-select-menu {
+  position: absolute;
+  z-index: 80;
+  inset-block-start: 100%;
+  inset-inline: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1469,8 +1516,20 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   border-top: 0;
   background: #0b0b14;
   padding: 5px;
+  max-block-size: 230px;
+  overflow-y: auto;
 }
-.pixel-select-menu { max-block-size: 230px; overflow-y: auto; }
+/* No pixelSelect currently renders inside an overlay. .overlay .win owns
+   scrolling and clips absolute descendants; any future overlay caller must
+   keep layoutFloatingPicker's overlay clamp (as the phone hat picker does)
+   or portal its menu outside that scroll owner. */
+.hat-picker.picker-opens-up > .hat-picker-menu,
+.pixel-select.picker-opens-up > .pixel-select-menu {
+  inset-block-start: auto;
+  inset-block-end: 100%;
+  border-top: 2px solid var(--gold);
+  border-bottom: 0;
+}
 .hat-picker-menu .hat-option,
 .pixel-select-menu .pixel-option {
   width: 100%;

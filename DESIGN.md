@@ -198,6 +198,36 @@ be silently normalized during unrelated work.
 - **Loading / empty / error:** no generic loading or empty state exists. Error
   meaning is expressed by `.danger`; callers own loading and empty behavior.
 
+### Pixel Select (`.pixel-select`, `.hat-picker`)
+
+- **Structure:** a native `details`/`summary` disclosure contains the existing
+  chunky option buttons and a hidden value input where the caller needs form
+  compatibility. The Menagerie hat picker shares the same menu-row language.
+- **Layout:** the menu floats above ordinary page content and never changes
+  document flow. It opens below when the list fits, flips above when the lower
+  viewport edge or compact phone dock would cover it, and scrolls within a
+  `230px` maximum block size.
+- **Layering:** floating menus sit above ordinary page surfaces but below the
+  compact dock, overlays, and toasts. An overlay scroll window clips absolute
+  descendants, so any future select placed inside one must retain the shared
+  overlay-boundary clamp or portal its menu outside the scroll owner.
+- **Dismissal:** only one picker may be open at a time. Outside activation and
+  Escape close it; Escape restores focus to the summary. Events within the
+  picker, including scrollbar interaction, remain owned by the picker.
+- **States:** summary default, hover, pressed, focus, open, and disabled states
+  reuse the pixel-button contract. Options preserve their selected, hover, and
+  `menuitemradio` semantics; floating changes placement only.
+
+### Scrollable Panels
+
+- **Scope:** menus (`.pixel-select-menu`, `.hat-picker-menu`), `.dlog`,
+  `.dev-console-output`, and overlay windows share the panel scrollbar. The
+  document scrollbar remains native and retains its stable gutter.
+- **Appearance:** Firefox uses `scrollbar-width: thin` and
+  `scrollbar-color`; Chromium/WebKit use the matching pseudo-elements. Both
+  render a square `--gold` thumb on a `--panel2` track, with no rounded corners
+  or new palette values.
+
 ### NPC Portrait And Dialogue (`.npc-head`, `.dialog`)
 
 - **Structure:** a flex `.npc-head` containing a pixelated portrait image (with
