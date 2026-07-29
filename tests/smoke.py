@@ -150,9 +150,9 @@ get("/api/dungeon", keys=["state", "stats", "theme", "enter_cost"])
 # ---- quest lifecycle: accept -> matching deed -> completable -> complete --
 print("quest lifecycle:")
 offers = client.get("/api/offers/running").json()["offers"]
-ok("Fenn considers one owned endurance path",
-   len(offers) == 1 and offers[0].get("modality") in {"run", "ride", "swim"})
-bram_offers = client.get("/api/offers/strength").json()["offers"]
+ok("Fenn considers one owned activity path",
+   len(offers) == 1 and offers[0].get("modality") in {"run", "ride", "swim", "climb"})
+bram_response = client.get("/api/offers/strength").json()
 grunhilda_offers = client.get("/api/offers/kettlebell").json()["offers"]
 iron_equipment = {
     exercises.EXERCISES[row["exercise"]]["equipment"]
@@ -163,9 +163,15 @@ ok("Grunhilda considers one owned Iron path",
    len(grunhilda_offers) == 1
    and len(iron_equipment) == 1
    and iron_equipment <= {"barbell", "dumbbell", "kettlebell"})
-ok("Bram deals only the wall",
-   len(bram_offers) == 1
-   and all(o.get("modality") == "climb" and o.get("target_minutes") for o in bram_offers))
+ok("Bram remains known but offers no new quests",
+   bram_response == {"offers": [], "active": None})
+bram_accept = client.post(
+    "/api/quests/accept",
+    json={"giver": "strength", "option_key": "retired-bram"},
+)
+ok("Bram refuses new quest acceptance",
+   bram_accept.status_code == 400
+   and "no longer sets quests" in bram_accept.json()["error"].casefold())
 r = client.post("/api/quests/accept", json={"giver": "running", "offer_id": offers[0]["offer_id"]})
 ok("accept quest", r.status_code == 200)
 q = client.get("/api/state").json()["active_quests"]
@@ -173,7 +179,12 @@ ok("quest is active", len(q) == 1)
 mins = q[0]["details"].get("target_minutes", 30)
 # complete it with an activity of the quest's OWN modality — this is also
 # the matcher-by-modality regression test (a swim quest needs a Swim)
-act_type = {"run": "Run", "ride": "Ride", "swim": "Swim"}.get(q[0]["details"].get("modality"), "Run")
+act_type = {
+    "run": "Run",
+    "ride": "Ride",
+    "swim": "Swim",
+    "climb": "Climbing",
+}.get(q[0]["details"].get("modality"), "Run")
 after_accept = (game.now() + timedelta(minutes=1)).isoformat(timespec="seconds")
 db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
      "VALUES ('smoke-run', 'smoke', ?, ?, 'quest deed', ?, ?)",

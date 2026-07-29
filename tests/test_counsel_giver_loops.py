@@ -1,3 +1,6 @@
+import json
+from datetime import timedelta
+
 from counsel_giver_test_support import (
     AcceptanceResponse,
     NOW,
@@ -26,7 +29,7 @@ def considered_contract() -> None:
         "strength": {"climb"},
         "mobility": {None},
     }
-    for giver in game.GIVER_ARCHETYPES:
+    for giver in game.OFFERABLE_GIVERS:
         new_profile(f"considered-{giver}")
         write_fresh_sync()
         first = offers(giver)
@@ -53,7 +56,6 @@ def self_tiers() -> None:
     expected = {
         "running": ("easy", "steady", "quality"),
         "kettlebell": ("volume", "circuit", "strength"),
-        "strength": ("technique", "volume", "limit-session"),
     }
     for giver, labels in expected.items():
         new_profile(f"self-{giver}", "self")
@@ -72,6 +74,127 @@ def self_tiers() -> None:
     write_fresh_sync()
     mobility = offers("mobility")
     assert len(mobility) == 3 and all(option.kind == "mobility" for option in mobility)
+
+
+def fenn_modality_dispatch() -> None:
+    # Given: all four of Fenn's activity-shaped roads are practiced and climbing
+    # is most due. Then: his tiers come from the climb builder, not endurance.
+    new_profile("self-fenn-climb", "self")
+    write_fresh_sync()
+    for activity_type, days_ago, minutes in (
+        ("Run", 1, 35),
+        ("Ride", 2, 60),
+        ("Swim", 3, 30),
+        ("Climbing", 9, 75),
+    ):
+        seed_activity(activity_type, days_ago, minutes)
+    climbing = offers("running")
+    assert {option.giver for option in climbing} == {"running"}
+    assert {option.modality for option in climbing} == {"climb"}
+    assert tuple(option.tier_label for option in climbing) == (
+        "technique",
+        "volume",
+        "limit-session",
+    )
+
+    for modality, activity_type, minutes in (
+        ("run", "Run", 35),
+        ("ride", "Ride", 60),
+        ("swim", "Swim", 30),
+    ):
+        new_profile(f"self-fenn-{modality}", "self")
+        write_fresh_sync()
+        seed_activity(activity_type, 4, minutes)
+        current = offers("running")
+        assert {option.modality for option in current} == {modality}
+        assert tuple(option.tier_label for option in current) == (
+            "easy",
+            "steady",
+            "quality",
+        )
+
+
+def seed_bram_quest(status: str = "active") -> int:
+    accepted_at = (NOW - timedelta(hours=1)).isoformat(timespec="seconds")
+    completed_at = NOW.isoformat(timespec="seconds") if status == "completed" else None
+    details = {
+        "modality": "climb",
+        "target_minutes": 30,
+        "intensity": "easy",
+        "structure": "Thirty minutes on the wall.",
+        "xp": 40,
+        "gold": 15,
+        "vigor": 2,
+    }
+    cursor = db.q(
+        "INSERT INTO quests "
+        "(giver, kind, title, details, status, accepted_at, completed_at) "
+        "VALUES (?,?,?,?,?,?,?)",
+        (
+            "strength",
+            "climb_technique",
+            "An Old Oath of the Wall",
+            json.dumps(details),
+            status,
+            accepted_at,
+            completed_at,
+        ),
+    )
+    db.commit()
+    assert cursor.lastrowid is not None
+    return cursor.lastrowid
+
+
+def bram_retirement_preserves_quests_and_history() -> None:
+    # Bram's identity remains permanent, but his live roster endpoint is empty.
+    new_profile("bram-retired")
+    retired = client.get("/api/offers/strength")
+    assert retired.status_code == 200
+    assert retired.json() == {"offers": [], "active": None}
+    refused = client.post(
+        "/api/quests/accept",
+        json={"giver": "strength", "option_key": "an-old-bram-offer"},
+    )
+    assert refused.status_code == 400
+    assert "no longer sets quests" in refused.json()["error"].casefold()
+
+    # A pre-existing oath still returns through Bram's endpoint and may complete.
+    new_profile("bram-active-complete")
+    quest_id = seed_bram_quest()
+    seed_activity("Climbing", 0, 45)
+    continued = client.get("/api/offers/strength")
+    assert continued.status_code == 200
+    assert continued.json()["offers"] == []
+    assert continued.json()["active"]["id"] == quest_id
+    assert continued.json()["active"]["completable"] is True
+    completed = client.post(
+        f"/api/quests/{quest_id}/complete",
+        json={"honor": False},
+    )
+    assert completed.status_code == 200
+    assert db.q("SELECT status FROM quests WHERE id=?", (quest_id,)).fetchone()["status"] == "done"
+    assert client.get("/api/offers/strength").json() == {"offers": [], "active": None}
+
+    # The same transition keeps abandonment available.
+    new_profile("bram-active-abandon")
+    abandoned_id = seed_bram_quest()
+    active = client.get("/api/offers/strength").json()
+    assert active["offers"] == [] and active["active"]["id"] == abandoned_id
+    abandoned = client.post(f"/api/quests/{abandoned_id}/abandon")
+    assert abandoned.status_code == 200
+    assert db.q(
+        "SELECT status FROM quests WHERE id=?",
+        (abandoned_id,),
+    ).fetchone()["status"] == "abandoned"
+
+    # Completed rows keep resolving the permanent display registry.
+    new_profile("bram-history")
+    historical_id = seed_bram_quest("completed")
+    history = client.get("/api/quests/log")
+    assert history.status_code == 200
+    stored = next(quest for quest in history.json()["quests"] if quest["id"] == historical_id)
+    assert stored["giver"] == "strength"
+    assert game.GIVERS[stored["giver"]]["name"] == "Ser Bram"
 
 
 def elowen_and_doctrine_precedence() -> None:
@@ -253,6 +376,8 @@ failures: list[str] = []
 for label, scenario in (
     ("considered contract", considered_contract),
     ("self tiers", self_tiers),
+    ("Fenn dispatches each modality to its existing tiers", fenn_modality_dispatch),
+    ("Bram retirement preserves quests and history", bram_retirement_preserves_quests_and_history),
     ("Elowen and doctrine precedence", elowen_and_doctrine_precedence),
     ("cold-start boundaries", cold_start_boundaries),
     ("wellness modes", wellness_modes),

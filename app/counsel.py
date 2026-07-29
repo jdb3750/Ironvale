@@ -46,8 +46,10 @@ def _giver_options(
     mode: counsel_candidates.GameMode,
     context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
-    if giver not in game.GIVER_ARCHETYPES:
+    if giver not in game.GIVERS:
         raise OfferValidationError("No such quest-giver.")
+    if giver not in game.OFFERABLE_GIVERS:
+        raise OfferValidationError(f"{game.GIVERS[giver]['name']} no longer sets quests.")
     rules = counsel_rules.rule_state(context=context)
     drafts = counsel_candidates.for_giver(giver, context)
     hard_suppressed = False
@@ -89,8 +91,10 @@ def _giver_options(
 
 
 def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
-    if giver not in game.GIVER_ARCHETYPES:
+    if giver not in game.GIVERS:
         raise OfferValidationError("No such quest-giver.")
+    if giver not in game.OFFERABLE_GIVERS:
+        raise OfferValidationError(f"{game.GIVERS[giver]['name']} no longer sets quests.")
     context = counsel_context.assemble()
     return _giver_options(
         giver,
@@ -101,8 +105,10 @@ def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
 
 def accept_current_option(giver: str, identity: OptionIdentity) -> int:
     mode = _game_mode()
-    if giver not in game.GIVER_ARCHETYPES:
+    if giver not in game.GIVERS:
         raise OfferValidationError("No such quest-giver.")
+    if giver not in game.OFFERABLE_GIVERS:
+        raise OfferValidationError(f"{game.GIVERS[giver]['name']} no longer sets quests.")
     for active in quests.active_quests():
         if active["giver"] == giver:
             name = game.GIVERS[giver]["name"]

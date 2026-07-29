@@ -92,6 +92,28 @@ def unset_charter_keeps_recency() -> None:
     assert "focus_charter" not in unchanged[0].reason_codes
 
 
+def climb_and_run_charters_filter_fenn() -> None:
+    # Given: both a recent run and an older climb. Then: a climb charter keeps
+    # the climb, while a run-only charter excludes it from Fenn's one slot.
+    new_profile("focus-fenn-climb", "self")
+    write_fresh_sync()
+    for days_ago in (1, 2, 3):
+        seed_activity("Run", days_ago, 40)
+    for days_ago in (7, 8, 9):
+        seed_activity("Climbing", days_ago, 75)
+
+    assert {option.modality for option in offers("running")} == {"climb"}
+    set_charter("climb", [])
+    climbing = offers("running")
+    assert {option.modality for option in climbing} == {"climb"}
+    assert all("focus_charter" in option.reason_codes for option in climbing)
+
+    set_charter("run", [])
+    running = offers("running")
+    assert {option.modality for option in running} == {"run"}
+    assert all("focus_charter" in option.reason_codes for option in running)
+
+
 failures: list[str] = []
 for label, scenario in (
     ("charter narrows the road", charter_narrows_the_road),
@@ -99,6 +121,7 @@ for label, scenario in (
     ("focus narrows but never gates", focus_narrows_but_never_gates),
     ("charter ignores unpracticed roads", charter_ignores_unpracticed_roads),
     ("unset charter keeps recency", unset_charter_keeps_recency),
+    ("climb and run charters filter Fenn", climb_and_run_charters_filter_fenn),
 ):
     try:
         scenario()

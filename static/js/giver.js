@@ -62,8 +62,12 @@ const CONGRATS = {
 const GIVER_ROLES = {
   running: 'Quests of the Long Way',
   kettlebell: 'Quests of Strength',
-  strength: 'Quests of the Unburdened',
+  strength: 'The Old Knight at Rest',
   mobility: 'Quests of Stillness',
+};
+
+const RETIRED_GIVER_LINES = {
+  strength: 'No new oaths from me, friend. I keep faith with the old ones, but I set no tasks now.',
 };
 
 let giverResponsiveQuery = null;
@@ -158,8 +162,11 @@ SCREENS.giver = async function () {
   const g = S.state.givers[key];
   const data = await api(`/offers/${key}`);
   if (!isRouteTokenCurrent(token)) return;
+  const isOfferable = Array.isArray(S.state.offerable_givers)
+    && S.state.offerable_givers.includes(key);
   let line;
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
+  else if (!isOfferable && !data.active) line = RETIRED_GIVER_LINES[key];
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
   const isLiftGiver = ['kettlebell', 'strength'].includes(key);
   const isIronGiver = key === 'kettlebell';
@@ -283,6 +290,8 @@ SCREENS.giver = async function () {
         </details>` : ''}
       </div>
     </div>`;
+  } else if (!isOfferable) {
+    body = '';
   } else {
     const mode = data.offers[0]?.counsel_mode || S.state.settings?.counsel_mode || 'considered';
     const boardTitle = mode === 'self' ? 'Choose Your Path' : 'Today’s Considered Path';

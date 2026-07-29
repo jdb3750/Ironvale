@@ -181,6 +181,7 @@ def legacy_iron_charter_survives_as_strength() -> None:
 
 def focus_resolution_is_explicit() -> None:
     assert counsel_nudge._giver_for_focus("strength") == "kettlebell"
+    assert counsel_nudge._giver_for_focus("climb") == "running"
 
     try:
         counsel_nudge._giver_for_focus("unmapped")
@@ -191,6 +192,21 @@ def focus_resolution_is_explicit() -> None:
         raise AssertionError("unresolvable focus leaked StopIteration") from error
     else:
         raise AssertionError("unresolvable focus did not fail")
+
+
+def climb_nudge_routes_to_fenn() -> None:
+    # Given: climbing is the practiced, overdue charter focus. Then: the daily
+    # pointer names Fenn, never Bram's permanent historical identity.
+    new_profile("nudge-climb-fenn")
+    seed_activity("Climbing", 5, 75)
+    enable(counsel_charter={"primary": "climb", "secondary": []})
+    pointed = nudge()
+    assert pointed is not None
+    assert (pointed["focus"], pointed["giver"], pointed["giver_name"]) == (
+        "climb",
+        "running",
+        "Old Fenn",
+    )
 
 
 def malformed_persisted_settings_are_normalized() -> None:
@@ -304,6 +320,7 @@ for label, scenario in (
     ("malformed persisted charter is normalized", malformed_persisted_charter_is_normalized),
     ("legacy iron charter survives as strength", legacy_iron_charter_survives_as_strength),
     ("focus resolution is explicit", focus_resolution_is_explicit),
+    ("climb nudge routes to Fenn", climb_nudge_routes_to_fenn),
     ("malformed persisted settings are normalized", malformed_persisted_settings_are_normalized),
     ("empty-charter fallback is deterministic", fallback_determinism),
     ("strain routes to Elowen only when recovery is practiced", strain_routes_to_practiced_recovery_only),

@@ -177,6 +177,7 @@ def state():
         "settings": {**s, "intervals_api_key": bool(s["intervals_api_key"])},
         "siege_timezone": raid.get_siege_timezone(),
         "givers": game.GIVERS,
+        "offerable_givers": game.OFFERABLE_GIVERS,
         "ambition_levels": game.AMBITION,
         "active_quests": actives,
         "inventory": _inventory(),
@@ -300,7 +301,7 @@ async def save_settings(request: Request):
 def offers(giver: str):
     if giver not in game.GIVERS:
         raise ValueError("No such quest-giver.")
-    out = counsel.giver_options(giver)
+    out = counsel.giver_options(giver) if giver in game.OFFERABLE_GIVERS else ()
     active = next((q for q in quests.active_quests() if q["giver"] == giver), None)
     if active:
         ok, note, _ = quests.quest_completable(active)
@@ -324,6 +325,8 @@ async def accept(request: Request):
     offer_id = body.get("offer_id")
     if not isinstance(giver, str) or giver not in game.GIVERS:
         raise counsel.OfferValidationError("No such quest-giver.")
+    if giver not in game.OFFERABLE_GIVERS:
+        raise counsel.OfferValidationError(f"{game.GIVERS[giver]['name']} no longer sets quests.")
     if option_key is not None and (not isinstance(option_key, str) or not option_key):
         raise counsel.OfferValidationError("That offer key is not recognized.")
     if offer_id is not None and type(offer_id) is not int:

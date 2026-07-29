@@ -47,14 +47,6 @@ const GIVER_BOARD_CASES = [
     warnedTier: 'strength',
   },
   {
-    giver: 'strength',
-    stateName: 'ser-bram-strength',
-    identity: 'Ser Bram the Unburdened',
-    portrait: 'bram',
-    selfTiers: ['technique', 'volume', 'limit-session'],
-    warnedTier: 'limit-session',
-  },
-  {
     giver: 'mobility',
     stateName: 'elowen-mobility',
     identity: 'Sage Elowen of the Willow',
@@ -220,6 +212,11 @@ async function openGiverBoard(page, giver) {
   await page.waitForFunction(giverKey => (
     document.querySelector('.giver-offer-board')?.dataset.giver === giverKey
     || /Your Sworn (Quest|Writ)/.test(document.querySelector('.win-title')?.textContent || '')
+    || (
+      S.params.giver === giverKey
+      && !S.state.offerable_givers.includes(giverKey)
+      && document.querySelector('.npc-head')
+    )
   ), giver);
   await page.locator('.npc-head').waitFor();
   await page.waitForFunction(() => {
@@ -850,7 +847,7 @@ test('giver counsel boards render deterministic one-or-three paths across respon
         }
       }
     }
-    assert.equal(matrix.length, 24);
+    assert.equal(matrix.length, 18);
     await page.setViewportSize(GIVER_VIEWPORTS.phone);
     await openGiverBoard(page, 'running');
     const hardWarningCard = page.locator('.counsel-path-card.has-wellness-warning');
@@ -885,6 +882,55 @@ test('giver counsel boards render deterministic one-or-three paths across respon
           },
         }, null, 2)}\n`,
       );
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('town keeps all four giver identities while Bram has no offer board', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    for (const [viewportName, viewport] of Object.entries(GIVER_VIEWPORTS)) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => nav('town'));
+      await page.locator('.town-scene').waitFor();
+      for (const name of ['Old Fenn', 'Grunhilda', 'Ser Bram', 'Sage Elowen']) {
+        assert.equal(
+          await page.getByRole('button', { name: new RegExp(`Visit ${name}`) }).count(),
+          1,
+        );
+      }
+      assert.match(
+        await page.getByRole('button', { name: /Visit Ser Bram/ }).getAttribute('aria-label'),
+        /The Old Knight at Rest/,
+      );
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `three-giver-town-four-identities__${viewportName}.png`),
+        });
+      }
+
+      await openGiverBoard(page, 'strength');
+      assert.match(await page.locator('.npc-name').innerText(), /Ser Bram the Unburdened/);
+      assert.match(await page.locator('#dlg').innerText(), /set no tasks now/i);
+      assert.equal(await page.locator('.giver-offer-board').count(), 0);
+      assert.equal(await page.locator('.giver-offer-panel').count(), 0);
+      assert.equal(await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).count(), 0);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        true,
+      );
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `retired-ser-bram__${viewportName}.png`),
+        });
+      }
     }
     assert.deepEqual(failures, []);
   } finally {
@@ -1037,7 +1083,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '98'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '99'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
