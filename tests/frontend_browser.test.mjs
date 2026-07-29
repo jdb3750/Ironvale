@@ -1197,7 +1197,7 @@ test('town keeps all four giver identities while Bram has no offer board', async
       }
 
       await openGiverBoard(page, 'strength');
-      assert.match(await page.locator('.npc-name').innerText(), /Ser Bram the Unburdened/);
+      assert.match(await page.locator('.npc-name').innerText(), /Ser Bram the Old Knight at Rest/);
       assert.match(await page.locator('#dlg').innerText(), /set no tasks now/i);
       assert.equal(await page.locator('.giver-offer-board').count(), 0);
       assert.equal(await page.locator('.giver-offer-panel').count(), 0);

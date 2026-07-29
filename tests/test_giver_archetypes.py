@@ -17,13 +17,15 @@ context = counsel_context.assemble()
 expected_titles = {
     "running": ("Old Fenn", "the Wayfarer"),
     "kettlebell": ("Grunhilda", "Iron-Bell"),
-    "strength": ("Ser Bram", "the Unburdened"),
+    "strength": ("Ser Bram", "the Old Knight at Rest"),
     "mobility": ("Sage Elowen", "of the Willow"),
 }
 assert tuple(game.GIVER_ARCHETYPES) == tuple(expected_titles)
 assert tuple(game.GIVERS) == tuple(expected_titles)
 assert game.OFFERABLE_GIVERS == ("running", "kettlebell", "mobility")
 assert game.GIVER_ARCHETYPES["running"]["modalities"] == counsel_candidates.FENN_MODALITIES
+assert game.GIVER_ARCHETYPES["strength"]["archetype"] == "Retired"
+assert game.GIVER_ARCHETYPES["strength"]["modalities"] == ()
 for giver, (name, title) in expected_titles.items():
     ownership = game.GIVER_ARCHETYPES[giver]
     assert ownership["display"]["name"] == name

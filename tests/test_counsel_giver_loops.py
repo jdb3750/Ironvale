@@ -195,6 +195,9 @@ def bram_retirement_preserves_quests_and_history() -> None:
     stored = next(quest for quest in history.json()["quests"] if quest["id"] == historical_id)
     assert stored["giver"] == "strength"
     assert game.GIVERS[stored["giver"]]["name"] == "Ser Bram"
+    assert game.GIVERS[stored["giver"]]["title"] == "the Old Knight at Rest"
+    assert game.GIVER_ARCHETYPES[stored["giver"]]["archetype"] == "Retired"
+    assert game.GIVER_ARCHETYPES[stored["giver"]]["modalities"] == ()
 
 
 def elowen_and_doctrine_precedence() -> None:
