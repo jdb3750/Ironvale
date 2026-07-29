@@ -95,6 +95,47 @@ Headings reset to normal weight. Uppercase labels and controls generally use
 from `12px` upward exist outside this small shared scale. That variation is an
 observed inconsistency, not a recommendation to add more sizes.
 
+### PROPOSED — Quanta-Strike and a type-scale pass (NOT implemented)
+
+A candidate recorded for a later, explicitly approved pass. **Nothing below is
+built.** Font: <https://github.com/dithernaut/quanta-strike>.
+
+**What it is.** Not a variable font. It is a family of hand-drawn **strikes**,
+each designed for one exact pixel size — `quanta-strike-16` is sharp at 16px and
+blurs at every other size. Family and size are bound together on purpose;
+fluid sizing and `clamp()` are unusable with it by design. Shipped strikes:
+**6, 10, 12, 14, 16, 18, 20, 32**.
+
+**Why it fits mechanically.** OFL-1.1, so bundling is fine. It ships **woff2**,
+which drops straight into the existing self-hosted `@font-face` pattern beside
+VT323 and PressStart. 1,100+ glyphs with bold, against VT323's thin coverage.
+`-webkit-font-smoothing: none` is already set, which is correct for pixel type.
+**Vendor the woff2 files directly; do not take the npm dependency** — the package
+exists to generate binding CSS, and this project has no CSS build step.
+
+**Why it is not a font swap.** The stylesheet uses **17 distinct sizes** (11–24,
+plus 26, 28, 30). Only **49 of 128** `font-size` declarations land on a size that
+has a strike; **79 do not** — including three of the five most-used sizes, 15px
+(18 uses), 17px (13) and 19px (12), all odd numbers with no strike. Adopting the
+font therefore *requires* collapsing the scale onto roughly six sizes.
+
+**The type-scale pass.** Choose a small set of sizes and map every existing use
+onto one of them. Copy does not change; the decision is that "small" means one
+number rather than four nearly-identical ones. Note this is work the section
+above already implies — the drift is recorded there as an inconsistency
+independent of any font.
+
+**Sequencing — trial before commitment.** Strikes at 16, 18 and 20 already match
+sizes in heavy use, so the font can be dropped onto **one screen at those sizes
+only**, judged in situ, and deleted if disliked. Pay for the scale pass only
+after that trial succeeds. Do not begin with the scale normalization.
+
+**Pair it with §7's elevation proposal.** Both are system-wide visual passes
+requiring every screen to be re-walked and re-checked at 375px; running them
+together means one round of that verification rather than two. VT323 is tall and
+condensed, so different metrics will shift line lengths and wrapping everywhere —
+that re-check is the real cost, not the CSS.
+
 ## 4. Spacing & Layout
 
 ### Base Rhythm

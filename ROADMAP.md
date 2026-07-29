@@ -92,6 +92,13 @@ sketches. Neither is scoped.
   tension it resolves are in `DESIGN.md` §7 ("PROPOSED — elevation for overlaid
   surfaces"). **Queued next after the dropdown width/wrap fix**, as a system-wide
   pass rather than a menu-only tweak.
+- **Quanta-Strike font + type-scale pass** — a hand-drawn pixel font whose strikes
+  are each sharp at exactly one size, which would force collapsing the stylesheet's
+  17 text sizes onto about six. OFL-licensed, ships woff2, drops into the existing
+  self-hosted font pattern. Analysis, the size mismatch, and the trial-first
+  sequencing are in `DESIGN.md` §3 ("PROPOSED — Quanta-Strike"). **Try it on one
+  screen before committing**; pair the full pass with the elevation work above,
+  since both require re-walking every screen.
 
 ## 3. Sweep-up backlog
 
