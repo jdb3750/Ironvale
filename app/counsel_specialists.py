@@ -65,7 +65,13 @@ def _iron_exercises(
         if exercise["equipment"] == equipment and name not in names
     )
     chosen = tuple(names[:4])
-    weights = tuple(context.latest_weight(name) for name in chosen)
+    # Bodyweight history sizes Strength but never implies an external load.
+    weights = tuple(
+        None
+        if exercises.EXERCISES[name]["equipment"] == "bodyweight"
+        else context.latest_weight(name)
+        for name in chosen
+    )
     focus_source = (
         tuple(group for row in valid for group in row.groups)
         if valid

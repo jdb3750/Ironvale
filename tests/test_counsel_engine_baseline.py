@@ -87,7 +87,11 @@ equipment = {
     for offer in iron
     for row in offer["routine"]
 }
-ok("Grunhilda retains all iron equipment", equipment == {"barbell", "dumbbell", "kettlebell"})
+ok(
+    "Grunhilda owns all Strength equipment",
+    len(iron) == 4
+    and equipment == {"barbell", "dumbbell", "kettlebell", "bodyweight"},
+)
 ok(
     "Grunhilda retains the characterized routines and rewards",
     {offer_contract(offer) for offer in iron}

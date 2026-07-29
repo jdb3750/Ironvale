@@ -11,20 +11,20 @@ FOCUS_KIND: Final[Dict[str, counsel_context.TrainingKind]] = {
     "ride": "ride",
     "swim": "swim",
     "climb": "climb",
-    "iron": "iron",
+    "strength": "iron",
     "recovery": "recovery",
 }
 JsonMap = Dict[str, pydantic.JsonValue]
 
 
 def _giver_for_focus(focus: str) -> str:
-    modality = "climbing" if focus == "climb" else focus
-    return next(
-        giver
-        for giver, ownership in game.GIVER_ARCHETYPES.items()
-        if modality in ownership["modalities"]
-        or focus.casefold() == ownership["archetype"].casefold()
-    )
+    # Focus ownership is declared data; display labels never define identity.
+    try:
+        return game.COUNSEL_FOCUS_GIVERS[focus]
+    except KeyError as error:
+        raise ValueError(
+            f"No quest-giver is declared for counsel focus {focus!r}.",
+        ) from error
 
 
 def _days_since_practice(

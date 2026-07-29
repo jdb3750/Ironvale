@@ -15,6 +15,7 @@ from counsel_giver_test_support import (
     seed_activity,
     seed_adverse_wellness,
 )
+from app import counsel_nudge
 
 
 def nudge():
@@ -62,12 +63,12 @@ def no_practice_no_nudge() -> None:
 
 
 def charter_cadence() -> None:
-    # Given: primary run overdue at two days while secondary iron rests. Then:
+    # Given: primary run overdue at two days while secondary strength rests. Then:
     # the primary's tighter cadence wins; flipped recency flips the pointer.
     new_profile("nudge-cadence")
     seed_activity("Run", 3, 30)
     seed_activity("WeightTraining", 1, 30)
-    enable(counsel_charter={"primary": "run", "secondary": ["iron"]})
+    enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     first = nudge()
     assert first is not None and (first["focus"], first["giver"]) == ("run", "running")
     assert first["reason"] == "cadence" and first["days_since"] == 3
@@ -75,15 +76,15 @@ def charter_cadence() -> None:
     new_profile("nudge-cadence-flip")
     seed_activity("Run", 0, 30)
     seed_activity("WeightTraining", 5, 30)
-    enable(counsel_charter={"primary": "run", "secondary": ["iron"]})
+    enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     flipped = nudge()
     assert flipped is not None
-    assert (flipped["focus"], flipped["giver"]) == ("iron", "kettlebell")
+    assert (flipped["focus"], flipped["giver"]) == ("strength", "kettlebell")
 
     new_profile("nudge-nothing-due")
     seed_activity("Run", 1, 30)
     seed_activity("WeightTraining", 2, 30)
-    enable(counsel_charter={"primary": "run", "secondary": ["iron"]})
+    enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     assert nudge() is None  # everything inside its cadence: no nagging
 
 
@@ -100,34 +101,34 @@ def exact_cadence_boundaries() -> None:
     new_profile("nudge-secondary-day-three")
     seed_activity("Run", 0, 30)
     seed_activity("WeightTraining", 3, 30)
-    enable(counsel_charter={"primary": "run", "secondary": ["iron"]})
+    enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     assert nudge() is None
 
     # Given: the secondary reaches day four. Then: it becomes due.
     new_profile("nudge-secondary-day-four")
     seed_activity("Run", 0, 30)
     seed_activity("WeightTraining", 4, 30)
-    enable(counsel_charter={"primary": "run", "secondary": ["iron"]})
+    enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     secondary_due = nudge()
     assert secondary_due is not None
-    assert (secondary_due["focus"], secondary_due["days_since"]) == ("iron", 4)
+    assert (secondary_due["focus"], secondary_due["days_since"]) == ("strength", 4)
 
 
 def practiced_only() -> None:
-    # Given: a declared iron focus with zero iron sessions. Then: iron is never
+    # Given: declared strength with zero strength sessions. Then: strength is never
     # named — a practiced-but-undeclared run wins through the fallback instead.
     new_profile("nudge-unpracticed")
     seed_activity("Run", 6, 30)
-    enable(counsel_charter={"primary": "iron", "secondary": []})
+    enable(counsel_charter={"primary": "strength", "secondary": []})
     pointed = nudge()
     assert pointed is not None and pointed["focus"] == "run"
     assert pointed["reason"] == "balance"
 
     new_profile("nudge-unpracticed-quiet")
     seed_activity("Run", 1, 30)
-    enable(counsel_charter={"primary": "run", "secondary": ["iron"]})
+    enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     quiet = nudge()
-    assert quiet is None or quiet["focus"] != "iron"
+    assert quiet is None or quiet["focus"] != "strength"
 
 
 def future_activity_is_not_practice() -> None:
@@ -158,6 +159,40 @@ def malformed_persisted_charter_is_normalized() -> None:
     assert pointed is not None and pointed["giver"] == "running"
 
 
+def legacy_iron_charter_survives_as_strength() -> None:
+    # Given: the deployed spelling was persisted before Strength absorbed bodyweight.
+    new_profile("nudge-legacy-iron-charter")
+    db.kv_set(
+        "settings",
+        {
+            "timezone": "UTC",
+            "counsel_mode": "considered",
+            "counsel_nudge_enabled": False,
+            "counsel_charter": {"primary": "iron", "secondary": ["run"]},
+        },
+    )
+
+    # Then: settings preserves the charter under the declared Strength focus.
+    assert game.get_settings()["counsel_charter"] == {
+        "primary": "strength",
+        "secondary": ["run"],
+    }
+
+
+def focus_resolution_is_explicit() -> None:
+    assert counsel_nudge._giver_for_focus("strength") == "kettlebell"
+
+    try:
+        counsel_nudge._giver_for_focus("unmapped")
+    except ValueError as error:
+        assert "unmapped" in str(error)
+        assert "focus" in str(error).casefold()
+    except StopIteration as error:
+        raise AssertionError("unresolvable focus leaked StopIteration") from error
+    else:
+        raise AssertionError("unresolvable focus did not fail")
+
+
 def malformed_persisted_settings_are_normalized() -> None:
     new_profile("nudge-malformed-settings")
     db.kv_set("settings", 1)
@@ -175,7 +210,7 @@ def fallback_determinism() -> None:
     seed_activity("WeightTraining", 6, 30)
     enable()
     stale = nudge()
-    assert stale is not None and (stale["focus"], stale["reason"]) == ("iron", "balance")
+    assert stale is not None and (stale["focus"], stale["reason"]) == ("strength", "balance")
 
     new_profile("nudge-tie")
     seed_activity("Run", 3, 30)
@@ -267,6 +302,8 @@ for label, scenario in (
     ("a declared-but-unpracticed focus is never named", practiced_only),
     ("future activity is not practice", future_activity_is_not_practice),
     ("malformed persisted charter is normalized", malformed_persisted_charter_is_normalized),
+    ("legacy iron charter survives as strength", legacy_iron_charter_survives_as_strength),
+    ("focus resolution is explicit", focus_resolution_is_explicit),
     ("malformed persisted settings are normalized", malformed_persisted_settings_are_normalized),
     ("empty-charter fallback is deterministic", fallback_determinism),
     ("strain routes to Elowen only when recovery is practiced", strain_routes_to_practiced_recovery_only),

@@ -115,7 +115,6 @@ EXERCISES = {
 }
 
 KB_NAMES = [k for k, v in EXERCISES.items() if v["equipment"] == "kettlebell"]
-GYM_NAMES = [k for k, v in EXERCISES.items() if v["equipment"] in ("barbell", "dumbbell", "bodyweight")]
 
 
 def groups_for(exercise):

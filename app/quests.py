@@ -410,7 +410,7 @@ def gen_lift_offers(rng):
     ).fetchall())
     for i, equipment in enumerate(GIVER_ARCHETYPES["kettlebell"]["modalities"]):
         style = styles[i % len(styles)]
-        focus = focus_sets[i]
+        focus = focus_sets[i % len(focus_sets)]
         names = [
             name for name, exercise in exercises.EXERCISES.items()
             if exercise["equipment"] == equipment
@@ -421,7 +421,10 @@ def gen_lift_offers(rng):
             style=style,
             focus=tuple(focus),
             exercises=tuple(chosen),
-            weights=tuple(last_weight(name) for name in chosen),
+            weights=tuple(
+                None if equipment == "bodyweight" else last_weight(name)
+                for name in chosen
+            ),
             iron_session_count=iron_session_count,
         ))
         o = dict(candidate.payload)

@@ -59,9 +59,9 @@ GIVER_ARCHETYPES = {
         "modalities": ("run", "ride", "swim"),
     },
     "kettlebell": {
-        "archetype": "Iron",
+        "archetype": "Strength",
         "display": {"name": "Grunhilda", "title": "Iron-Bell", "sprite": "grunhilda"},
-        "modalities": ("barbell", "dumbbell", "kettlebell"),
+        "modalities": ("barbell", "dumbbell", "kettlebell", "bodyweight"),
     },
     "strength": {
         "archetype": "Skill",
@@ -78,7 +78,14 @@ GIVER_ARCHETYPES = {
 GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.items()}
 
 COUNSEL_MODES = ("considered", "self")
-COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "iron")
+COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "strength")
+COUNSEL_FOCUS_GIVERS = {
+    "run": "running",
+    "ride": "running",
+    "swim": "running",
+    "climb": "strength",
+    "strength": "kettlebell",
+}
 
 
 def profile_tz():
@@ -168,9 +175,18 @@ def _normalize_counsel_charter(value):
         return None
     primary = value.get("primary")
     secondary = value.get("secondary", [])
-    if not isinstance(primary, str) or primary not in COUNSEL_FOCUSES:
+    if not isinstance(primary, str):
         return None
     if not isinstance(secondary, list):
+        return None
+    # Persisted "iron" focus values are a legacy alias; normalize identity
+    # before validation so an old charter cannot be silently erased.
+    primary = "strength" if primary == "iron" else primary
+    secondary = [
+        "strength" if focus == "iron" else focus
+        for focus in secondary
+    ]
+    if primary not in COUNSEL_FOCUSES:
         return None
     if any(
         not isinstance(focus, str) or focus not in COUNSEL_FOCUSES
