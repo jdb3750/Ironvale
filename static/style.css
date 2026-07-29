@@ -1563,27 +1563,34 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   text-align: center;
 }
 .iron-today-control {
-  margin: 8px 0 12px;
-  padding: 8px 10px 10px;
-  border: 2px solid var(--gold);
-  background: var(--panel2);
+  max-inline-size: 360px;
+  margin: 0 auto 12px;
   text-align: center;
 }
-.iron-today-control .counsel-label { margin-top: 0; }
-.iron-today-options {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+.iron-today-control .pixel-select {
+  display: inline-block;
+  max-inline-size: 260px;
+  margin: 0;
 }
-.iron-today-options .btn {
-  min-block-size: 44px;
+.iron-today-control .pixel-select > .pixel-select-summary,
+.iron-today-control .pixel-select[open] > .pixel-select-summary {
+  display: inline-block;
+  width: auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  padding: 12px 4px;
+  color: var(--dim-readable);
+  font-size: 17px;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-.iron-today-options .btn.active {
-  border-color: var(--gold-bright);
-  background: var(--gold);
-  color: var(--bg);
+.iron-today-control .pixel-select-summary::before {
+  content: 'within reach today: ';
 }
 .offer.counsel-path-card:hover { border-color: #4a3d20; }
 .counsel-path-card.has-wellness-warning {

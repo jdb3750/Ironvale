@@ -290,20 +290,23 @@ SCREENS.giver = async function () {
       ? 'The counsel lays out each eligible effort. The choice remains yours.'
       : 'One eligible path, chosen from this giver’s work for today.';
     const selectedIron = S.state.settings?.counsel_iron_today?.equipment || '';
+    const selectedIronLabel = selectedIron || 'any iron';
+    // The day constraint stays inside Grunhilda's server-owned modalities;
+    // the empty choice clears it instead of naming another implement.
+    const ironTodayOptions = [
+      { value: '', label: 'any iron' },
+      ...(Array.isArray(data.modalities) ? data.modalities : [])
+        .map(equipment => ({ value: equipment, label: equipment })),
+    ];
     const ironTodayControl = isIronGiver ? `
       <div class="iron-today-control">
-        <span class="counsel-label">TODAY’S IRON</span>
-        <div class="counsel-help">Name only what is within reach today. The mark fades at dawn.</div>
-        <div class="iron-today-options" role="group" aria-label="Iron available today">
-          <button type="button" class="btn small ${selectedIron ? '' : 'active'}"
-            data-equipment="" aria-pressed="${selectedIron ? 'false' : 'true'}"
-            onclick="G.setIronToday(this.dataset.equipment)">ANY IRON</button>
-          ${(Array.isArray(data.modalities) ? data.modalities : []).map(equipment => `
-            <button type="button" class="btn small ${selectedIron === equipment ? 'active' : ''}"
-              data-equipment="${esc(equipment)}" aria-pressed="${selectedIron === equipment ? 'true' : 'false'}"
-              onclick="G.setIronToday(this.dataset.equipment)">${esc(equipment)}</button>
-          `).join('')}
-        </div>
+        ${pixelSelect(
+          'iron-today-equipment',
+          ironTodayOptions,
+          selectedIron,
+          `Iron available today: ${selectedIronLabel}`,
+          'setIronToday',
+        )}
       </div>` : '';
     body = `<div class="win counsel-surface giver-offer-panel giver-offer-board" data-counsel-mode="${esc(mode)}" data-giver="${esc(key)}">
       <span class="win-title">${boardTitle}</span>
