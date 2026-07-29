@@ -84,3 +84,52 @@ sketches. Neither is scoped.
 - **ExerciseDB integration** — a larger exercise catalog with form cues and
   muscle-group targeting. Unverified: nobody has checked its licence, shape or
   fit against `exercises.py`. Needs a small spike before anyone estimates it.
+
+## 3. Sweep-up backlog
+
+Known defects and cleanups, deliberately deferred to a single sweep **at the end
+of the current phase** rather than being smuggled into feature seams. Add to this
+list as things are found; do not let it become a wishlist — every entry should be
+something verified, with the reason it matters.
+
+**Defects (behaviour is wrong today)**
+
+- **A weighted pull-up loses its load.** `counsel_specialists._iron_exercises`
+  suppresses the suggested weight for anything tagged `bodyweight`, because
+  `lift_sets.weight` is `NOT NULL` and an unloaded rep stores `0.0` (which would
+  render as "@ 0"). The rule cannot tell *unloaded* from *loaded*, so a Pull-Up
+  logged at 10 kg offers no weight — and weighted pull-ups and dips are the
+  natural progression once bodyweight reps get easy. Fix: suppress on a falsy
+  weight, not on the equipment tag. *(Verified by probe.)*
+- **`save_routine` accepts off-catalog exercise names.** `programs.py` stores any
+  non-empty string as an exercise. The *readers* were hardened after this crashed
+  Grunhilda's board with a `KeyError`, but the writer is still unvalidated, so new
+  unreadable routines can still be created. Decide whether to validate on write or
+  to keep tolerating them by contract — but decide, rather than leaving it
+  accidental.
+
+**Stale declarations (inert now, traps later)**
+
+- **`GIVER_ARCHETYPES["strength"]` claims Bram owns climbing.** Full detail in
+  `COUNCIL_REDESIGN.md` §0d. This is the same failure mode that orphaned every
+  bodyweight movement, so it is the one I would clear first.
+- **Bram's title contradicts his subtitle** — "the Unburdened" versus "The Old
+  Knight at Rest". See §0d.
+
+**Dead code**
+
+- **The legacy offer path** — `get_offers`, `accept_offer`, `gen_lift_offers`,
+  `gen_endurance_offers`, `gen_climb_offers` are reachable only from tests
+  (verified caller-by-caller). **`gen_mobility_offers` is LIVE** and must not be
+  deleted by association: mobility never got a `build_*_candidates` function, so
+  `counsel_specialists.mobility` calls the legacy generator directly. Removing the
+  dead five means rewriting the tests that reach through them.
+
+**Legibility**
+
+- **Copy living in CSS.** The lead-in string `within reach today: ` is a
+  `content:` rule in `style.css` rather than the template — the only user-visible
+  string in the codebase kept in the stylesheet.
+- **`strength` means two things.** In `COUNSEL_FOCUS_GIVERS` it is both a focus
+  value (-> Grunhilda) and a giver key (Bram). Correct but hostile to read; it
+  resolves itself with the DB key rename in §2.
