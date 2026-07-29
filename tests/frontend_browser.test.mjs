@@ -286,7 +286,9 @@ before(async () => {
     serverOutput += chunk;
   });
   await waitForServer();
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({
+    headless: !EVIDENCE_DIR,
+  });
 });
 
 after(async () => {
@@ -662,6 +664,79 @@ test('shared pixelSelect menus float without shifting content and still select',
   }
 });
 
+test('floating pickers close predictably without affecting ordinary disclosures', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(() => nav('settings'));
+    await page.locator('#settings-game').waitFor();
+
+    const roadPicker = page.locator('#set-units').locator('..');
+    const weightPicker = page.locator('#set-wu').locator('..');
+    const roadSummary = roadPicker.locator('.pixel-select-summary');
+    const weightSummary = weightPicker.locator('.pixel-select-summary');
+
+    await roadSummary.click();
+    assert.equal(await roadPicker.evaluate(element => element.open), true);
+    await page.locator('#settings-game').click();
+    assert.equal(await roadPicker.evaluate(element => element.open), false);
+
+    await roadSummary.click();
+    await weightSummary.evaluate(element => element.click());
+    assert.equal(
+      await page.locator('.pixel-select[open], .hat-picker[open]').count(),
+      1,
+    );
+    assert.equal(await roadPicker.evaluate(element => element.open), false);
+    assert.equal(await weightPicker.evaluate(element => element.open), true);
+
+    await page.keyboard.press('Escape');
+    assert.equal(await weightPicker.evaluate(element => element.open), false);
+    assert.equal(await weightSummary.evaluate(element => document.activeElement === element), true);
+
+    await roadSummary.click();
+    await roadSummary.click();
+    assert.equal(await roadPicker.evaluate(element => element.open), false);
+
+    const timezonePicker = page.locator('#set-siege-tz').locator('..');
+    await timezonePicker.locator('.pixel-select-summary').click();
+    const menu = timezonePicker.locator('.pixel-select-menu');
+    await menu.click({ position: { x: 4, y: 4 } });
+    assert.equal(await timezonePicker.evaluate(element => element.open), true);
+    const menuBox = await menu.boundingBox();
+    assert.ok(menuBox);
+    const beforeScrollbarDrag = await menu.evaluate(element => element.scrollTop);
+    await page.mouse.move(menuBox.x + menuBox.width - 6, menuBox.y + 40);
+    await page.mouse.down();
+    await page.mouse.move(
+      menuBox.x + menuBox.width - 6,
+      menuBox.y + menuBox.height - 30,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    assert.equal(await timezonePicker.evaluate(element => element.open), true);
+    await page.mouse.move(menuBox.x + menuBox.width / 2, menuBox.y + menuBox.height / 2);
+    await page.mouse.wheel(0, 160);
+    await page.waitForFunction(
+      previous => document.querySelector('#set-siege-tz')
+        ?.closest('.pixel-select')
+        ?.querySelector('.pixel-select-menu')?.scrollTop > previous,
+      beforeScrollbarDrag,
+    );
+    assert.equal(await timezonePicker.evaluate(element => element.open), true);
+
+    await openGiverBoard(page, 'kettlebell');
+    const disclosure = page.locator('.phone-disclosure.offer-lore').first();
+    await disclosure.locator('summary').click();
+    assert.equal(await disclosure.evaluate(element => element.open), true);
+    await page.locator('.npc-head').click();
+    assert.equal(await disclosure.evaluate(element => element.open), true);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('every live pixel dropdown call site uses the shared floating menu', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
@@ -782,12 +857,14 @@ test('siege timezone menu flips above the phone dock and stays visible at every 
         const dock = document.querySelector('.phone-dock')?.getBoundingClientRect();
         const style = getComputedStyle(element.querySelector('.pixel-select-menu'));
         return {
+          clientWidth: element.querySelector('.pixel-select-menu').clientWidth,
           dockTop: dock && dock.height > 0 ? dock.top : window.innerHeight,
           opensUp: element.classList.contains('picker-opens-up'),
           maxBlockSize: parseFloat(style.maxBlockSize),
           menuBottom: menu.bottom,
           menuTop: menu.top,
           overflowY: style.overflowY,
+          scrollWidth: element.querySelector('.pixel-select-menu').scrollWidth,
           summaryTop: summary.top,
         };
       });
@@ -799,9 +876,16 @@ test('siege timezone menu flips above the phone dock and stays visible at every 
       assert.ok(geometry.menuBottom <= geometry.dockTop);
       assert.ok(geometry.maxBlockSize <= 230);
       assert.equal(geometry.overflowY, 'auto');
+      assert.ok(geometry.scrollWidth <= geometry.clientWidth, JSON.stringify(geometry));
       assert.equal(await selector.locator('.pixel-option').first().isVisible(), true);
 
       if (EVIDENCE_DIR) {
+        const evidenceMenu = selector.locator('.pixel-select-menu');
+        await evidenceMenu.evaluate(element => {
+          element.scrollTop = Math.floor((element.scrollHeight - element.clientHeight) / 2);
+        });
+        await evidenceMenu.hover({ position: { x: 20, y: 20 } });
+        await page.mouse.wheel(0, 40);
         await page.screenshot({
           path: path.join(EVIDENCE_DIR, `pixel-select-siege-timezone-${name}.png`),
         });
@@ -1270,7 +1354,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '100'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '101'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

@@ -211,9 +211,22 @@ be silently normalized during unrelated work.
   compact dock, overlays, and toasts. An overlay scroll window clips absolute
   descendants, so any future select placed inside one must retain the shared
   overlay-boundary clamp or portal its menu outside the scroll owner.
+- **Dismissal:** only one picker may be open at a time. Outside activation and
+  Escape close it; Escape restores focus to the summary. Events within the
+  picker, including scrollbar interaction, remain owned by the picker.
 - **States:** summary default, hover, pressed, focus, open, and disabled states
   reuse the pixel-button contract. Options preserve their selected, hover, and
   `menuitemradio` semantics; floating changes placement only.
+
+### Scrollable Panels
+
+- **Scope:** menus (`.pixel-select-menu`, `.hat-picker-menu`), `.dlog`,
+  `.dev-console-output`, and overlay windows share the panel scrollbar. The
+  document scrollbar remains native and retains its stable gutter.
+- **Appearance:** Firefox uses `scrollbar-width: thin` and
+  `scrollbar-color`; Chromium/WebKit use the matching pseudo-elements. Both
+  render a square `--gold` thumb on a `--panel2` track, with no rounded corners
+  or new palette values.
 
 ### NPC Portrait And Dialogue (`.npc-head`, `.dialog`)
 

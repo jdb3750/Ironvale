@@ -98,10 +98,19 @@ function layoutOpenFloatingPickers() {
   document.querySelectorAll('.pixel-select[open], .hat-picker[open]').forEach(layoutFloatingPicker);
 }
 
+// Menu invariant: only floating pickers are mutually exclusive; ordinary
+// details disclosures remain independent and may stay open together.
+function closeFloatingPickers(except = null) {
+  document.querySelectorAll('.pixel-select[open], .hat-picker[open]').forEach(root => {
+    if (root !== except) root.open = false;
+  });
+}
+
 if (typeof MutationObserver === 'function') {
   const floatingPickerObserver = new MutationObserver(records => {
     records.forEach(record => {
       if (record.target.matches?.(FLOATING_PICKER_SELECTOR)) {
+        if (record.target.open) closeFloatingPickers(record.target);
         requestAnimationFrame(() => layoutFloatingPicker(record.target));
       }
     });
@@ -112,6 +121,18 @@ if (typeof MutationObserver === 'function') {
     subtree: true,
   });
 }
+document.addEventListener('click', event => {
+  if (!event.target.closest?.(FLOATING_PICKER_SELECTOR)) closeFloatingPickers();
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  const openPicker = document.querySelector('.pixel-select[open], .hat-picker[open]');
+  if (!openPicker) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openPicker.open = false;
+  openPicker.querySelector('summary')?.focus();
+}, true);
 window.addEventListener('resize', layoutOpenFloatingPickers, { passive: true });
 window.addEventListener('scroll', layoutOpenFloatingPickers, { capture: true, passive: true });
 

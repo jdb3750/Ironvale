@@ -578,6 +578,45 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   background: #000; border: 2px solid #3a3450; padding: 10px;
   font-size: 18px; line-height: 1.25; text-align: left;
 }
+/* Shared scrollable panels use one square, token-driven scrollbar treatment.
+   The document scrollbar stays native; its stable gutter is a separate
+   page-layout contract. */
+.pixel-select-menu,
+.hat-picker-menu,
+.dlog,
+.dev-console-output,
+.overlay .win {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold) var(--panel2);
+}
+.pixel-select-menu::-webkit-scrollbar,
+.hat-picker-menu::-webkit-scrollbar,
+.dlog::-webkit-scrollbar,
+.dev-console-output::-webkit-scrollbar,
+.overlay .win::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.pixel-select-menu::-webkit-scrollbar-track,
+.hat-picker-menu::-webkit-scrollbar-track,
+.dlog::-webkit-scrollbar-track,
+.dev-console-output::-webkit-scrollbar-track,
+.overlay .win::-webkit-scrollbar-track,
+.pixel-select-menu::-webkit-scrollbar-corner,
+.hat-picker-menu::-webkit-scrollbar-corner,
+.dlog::-webkit-scrollbar-corner,
+.dev-console-output::-webkit-scrollbar-corner,
+.overlay .win::-webkit-scrollbar-corner {
+  background: var(--panel2);
+}
+.pixel-select-menu::-webkit-scrollbar-thumb,
+.hat-picker-menu::-webkit-scrollbar-thumb,
+.dlog::-webkit-scrollbar-thumb,
+.dev-console-output::-webkit-scrollbar-thumb,
+.overlay .win::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 0;
+}
 .dev-console-line { white-space: pre-wrap; overflow-wrap: anywhere; }
 .dev-console-line.title { color: var(--green); }
 .dev-console-line.muted { color: var(--dim); }
