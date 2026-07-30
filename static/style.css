@@ -46,12 +46,14 @@
   --bg: #0a0a12;
   --panel: #121220;
   --panel2: #191928;
+  --surface-raised: #24243b;
   --ink: #d8cfa8;
   --dim: #776f8e;
   --dim-readable: #958ca8;
   --gold: #c9a24b;
   --gold-bright: #f0d080;
   --red: #c85050;
+  --danger-ink: #dc7a72;
   --green: #7ab55c;
   --blue: #6aa0c8;
   --purple: #a06ac8;
@@ -606,11 +608,10 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 
 .toast {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-  background: var(--panel); border: 2px solid var(--gold); color: var(--ink);
+  color: var(--ink);
   padding: 8px 16px; z-index: 1100; font-family: var(--font-body); font-size: var(--type-body); max-width: 90vw;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
 }
-.toast.err { border-color: var(--red); color: var(--red); }
+.toast.err { border-color: var(--red); color: var(--danger-ink); }
 .sync-status-error { color: var(--red); }
 .sync-status-panel { margin-bottom: 8px; }
 
@@ -802,9 +803,6 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
 }
 .fenn-bubble {
   position: relative;
-  background: var(--panel);
-  border: 2px solid var(--gold-bright);
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
   padding: 10px 10px 12px;
   cursor: pointer;
   animation: fbpop 0.3s ease-out forwards;
@@ -815,7 +813,7 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
   border: 10px solid transparent;
 }
 .fenn-bubble::after { border-top-color: var(--gold-bright); margin-left: -10px; }
-.fenn-bubble::before { border-top-color: var(--panel); margin-left: -8px; border-width: 8px; margin-top: -1px; }
+.fenn-bubble::before { border-top-color: var(--surface-raised); margin-left: -8px; border-width: 8px; margin-top: -1px; }
 .fenn-bubble .fb-line {
   font-style: italic; color: var(--ink); font-family: var(--font-body); font-size: var(--type-body); line-height: 1.35;
   text-align: center; margin-bottom: 8px;
@@ -1572,9 +1570,6 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   display: flex;
   flex-direction: column;
   gap: 3px;
-  border: 2px solid var(--gold);
-  border-top: 0;
-  background: #0b0b14;
   padding: 5px;
   max-block-size: 230px;
   overflow-y: auto;
@@ -1588,8 +1583,40 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pixel-select.picker-opens-up > .pixel-select-menu {
   inset-block-start: auto;
   inset-block-end: 100%;
-  border-top: 2px solid var(--gold);
+}
+
+/* Raised-surface invariant: menus, modal windows, transient notices and
+   callouts sit closer to the viewer than panel2. One top-left light source
+   gives them the same bevel and the same unblurred southeast cast shadow. */
+.pixel-select-menu,
+.hat-picker-menu,
+.overlay .win,
+.toast,
+.fenn-bubble {
+  background: var(--surface-raised);
+  border: 2px solid;
+  border-color: var(--gold-bright) #7a5f28 #52401c var(--gold);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+}
+
+.hat-picker-menu,
+.pixel-select-menu {
+  border-top: 0;
+}
+.hat-picker.picker-opens-up > .hat-picker-menu,
+.pixel-select.picker-opens-up > .pixel-select-menu {
+  border-top: 2px solid var(--gold-bright);
   border-bottom: 0;
+}
+
+:is(
+  .pixel-select-menu,
+  .hat-picker-menu,
+  .overlay .win,
+  .toast,
+  .fenn-bubble
+) .muted {
+  color: var(--dim-readable);
 }
 .hat-picker-menu .hat-option,
 .pixel-select-menu .pixel-option {
@@ -1751,15 +1778,12 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   justify-self: end;
 }
 .offer.counsel-path-card:hover { border-color: #4a3d20; }
-.counsel-path-card.has-wellness-warning {
-  --counsel-warning: #dc7a72;
-}
 .counsel-path-card.has-wellness-warning .counsel-eligibility.warn {
-  color: var(--counsel-warning);
+  color: var(--danger-ink);
 }
 .counsel-path-card.has-wellness-warning .chip.hard {
-  border-color: var(--counsel-warning);
-  color: var(--counsel-warning);
+  border-color: var(--danger-ink);
+  color: var(--danger-ink);
 }
 .counsel-tier-row {
   display: flex;

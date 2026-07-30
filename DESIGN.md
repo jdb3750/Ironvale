@@ -22,24 +22,23 @@ other hues carry status, rarity, and game meaning.
 
 ### Palette
 
-There is one dark theme. These are the 16 color custom properties currently
-declared in `:root`; typography tokens are documented in §3. The counsel
-hard-warning token is intentionally scoped to warned
-counsel cards rather than added to the global root ramp. The stylesheet also
-contains raw, one-off colors that have not yet been promoted to tokens.
+There is one dark theme. These are the 18 color custom properties currently
+declared in `:root`; typography tokens are documented in §3. The stylesheet
+also contains raw, one-off colors that have not yet been promoted to tokens.
 
 | Role | Token | Value | Current use |
 | --- | --- | --- | --- |
 | Page ground | `--bg` | `#0a0a12` | Page background, window title cutouts, inverse action text |
-| Primary panel | `--panel` | `#121220` | Windows, toasts, major contained surfaces |
+| Primary panel | `--panel` | `#121220` | Windows and major contained surfaces |
 | Secondary panel | `--panel2` | `#191928` | Buttons, cards, rows, secondary contained surfaces |
+| Raised surface | `--surface-raised` | `#24243b` | Floating menus, modal windows, toasts, and bubbles |
 | Primary text | `--ink` | `#d8cfa8` | Body copy and form text |
 | Muted text | `--dim` | `#776f8e` | Labels, metadata, disabled-looking copy |
 | Readable muted text | `--dim-readable` | `#958ca8` | Small helper copy and enabled muted controls on panels |
 | Gold accent | `--gold` | `#c9a24b` | Standard borders, controls, active fills |
 | Bright gold | `--gold-bright` | `#f0d080` | Titles, selected emphasis, important values |
-| Danger | `--red` | `#c85050` | Errors, danger controls, hostile/status emphasis |
-| Counsel warning (scoped) | `--counsel-warning` | `#dc7a72` | Hard-path warning text and HARD chip on `--panel2`; scoped to warned counsel cards |
+| Danger structure | `--red` | `#c85050` | Danger borders and fills, hostile emphasis, and large display text |
+| Readable danger text | `--danger-ink` | `#dc7a72` | Small danger text on raised surfaces, hard-path warning text, and HARD chips |
 | Success | `--green` | `#7ab55c` | Success, completed states, restorative status |
 | Information | `--blue` | `#6aa0c8` | Informational and category emphasis |
 | Progress | `--purple` | `#a06ac8` | XP and reward emphasis |
@@ -51,6 +50,8 @@ contains raw, one-off colors that have not yet been promoted to tokens.
 ### Usage Rules
 
 - Use `--bg`, `--panel`, and `--panel2` as the core tonal hierarchy.
+  `--surface-raised` is lighter than that hierarchy because it represents
+  content physically floating above it.
 - Use `--ink` for readable copy and `--dim` for supporting information.
   Small helper copy and enabled muted controls use `--dim-readable` so their
   supporting role remains distinct without falling below the AA contrast target.
@@ -58,9 +59,10 @@ contains raw, one-off colors that have not yet been promoted to tokens.
   and controls; `--gold-bright` carries titles and stronger emphasis.
 - Red, green, blue, and purple already have game semantics. Rarity tokens are
   aliases by meaning even when their values match a status hue.
-- Counsel hard warnings use the scoped `--counsel-warning` token for enough
-  contrast on `--panel2`; the global `--red` token remains unchanged for
-  game-wide danger controls and status surfaces.
+- The former counsel-only warning value is now the general `--danger-ink`
+  token. This deliberately revises its original narrow scope so small danger
+  copy remains readable on both `--panel2` and raised surfaces. `--red`
+  remains unchanged for borders, fills, controls, and large display text.
 - Raw colors remain common in scene art, gradients, specialized panels, and
   secondary borders. That inconsistency is current implementation debt; do not
   infer additional global tokens from it without updating the CSS contract.
@@ -495,51 +497,35 @@ normal-motion presentation.
 ## 7. Depth & Surface
 
 The strategy is **borders plus tonal pixel windows**. `--bg`, `--panel`, and
-`--panel2` create the primary hierarchy. Two-pixel borders, inset rings, and
-hard offset shadows separate interactive and elevated surfaces; shadows read
-as pixel construction rather than soft physical elevation. Black fields are
-used for dialogue, charts, portrait frames, and dungeon surfaces. The fixed
-vignette sits above the interface without intercepting input.
+`--panel2` create the ordinary hierarchy. Two-pixel borders and inset rings
+separate contained surfaces; hard offset shadows express physical elevation
+without introducing soft or blurred light. Black fields are used for dialogue,
+charts, portrait frames, and dungeon surfaces. The fixed vignette sits above
+the interface without intercepting input.
 
 Specialized scenes and reward moments use gradients, glows, and raw colors,
 but shared windows and controls remain square-edged and border-led. The mix of
 tokenized core surfaces with raw feature colors is an existing inconsistency;
 it may be consolidated only as a separate, explicitly approved change.
 
-### PROPOSED — elevation for overlaid surfaces (NOT implemented)
+### Raised surfaces
 
-A design direction recorded for a later, explicitly approved pass. **Nothing
-below is built; do not implement it as a side effect of other work.**
+A surface drawn on top of other content is physically closer to the viewer.
+Every floating picker menu, modal window, toast, and deed/counsel bubble uses
+the shared `--surface-raised` background, which is perceptibly lighter than
+`--panel2`. These surfaces cast the same unblurred `4px 4px 0` southeast shadow
+onto the content beneath them.
 
-**The principle:** a surface drawn *on top of* other elements is physically
-closer to the viewer. If the light source sits at the viewer's point of view —
-which the existing south-shine bevels already imply — then closer should mean
-**lighter**, and the raised surface should **cast a shadow onto what it
-covers**. Depth would then be readable rather than decorative: you could tell
-what floats above what without reading borders.
+The light source is consistently top-left. Raised surfaces therefore use a
+bright top edge, gold left edge, and darker right and bottom edges. This bevel
+distinguishes their elevation from the uniform gold rule and concentric rings
+of an ordinary `.win`. Menus omit the edge attached to their trigger, including
+when they flip upward, but retain the same bevel and shadow direction.
 
-**Today the system is inverted.** The floating picker menu paints `#0b0b14`,
-darker than both `--panel` (`#121220`) and `--panel2` (`#191928`) and near
-page-ground `--bg`. The surface nearest the viewer is the darkest on screen. It
-separates from its surroundings by a gold border alone, which is the same
-device every ordinary window uses — so a menu reads as another bordered box
-rather than as something hovering above the page.
-
-**What a pass would change:** a lighter raised surface; a distinct border
-treatment (a bevel, or a more restrained outline) so elevation is not signalled
-by the same 2px gold rule that marks everything else; and a genuine cast shadow
-on the content beneath, consistent with one light direction.
-
-**The tension to resolve deliberately, not paper over:** §7 currently states
-that shadows read as *pixel construction rather than soft physical elevation*.
-This proposal introduces real elevation logic. That is a considered evolution
-of the depth language, and it must be applied as a **system rule for every
-overlaid surface** — menus, overlays, toasts, modals — or it becomes one more
-one-off. Adopting it means updating this section, not contradicting it.
-
-**Scope note:** the menu's `#0b0b14` is itself a raw, un-promoted color of the
-kind flagged above, so this pass is the natural moment to tokenize the
-elevation surfaces.
+Readable muted helper copy on a raised surface uses `--dim-readable`. Small
+danger copy uses `--danger-ink`, while `--red` remains the structural danger
+color for borders, fills, and large display text. Elevation never changes the
+semantic meaning of gold, blue, green, or red.
 
 ## 8. Navigation and History Contract
 
