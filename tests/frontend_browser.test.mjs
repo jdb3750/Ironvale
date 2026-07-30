@@ -791,27 +791,90 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
 
     const monday = schedule.locator('[data-schedule-day="monday"]');
     await monday.locator('summary').click();
-    await monday.getByRole('button', { name: 'Run', exact: true }).click();
+    await monday.locator('[data-add-schedule-shape="sized"]').click();
     assert.equal(await page.locator('.toast').count(), 0);
-    await monday.getByRole('button', { name: 'Climb', exact: true }).click();
+    await monday.getByRole('button', { name: 'Long', exact: true }).click();
+    await monday.locator('[data-add-schedule-shape="sized"]').click();
+    const secondSlot = monday.locator('[data-schedule-slot-index="1"]');
+    await secondSlot.locator('summary[aria-label="Slot 2 modality"]').click();
+    await secondSlot.locator('.pixel-option[data-value="climb"]').click();
+    await secondSlot.getByRole('button', { name: 'Volume', exact: true }).click();
     assert.deepEqual(
-      await monday.locator('[data-schedule-modality].active').allTextContents()
-        .then(labels => labels.map(label => label.trim())),
-      ['Climb'],
+      await monday.locator('[data-schedule-slot-shape="sized"] input[type="hidden"]').evaluateAll(
+        elements => elements.map(element => element.value),
+      ),
+      ['run', 'climb'],
     );
-    await monday.getByRole('button', { name: 'Run', exact: true }).click();
-    await monday.getByRole('button', { name: 'Strength', exact: true }).click();
-    assert.deepEqual(
-      await monday.locator('[data-schedule-modality].active').allTextContents()
-        .then(labels => labels.map(label => label.trim())),
-      ['Run', 'Strength'],
+
+    await monday.locator('[data-add-schedule-shape="open"]').click();
+    assert.equal(
+      await monday.locator('[data-schedule-slot-index="2"] input[type="hidden"]').inputValue(),
+      '',
     );
-    await monday.getByRole('button', { name: 'Quality', exact: true }).click();
-    await monday.getByRole('button', { name: 'Circuit', exact: true }).click();
-    await monday.getByRole('button', { name: 'Strength optional: off', exact: true }).click();
+    await monday.locator('[data-add-schedule-shape="routine"]').click();
+    const routineSlot = monday.locator('[data-schedule-slot-index="3"]');
+    assert.equal(
+      await routineSlot.locator('input[type="hidden"]').inputValue(),
+      'starting_strength',
+    );
+    assert.equal(await page.locator('.toast').count(), 0);
+
+    await routineSlot.getByRole('button', { name: 'FORGE A ROUTINE', exact: true }).click();
+    assert.equal(
+      await page.locator('.counsel-schedule-routine-builder label').evaluateAll(labels => (
+        labels.every(label => getComputedStyle(label).color === 'rgb(106, 160, 200)')
+      )),
+      true,
+    );
+    assert.equal(
+      await page.getByRole('button', { name: 'FORGE ROUTINE', exact: true }).evaluate(
+        button => button.classList.contains('green'),
+      ),
+      false,
+    );
+    await page.locator('#schedule-routine-name').fill('Rings and sliders');
+    await page.locator('#schedule-routine-exercise').selectOption({ label: 'Pull-Up' });
+    await page.locator('#schedule-routine-sets').fill('4');
+    await page.locator('#schedule-routine-reps').fill('6');
+    await page.getByRole('button', { name: 'ADD', exact: true }).click();
+    let routinePostCount = 0;
+    let releaseRoutinePost;
+    const routinePostGate = new Promise(resolve => { releaseRoutinePost = resolve; });
+    let sawRoutinePost;
+    const routinePostStarted = new Promise(resolve => { sawRoutinePost = resolve; });
+    await page.route('**/api/routines', async route => {
+      if (route.request().method() === 'POST') {
+        routinePostCount += 1;
+        sawRoutinePost();
+        await routinePostGate;
+      }
+      await route.continue();
+    });
+    const routineWrite = page.waitForResponse(response => (
+      response.request().method() === 'POST'
+      && response.url().endsWith('/api/routines')
+    ));
+    await page.evaluate(() => {
+      G.saveCounselRoutine();
+      G.saveCounselRoutine();
+    });
+    await routinePostStarted;
+    assert.equal(routinePostCount, 1);
+    assert.equal(await page.locator('#schedule-routine-save').isDisabled(), true);
+    await page.evaluate(() => G.saveCounselRoutine());
+    assert.equal(routinePostCount, 1);
+    releaseRoutinePost();
+    assert.equal((await routineWrite).status(), 200);
+    await page.getByText('Routine forged into the weekly plan.', { exact: true }).waitFor();
+    await page.locator('.overlay').waitFor({ state: 'detached' });
+    const customRoutineKey = await monday.locator(
+      '[data-schedule-slot-index="3"] input[type="hidden"]',
+    ).inputValue();
+    assert.match(customRoutineKey, /^custom:r[0-9a-f]{8}$/);
+    await monday.getByRole('button', { name: 'Slot 4 optional: off', exact: true }).click();
     assert.equal(await schedule.locator('[data-schedule-day][open]').count(), 1);
     assert.deepEqual(
-      await monday.locator('[data-schedule-modality="run"]').evaluate(element => ({
+      await monday.locator('[data-schedule-slot-index="0"] [data-schedule-tier="long"]').evaluate(element => ({
         background: getComputedStyle(element).backgroundColor,
         border: getComputedStyle(element).borderTopColor,
       })),
@@ -843,8 +906,10 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
     assert.deepEqual(
       await page.evaluate(() => S.state.settings.counsel_schedule.monday),
       [
-        { modality: 'run', optional: false, tier: 'quality' },
-        { modality: 'strength', optional: true, tier: 'circuit' },
+        { optional: false, tier: 'long', modality: 'run' },
+        { optional: false, tier: 'volume', modality: 'climb' },
+        { optional: false },
+        { routine: customRoutineKey, optional: true },
       ],
     );
     assert.deepEqual(
@@ -857,7 +922,7 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
     );
 
     if (EVIDENCE_DIR) {
-      await page.locator('[data-schedule-day="monday"] summary').click();
+      await page.locator('[data-schedule-day="monday"] > summary').click();
       await page.waitForFunction(() => (
         document.querySelectorAll('.key-pop-ghost').length === 0
       ));
@@ -2420,7 +2485,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '111'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '112'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

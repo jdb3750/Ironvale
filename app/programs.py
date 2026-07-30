@@ -55,6 +55,16 @@ def get_routines():
     return db.kv_get("routines", [])
 
 
+def schedule_routine_keys():
+    routines = get_routines()
+    custom = (
+        f"custom:{routine['id']}"
+        for routine in (routines if isinstance(routines, list) else ())
+        if isinstance(routine, dict) and isinstance(routine.get("id"), str)
+    )
+    return (*PROGRAMS.keys(), *custom)
+
+
 def save_routine(payload):
     routines = get_routines()
     exs = []

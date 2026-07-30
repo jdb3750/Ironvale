@@ -1952,7 +1952,8 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   background: var(--panel);
 }
 .counsel-schedule-choices,
-.counsel-schedule-tiers {
+.counsel-schedule-tiers,
+.counsel-schedule-shapes {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -1973,14 +1974,81 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .counsel-schedule-slot-head .counsel-label {
   margin-top: 0;
 }
+.counsel-schedule-slot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.counsel-schedule-shape-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--gold-bright);
+  text-align: center;
+}
+.counsel-schedule-slot-fields {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.counsel-schedule-picker {
+  min-inline-size: 0;
+}
+.counsel-schedule-picker .pixel-select-summary {
+  width: 100%;
+}
+.counsel-schedule-forge {
+  justify-self: center;
+}
 .counsel-schedule-save {
   display: block;
   margin: 10px auto 0;
+}
+.counsel-schedule-routine-builder {
+  text-align: left;
+}
+.counsel-schedule-routine-measure {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.counsel-schedule-routine-measure label {
+  min-inline-size: 0;
+}
+.counsel-schedule-routine-measure .counsel-label {
+  margin-top: 0;
+}
+.counsel-schedule-routine-measure input {
+  min-inline-size: 0;
+  width: 100%;
+}
+.counsel-schedule-routine-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+.counsel-schedule-routine-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block: 4px;
+  border-bottom: 1px solid #4a3d20;
+}
+@media (max-width: 420px) {
+  .counsel-schedule-routine-measure {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .counsel-schedule-routine-measure > .btn {
+    grid-column: 1 / -1;
+  }
 }
 /* In-world confirm dialog (replaces window.confirm). */
 .confirm-win { max-width: 360px; }
