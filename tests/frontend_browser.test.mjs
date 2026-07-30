@@ -1111,7 +1111,7 @@ test('Menagerie hat-picker summary centers its label in the phone touch target',
   }
 });
 
-test('raised surfaces share a lighter bevel and one southeast cast shadow', async () => {
+test('raised surfaces share tone and shadow while only modal trim is gold', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   const viewports = [
     ['phone', { width: 375, height: 812 }],
@@ -1130,6 +1130,7 @@ test('raised surfaces share a lighter bevel and one southeast cast shadow', asyn
       await selector.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
       assert.equal(await followingTop(), beforeOpen);
       if (EVIDENCE_DIR) {
+        await page.waitForFunction(() => !document.querySelector('.key-pop-ghost'));
         await page.screenshot({
           path: path.join(EVIDENCE_DIR, `elevation-menu-over-card-${viewportName}.png`),
         });
@@ -1152,6 +1153,10 @@ test('raised surfaces share a lighter bevel and one southeast cast shadow', asyn
             borderLeftColor: style.borderLeftColor,
             borderRightColor: style.borderRightColor,
             borderTopColor: style.borderTopColor,
+            borderBottomWidth: style.borderBottomWidth,
+            borderLeftWidth: style.borderLeftWidth,
+            borderRightWidth: style.borderRightWidth,
+            borderTopWidth: style.borderTopWidth,
             shadow: style.boxShadow,
           };
         };
@@ -1165,23 +1170,28 @@ test('raised surfaces share a lighter bevel and one southeast cast shadow', asyn
         const overlay = showModal('<div class="win center" data-elevation-modal>A raised window.</div>');
         toast('A raised notice.');
 
-        const surfaces = {
+        const neutralSurfaces = {
           bubble: describe(bubble),
           hatMenu: describe(hatMenu),
           menu: describe(document.querySelector('.iron-today-control .pixel-select-menu')),
-          modal: describe(overlay.querySelector('[data-elevation-modal]')),
           toast: describe(document.querySelector('.toast')),
         };
+        const modal = describe(overlay.querySelector('[data-elevation-modal]'));
         const ordinary = describe(document.querySelector('#app .win'));
         bubble.remove();
         hatMenu.remove();
         overlay.remove();
         document.querySelector('.toast')?.remove();
         return {
+          edgeLit: tokenColor('--edge-lit'),
+          edgeShade: tokenColor('--edge-shade'),
+          gold: tokenColor('--gold'),
+          goldBright: tokenColor('--gold-bright'),
           ordinary,
           panel2: tokenColor('--panel2'),
           raised: tokenColor('--surface-raised'),
-          surfaces,
+          modal,
+          neutralSurfaces,
         };
       });
       const parseRgb = value => value.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
@@ -1192,46 +1202,221 @@ test('raised surfaces share a lighter bevel and one southeast cast shadow', asyn
       assert.ok(elevation.raised && elevation.raised !== 'rgba(0, 0, 0, 0)', JSON.stringify(elevation));
       assert.ok(luminance(elevation.raised) > luminance(elevation.panel2), JSON.stringify(elevation));
       const shadows = new Set();
-      for (const surface of Object.values(elevation.surfaces)) {
+      const goldFamily = new Set([elevation.gold, elevation.goldBright]);
+      for (const surface of [...Object.values(elevation.neutralSurfaces), elevation.modal]) {
         assert.equal(surface.background, elevation.raised, JSON.stringify(elevation));
         assert.match(surface.shadow, /4px 4px 0px/);
         shadows.add(surface.shadow);
       }
+      for (const surface of Object.values(elevation.neutralSurfaces)) {
+        assert.equal(surface.borderLeftColor, elevation.edgeLit, JSON.stringify(elevation));
+        assert.equal(surface.borderRightColor, elevation.edgeShade, JSON.stringify(elevation));
+        assert.equal(surface.borderBottomColor, elevation.edgeShade, JSON.stringify(elevation));
+        if (Number.parseFloat(surface.borderTopWidth) > 0) {
+          assert.equal(surface.borderTopColor, elevation.edgeLit, JSON.stringify(elevation));
+        }
+        const visibleBorders = [
+          ['borderTopColor', 'borderTopWidth'],
+          ['borderRightColor', 'borderRightWidth'],
+          ['borderBottomColor', 'borderBottomWidth'],
+          ['borderLeftColor', 'borderLeftWidth'],
+        ].filter(([, width]) => Number.parseFloat(surface[width]) > 0)
+          .map(([color]) => surface[color]);
+        assert.ok(
+          visibleBorders.every(color => !goldFamily.has(color)),
+          JSON.stringify(elevation),
+        );
+      }
       assert.equal(shadows.size, 1, JSON.stringify(elevation));
-      assert.notDeepEqual(
+      assert.deepEqual(
         [
-          elevation.surfaces.modal.borderTopColor,
-          elevation.surfaces.modal.borderRightColor,
-          elevation.surfaces.modal.borderBottomColor,
-          elevation.surfaces.modal.borderLeftColor,
+          elevation.modal.borderTopColor,
+          elevation.modal.borderRightColor,
+          elevation.modal.borderBottomColor,
+          elevation.modal.borderLeftColor,
         ],
         [
-          elevation.ordinary.borderTopColor,
-          elevation.ordinary.borderRightColor,
-          elevation.ordinary.borderBottomColor,
-          elevation.ordinary.borderLeftColor,
+          elevation.goldBright,
+          'rgb(122, 95, 40)',
+          'rgb(82, 64, 28)',
+          elevation.gold,
         ],
       );
+      assert.notEqual(elevation.ordinary.background, elevation.raised);
 
       if (EVIDENCE_DIR) {
         await page.evaluate(() => {
-          showModal(`<div class="win center">
-            <div class="win-title">RAISED WINDOW</div>
-            <p>A nearer surface for a decision that cannot wait.</p>
-            <button class="btn small" type="button">CONTINUE</button>
-          </div>`);
+          showCeremony({
+            xp: 106,
+            gold: 47,
+            vigor: 2,
+            note: 'The bell answers.',
+          }, 'The Iron Communion');
         });
+        await page.locator('#cere-glory:not([disabled])').waitFor();
         await page.screenshot({
-          path: path.join(EVIDENCE_DIR, `elevation-modal-${viewportName}.png`),
+          path: path.join(EVIDENCE_DIR, `modal-gold-ceremony-${viewportName}.png`),
         });
-        await page.locator('.overlay').evaluate(element => element.remove());
-        await page.evaluate(() => toast('The oath is inked.'));
+        await page.locator('#cere-glory').click();
+        await page.evaluate(() => {
+          void confirmModal('Forsake this path?', {
+            title: 'Set the oath aside?',
+            okLabel: 'FORSAKE IT',
+            danger: true,
+          });
+        });
+        await page.locator('.confirm-win').waitFor();
         await page.screenshot({
-          path: path.join(EVIDENCE_DIR, `elevation-toast-${viewportName}.png`),
+          path: path.join(EVIDENCE_DIR, `modal-gold-confirm-${viewportName}.png`),
         });
-        await page.locator('.toast').evaluate(element => element.remove());
+        await page.locator('[data-confirm-cancel]').click();
       }
     }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('modal controls keep visible keyboard focus against gold trim', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await page.evaluate(() => {
+      showModal(`<div class="win center" data-focus-modal>
+        <div class="win-title">A CHOICE</div>
+        <button class="btn small" type="button" data-modal-action>CONTINUE</button>
+      </div>`);
+    });
+    const action = page.locator('[data-modal-action]');
+    await action.waitFor();
+    await page.keyboard.press('Tab');
+    const focus = await action.evaluate(element => {
+      const style = getComputedStyle(element);
+      const modalStyle = getComputedStyle(element.closest('[data-focus-modal]'));
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--gold-bright)';
+      document.body.appendChild(probe);
+      const goldBright = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        active: document.activeElement === element,
+        focusVisible: element.matches(':focus-visible'),
+        modalBorder: modalStyle.borderTopColor,
+        outlineColor: style.outlineColor,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: Number.parseFloat(style.outlineWidth),
+        shadow: style.boxShadow,
+        goldBright,
+      };
+    });
+    assert.equal(focus.active, true);
+    assert.equal(focus.focusVisible, true);
+    assert.equal(focus.modalBorder, focus.goldBright);
+    assert.equal(focus.outlineColor, focus.goldBright);
+    assert.notEqual(focus.outlineStyle, 'none');
+    assert.ok(focus.outlineWidth >= 2, JSON.stringify(focus));
+    assert.notEqual(focus.shadow, 'none');
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('picker option rows reserve gold for hover and selected state', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'kettlebell');
+    const selector = page.locator('.iron-today-control .pixel-select');
+    await selector.locator('.pixel-select-summary').evaluate(summary => summary.click());
+    const optionChrome = async (locator) => locator.evaluate(element => {
+      const tokenColor = (name) => {
+        const probe = document.createElement('span');
+        probe.style.color = `var(${name})`;
+        document.body.appendChild(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      const style = getComputedStyle(element);
+      return {
+        border: style.borderTopColor,
+        marker: getComputedStyle(element, '::before').color,
+        edge: tokenColor('--edge'),
+        gold: tokenColor('--gold'),
+        goldBright: tokenColor('--gold-bright'),
+      };
+    });
+    const resting = selector.locator('.pixel-option[data-value="barbell"]');
+    const selected = selector.locator('.pixel-option.selected');
+    const restingChrome = await optionChrome(resting);
+    const selectedChrome = await optionChrome(selected);
+    assert.equal(restingChrome.border, restingChrome.edge);
+    assert.equal(restingChrome.marker, restingChrome.edge);
+    assert.equal(selectedChrome.border, selectedChrome.goldBright);
+    assert.equal(selectedChrome.marker, selectedChrome.goldBright);
+
+    await resting.hover();
+    const hoverChrome = await optionChrome(resting);
+    assert.equal(hoverChrome.border, hoverChrome.gold);
+    assert.equal(hoverChrome.marker, hoverChrome.gold);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('picker option rows and summaries keep visible keyboard focus', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'kettlebell');
+    const selector = page.locator('.iron-today-control .pixel-select');
+    const summary = selector.locator('.pixel-select-summary');
+    await summary.evaluate(element => element.click());
+    await summary.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    const option = selector.locator('.pixel-option[data-value="barbell"]');
+    const optionFocus = await option.evaluate(element => {
+      const style = getComputedStyle(element);
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--gold)';
+      document.body.appendChild(probe);
+      const gold = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        active: document.activeElement === element,
+        border: style.borderTopColor,
+        focusVisible: element.matches(':focus-visible'),
+        marker: getComputedStyle(element, '::before').color,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: Number.parseFloat(style.outlineWidth),
+        gold,
+      };
+    });
+    assert.equal(optionFocus.active, true);
+    assert.equal(optionFocus.focusVisible, true);
+    assert.equal(optionFocus.border, optionFocus.gold);
+    assert.equal(optionFocus.marker, optionFocus.gold);
+    assert.notEqual(optionFocus.outlineStyle, 'none');
+    assert.ok(optionFocus.outlineWidth >= 2, JSON.stringify(optionFocus));
+
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Shift+Tab');
+    const summaryFocus = await summary.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        active: document.activeElement === element,
+        focusVisible: element.matches(':focus-visible'),
+        outlineStyle: style.outlineStyle,
+        outlineWidth: Number.parseFloat(style.outlineWidth),
+      };
+    });
+    assert.equal(summaryFocus.active, true);
+    assert.equal(summaryFocus.focusVisible, true);
+    assert.notEqual(summaryFocus.outlineStyle, 'none');
+    assert.ok(summaryFocus.outlineWidth >= 2, JSON.stringify(summaryFocus));
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -1969,7 +2154,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '106'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '108'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
