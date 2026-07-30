@@ -50,7 +50,7 @@ SCREENS.undercroft = async function () {
           <summary>RULES OF THE UNDERCROFT</summary>
           <div class="phone-disclosure-content">
             <hr class="rule">
-            <div class="muted" style="font-size:18px">
+            <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">
               &#9656; You descend with nothing. Weapons, trinkets and potions are all found below:
                 Pip trades on every floor, every floor holds a relic pedestal, and chests hide the rest.<br>
               &#9656; <b style="color:var(--gold-bright)">Nothing leaves the dungeon.</b> Retire at stairs or entrance and only your looted gold banks.<br>
@@ -162,7 +162,7 @@ function renderDungeon(st, stats, theme) {
       <div class="npc-head" style="align-items:center;gap:10px">
         ${portraitTag('pip', 64)}
         <div><span class="npc-name" style="color:var(--gold-bright)">Pip, somehow, down here</span><br>
-        <span class="muted" style="font-size:17px">"Every floor, friend. Loot gold only — cave rules." (&#9670;${st.loot_gold} looted)</span></div>
+        <span class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">"Every floor, friend. Loot gold only — cave rules." (&#9670;${st.loot_gold} looted)</span></div>
       </div>
       ${stock.length ? stock.map(s => {
         const it = s.kind === 'trinket' ? (TRINKET_CACHE[s.id] || { name: s.id, sprite: 'rock', rarity: 'uncommon', desc: 'a mysterious trinket' })
@@ -170,7 +170,7 @@ function renderDungeon(st, stats, theme) {
         return `<div class="shop-row">
           <span class="icon">${spriteTag(it.sprite, 30)}</span>
           <span class="grow"><span class="s-name r-${it.rarity}">${esc(it.name)}</span>
-            ${s.kind !== 'item' ? `<span class="chip" style="font-size:13px">${s.kind}</span>` : ''}<br>
+            ${s.kind !== 'item' ? `<span class="chip" style="font-family: var(--font-body); font-size: var(--type-body)">${s.kind}</span>` : ''}<br>
             <span class="s-desc">${esc(it.desc)}</span></span>
           <span class="price">&#9670;${s.price}</span>
           <button type="button" class="btn small dungeon-action" style="min-width:0" ${st.loot_gold >= s.price ? '' : 'disabled'}
@@ -190,8 +190,8 @@ function renderDungeon(st, stats, theme) {
       <div class="center">
         <div class="muted">a pedestal in pale light bears:</div>
         <div style="display:flex;justify-content:center;margin:8px 0">${spriteTag(it.sprite, 48)}</div>
-        <div class="r-${it.rarity}" style="font-size:24px">${esc(it.name)}</div>
-        <div class="muted" style="font-size:17px">${esc(it.desc)}${replacing}</div>
+        <div class="r-${it.rarity}" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(it.name)}</div>
+        <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(it.desc)}${replacing}</div>
         <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
           <button type="button" class="btn wide green dungeon-action" onclick="G.dact({action:'take_relic'})">TAKE IT</button>
         </div>
@@ -207,7 +207,7 @@ function renderDungeon(st, stats, theme) {
         <span style="color:var(--gold-bright)">&#9670;${st.loot_gold} looted</span>
       </div>
       <div class="hpbar" style="margin-top:6px"><div style="width:${hpPct}%"></div><span>HP ${st.hp}/${stats.max_hp}</span></div>
-      <div class="center" style="font-size:16px;margin-top:4px">${gearLine(st)}
+      <div class="center" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:4px">${gearLine(st)}
         <span style="display:inline-flex;align-items:center;gap:4px">
           <button type="button" class="btn small" style="min-width:0;padding:0 8px" onclick="G.dItems()">ITEMS</button>
           ${(st.trinkets || []).length ? `<button type="button" class="btn small" style="min-width:0;padding:0 8px" onclick="G.dGear()">inspect</button>` : ''}
@@ -250,7 +250,7 @@ G.dGear = async () => {
   const gearRows = ['weapon', 'armor', 'charm'].map(s => {
     const iid = d.gear[s];
     const it = iid ? cat[iid] : null;
-    return `<div class="shop-row"><span class="muted" style="width:70px;text-transform:uppercase;font-size:14px">${s}</span>
+    return `<div class="shop-row"><span class="muted" style="width:70px;text-transform:uppercase;font-family: var(--font-fine); font-size: var(--type-fine)">${s}</span>
       ${it ? `<span class="icon">${spriteTag(it.sprite, 26)}</span><span class="grow r-${it.rarity}">${esc(it.name)}</span>` : '<span class="grow muted">none</span>'}</div>`;
   }).join('');
   const tkRows = (d.trinkets || []).map(tid => {
@@ -260,7 +260,7 @@ G.dGear = async () => {
   }).join('');
   showModal(`<div class="win"><span class="win-title">This Run's Findings</span>
     ${gearRows}${tkRows || ''}
-    <div class="muted center" style="font-size:16px;margin-top:6px">none of it leaves the Undercroft</div>
+    <div class="muted center" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:6px">none of it leaves the Undercroft</div>
     <div class="center" style="margin-top:8px"><button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">close</button></div>
   </div>`);
 };
@@ -289,8 +289,8 @@ async function runDungeonAction(body, routeToken, profileToken = captureProfileT
       showModal(`<div class="win mon-card gacha-card">
         <div class="muted">it stops fighting. it looks up at you.</div>
         <div style="display:flex;justify-content:center;margin:10px 0">${monsterTag(r.captured.dna, r.captured.rarity, 100)}</div>
-        <div class="r-${r.captured.rarity}" style="font-size:26px">${esc(r.captured.name)}</div>
-        <div class="muted" style="font-size:16px">${esc(r.captured.personality)} &middot; joins your menagerie</div>
+        <div class="r-${r.captured.rarity}" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(r.captured.name)}</div>
+        <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(r.captured.personality)} &middot; joins your menagerie</div>
         <button type="button" class="btn big dungeon-action" style="margin-top:10px" onclick="G.closeOverlay(this.closest('.overlay'))">WELCOME, STRANGE ONE</button>
       </div>`);
     };
@@ -318,7 +318,7 @@ async function runDungeonAction(body, routeToken, profileToken = captureProfileT
     showModal(`<div class="win ceremony">
       <div class="youdied">YOU DIED</div>
       <p class="muted" style="margin:12px 0">on floor ${dd.floor} of the Undercroft</p>
-      <div style="text-align:left;font-size:19px">
+      <div style="text-align:left;font-family: var(--font-body); font-size: var(--type-body)">
         ${dd.lost_gold ? `<div>&#9670; ${dd.lost_gold} looted gold — stays in the dark</div>` : ''}
         <div>everything you found remains below</div>
         <div>your depth resets to floor 1</div>

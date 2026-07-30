@@ -19,7 +19,7 @@ SCREENS.crank = function () {
   const canPull = canPay && !crankBusy;
   $app().innerHTML = shell(`
     <div class="win crank">
-      <div class="pixel-title" style="font-size:20px;margin-bottom:8px">THE CRANKWERK</div>
+      <div class="pixel-title" style="font-size: var(--type-title);margin-bottom:8px">THE CRANKWERK</div>
       <div class="muted">It vends delights for the Menagerie: hats, finery, whole packs of creatures.<br>
         <b style="color:var(--gold-bright)">Grip the lever. Pull it all the way down.</b></div>
       <div class="crank-stage">
@@ -37,7 +37,7 @@ SCREENS.crank = function () {
           onclick="crankPay='gold';render()">${spriteTag('icon_coin', 14)} 35 GOLD</button>
       </div>
       ${!canPay ? '<div class="muted" style="margin-top:6px">the machine wants a token or 35 gold</div>' : ''}
-      <div class="muted" style="margin-top:10px;font-size:17px">
+      <div class="muted" style="margin-top:10px;font-family: var(--font-body); font-size: var(--type-body)">
         odds: <span class="r-common">common</span> &middot; <span class="r-uncommon">uncommon</span> &middot; <span class="r-rare">rare</span> &middot; <span class="r-legendary">LEGENDARY</span>
       </div>
     </div>
@@ -137,8 +137,8 @@ function showCrankResult(r, token, animated) {
   const ov = showModal(`<div class="win ceremony gacha-card ${rare === 'legendary' ? 'legendary-glow' : ''}">
     <div class="muted">the capsule cracks open...</div>
     <div style="margin:12px auto;display:flex;justify-content:center">${spriteTag(r.item.sprite, 96)}</div>
-    <div class="r-${rare}" style="font-size:30px">${esc(r.item.name)}</div>
-    <div class="muted" style="text-transform:uppercase;font-size:16px">${rare} ${r.item.type}</div>
+    <div class="r-${rare}" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(r.item.name)}</div>
+    <div class="muted" style="text-transform:uppercase;font-family: var(--font-body); font-size: var(--type-body)">${rare} ${r.item.type}</div>
     <p style="margin-top:8px">${esc(r.item.desc)}</p>
     <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       ${isWearable || r.item.type === 'pack' || r.item.type === 'decor' ? `<button class="btn big" style="width:auto" onclick="G.closeOverlay(this.closest('.overlay'),()=>nav('ranch'))">TO THE MENAGERIE</button>` : ''}
@@ -262,25 +262,25 @@ SCREENS.settings = function () {
   const selfDirected = s.counsel_mode === 'self';
   const siegeTz = S.state.siege_timezone || 'UTC';
   const siegeTzOptions = [
-    { value: 'UTC', label: 'Siege Bell Timezone: UTC' },
-    { value: 'America/New_York', label: 'Siege Bell Timezone: America/New_York' },
-    { value: 'America/Chicago', label: 'Siege Bell Timezone: America/Chicago' },
-    { value: 'America/Denver', label: 'Siege Bell Timezone: America/Denver' },
-    { value: 'America/Los_Angeles', label: 'Siege Bell Timezone: America/Los_Angeles' },
-    { value: 'Europe/London', label: 'Siege Bell Timezone: Europe/London' },
-    { value: 'Europe/Berlin', label: 'Siege Bell Timezone: Europe/Berlin' },
-    { value: 'Australia/Sydney', label: 'Siege Bell Timezone: Australia/Sydney' },
+    { value: 'UTC', label: 'UTC' },
+    { value: 'America/New_York', label: 'America/New_York' },
+    { value: 'America/Chicago', label: 'America/Chicago' },
+    { value: 'America/Denver', label: 'America/Denver' },
+    { value: 'America/Los_Angeles', label: 'America/Los_Angeles' },
+    { value: 'Europe/London', label: 'Europe/London' },
+    { value: 'Europe/Berlin', label: 'Europe/Berlin' },
+    { value: 'Australia/Sydney', label: 'Australia/Sydney' },
   ];
   if (siegeTz && !siegeTzOptions.some(o => o.value === siegeTz)) {
-    siegeTzOptions.unshift({ value: siegeTz, label: 'Siege Bell Timezone: ' + siegeTz });
+    siegeTzOptions.unshift({ value: siegeTz, label: siegeTz });
   }
   const weightOpts = [
-    { value: 'kg', label: 'Weight Unit: kg' },
-    { value: 'lb', label: 'Weight Unit: lb' },
+    { value: 'kg', label: 'kg' },
+    { value: 'lb', label: 'lb' },
   ];
   const unitOpts = [
-    { value: 'km', label: 'Road Unit: km' },
-    { value: 'mi', label: 'Road Unit: mi' },
+    { value: 'km', label: 'km' },
+    { value: 'mi', label: 'mi' },
   ];
   const loopOpts = [
     { value: 'considered', label: 'Considered' },
@@ -306,7 +306,7 @@ SCREENS.settings = function () {
           <button class="btn small" style="min-width:0" onclick="G.saveName()">SAVE NAME</button>
         </div>
       </div>
-      <div class="muted" style="font-size:16px;margin:6px 0">to change your look, tap your portrait at the top of any page</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin:6px 0">to change your look, tap your portrait at the top of any page</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
         <button class="btn small" style="min-width:0" onclick="G.setPinPrompt()">SET / CHANGE PIN</button>
         <button class="btn small" style="min-width:0" onclick="G.switchProfile()">SWITCH ADVENTURER</button>
@@ -316,15 +316,18 @@ SCREENS.settings = function () {
         <button type="button" class="btn wide btn-fit toggle ${SFX.muted ? '' : 'green'}" data-sound-btn data-settings-sound onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
       </div>
       <div class="formrow">
+        <span class="counsel-label">road unit</span>
         ${pixelSelect('set-units', unitOpts, s.units, 'road unit', 'saveUnits')}
       </div>
       <div class="formrow">
+        <span class="counsel-label">weight unit</span>
         ${pixelSelect('set-wu', weightOpts, s.weight_unit, 'weight unit', 'saveWeightUnit')}
       </div>
-      <div class="formrow"><span class="counsel-label">timezone</span><div>${esc(s.timezone || 'Automatic from this device')}</div></div>
       <div class="formrow">
+        <span class="counsel-label">siege bell timezone</span>
         ${pixelSelect('set-siege-tz', siegeTzOptions, siegeTz, 'siege timezone', 'saveSiegeTimezone')}
       </div>
+      <div class="formrow"><span class="counsel-label">timezone</span><div>${esc(s.timezone || 'Automatic from this device')}</div></div>
       <hr class="rule">
       <span class="counsel-label">ambition</span>
       <div class="muted" style="margin-bottom:8px">how hard the quest-givers push you</div>
@@ -400,7 +403,7 @@ G.saveName = async () => {
 G.setPinPrompt = () => {
   showModal(`<div class="win center" style="max-width:320px">
     <span class="win-title">Set / Change PIN</span>
-    <div class="muted" style="font-size:15px;margin-bottom:8px">4 digits — keeps this adventurer's save locked to whoever knows it.</div>
+    <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:8px">4 digits — keeps this adventurer's save locked to whoever knows it.</div>
     <input type="password" inputmode="numeric" maxlength="4" id="np-setpin" class="pin-input"
       placeholder="&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')G.submitSetPin()">
     <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">

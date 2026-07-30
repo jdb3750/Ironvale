@@ -13,15 +13,18 @@ Iron Vale feels like an old-school DOS role-playing game viewed through a CRT:
 dark, compact, tactile, and ceremonial without becoming ornamental. Its
 signature is the tonal pixel window: near-black surfaces separated by hard
 gold or muted borders, offset block shadows, bitmap typography, and a fixed
-scanline-and-vignette layer. Bright gold marks important language and action;
+vignette layer. Scanlines were removed when the Quanta-Strike scale became the
+default because they interfered with the smaller hand-drawn glyphs. Bright gold
+marks important language and action;
 other hues carry status, rarity, and game meaning.
 
 ## 2. Color
 
 ### Palette
 
-There is one dark theme. These are the 16 custom properties currently declared
-in `:root`; the counsel hard-warning token is intentionally scoped to warned
+There is one dark theme. These are the 16 color custom properties currently
+declared in `:root`; typography tokens are documented in §3. The counsel
+hard-warning token is intentionally scoped to warned
 counsel cards rather than added to the global root ramp. The stylesheet also
 contains raw, one-off colors that have not yet been promoted to tokens.
 
@@ -66,75 +69,37 @@ contains raw, one-off colors that have not yet been promoted to tokens.
 
 ### Font Families
 
-| Family | Source | Stack | Current role |
-| --- | --- | --- | --- |
-| `VT323` | `/static/fonts/vt323.woff2` | `'VT323', 'Courier New', monospace` on `body`; `'VT323', monospace` on controls | Default interface, body copy, labels, buttons, inputs |
-| `PressStart` | `/static/fonts/pressstart.woff2` | `'PressStart', monospace` | `.pixel-title`, ceremony headings, and high-impact game messages |
+| Family | Source | Current role |
+| --- | --- | --- |
+| `quanta-strike-10` | `/static/fonts/quanta-strike-10-regular.woff2` | Fine print |
+| `quanta-strike-12` | `/static/fonts/quanta-strike-12-regular.woff2` and `quanta-strike-12-bold.woff2` | Body copy, tags, helper text, and buttons |
+| `quanta-strike-14` | `/static/fonts/quanta-strike-14-regular.woff2` | Titles, NPC dialogue, and workout titles |
+| `quanta-strike-16` | `/static/fonts/quanta-strike-16-regular.woff2` | Form inputs and selects |
+| `PressStart` | `/static/fonts/pressstart.woff2` | `.pixel-title`, `.ceremony h2`, and `.youdied` |
 
-The project intentionally uses only these two local font families. Font
-smoothing is disabled on the body to retain the pixel character.
+VT323 remains vendored as a legacy asset but is not part of the active default
+scale. Font smoothing is disabled on the body to retain the pixel character.
 
 ### Implemented Scale
 
-The stylesheet has no typography tokens or formal heading scale. The stable
-anchors are:
+Quanta-Strike is a family of hand-drawn, size-bound strikes. Each role therefore
+has both a family token and a size token; a future font pack must replace the
+pair together so a conventional outline font is not rendered at a microscopic
+Quanta size.
 
-| Level | Size | Weight / line height | Current use |
+| Role | Family token | Size token | Weight |
 | --- | --- | --- | --- |
-| Body | `20px` | normal / `1.35` | Default desktop interface text |
-| Body, mobile | `19px` | normal / inherited | Body at `max-width: 560px` |
-| Standard control | `20px` | normal / inherited | `.btn` and form controls |
-| Small control | `17px` | normal / inherited | `.btn.small` |
-| Large control | `24px` | normal / inherited | `.btn.big` |
-| Window title | `20px` | normal / inherited | `.win-title`, uppercase |
-| NPC dialogue | `21px` | normal / inherited | `.dialog` |
-| Ceremony title | `18px` | normal / inherited | `.ceremony h2` in `PressStart` |
+| Fine print | `--font-fine` | `--type-fine: 10px` | Regular |
+| Body copy, tags, helper and muted text | `--font-body` | `--type-body: 12px` | Regular |
+| Buttons | `--font-body` | `--type-body: 12px` | Bold |
+| Titles, NPC dialogue and workout titles | `--font-title` | `--type-title: 14px` | Regular |
+| Form inputs and selects | `--font-form` | `--type-form: 16px` | Regular |
 
-Headings reset to normal weight. Uppercase labels and controls generally use
-`1px` letter spacing; `.pixel-title` uses `2px`. Many feature-specific sizes
-from `12px` upward exist outside this small shared scale. That variation is an
-observed inconsistency, not a recommendation to add more sizes.
-
-### PROPOSED — Quanta-Strike and a type-scale pass (NOT implemented)
-
-A candidate recorded for a later, explicitly approved pass. **Nothing below is
-built.** Font: <https://github.com/dithernaut/quanta-strike>.
-
-**What it is.** Not a variable font. It is a family of hand-drawn **strikes**,
-each designed for one exact pixel size — `quanta-strike-16` is sharp at 16px and
-blurs at every other size. Family and size are bound together on purpose;
-fluid sizing and `clamp()` are unusable with it by design. Shipped strikes:
-**6, 10, 12, 14, 16, 18, 20, 32**.
-
-**Why it fits mechanically.** OFL-1.1, so bundling is fine. It ships **woff2**,
-which drops straight into the existing self-hosted `@font-face` pattern beside
-VT323 and PressStart. 1,100+ glyphs with bold, against VT323's thin coverage.
-`-webkit-font-smoothing: none` is already set, which is correct for pixel type.
-**Vendor the woff2 files directly; do not take the npm dependency** — the package
-exists to generate binding CSS, and this project has no CSS build step.
-
-**Why it is not a font swap.** The stylesheet uses **17 distinct sizes** (11–24,
-plus 26, 28, 30). Only **49 of 128** `font-size` declarations land on a size that
-has a strike; **79 do not** — including three of the five most-used sizes, 15px
-(18 uses), 17px (13) and 19px (12), all odd numbers with no strike. Adopting the
-font therefore *requires* collapsing the scale onto roughly six sizes.
-
-**The type-scale pass.** Choose a small set of sizes and map every existing use
-onto one of them. Copy does not change; the decision is that "small" means one
-number rather than four nearly-identical ones. Note this is work the section
-above already implies — the drift is recorded there as an inconsistency
-independent of any font.
-
-**Sequencing — trial before commitment.** Strikes at 16, 18 and 20 already match
-sizes in heavy use, so the font can be dropped onto **one screen at those sizes
-only**, judged in situ, and deleted if disliked. Pay for the scale pass only
-after that trial succeeds. Do not begin with the scale normalization.
-
-**Pair it with §7's elevation proposal.** Both are system-wide visual passes
-requiring every screen to be re-walked and re-checked at 375px; running them
-together means one round of that verification rather than two. VT323 is tall and
-condensed, so different metrics will shift line lengths and wrapping everywhere —
-that re-check is the real cost, not the CSS.
+Every active Quanta declaration uses one of these four exact strikes. There is
+no fluid type or intermediate size because rendering a strike away from its
+native pixel size is blurry by design. `.btn.small` and `.btn.big` change
+padding and geometry, not type size. PressStart keeps the three high-impact
+roles listed above and uses the title-size token.
 
 ## 4. Spacing & Layout
 
@@ -174,8 +139,8 @@ be silently normalized during unrelated work.
   3x building art, with the same building row structure preserved on mobile.
   Below `480px`, rows use a deterministic two-column grid and center an odd
   trailing building.
-- The mobile rules reduce type slightly, tighten the app shell, and stack the
-  generic NPC row vertically.
+- The mobile rules tighten the app shell and stack the generic NPC row
+  vertically; the tokenized type scale does not change between breakpoints.
 
 ### Required Responsive Contract
 
@@ -228,8 +193,8 @@ be silently normalized during unrelated work.
   `.wide`, `.big`, `.danger`, and `.green`. `.wide` fills its containing
   panel without changing the standard control size; `.big` is both larger and
   full-width.
-- **Appearance:** `VT323`, uppercase, `--panel2` fill, gold border and text,
-  and a hard offset shadow.
+- **Appearance:** Quanta Strike 12 Bold, uppercase, `--panel2` fill, gold
+  border and text, and a hard offset shadow.
 - **States:** default uses the base appearance; hover fills gold and inverts
   text; active translates `2px` in both axes and shortens the shadow; disabled
   uses `0.4` opacity and a not-allowed cursor. Danger and green variants use
@@ -284,9 +249,10 @@ be silently normalized during unrelated work.
   declared in `static/js/art.js` under `static/art/npcs/`.
 - **Appearance:** portrait and black dialogue field use hard borders; the
   speaker name and cursor use bright gold.
-- **States:** default dialogue has a `64px` minimum height, which also preserves
-  an empty or not-yet-typed state. Typing adds the blinking cursor. There are no
-  hover, active, focus, disabled, loading, or error states on the container.
+- **States:** default dialogue uses Quanta Strike 14 Regular and has a `64px`
+  minimum height, which also preserves an empty or not-yet-typed state. Typing
+  adds the blinking cursor. There are no hover, active, focus, disabled,
+  loading, or error states on the container.
 - **Responsive:** the generic row stacks and centers below `560px`.
 
 ### Town Scene (`.town-scene`, `.bld`)
@@ -342,7 +308,7 @@ be silently normalized during unrelated work.
 - **Layout:** groups are equal-width desktop columns, become two columns from
   `720px` through `860px`, and stack one group per row below `720px`. Every
   phone row therefore presents two destination buttons across. Buttons fill
-  their tracks, wrap when needed, use the `19px` mobile body scale, and keep at
+  their tracks, wrap when needed, use the 12px Bold button token, and keep at
   least `44px` of height without horizontal overflow.
 - **Appearance:** grouped buttons reuse the shared pixel-button surface and
   the Hall keeps the same square windows, gold borders, and semantic status
@@ -439,9 +405,9 @@ be silently normalized during unrelated work.
   weighted steps retains both weight and integer steps.
 - **Touch and typing:** repeated decrement/increment controls are at least
   48x48 CSS pixels; direct inputs and the Log Set action are at least 44px
-  high. Numeric input text is at least 16px (the existing 20px control type is
-  preferred), supports an appropriate input mode, selects predictably, and
-  remains visible above the keyboard.
+  high. Numeric input text uses the 16px Regular form token, supports an
+  appropriate input mode, selects predictably, and remains visible above the
+  keyboard.
 - **Validation:** blank, malformed, negative, fractional where an integer is
   required, or non-finite values show a specific inline error and send zero
   requests. A valid activation sends exactly one request while the action is
@@ -532,9 +498,8 @@ The strategy is **borders plus tonal pixel windows**. `--bg`, `--panel`, and
 `--panel2` create the primary hierarchy. Two-pixel borders, inset rings, and
 hard offset shadows separate interactive and elevated surfaces; shadows read
 as pixel construction rather than soft physical elevation. Black fields are
-used for dialogue, charts, portrait frames, and dungeon surfaces. The fixed CRT
-overlay adds scanlines and a vignette above the interface without intercepting
-input.
+used for dialogue, charts, portrait frames, and dungeon surfaces. The fixed
+vignette sits above the interface without intercepting input.
 
 Specialized scenes and reward moments use gradients, glows, and raw colors,
 but shared windows and controls remain square-edged and border-led. The mix of
@@ -614,10 +579,11 @@ elevation surfaces.
   initial-scale=1` with no `maximum-scale` and no `user-scalable=no`. At 200%
   zoom and 320px width, essential content and actions remain reachable with no
   document-level horizontal overflow.
-- Form text stays at least 16px to avoid involuntary focus zoom. The visual
-  keyboard is handled through focus plus `visualViewport`, not a guessed
-  device height. Scrolling a field/action into view must respect the compact
-  header, dock state, and safe-area insets.
+- Form inputs and selects use `--font-form` with `--type-form: 16px` in every
+  display mode, preventing involuntary focus zoom without a browser-only media
+  exception. The visual keyboard is handled through focus plus
+  `visualViewport`, not a guessed device height. Scrolling a field/action into
+  view must respect the compact header, dock state, and safe-area insets.
 - Top, bottom, left, and right `safe-area` insets are layout inputs, not device
   assumptions. Browser and standalone display modes must both keep the header,
   dock, overlays, controls, and final content clear of cutouts/home indicators.
@@ -629,8 +595,8 @@ elevation surfaces.
   also have a direct tap and keyboard path with the same outcome. Pointer
   cancel, navigation away, and backend rejection restore a coherent state.
 - Color continues to carry the world semantics defined in Section 2, but text,
-  shape, label, or state supplies a non-color cue. CRT scanlines and pixel type
-  may not reduce critical control/error readability below the AA contract.
+  shape, label, or state supplies a non-color cue. Pixel type may not reduce
+  critical control/error readability below the AA contract.
 
 ## 10. Shared-App Architecture Contract
 

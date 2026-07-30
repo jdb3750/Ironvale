@@ -142,6 +142,13 @@ entries are open work with the removal path worked out.
   player to a giver who cannot help them. A one-line fix, but it needs a `?v=`
   bump because it touches `static/`, so fold it into the next task that already
   changes a static asset rather than spending a bump on it alone.
+- **The browser suite silently tests against a foreign server on its port.**
+  `tests/frontend_browser.test.mjs` spawns its own uvicorn on 8322, but if
+  something is already listening there it connects to that instead and produces a
+  spray of unrelated failures with no hint of the cause. This cost three separate
+  debugging detours in one day, each time from a leftover preview server. The
+  suite should refuse to run — loudly — when 8322 is occupied by a process it did
+  not start, rather than testing the wrong app.
 - **A browser-suite helper can report navigation complete before the DOM
   settles.** Observed while adding retired-giver coverage: the helper's
   completion can race the render when screenshot writing shifts timing. Nothing

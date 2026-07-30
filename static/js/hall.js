@@ -69,14 +69,14 @@ SCREENS.stats = async function () {
     try { const rr = await fetch('/api/keepsakes'); if (rr.ok) ks = (await rr.json()).keepsakes; } catch (e) { /* backend predates the mantel */ }
     S.keepsakes = ks;
     const mantelWin = ks ? `<div class="win"><span class="win-title">The Mantel</span>
-      <div class="muted" style="font-size:16px;margin-bottom:6px">what the years leave on the shelf${ks.length ? ' — tap a keepsake' : ''}</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:6px">what the years leave on the shelf${ks.length ? ' — tap a keepsake' : ''}</div>
       ${ks.length ? `<div class="mantel">${ks.map((k, i) =>
         `<button type="button" class="ks control-reset" style="padding:2px 4px 6px;border-bottom:5px solid #5a4426"
           aria-label="Open keepsake: ${esc(k.name)}" onclick="G.keepsake(${i})">${spriteTag(k.sprite, 48)}</button>`).join('')}</div>`
     : '<div class="mantel mantel-empty"><span class="muted">bare wood, for now. it is patient.</span></div>'}
     </div>` : '';
     const notesWin = d.insights.length ? `<div class="win"><span class="win-title">The Curator's Notes</span>
-      ${d.insights.map(([lv, txt]) => `<div class="insight ${lv}" style="font-size:18px;margin:5px 0">${esc(txt)}</div>`).join('')}
+      ${d.insights.map(([lv, txt]) => `<div class="insight ${lv}" style="font-family: var(--font-body); font-size: var(--type-body);margin:5px 0">${esc(txt)}</div>`).join('')}
     </div>` : '';
     body = notesWin + `<div class="win"><span class="win-title">${esc(c.name)}, Level ${c.level}</span>
       ${sb('STR', c.stats.str, 'var(--red)')}
@@ -97,7 +97,7 @@ SCREENS.stats = async function () {
     const latest = (f) => { for (let i = w.length - 1; i >= 0; i--) if (w[i][f] != null) return w[i][f]; return null; };
     const chart = (id, label, f, color, fmt) => {
       const has = w.some(r => r[f] != null);
-      return has ? `<div style="margin:10px 0"><span class="muted" style="text-transform:uppercase;font-size:15px">${label}
+      return has ? `<div style="margin:10px 0"><span class="muted" style="text-transform:uppercase;font-family: var(--font-body); font-size: var(--type-body)">${label}
         ${latest(f) != null ? `— <span style="color:${color}">${fmt(latest(f))}</span>` : ''}</span>
         <canvas class="chart" id="${id}" width="440" height="90"></canvas></div>` : '';
     };
@@ -122,7 +122,7 @@ SCREENS.stats = async function () {
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
         ${rangeBtn(30, '30d')}${rangeBtn(90, '90d')}${rangeBtn(180, '180d')}${rangeBtn(365, '1y')}${rangeBtn(0, 'All')}
       </div>
-      <div class="muted" style="font-size:14px;margin-bottom:8px">showing ${rangeLabel} &middot; ${w.length} day(s) with readings</div>
+      <div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);margin-bottom:8px">showing ${rangeLabel} &middot; ${w.length} day(s) with readings</div>
       ${w.length === 0 ? '<div class="muted">No wellness data yet. Link intervals.icu in Settings and send the ravens.</div>' : ''}
       ${chart('ch-hrv', 'HRV', 'hrv', 'var(--green)', v => v.toFixed(0) + ' ms')}
       ${chart('ch-rhr', 'Resting heart rate', 'resting_hr', 'var(--red)', v => v.toFixed(0) + ' bpm')}
@@ -132,7 +132,7 @@ SCREENS.stats = async function () {
     </div>
     ${sleepVals.length ? `<div class="win"><span class="win-title">The Hall of Rest</span>
       ${sleepPanel}
-      <div class="muted" style="font-size:15px;margin-bottom:2px">hours slept per night — heroes are made in bed</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:2px">hours slept per night — heroes are made in bed</div>
       <canvas class="chart" id="ch-sleep" width="440" height="90"></canvas>
     </div>` : ''}`;
   } else if (statsTab === 'deeds') {
@@ -143,12 +143,12 @@ SCREENS.stats = async function () {
     try { const rr = await fetch('/api/road'); if (rr.ok) road = await rr.json(); } catch (e) { /* backend predates the road */ }
     S.roadState = road;   // kept for click hit-testing + claims
     body = `${road ? `<div class="win"><span class="win-title">The Long Road</span>
-      <div class="muted" style="font-size:16px;margin-bottom:6px">every kilometer you have ever covered, walked by a small and stubborn pilgrim</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:6px">every kilometer you have ever covered, walked by a small and stubborn pilgrim</div>
       <div class="road-scroll" id="road-scroll"><canvas id="road-map" height="214"></canvas></div>
       <div class="road-caption">
         <b style="color:var(--gold-bright)">${road.total_km} km</b> from the Vale Gate
         ${road.km_to_next != null ? ` &middot; ${road.km_to_next} km to the next landmark` : ''}
-        <br><span class="muted" style="font-size:14px">${road.breakdown.run} run &middot; ${road.breakdown.walk} walked &middot; ${road.breakdown.swim} swum &middot; ${road.breakdown.ride} ridden (counts &frac14;) &middot; tap a landmark for its story</span>
+        <br><span class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">${road.breakdown.run} run &middot; ${road.breakdown.walk} walked &middot; ${road.breakdown.swim} swum &middot; ${road.breakdown.ride} ridden (counts &frac14;) &middot; tap a landmark for its story</span>
       </div>
       ${road.unclaimed > 0 ? `<div class="center" style="margin-top:8px">
         <button class="btn wide green" id="road-claim" ${roadClaimPending ? 'disabled aria-busy="true"' : ''} onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
@@ -156,7 +156,7 @@ SCREENS.stats = async function () {
     </div>` : ''}
     <div class="win"><span class="win-title">The Road (12 weeks)</span>
       <canvas class="chart" id="ch-run" width="440" height="120"></canvas>
-      <div class="muted" style="font-size:16px">weekly run minutes</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">weekly run minutes</div>
       <hr class="rule">
       <table class="rpg"><tr><td>Runs recorded (60d)</td><td>${rs.n}</td></tr>
       <tr><td>Typical run</td><td>${Math.round(rs.median)} min</td></tr>
@@ -179,12 +179,12 @@ SCREENS.stats = async function () {
     }).join('');
     body = `<div class="win"><span class="win-title">Muscle Ledger</span>
       <div class="center">${bodyMapTag(Object.entries(d.muscles).filter(([, m]) => m.days_since <= 3).map(([g]) => g), 130)}</div>
-      <div class="muted center" style="font-size:15px;margin-bottom:6px">lit: trained in the last 3 days (climbing counts for back/arms/core)</div>
+      <div class="muted center" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:6px">lit: trained in the last 3 days (climbing counts for back/arms/core)</div>
       <table class="rpg"><tr><th>group</th><th>last trained</th><th>sets 14d</th><th>state</th></tr>${rows}</table>
     </div>
     <div class="win"><span class="win-title">Tonnage (12 weeks)</span>
       <canvas class="chart" id="ch-ton" width="440" height="120"></canvas>
-      <div class="muted" style="font-size:16px">weekly ${wu} lifted (weight &times; reps)</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">weekly ${wu} lifted (weight &times; reps)</div>
     </div>
     <div class="win"><span class="win-title">Personal Records</span>
       <table class="rpg"><tr><th>lift</th><th>max</th><th>est 1RM</th><th>sets</th></tr>
@@ -199,14 +199,14 @@ SCREENS.stats = async function () {
     try { const rr = await fetch('/api/tapestry'); if (rr.ok) tap = await rr.json(); } catch (e) { /* backend predates the weave */ }
     S.tapestry = tap;
     const tapWin = tap ? `<div class="win"><span class="win-title">The Tapestry</span>
-      <div class="muted" style="font-size:16px;margin-bottom:6px">a year of days, one stitch each, colored by the day's longest labor</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:6px">a year of days, one stitch each, colored by the day's longest labor</div>
       <div class="tapestry-scroll" id="tapestry-scroll"><canvas id="tapestry-cv"></canvas></div>
       <div class="tap-legend">${Object.entries(CAT_LABELS).map(([k, v]) =>
         `<span><span class="cdot cat-${k}"></span>${v}</span>`).join('')}</div>
-      <div class="road-caption" style="font-size:16px">
+      <div class="road-caption" style="font-family: var(--font-body); font-size: var(--type-body)">
         <b style="color:var(--gold-bright)">${tap.woven}</b> day${tap.woven === 1 ? '' : 's'} woven this past year
         &middot; longest unbroken thread: <b style="color:var(--gold-bright)">${tap.best_stretch}</b> day${tap.best_stretch === 1 ? '' : 's'}
-        <br><span class="muted" style="font-size:14px">tap a stitch to inspect that day</span>
+        <br><span class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">tap a stitch to inspect that day</span>
       </div>
     </div>` : '';
     body = tapWin + await calendarBody();
@@ -252,7 +252,7 @@ SCREENS.stats = async function () {
         <div class="alm-sign">&mdash; Maud, Curator of the Hall</div>
         <div class="alm-nav">
           ${navBtn(alm.months[idx - 1], '&laquo; older')}
-          <span class="muted" style="font-size:15px">edition ${idx + 1} of ${alm.months.length}</span>
+          <span class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">edition ${idx + 1} of ${alm.months.length}</span>
           ${navBtn(alm.months[idx + 1], 'newer &raquo;')}
         </div>
       </div>`;
@@ -269,8 +269,8 @@ SCREENS.stats = async function () {
       <div class="npc-head">
         ${portraitTag('maud', 128)}
         <div class="dialog">
-          <div class="npc-name">Maud, Curator of the Hall <span class="muted" style="font-size:15px">(an owl, somehow)</span></div>
-          <div id="curator-dlg" style="min-height:24px;font-size:19px"></div>
+          <div class="npc-name">Maud, Curator of the Hall <span class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">(an owl, somehow)</span></div>
+          <div id="curator-dlg" style="min-height:24px;font-family: var(--font-title); font-size: var(--type-title)"></div>
         </div>
       </div>
     </div>`;
@@ -312,7 +312,7 @@ function compendiumBody() {
         onclick="G.compToggle(${S.exercises.indexOf(e)})">
         <span class="grow"><span class="s-name">${esc(e.name)}</span><br>
           <span class="s-desc">targets: ${e.groups.join(', ')}</span>
-          ${COMP.open[e.name] ? `<span class="muted" style="display:block;font-size:17px;border-left:2px solid var(--gold);padding-left:8px;margin-top:6px">${esc(e.how || '')}</span>` : ''}</span>
+          ${COMP.open[e.name] ? `<span class="muted" style="display:block;font-family: var(--font-body); font-size: var(--type-body);border-left:2px solid var(--gold);padding-left:8px;margin-top:6px">${esc(e.how || '')}</span>` : ''}</span>
         ${bodyMapTag(e.groups, 90)}
       </button>`).join('')}
     </div>` : '';
@@ -372,12 +372,12 @@ async function calendarBody() {
   return `<div class="win"><span class="win-title">Calendar of Deeds</span>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <button class="btn small" style="min-width:0" onclick="G.calNav(-1)">&#9668;</button>
-      <span style="font-size:24px;color:var(--gold-bright)">${monthName} ${calState.y}</span>
+      <span style="font-family: var(--font-title); font-size: var(--type-title);color:var(--gold-bright)">${monthName} ${calState.y}</span>
       <button class="btn small" style="min-width:0" onclick="G.calNav(1)">&#9658;</button>
     </div>
     <div class="calgrid">${cells}</div>
     <div class="legend">${legend}<span><span style="color:var(--gold-bright)">&#9733;</span> quest done</span></div>
-    <div class="muted" style="font-size:16px;margin-top:6px">tap a day to inspect, fix, or strike entries</div>
+    <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:6px">tap a day to inspect, fix, or strike entries</div>
   </div>`;
 }
 
@@ -631,7 +631,7 @@ G.roadLore = (key) => {
   showModal(`<div class="win center road-card" style="max-width:400px">
     <span class="win-title">${esc(m.name)}</span>
     <div style="display:flex;justify-content:center;margin:10px 0">${spriteTag(m.icon, 72)}</div>
-    <div class="muted" style="font-size:14px;letter-spacing:2px">KILOMETER ${m.km}</div>
+    <div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);letter-spacing:2px">KILOMETER ${m.km}</div>
     <p class="road-lore">${esc(m.lore)}</p>
     <button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">walk on</button>
   </div>`);
@@ -643,7 +643,7 @@ G.keepsake = (i) => {
   showModal(`<div class="win center road-card" style="max-width:400px">
     <span class="win-title">${esc(k.name)}</span>
     <div style="display:flex;justify-content:center;margin:10px 0">${spriteTag(k.sprite, 72)}</div>
-    <div class="muted" style="font-size:14px;letter-spacing:2px">${k.date ? 'KEPT SINCE ' + k.date : 'FROM A DAY THE LEDGER DOES NOT NAME'}</div>
+    <div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);letter-spacing:2px">${k.date ? 'KEPT SINCE ' + k.date : 'FROM A DAY THE LEDGER DOES NOT NAME'}</div>
     <p class="road-lore">${esc(k.lore)}</p>
     <button class="btn small" style="min-width:0" onclick="G.closeOverlay(this.closest('.overlay'))">back on the shelf</button>
   </div>`);
@@ -677,7 +677,7 @@ G.roadClaim = async () => {
   const more = (S.roadState?.unclaimed || 1) - 1;
   showModal(`<div class="win ceremony road-card">
     <h2>YOU REACH ${esc(r.landmark).toUpperCase()}</h2>
-    <div class="muted" style="font-size:14px;letter-spacing:2px;margin:4px 0">KILOMETER ${r.km} OF THE LONG ROAD</div>
+    <div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);letter-spacing:2px;margin:4px 0">KILOMETER ${r.km} OF THE LONG ROAD</div>
     <p class="road-lore">${esc(r.lore)}</p>
     <div class="reward-line" style="color:var(--gold-bright)">&#9670; +${r.reward.gold} gold</div>
     <div class="reward-line" style="color:var(--blue)">&#9678; +${r.reward.tokens} brass token</div>

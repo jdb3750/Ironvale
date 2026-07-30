@@ -70,14 +70,14 @@ SCREENS.ranch = async function () {
         </div>` : ''}
         ${!d.monsters.length ? '<div class="ranch-empty">The pen stands empty. Rip a pack, or subdue a creature in the Undercroft.</div>' : ''}
       </div>
-      <div class="muted center" style="font-size:16px;margin-top:4px">${inertPen
+      <div class="muted center" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:4px">${inertPen
         ? 'step inside to meet the herd, drag creatures about, and hand out hats'
         : `tap a creature to meet it &middot; drag one to relocate it (they hate this)
         &middot; drag a hat onto a head, or drop it on the grass and see who claims it`}</div>
       <div class="center" style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
         <button type="button" class="btn wide green btn-fit ranch-action" onclick="G.ripPack()">RIP A PACK ${RANCH.packs > 0 ? `(${RANCH.packs} owned)` : `(${spriteTag('icon_coin', 14)}${d.pack_cost})`}</button>
       </div>
-      <div class="muted center" style="font-size:15px;margin-top:6px">now dropping: <span class="r-uncommon">${esc(d.series)}</span>
+      <div class="muted center" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:6px">now dropping: <span class="r-uncommon">${esc(d.series)}</span>
         &middot; ${d.series_days_left === 1 ? 'ends today' : `ends in ${d.series_days_left} days`} — limited monthly run</div>
     </div>
     ${d.monsters.length ? `<div class="win"><span class="win-title">The Herd</span>
@@ -209,7 +209,7 @@ function ranchPackCard(monster, reducedMotion = false) {
   return `<div class="pack-card r-${monster.rarity}"${reducedMotion ? ' style="animation:none"' : ''}>
     <div style="display:flex;justify-content:center">${monsterTag(monster.dna, monster.rarity, 60)}</div>
     <div class="pc-name r-${monster.rarity}">${esc(monster.name)}</div>
-    <div class="muted" style="font-size:13px">${esc(monster.personality)}</div>
+    <div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">${esc(monster.personality)}</div>
   </div>`;
 }
 
@@ -335,12 +335,12 @@ function startRanch(mons) {
   function renderHatPanel() {
     const owned = Object.entries(RANCH.hats).filter(([, q]) => q > 0);
     panel.innerHTML = owned.length
-      ? `<div class="muted" style="font-size:14px;margin-bottom:4px">drag onto a creature, or onto the grass</div>
+      ? `<div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);margin-bottom:4px">drag onto a creature, or onto the grass</div>
          <div class="pen-hats">${owned.map(([id, q]) => {
           const it = (S.itemsCatalog || {})[id] || { sprite: id, name: id };
           return `<button type="button" class="hat-slot" data-hat="${id}" style="font:inherit;color:inherit;border-radius:0;appearance:none" title="${esc(it.name)}" aria-label="Drag ${esc(it.name)}, ${q} owned">${spriteTag(it.sprite, 26)}<span class="qty">&times;${q}</span></button>`;
         }).join('')}</div>`
-      : '<div class="muted" style="font-size:14px">no hats in the box — crank the Crankwerk</div>';
+      : '<div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">no hats in the box — crank the Crankwerk</div>';
     hydrateSprites(panel);
   }
   RANCH.renderHatPanel = renderHatPanel;
@@ -681,7 +681,7 @@ function openRanchLens(id, playSound) {
   const ownedHats = Object.entries(RANCH.hats).filter(([, quantity]) => quantity > 0);
   const inner = `
       <div class="lens-box-name r-${m.rarity}">${esc(m.name)}${isBuddy ? ' <span style="color:#e05070">&#9829;</span>' : ''}</div>
-      <div class="muted" style="text-transform:uppercase;font-size:13px">${m.rarity}</div>
+      <div class="muted" style="text-transform:uppercase;font-family: var(--font-fine); font-size: var(--type-fine)">${m.rarity}</div>
       <div class="lens-box-info">
         <span style="color:var(--blue)">${esc(m.personality)}</span>
         ${hatName ? `<br>wearing <span style="color:var(--gold-bright)">${esc(hatName)}</span>` : ''}
@@ -827,7 +827,7 @@ G.ripPack = async () => {
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.innerHTML = `<div class="win pack-stage">
-    <div class="r-uncommon" style="font-size:20px">${esc(result.series)}</div>
+    <div class="r-uncommon" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(result.series)}</div>
     <div class="muted">something scrabbles inside...</div>
     <button type="button" class="pack-wrap ranch-action control-reset illustrated-control" id="pack-wrap" style="margin:14px 0" aria-label="Rip open the monster pack">${spriteTag('pack', 120)}</button>
     <div style="color:var(--gold-bright)" id="pack-prompt">TAP THE PACK TO RIP IT OPEN</div>
