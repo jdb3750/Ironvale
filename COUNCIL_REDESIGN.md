@@ -501,6 +501,11 @@ Sat  long run
 Sun  climb                 + iron B
 ```
 
+> **AMENDED 2026-07-30, after seam A shipped.** The bullets below are corrected
+> by §5b-i. A real player-authored week — half sized runs, half named routines —
+> could not be expressed by the original model, and the vocabulary predates the
+> key rename.
+
 - A slot is **modality-level** (`run`/`ride`/`swim`/`climb`/`iron`) — same
   vocabulary as focus (§0b), routed to givers by the archetype config.
 - A slot carries an **effort tier** reusing Choose-your-own's own tier names per
@@ -514,6 +519,42 @@ Sun  climb                 + iron B
 - **Iron A / B** maps onto a selected `programs.py` doctrine's alternating
   sessions — the calendar says *when*, the doctrine says *what*, with its real
   linear progression. Do not build a parallel progression system (§5).
+
+### 5b-i. What a slot actually holds (decided 2026-07-30 — supersedes the above)
+
+Written against a real week the player authored elsewhere and brought in. The
+original model assumed every slot is "a modality at an effort the game picks."
+Half of a real week is **a specific routine written down in advance** — a named
+Strength A, a fixed set of ring and slider work — and no tier can express that.
+
+**A slot takes one of three shapes:**
+
+| Shape | Holds | Serves |
+|---|---|---|
+| **sized** | modality + tier | "easy run", "quality run" — the game sizes it |
+| **routine** | a `programs.py` key (built-in or `custom:<id>`) | "Strength A, exactly as written" |
+| **open** | modality, or nothing at all | "climbing, I'll decide the shape" / "see how Tuesday went" |
+
+Plus the existing `rest` and `optional` flags. **Open is not an unfinished slot** —
+it is a deliberate refusal to decide in advance, and a week is allowed to contain
+days the player intends to judge on the morning.
+
+- **`long` is a real endurance tier and was missing.** The engine already emits
+  `run_long` beside `run_easy`, `run_steady`, `run_tempo`, `run_intervals` and
+  `run_hills`; the schedule's vocabulary stopped at easy/steady/quality, so a
+  fixed weekly long run — often the most immovable thing in a week — could not be
+  written down. `quality` deliberately keeps collapsing tempo/intervals/hills:
+  asking for "hard" and letting the engine choose the flavour is the point.
+- **No pinned A/B sessions.** A routine slot names the routine, and a doctrine
+  keeps alternating through its own sessions as it already does. Pinning a session
+  per day would fight `program_state`'s counter and desync the moment a session is
+  skipped. Two custom routines named for their halves express the same week with
+  no new mechanism. (Revisit only if auto-alternation proves insufficient.)
+- **Same-lane slots on one day are ALLOWED.** Seam A rejected them; that was
+  over-tight. The real constraint is one *active* quest per giver, not one slot
+  per giver per day — run in the morning, finish it, and Fenn is free for the
+  evening's climb. Seam B serves a day's slots in order as each giver frees up.
+  Two slots in one lane simply means the second waits.
 
 ### Plan proposes, body disposes (the feature, not a bug)
 The wellness veto still applies. Tuesday says *quality*; HRV is low → the giver
