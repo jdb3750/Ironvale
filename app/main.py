@@ -164,7 +164,9 @@ async def login(request: Request):
 
 @app.get("/api/state")
 def state():
-    s = game.get_settings()
+    s = game.get_settings(
+        schedule_routine_keys=programs.schedule_routine_keys(),
+    )
     quests.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
     c = game.get_char()  # read once, after writ resolution (which can mutate it)
     monsters.ensure_starter()
@@ -263,8 +265,13 @@ async def save_settings(request: Request):
     if "counsel_schedule" in body:
         counsel_schedule = body["counsel_schedule"]
         if counsel_schedule is not None:
-            counsel_schedule = game.validate_counsel_schedule(counsel_schedule)
-    s = game.get_settings()
+            counsel_schedule = game.validate_counsel_schedule(
+                counsel_schedule,
+                programs.schedule_routine_keys(),
+            )
+    s = game.get_settings(
+        schedule_routine_keys=programs.schedule_routine_keys(),
+    )
     if "timezone" in body:
         name = body["timezone"]
         if not isinstance(name, str):

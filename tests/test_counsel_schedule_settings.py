@@ -38,9 +38,38 @@ def valid_schedule():
     return schedule
 
 
-def round_trip() -> None:
+def all_slot_shapes_round_trip() -> None:
     new_profile("schedule-round-trip")
-    schedule = valid_schedule()
+    routine_response = client.post(
+        "/api/routines",
+        json={
+            "name": "Rings and sliders",
+            "giver": "strength",
+            "exercises": [
+                {"exercise": "Pull-Up", "sets": 3, "reps": 5},
+                {"exercise": "Bulgarian Split Squat", "sets": 3, "reps": 8},
+            ],
+        },
+    )
+    assert routine_response.status_code == 200
+    routine_key = f"custom:{routine_response.json()['routine']['id']}"
+    schedule = empty_schedule()
+    schedule["monday"] = [
+        {"modality": "run", "tier": "long", "optional": False},
+    ]
+    schedule["tuesday"] = [
+        {"routine": "starting_strength", "optional": False},
+        {"routine": routine_key, "optional": True},
+    ]
+    schedule["wednesday"] = [
+        {"modality": "climb", "optional": False},
+    ]
+    schedule["thursday"] = [
+        {"optional": True},
+    ]
+    schedule["sunday"] = [
+        {"modality": "rest", "optional": False},
+    ]
 
     saved = client.post("/api/settings", json={"counsel_schedule": schedule})
     state = client.get("/api/state")
@@ -50,42 +79,30 @@ def round_trip() -> None:
     assert state.json()["settings"]["counsel_schedule"] == schedule
 
 
-def rejects_two_endurance_paths() -> None:
-    new_profile("schedule-one-lane")
-    schedule = empty_schedule()
-    schedule["thursday"] = [
-        {"modality": "run", "tier": "steady", "optional": False},
-        {"modality": "climb", "tier": "volume", "optional": False},
-    ]
-
-    rejected = client.post("/api/settings", json={"counsel_schedule": schedule})
-
-    assert rejected.status_code == 400
-    assert "run" in rejected.json()["error"].lower()
-    assert "climb" in rejected.json()["error"].lower()
-    assert "one path" in rejected.json()["error"].lower()
-    assert client.get("/api/state").json()["settings"]["counsel_schedule"] is None
-
-
-def accepts_two_giver_lanes() -> None:
-    new_profile("schedule-two-lanes")
+def open_without_modality_persists() -> None:
+    new_profile("schedule-open")
     schedule = empty_schedule()
     schedule["tuesday"] = [
-        {"modality": "ride", "tier": "quality", "optional": False},
-        {"modality": "strength", "tier": "circuit", "optional": False},
+        {"optional": False},
     ]
 
-    accepted = client.post("/api/settings", json={"counsel_schedule": schedule})
+    saved = client.post("/api/settings", json={"counsel_schedule": schedule})
 
-    assert accepted.status_code == 200
+    assert saved.status_code == 200
     assert (
-        client.get("/api/state").json()["settings"]["counsel_schedule"]
-        == schedule
+        client.get("/api/state").json()["settings"]["counsel_schedule"]["tuesday"]
+        == [{"optional": False}]
     )
 
 
-def rejects_wrong_tiers() -> None:
+def accepts_long_and_rejects_wrong_tiers() -> None:
     new_profile("schedule-tier-validation")
+    long_run = empty_schedule()
+    long_run["saturday"] = [
+        {"modality": "run", "tier": "long", "optional": False},
+    ]
+    accepted = client.post("/api/settings", json={"counsel_schedule": long_run})
+
     invalid_strength = empty_schedule()
     invalid_strength["friday"] = [
         {"modality": "strength", "tier": "quality", "optional": False},
@@ -95,21 +112,87 @@ def rejects_wrong_tiers() -> None:
         json={"counsel_schedule": invalid_strength},
     )
 
-    rest_with_tier = empty_schedule()
-    rest_with_tier["sunday"] = [
-        {"modality": "rest", "tier": "easy", "optional": False},
-    ]
-    tiered_rest = client.post(
-        "/api/settings",
-        json={"counsel_schedule": rest_with_tier},
+    assert accepted.status_code == 200
+    assert (
+        client.get("/api/state").json()["settings"]["counsel_schedule"]["saturday"]
+        == [{"modality": "run", "tier": "long", "optional": False}]
     )
-
     assert wrong_strength_tier.status_code == 400
     assert "effort" in wrong_strength_tier.json()["error"].lower()
-    assert tiered_rest.status_code == 400
-    assert "rest" in tiered_rest.json()["error"].lower()
-    assert "tier" in tiered_rest.json()["error"].lower()
-    assert client.get("/api/state").json()["settings"]["counsel_schedule"] is None
+
+
+def accepts_same_lane_slots() -> None:
+    new_profile("schedule-same-lane")
+    schedule = empty_schedule()
+    schedule["tuesday"] = [
+        {"modality": "run", "tier": "steady", "optional": False},
+        {"modality": "climb", "tier": "volume", "optional": False},
+    ]
+
+    accepted = client.post("/api/settings", json={"counsel_schedule": schedule})
+
+    assert accepted.status_code == 200
+    persisted = client.get("/api/state").json()["settings"]["counsel_schedule"]
+    assert persisted["tuesday"] == schedule["tuesday"]
+    assert len(persisted["tuesday"]) == 2
+
+
+def validates_routine_keys() -> None:
+    new_profile("schedule-routine-keys")
+    routine_response = client.post(
+        "/api/routines",
+        json={
+            "name": "Strength A",
+            "giver": "strength",
+            "exercises": [{"exercise": "Pull-Up", "sets": 5, "reps": 5}],
+        },
+    )
+    assert routine_response.status_code == 200
+    routine_key = f"custom:{routine_response.json()['routine']['id']}"
+    schedule = empty_schedule()
+    schedule["monday"] = [{"routine": routine_key, "optional": False}]
+
+    saved = client.post("/api/settings", json={"counsel_schedule": schedule})
+    assert saved.status_code == 200
+    assert (
+        client.get("/api/state").json()["settings"]["counsel_schedule"]["monday"]
+        == [{"routine": routine_key, "optional": False}]
+    )
+
+    unknown = empty_schedule()
+    unknown["monday"] = [
+        {"routine": "custom:rdoesnotexist", "optional": False},
+    ]
+    rejected = client.post(
+        "/api/settings",
+        json={"counsel_schedule": unknown},
+    )
+
+    assert rejected.status_code == 400
+    assert "routine" in rejected.json()["error"].lower()
+    assert (
+        client.get("/api/state").json()["settings"]["counsel_schedule"]["monday"]
+        == [{"routine": routine_key, "optional": False}]
+    )
+
+
+def legacy_sized_slots_still_load() -> None:
+    new_profile("schedule-legacy")
+    legacy = valid_schedule()
+    db.kv_set(
+        "settings",
+        {
+            "timezone": "UTC",
+            "counsel_mode": "considered",
+            "counsel_schedule": legacy,
+        },
+    )
+
+    state = client.get("/api/state")
+
+    assert state.status_code == 200
+    assert state.json()["settings"]["counsel_schedule"] == legacy
+    assert "tier" in state.json()["settings"]["counsel_schedule"]["monday"][0]
 
 
 def malformed_persisted_schedule_degrades_to_absent() -> None:
@@ -168,10 +251,12 @@ def schedule_is_inert() -> None:
 
 
 SCENARIOS = (
-    round_trip,
-    rejects_two_endurance_paths,
-    accepts_two_giver_lanes,
-    rejects_wrong_tiers,
+    all_slot_shapes_round_trip,
+    open_without_modality_persists,
+    accepts_long_and_rejects_wrong_tiers,
+    accepts_same_lane_slots,
+    validates_routine_keys,
+    legacy_sized_slots_still_load,
     malformed_persisted_schedule_degrades_to_absent,
     schedule_is_inert,
 )
