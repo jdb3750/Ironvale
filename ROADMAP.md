@@ -135,6 +135,21 @@ entries are open work with the removal path worked out.
 
 **Defects (behaviour is wrong today)**
 
+- **Headful screenshot mode hits `innerText` timing failures.** Observed during the
+  v0.25.0 migration work: the optional headful capture mode failed twice on
+  `innerText` reads while still producing valid captures, and the canonical
+  headless suite passed 41/41. Same family as the `openGiverBoard` race fixed in
+  v0.24.3 — a read that runs before the DOM settles. Low priority because the
+  canonical path is headless, but it will keep producing noise that looks like a
+  real failure.
+- **A mid-day imported database can migrate without its own pre-migration
+  snapshot.** `vault.ensure_snapshot_before_migration()` is per-UTC-day, so a
+  legacy database imported *after* that day's snapshot already exists reuses it
+  rather than sealing a fresh one. Both production saves were captured before
+  their first mutation and normal profile creation writes the marker without
+  migrating, so this only bites an out-of-band import. Narrow, but the whole point
+  of that snapshot is being the rollback path.
+
 - **The workout logger's empty state still names a retired giver.**
   `static/js/giver.js:758` reads "No quest in hand. Accept one from Grunhilda or
   Ser Bram first." Bram has offered nothing since v0.22.0, so the copy sends a
