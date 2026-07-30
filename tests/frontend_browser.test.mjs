@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -19,10 +20,23 @@ import { chromium } from 'playwright';
       claim really is "the user sees this" AND you have scrolled/opened it
       first; use textContent when you only mean "the element says this". */
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const BROWSER_PORT = Number(process.env.IRON_VALE_BROWSER_PORT || 8322);
-const BASE_URL = `http://127.0.0.1:${BROWSER_PORT}`;
+const BROWSER_PORT_OVERRIDE = process.env.IRON_VALE_BROWSER_PORT;
+const BROWSER_PORT = BROWSER_PORT_OVERRIDE === undefined
+  ? 0
+  : Number(BROWSER_PORT_OVERRIDE);
+if (
+  BROWSER_PORT_OVERRIDE !== undefined
+  && (!Number.isInteger(BROWSER_PORT) || BROWSER_PORT < 1 || BROWSER_PORT > 65_535)
+) {
+  throw new Error(
+    `IRON_VALE_BROWSER_PORT must be an integer from 1 to 65535; received ${BROWSER_PORT_OVERRIDE}.`,
+  );
+}
 const EVIDENCE_DIR = process.env.IRON_VALE_VISUAL_QA_DIR;
 
+// Server-ownership invariant: derive the target URL only from this child uvicorn's
+// startup line; the default port 0 must never compete with the human preview.
+let BASE_URL = '';
 let browser;
 let dataDir;
 let server;
@@ -62,12 +76,37 @@ const GIVER_VIEWPORTS = {
   desktop: { width: 1280, height: 900 },
 };
 
+async function assertExplicitPortAvailable() {
+  await new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once('error', error => {
+      if (error.code === 'EADDRINUSE') {
+        reject(new Error(
+          `IRON_VALE_BROWSER_PORT=${BROWSER_PORT} is already in use. `
+          + 'Unset it to let the suite claim an ephemeral port, or choose a free port.',
+        ));
+        return;
+      }
+      reject(error);
+    });
+    probe.listen(BROWSER_PORT, '127.0.0.1', () => probe.close(resolve));
+  });
+}
+
 async function waitForServer() {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     if (server.exitCode !== null) {
       throw new Error(`Scratch Iron Vale server exited early.\n${serverOutput}`);
     }
+    const portMatch = serverOutput.match(
+      /Uvicorn running on http:\/\/127\.0\.0\.1:(\d+)/,
+    );
+    if (!portMatch) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      continue;
+    }
+    BASE_URL = `http://127.0.0.1:${portMatch[1]}`;
     try {
       const response = await fetch(`${BASE_URL}/api/profiles`);
       if (response.ok) return;
@@ -264,6 +303,7 @@ async function waitForGiverResponsiveState(page, phone) {
 before(async () => {
   dataDir = await mkdtemp(path.join(tmpdir(), 'iron-vale-browser-'));
   if (EVIDENCE_DIR) await mkdir(EVIDENCE_DIR, { recursive: true });
+  if (BROWSER_PORT_OVERRIDE !== undefined) await assertExplicitPortAvailable();
   server = spawn(
     path.join(ROOT, '.venv/bin/uvicorn'),
     ['app.main:app', '--host', '127.0.0.1', '--port', String(BROWSER_PORT)],
@@ -295,6 +335,15 @@ after(async () => {
   await browser?.close();
   if (server && server.exitCode === null) server.kill('SIGTERM');
   await rm(dataDir, { recursive: true, force: true });
+});
+
+test('browser harness targets the uvicorn process it launched', () => {
+  const portMatch = serverOutput.match(
+    /Uvicorn running on http:\/\/127\.0\.0\.1:(\d+)/,
+  );
+  assert.ok(portMatch, `Uvicorn did not report its bound port.\n${serverOutput}`);
+  if (!process.env.IRON_VALE_BROWSER_PORT) assert.equal(BROWSER_PORT, 0);
+  assert.equal(BASE_URL, `http://127.0.0.1:${portMatch[1]}`);
 });
 
 test('global type tokens drive text roles without scanlines or focus zoom', async () => {
