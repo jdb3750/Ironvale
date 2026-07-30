@@ -236,6 +236,8 @@ G.crank = async (useToken) => {
 /* ================= SETTINGS ================= */
 
 let settingsTab = 'game';
+let counselScheduleDraft = null;
+let counselScheduleOpenDay = null;
 const SETTINGS_TABS = Object.freeze([
   { id: 'game', label: 'GAME' },
   { id: 'apis', label: 'APIS' },
@@ -244,6 +246,8 @@ const SETTINGS_TABS = Object.freeze([
 
 RESETS.push(() => {
   settingsTab = 'game';
+  counselScheduleDraft = null;
+  counselScheduleOpenDay = null;
 });
 
 G.setSettingsTab = (id) => {
@@ -251,6 +255,166 @@ G.setSettingsTab = (id) => {
   settingsTab = id;
   render();
   document.getElementById(`settings-tab-${id}`)?.focus({ preventScroll: true });
+};
+
+function copyCounselSchedule(schedule) {
+  const days = S.state.counsel_schedule_options.days;
+  return Object.fromEntries(days.map(day => [
+    day,
+    Array.isArray(schedule?.[day])
+      ? schedule[day].map(slot => ({ ...slot }))
+      : [],
+  ]));
+}
+
+function counselScheduleConfig(modality) {
+  return S.state.counsel_schedule_options.modalities
+    .find(option => option.value === modality);
+}
+
+function ensureCounselScheduleDraft() {
+  if (counselScheduleDraft === null) {
+    counselScheduleDraft = copyCounselSchedule(
+      S.state.settings.counsel_schedule,
+    );
+  }
+  return counselScheduleDraft;
+}
+
+function counselScheduleSlotLabel(slot) {
+  const effort = slot.tier ? ` · ${slot.tier}` : '';
+  const optional = slot.optional ? ' · optional' : '';
+  return `${slot.modality}${effort}${optional}`;
+}
+
+function counselScheduleDisplayName(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function counselScheduleEditorHTML() {
+  const schedule = ensureCounselScheduleDraft();
+  const config = S.state.counsel_schedule_options;
+  const dayNames = Object.fromEntries(
+    config.days.map(day => [day, day.slice(0, 3).toUpperCase()]),
+  );
+  return `<fieldset id="counsel-schedule" class="counsel-schedule counsel-block">
+    <legend>Weekly template</legend>
+    <div class="counsel-help">Set the shape of your week. The Council records it, but does not steer quests from it yet.</div>
+    <div class="counsel-schedule-days">
+      ${config.days.map(day => {
+        const slots = schedule[day];
+        const summary = slots.length
+          ? slots.map(counselScheduleSlotLabel).join(' + ')
+          : 'empty';
+        return `<details class="counsel-schedule-day" data-schedule-day="${day}" ${counselScheduleOpenDay === day ? 'open' : ''} ontoggle="G.trackCounselScheduleDay(this)">
+          <summary class="btn small counsel-schedule-summary">
+            <span class="counsel-schedule-day-name">${dayNames[day]}</span>
+            <span class="counsel-schedule-day-plan">${esc(summary)}</span>
+          </summary>
+          <div class="counsel-schedule-day-body">
+            <span class="counsel-schedule-label">Paths</span>
+            <div class="counsel-schedule-choices">
+              ${config.modalities.map(option => {
+                const selected = slots.some(slot => slot.modality === option.value);
+                return `<button type="button" class="btn small counsel-schedule-choice ${selected ? 'active' : ''}" data-schedule-modality="${option.value}" aria-pressed="${selected}" onclick="G.toggleCounselScheduleModality('${day}','${option.value}')">${esc(counselScheduleDisplayName(option.value))}</button>`;
+              }).join('')}
+            </div>
+            <div class="counsel-help">One path per giver. Tap a selected path again to clear it.</div>
+            ${slots.map(slot => {
+              const option = counselScheduleConfig(slot.modality);
+              const tiers = option?.tiers || [];
+              return `<div class="counsel-schedule-slot" data-schedule-slot="${slot.modality}">
+                <div class="counsel-schedule-slot-head">
+                  <span class="counsel-label">${esc(counselScheduleDisplayName(slot.modality))}</span>
+                  <button type="button" class="btn small toggle ${slot.optional ? 'green' : ''}" data-schedule-optional="${slot.modality}" aria-pressed="${slot.optional}" aria-label="${esc(counselScheduleDisplayName(slot.modality))} optional: ${slot.optional ? 'on' : 'off'}" onclick="G.toggleCounselScheduleOptional('${day}','${slot.modality}')">OPTIONAL: ${slot.optional ? 'ON' : 'OFF'}</button>
+                </div>
+                ${tiers.length ? `<div class="counsel-schedule-tiers" aria-label="${esc(slot.modality)} effort tier">
+                  ${tiers.map(tier => `<button type="button" class="btn small counsel-schedule-choice ${slot.tier === tier ? 'active' : ''}" data-schedule-tier="${tier}" aria-pressed="${slot.tier === tier}" onclick="G.setCounselScheduleTier('${day}','${slot.modality}','${tier}')">${esc(counselScheduleDisplayName(tier))}</button>`).join('')}
+                </div>` : '<div class="counsel-help">No effort tier. Rest is the whole path.</div>'}
+              </div>`;
+            }).join('')}
+          </div>
+        </details>`;
+      }).join('')}
+    </div>
+    <button type="button" class="btn small counsel-schedule-save" onclick="G.saveCounselSchedule()">SAVE WEEKLY PLAN</button>
+  </fieldset>`;
+}
+
+function refreshCounselScheduleEditor(day, focusSelector) {
+  counselScheduleOpenDay = day;
+  const editor = document.getElementById('counsel-schedule');
+  if (!editor) return;
+  editor.outerHTML = counselScheduleEditorHTML();
+  requestAnimationFrame(() => {
+    document.querySelector(
+      `[data-schedule-day="${day}"] ${focusSelector}`,
+    )?.focus({ preventScroll: true });
+  });
+}
+
+G.trackCounselScheduleDay = (details) => {
+  const day = details.dataset.scheduleDay;
+  if (details.open) {
+    counselScheduleOpenDay = day;
+    document.querySelectorAll('[data-schedule-day][open]').forEach(other => {
+      if (other !== details) other.open = false;
+    });
+  } else if (counselScheduleOpenDay === day) {
+    counselScheduleOpenDay = null;
+  }
+};
+
+G.toggleCounselScheduleModality = (day, modality) => {
+  const schedule = ensureCounselScheduleDraft();
+  const option = counselScheduleConfig(modality);
+  if (!schedule[day] || !option) return;
+  const slots = schedule[day];
+  const laneIndex = slots.findIndex(slot => (
+    counselScheduleConfig(slot.modality)?.giver === option.giver
+  ));
+  if (laneIndex >= 0 && slots[laneIndex].modality === modality) {
+    slots.splice(laneIndex, 1);
+  } else {
+    const slot = {
+      modality,
+      optional: laneIndex >= 0 ? slots[laneIndex].optional : false,
+    };
+    if (option.tiers.length) slot.tier = option.tiers[0];
+    if (laneIndex >= 0) slots.splice(laneIndex, 1, slot);
+    else slots.push(slot);
+  }
+  const order = S.state.counsel_schedule_options.modalities
+    .map(entry => entry.value);
+  slots.sort((left, right) => (
+    order.indexOf(left.modality) - order.indexOf(right.modality)
+  ));
+  refreshCounselScheduleEditor(
+    day,
+    `[data-schedule-modality="${modality}"]`,
+  );
+};
+
+G.setCounselScheduleTier = (day, modality, tier) => {
+  const slot = ensureCounselScheduleDraft()[day]
+    ?.find(entry => entry.modality === modality);
+  if (!slot || !counselScheduleConfig(modality)?.tiers.includes(tier)) return;
+  slot.tier = tier;
+  refreshCounselScheduleEditor(
+    day,
+    `[data-schedule-slot="${modality}"] [data-schedule-tier="${tier}"]`,
+  );
+};
+
+G.toggleCounselScheduleOptional = (day, modality) => {
+  const slot = ensureCounselScheduleDraft()[day]
+    ?.find(entry => entry.modality === modality);
+  if (!slot) return;
+  slot.optional = !slot.optional;
+  refreshCounselScheduleEditor(
+    day,
+    `[data-schedule-slot="${modality}"] [data-schedule-optional="${modality}"]`,
+  );
 };
 
 SCREENS.settings = function () {
@@ -340,6 +504,7 @@ SCREENS.settings = function () {
         <span class="counsel-label">game loop style</span>
         ${pixelSelect('set-counsel-mode', loopOpts, s.counsel_mode, 'game loop style', 'saveCounselMode')}
       </div>
+      ${counselScheduleEditorHTML()}
       <button type="button" class="btn small toggle ${s.counsel_nudge_enabled ? 'green' : ''}" aria-pressed="${s.counsel_nudge_enabled ? 'true' : 'false'}" onclick="G.toggleCounselNudge()">DAILY POINTER: ${s.counsel_nudge_enabled ? 'ON' : 'OFF'}</button>
       <fieldset id="counsel-focus" class="counsel-focus counsel-block" aria-describedby="counsel-focus-hint" ${selfDirected ? 'disabled' : ''}>
         <legend>Focus</legend>
@@ -469,6 +634,23 @@ G.saveCounselMode = async (value) => {
   if (!isRouteTokenCurrent(token)) return;
   SFX.accept();
   toast(value === 'considered' ? 'Considered path chosen.' : 'Choose-your-own path chosen.');
+  render();
+};
+
+G.saveCounselSchedule = async () => {
+  const token = captureRouteToken();
+  const counsel_schedule = copyCounselSchedule(
+    ensureCounselScheduleDraft(),
+  );
+  await api('/settings', { method: 'POST', body: { counsel_schedule } });
+  await refreshState();
+  if (!isRouteTokenCurrent(token)) return;
+  counselScheduleDraft = copyCounselSchedule(
+    S.state.settings.counsel_schedule,
+  );
+  counselScheduleOpenDay = null;
+  SFX.accept();
+  toast('Weekly counsel plan saved.');
   render();
 };
 

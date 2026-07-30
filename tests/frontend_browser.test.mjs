@@ -440,7 +440,7 @@ test('phone Scrivener blocks incomplete deeds without a request or overflow', as
     await page.getByRole('button', { name: 'SWEAR IT ON THE LEDGER' }).click();
     await page.locator('.toast.err').waitFor();
     assert.equal(claimRequests, 0);
-    assert.equal(
+    assert.deepEqual(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       true,
     );
@@ -762,6 +762,123 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
       await page.evaluate(() => S.state.settings.counsel_charter),
       { primary: 'run', secondary: ['strength'] },
     );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Settings authors a compact inert seven-day counsel template', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(() => nav('settings'));
+    await page.locator('#settings-game').waitFor();
+
+    const schedule = page.locator('#counsel-schedule');
+    await schedule.waitFor();
+    assert.equal(await schedule.locator('[data-schedule-day]').count(), 7);
+    assert.equal(await schedule.locator('[data-schedule-day][open]').count(), 0);
+    assert.deepEqual(
+      await page.locator('#set-counsel-mode').locator('..').locator('[role="menuitemradio"]').allTextContents()
+        .then(labels => labels.map(label => label.trim())),
+      ['Considered', 'Choose-your-own'],
+    );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true,
+    );
+
+    const monday = schedule.locator('[data-schedule-day="monday"]');
+    await monday.locator('summary').click();
+    await monday.getByRole('button', { name: 'Run', exact: true }).click();
+    assert.equal(await page.locator('.toast').count(), 0);
+    await monday.getByRole('button', { name: 'Climb', exact: true }).click();
+    assert.deepEqual(
+      await monday.locator('[data-schedule-modality].active').allTextContents()
+        .then(labels => labels.map(label => label.trim())),
+      ['Climb'],
+    );
+    await monday.getByRole('button', { name: 'Run', exact: true }).click();
+    await monday.getByRole('button', { name: 'Strength', exact: true }).click();
+    assert.deepEqual(
+      await monday.locator('[data-schedule-modality].active').allTextContents()
+        .then(labels => labels.map(label => label.trim())),
+      ['Run', 'Strength'],
+    );
+    await monday.getByRole('button', { name: 'Quality', exact: true }).click();
+    await monday.getByRole('button', { name: 'Circuit', exact: true }).click();
+    await monday.getByRole('button', { name: 'Strength optional: off', exact: true }).click();
+    assert.equal(await schedule.locator('[data-schedule-day][open]').count(), 1);
+    assert.deepEqual(
+      await monday.locator('[data-schedule-modality="run"]').evaluate(element => ({
+        background: getComputedStyle(element).backgroundColor,
+        border: getComputedStyle(element).borderTopColor,
+      })),
+      {
+        background: 'rgb(201, 162, 75)',
+        border: 'rgb(240, 208, 128)',
+      },
+    );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true,
+    );
+    assert.equal(
+      await schedule.locator('summary, button').evaluateAll(elements => (
+        elements
+          .filter(element => element.getClientRects().length)
+          .every(element => element.getBoundingClientRect().height >= 43)
+      )),
+      true,
+    );
+
+    const settingsWrite = page.waitForResponse(response => (
+      response.request().method() === 'POST'
+      && response.url().endsWith('/api/settings')
+    ));
+    await schedule.getByRole('button', { name: 'SAVE WEEKLY PLAN', exact: true }).click();
+    assert.equal((await settingsWrite).status(), 200);
+    await page.getByText('Weekly counsel plan saved.', { exact: true }).waitFor();
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_schedule.monday),
+      [
+        { modality: 'run', optional: false, tier: 'quality' },
+        { modality: 'strength', optional: true, tier: 'circuit' },
+      ],
+    );
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_schedule.tuesday),
+      [],
+    );
+    assert.equal(
+      await page.evaluate(() => S.state.settings.counsel_mode),
+      'considered',
+    );
+
+    if (EVIDENCE_DIR) {
+      await page.locator('[data-schedule-day="monday"] summary').click();
+      await page.waitForFunction(() => (
+        document.querySelectorAll('.key-pop-ghost').length === 0
+      ));
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-phone.png'),
+        fullPage: true,
+      });
+      await page.locator('#counsel-schedule').scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-phone-viewport.png'),
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#counsel-schedule').scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-desktop-viewport.png'),
+      });
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-desktop.png'),
+        fullPage: true,
+      });
+    }
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -2303,7 +2420,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '110'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '111'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
