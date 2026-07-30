@@ -189,6 +189,18 @@ entries are open work with the removal path worked out.
   that no longer exists. **The contract is: the writer accepts any name; readers
   must tolerate unknown ones.** Documented here rather than enforced in code.
 
+**Stale declarations (inert now, traps later)**
+
+- **Two `bram` leftovers in the doctrine code.** `programs.py:77` defaults a custom
+  routine's giver to `"bram"` — a retired giver who offers nothing, so a routine
+  created without an explicit giver would be unofferable. Unreachable today only
+  because the UI always passes one. And `/api/programs` in `main.py` builds its
+  `active` map over `("strength", "bram")`, querying a doctrine slot for a giver
+  who cannot hold one. Both are rename-era residue: before the three-giver collapse
+  `strength` *was* Bram and legitimately took doctrines. Neither breaks anything;
+  both are declarations that outlived their meaning and will mislead the next
+  reader. Surfaced while briefing Scheduled seam A-prime.
+
 **Resolved stale declarations**
 
 - **DONE v0.22.4 — Bram's registry entry is retired and owns no modalities.**
