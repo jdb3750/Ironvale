@@ -1111,6 +1111,133 @@ test('Menagerie hat-picker summary centers its label in the phone touch target',
   }
 });
 
+test('raised surfaces share a lighter bevel and one southeast cast shadow', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  const viewports = [
+    ['phone', { width: 375, height: 812 }],
+    ['desktop', { width: 1280, height: 900 }],
+  ];
+  try {
+    await createGiverProfile(page, 'considered');
+    for (const [viewportName, viewport] of viewports) {
+      await page.setViewportSize(viewport);
+      await openGiverBoard(page, 'kettlebell');
+      const selector = page.locator('.iron-today-control .pixel-select');
+      const followingTop = () => page.locator('.counsel-path-card').first()
+        .evaluate(element => element.getBoundingClientRect().top);
+      const beforeOpen = await followingTop();
+      await selector.locator('.pixel-select-summary').evaluate(summary => summary.click());
+      await selector.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+      assert.equal(await followingTop(), beforeOpen);
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `elevation-menu-over-card-${viewportName}.png`),
+        });
+      }
+
+      const elevation = await page.evaluate(() => {
+        const tokenColor = (name) => {
+          const probe = document.createElement('span');
+          probe.style.backgroundColor = `var(${name})`;
+          document.body.appendChild(probe);
+          const color = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return color;
+        };
+        const describe = (element) => {
+          const style = getComputedStyle(element);
+          return {
+            background: style.backgroundColor,
+            borderBottomColor: style.borderBottomColor,
+            borderLeftColor: style.borderLeftColor,
+            borderRightColor: style.borderRightColor,
+            borderTopColor: style.borderTopColor,
+            shadow: style.boxShadow,
+          };
+        };
+        const bubble = document.createElement('div');
+        bubble.className = 'fenn-bubble';
+        bubble.textContent = 'A deed waits.';
+        document.body.appendChild(bubble);
+        const hatMenu = document.createElement('div');
+        hatMenu.className = 'hat-picker-menu';
+        document.body.appendChild(hatMenu);
+        const overlay = showModal('<div class="win center" data-elevation-modal>A raised window.</div>');
+        toast('A raised notice.');
+
+        const surfaces = {
+          bubble: describe(bubble),
+          hatMenu: describe(hatMenu),
+          menu: describe(document.querySelector('.iron-today-control .pixel-select-menu')),
+          modal: describe(overlay.querySelector('[data-elevation-modal]')),
+          toast: describe(document.querySelector('.toast')),
+        };
+        const ordinary = describe(document.querySelector('#app .win'));
+        bubble.remove();
+        hatMenu.remove();
+        overlay.remove();
+        document.querySelector('.toast')?.remove();
+        return {
+          ordinary,
+          panel2: tokenColor('--panel2'),
+          raised: tokenColor('--surface-raised'),
+          surfaces,
+        };
+      });
+      const parseRgb = value => value.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
+      const luminance = value => parseRgb(value)
+        .map(channel => channel / 255)
+        .map(channel => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+      assert.ok(elevation.raised && elevation.raised !== 'rgba(0, 0, 0, 0)', JSON.stringify(elevation));
+      assert.ok(luminance(elevation.raised) > luminance(elevation.panel2), JSON.stringify(elevation));
+      const shadows = new Set();
+      for (const surface of Object.values(elevation.surfaces)) {
+        assert.equal(surface.background, elevation.raised, JSON.stringify(elevation));
+        assert.match(surface.shadow, /4px 4px 0px/);
+        shadows.add(surface.shadow);
+      }
+      assert.equal(shadows.size, 1, JSON.stringify(elevation));
+      assert.notDeepEqual(
+        [
+          elevation.surfaces.modal.borderTopColor,
+          elevation.surfaces.modal.borderRightColor,
+          elevation.surfaces.modal.borderBottomColor,
+          elevation.surfaces.modal.borderLeftColor,
+        ],
+        [
+          elevation.ordinary.borderTopColor,
+          elevation.ordinary.borderRightColor,
+          elevation.ordinary.borderBottomColor,
+          elevation.ordinary.borderLeftColor,
+        ],
+      );
+
+      if (EVIDENCE_DIR) {
+        await page.evaluate(() => {
+          showModal(`<div class="win center">
+            <div class="win-title">RAISED WINDOW</div>
+            <p>A nearer surface for a decision that cannot wait.</p>
+            <button class="btn small" type="button">CONTINUE</button>
+          </div>`);
+        });
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `elevation-modal-${viewportName}.png`),
+        });
+        await page.locator('.overlay').evaluate(element => element.remove());
+        await page.evaluate(() => toast('The oath is inked.'));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `elevation-toast-${viewportName}.png`),
+        });
+        await page.locator('.toast').evaluate(element => element.remove());
+      }
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('siege timezone menu flips above the phone dock and stays visible at every viewport', async () => {
   for (const [name, viewport] of Object.entries(GIVER_VIEWPORTS)) {
     const { context, failures, page } = await openMainProfile(viewport);
@@ -1713,9 +1840,67 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
           overflow: document.documentElement.scrollWidth > window.innerWidth,
         };
       });
+      const raised = await page.evaluate(() => {
+        const tokenColor = (name) => {
+          const probe = document.createElement('span');
+          probe.style.color = `var(${name})`;
+          document.body.appendChild(probe);
+          const color = getComputedStyle(probe).color;
+          probe.remove();
+          return color;
+        };
+        const overlay = showModal(`<div class="win" data-raised-contrast>
+          <span data-tone="ink" style="color:var(--ink)">ink</span>
+          <span data-tone="gold" style="color:var(--gold)">gold</span>
+          <span data-tone="gold-bright" style="color:var(--gold-bright)">bright gold</span>
+          <span data-tone="blue" style="color:var(--blue)">blue</span>
+          <span data-tone="green" style="color:var(--green)">green</span>
+          <span data-tone="danger" style="color:var(--danger-ink)">danger</span>
+          <span data-tone="helper" class="muted">helper</span>
+        </div>`);
+        toast('The gate does not open.', true);
+        const panel = overlay.querySelector('[data-raised-contrast]');
+        const background = getComputedStyle(panel).backgroundColor;
+        const tones = Object.fromEntries(
+          [...panel.querySelectorAll('[data-tone]')].map(element => [
+            element.dataset.tone,
+            {
+              background,
+              foreground: getComputedStyle(element).color,
+            },
+          ]),
+        );
+        const toastElement = document.querySelector('.toast.err');
+        const toastStyle = getComputedStyle(toastElement);
+        const result = {
+          dangerInk: tokenColor('--danger-ink'),
+          dimReadable: tokenColor('--dim-readable'),
+          red: tokenColor('--red'),
+          tones,
+          toast: {
+            background: toastStyle.backgroundColor,
+            borderTopColor: toastStyle.borderTopColor,
+            foreground: toastStyle.color,
+          },
+        };
+        overlay.remove();
+        toastElement.remove();
+        return result;
+      });
       observations.push({
         viewport: { name: viewportName, ...viewport },
         ...capture,
+        raised,
+        raisedRatios: Object.fromEntries(
+          Object.entries(raised.tones).map(([tone, colors]) => [
+            tone,
+            contrastRatio(parseRgb(colors.foreground), parseRgb(colors.background)),
+          ]),
+        ),
+        toastRatio: contrastRatio(
+          parseRgb(raised.toast.foreground),
+          parseRgb(raised.toast.background),
+        ),
         assetVersion: await page.locator('link[rel="stylesheet"]').evaluate(element => (
           new URL(element.href).searchParams.get('v')
         )),
@@ -1767,7 +1952,24 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '105'), JSON.stringify(observations, null, 2));
+    assert.ok(
+      observations.every(item => Object.values(item.raisedRatios).every(ratio => ratio >= 4.5)),
+      JSON.stringify(observations, null, 2),
+    );
+    assert.ok(observations.every(item => item.toastRatio >= 4.5), JSON.stringify(observations, null, 2));
+    assert.ok(
+      observations.every(item => item.raised.toast.foreground === item.raised.dangerInk),
+      JSON.stringify(observations, null, 2),
+    );
+    assert.ok(
+      observations.every(item => item.raised.toast.borderTopColor === item.raised.red),
+      JSON.stringify(observations, null, 2),
+    );
+    assert.ok(
+      observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
+      JSON.stringify(observations, null, 2),
+    );
+    assert.ok(observations.every(item => item.assetVersion === '106'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
