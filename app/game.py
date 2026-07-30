@@ -53,23 +53,23 @@ AMBITION = [
 ]
 
 GIVER_ARCHETYPES = {
-    "running": {
+    "endurance": {
         "archetype": "Endurance",
         "display": {"name": "Old Fenn", "title": "the Wayfarer", "sprite": "fenn"},
         "modalities": ("run", "ride", "swim", "climb"),
     },
-    "kettlebell": {
+    "strength": {
         "archetype": "Strength",
         "display": {"name": "Grunhilda", "title": "Iron-Bell", "sprite": "grunhilda"},
         "modalities": ("barbell", "dumbbell", "kettlebell", "bodyweight"),
     },
-    "strength": {
+    "bram": {
         # Historical identity remains registered; retirement owns no live modalities.
         "archetype": "Retired",
         "display": {"name": "Ser Bram", "title": "the Old Knight at Rest", "sprite": "bram"},
         "modalities": (),
     },
-    "mobility": {
+    "recovery": {
         "archetype": "Recovery",
         "display": {"name": "Sage Elowen", "title": "of the Willow", "sprite": "elowen"},
         "modalities": ("mobility", "stretch", "easy movement", "rest"),
@@ -79,16 +79,16 @@ GIVER_ARCHETYPES = {
 GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.items()}
 # Historical giver identity is permanent; only this smaller live roster may
 # generate or accept new quests.
-OFFERABLE_GIVERS = ("running", "kettlebell", "mobility")
+OFFERABLE_GIVERS = ("endurance", "strength", "recovery")
 
 COUNSEL_MODES = ("considered", "self")
 COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "strength")
 COUNSEL_FOCUS_GIVERS = {
-    "run": "running",
-    "ride": "running",
-    "swim": "running",
-    "climb": "running",
-    "strength": "kettlebell",
+    "run": "endurance",
+    "ride": "endurance",
+    "swim": "endurance",
+    "climb": "endurance",
+    "strength": "strength",
 }
 
 
@@ -208,7 +208,7 @@ def _normalize_counsel_iron_today(value, current_date):
     equipment = value.get("equipment")
     if (
         value.get("date") != current_date
-        or equipment not in GIVER_ARCHETYPES["kettlebell"]["modalities"]
+        or equipment not in GIVER_ARCHETYPES["strength"]["modalities"]
     ):
         return None
     return {"date": current_date, "equipment": equipment}

@@ -25,9 +25,9 @@ def considered_contract() -> None:
     # Given: identical fresh profiles. When: each giver is read repeatedly. Then:
     # one stable, disclosed, giver-owned option is returned.
     expected_modalities = {
-        "running": {"run", "ride", "swim"},
-        "strength": {"climb"},
-        "mobility": {None},
+        "endurance": {"run", "ride", "swim"},
+        "strength": {None},
+        "recovery": {None},
     }
     for giver in game.OFFERABLE_GIVERS:
         new_profile(f"considered-{giver}")
@@ -40,22 +40,22 @@ def considered_contract() -> None:
         assert first[0].giver == giver
         if giver in expected_modalities:
             assert first[0].modality in expected_modalities[giver]
-        if giver == "kettlebell":
+        if giver == "strength":
             assert_single_iron_implement(first[0])
     new_profile("considered-repeat")
     write_fresh_sync()
-    independent = offers("running")
+    independent = offers("endurance")
     new_profile("considered-repeat")
     write_fresh_sync()
-    assert offers("running") == independent
+    assert offers("endurance") == independent
 
 
 def self_tiers() -> None:
     # Given: Choose-your-own mode without a doctrine or writ. When: each board is
     # read. Then: the approved modality-specific alternatives remain ordered.
     expected = {
-        "running": ("easy", "steady", "quality"),
-        "kettlebell": ("volume", "circuit", "strength"),
+        "endurance": ("easy", "steady", "quality"),
+        "strength": ("volume", "circuit", "strength"),
     }
     for giver, labels in expected.items():
         new_profile(f"self-{giver}", "self")
@@ -64,7 +64,7 @@ def self_tiers() -> None:
         assert tuple(option.tier_label for option in current) == labels
         assert len({option.option_key for option in current}) == 3
         assert all(option.counsel_mode == "self" for option in current)
-    iron = offers("kettlebell")
+    iron = offers("strength")
     assert tuple(option.tier_cues for option in iron) == (
         ["lighter_load", "higher_reps"],
         ["brisk_transitions", "moderate_load"],
@@ -72,7 +72,7 @@ def self_tiers() -> None:
     )
     new_profile("self-mobility", "self")
     write_fresh_sync()
-    mobility = offers("mobility")
+    mobility = offers("recovery")
     assert len(mobility) == 3 and all(option.kind == "mobility" for option in mobility)
 
 
@@ -88,8 +88,8 @@ def fenn_modality_dispatch() -> None:
         ("Climbing", 9, 75),
     ):
         seed_activity(activity_type, days_ago, minutes)
-    climbing = offers("running")
-    assert {option.giver for option in climbing} == {"running"}
+    climbing = offers("endurance")
+    assert {option.giver for option in climbing} == {"endurance"}
     assert {option.modality for option in climbing} == {"climb"}
     assert tuple(option.tier_label for option in climbing) == (
         "technique",
@@ -105,7 +105,7 @@ def fenn_modality_dispatch() -> None:
         new_profile(f"self-fenn-{modality}", "self")
         write_fresh_sync()
         seed_activity(activity_type, 4, minutes)
-        current = offers("running")
+        current = offers("endurance")
         assert {option.modality for option in current} == {modality}
         assert tuple(option.tier_label for option in current) == (
             "easy",
@@ -131,7 +131,7 @@ def seed_bram_quest(status: str = "active") -> int:
         "(giver, kind, title, details, status, accepted_at, completed_at) "
         "VALUES (?,?,?,?,?,?,?)",
         (
-            "strength",
+            "bram",
             "climb_technique",
             "An Old Oath of the Wall",
             json.dumps(details),
@@ -148,12 +148,12 @@ def seed_bram_quest(status: str = "active") -> int:
 def bram_retirement_preserves_quests_and_history() -> None:
     # Bram's identity remains permanent, but his live roster endpoint is empty.
     new_profile("bram-retired")
-    retired = client.get("/api/offers/strength")
+    retired = client.get("/api/offers/bram")
     assert retired.status_code == 200
     assert retired.json() == {"offers": [], "active": None}
     refused = client.post(
         "/api/quests/accept",
-        json={"giver": "strength", "option_key": "an-old-bram-offer"},
+        json={"giver": "bram", "option_key": "an-old-bram-offer"},
     )
     assert refused.status_code == 400
     assert "no longer sets quests" in refused.json()["error"].casefold()
@@ -162,7 +162,7 @@ def bram_retirement_preserves_quests_and_history() -> None:
     new_profile("bram-active-complete")
     quest_id = seed_bram_quest()
     seed_activity("Climbing", 0, 45)
-    continued = client.get("/api/offers/strength")
+    continued = client.get("/api/offers/bram")
     assert continued.status_code == 200
     assert continued.json()["offers"] == []
     assert continued.json()["active"]["id"] == quest_id
@@ -173,12 +173,12 @@ def bram_retirement_preserves_quests_and_history() -> None:
     )
     assert completed.status_code == 200
     assert db.q("SELECT status FROM quests WHERE id=?", (quest_id,)).fetchone()["status"] == "done"
-    assert client.get("/api/offers/strength").json() == {"offers": [], "active": None}
+    assert client.get("/api/offers/bram").json() == {"offers": [], "active": None}
 
     # The same transition keeps abandonment available.
     new_profile("bram-active-abandon")
     abandoned_id = seed_bram_quest()
-    active = client.get("/api/offers/strength").json()
+    active = client.get("/api/offers/bram").json()
     assert active["offers"] == [] and active["active"]["id"] == abandoned_id
     abandoned = client.post(f"/api/quests/{abandoned_id}/abandon")
     assert abandoned.status_code == 200
@@ -193,7 +193,7 @@ def bram_retirement_preserves_quests_and_history() -> None:
     history = client.get("/api/quests/log")
     assert history.status_code == 200
     stored = next(quest for quest in history.json()["quests"] if quest["id"] == historical_id)
-    assert stored["giver"] == "strength"
+    assert stored["giver"] == "bram"
     assert game.GIVERS[stored["giver"]]["name"] == "Ser Bram"
     assert game.GIVERS[stored["giver"]]["title"] == "the Old Knight at Rest"
     assert game.GIVER_ARCHETYPES[stored["giver"]]["archetype"] == "Retired"
@@ -205,22 +205,22 @@ def elowen_and_doctrine_precedence() -> None:
     # the existing single progression/recovery path supersedes generic choices.
     new_profile("rest-writ")
     seed_adverse_wellness()
-    considered = offers("mobility")
+    considered = offers("recovery")
     assert len(considered) == 1 and considered[0].kind == "rest"
     assert client.post("/api/settings", json={"counsel_mode": "self"}).status_code == 200
-    self_options = offers("mobility")
+    self_options = offers("recovery")
     assert len(self_options) == 1 and self_options[0].kind == "rest"
     assert self_options[0].option_key != considered[0].option_key
     new_profile("doctrine")
     write_fresh_sync()
     selected = client.post(
         "/api/programs/select",
-        json={"giver": "kettlebell", "key": "starting_strength"},
+        json={"giver": "strength", "key": "starting_strength"},
     )
     assert selected.status_code == 200
     for mode in ("considered", "self"):
         assert client.post("/api/settings", json={"counsel_mode": mode}).status_code == 200
-        current = offers("kettlebell")
+        current = offers("strength")
         assert len(current) == 1 and current[0].program is True
         assert current[0].progression is not None
         assert current[0].progression.key == "starting_strength"
@@ -234,7 +234,7 @@ def cold_start_boundaries() -> None:
         write_fresh_sync()
         for days_ago in range(1, sessions + 1):
             seed_activity("Run", days_ago, 40 + days_ago)
-        current = offers("running")
+        current = offers("endurance")
         expected = "personalized" if sessions == 3 else "generic_starter"
         assert all(option.sizing == expected for option in current)
         assert all(
@@ -243,7 +243,7 @@ def cold_start_boundaries() -> None:
         )
     new_profile("iron-zero", "self")
     write_fresh_sync()
-    generic = offers("kettlebell")
+    generic = offers("strength")
     assert all(option.sizing == "generic_starter" for option in generic)
     assert all("no_iron_history" in option.reason_codes for option in generic)
     assert all(
@@ -258,7 +258,7 @@ def cold_start_boundaries() -> None:
         (NOW.isoformat(timespec="seconds"), "Back Squat", 82.5, 5),
     )
     db.commit()
-    personalized = offers("kettlebell")
+    personalized = offers("strength")
     assert all(option.sizing == "personalized" for option in personalized)
     assert all(
         any(
@@ -274,15 +274,15 @@ def wellness_modes() -> None:
     # Then: Considered suppresses hard work while self retains it with a warning.
     new_profile("fresh-considered")
     write_fresh_sync()
-    assert offers("running")[0].intensity == "hard"
+    assert offers("endurance")[0].intensity == "hard"
     new_profile("missing-considered")
-    suppressed = offers("running")[0]
+    suppressed = offers("endurance")[0]
     assert suppressed.intensity != "hard"
     assert {"wellness_data_missing", "hard_option_suppressed"} <= set(
         suppressed.reason_codes,
     )
     new_profile("missing-self", "self")
-    self_options = offers("running")
+    self_options = offers("endurance")
     hard = next(option for option in self_options if option.tier_label == "quality")
     assert hard.intensity == "hard" and hard.wellness_warning
     assert "hard_option_wellness_warning" in hard.reason_codes
@@ -293,7 +293,7 @@ def accept_security_and_attribution() -> None:
     # accepts are posted. Then: only current identities atomically write derived tags.
     new_profile("valid-counsel")
     write_fresh_sync()
-    current = offers("running")
+    current = offers("endurance")
     chosen = current[0]
     before_accept = (
         row_count("quests"),
@@ -302,7 +302,7 @@ def accept_security_and_attribution() -> None:
     )
     accepted = client.post(
         "/api/quests/accept",
-        json={"giver": "running", "option_key": chosen.option_key},
+        json={"giver": "endurance", "option_key": chosen.option_key},
     )
     assert accepted.status_code == 200
     accepted_payload = AcceptanceResponse.model_validate(accepted.json())
@@ -324,12 +324,12 @@ def accept_security_and_attribution() -> None:
     )
     new_profile("valid-self", "self")
     write_fresh_sync()
-    self_options = offers("running")
+    self_options = offers("endurance")
     self_chosen = self_options[1]
     forged_tag = client.post(
         "/api/quests/accept",
         json={
-            "giver": "running",
+            "giver": "endurance",
             "offer_id": self_chosen.offer_id,
             "mode": "schedule",
             "tag": "schedule",
@@ -342,27 +342,27 @@ def accept_security_and_attribution() -> None:
     assert self_record.mode == "self"
     new_profile("stale")
     write_fresh_sync()
-    stale_key = offers("running")[0].option_key
+    stale_key = offers("endurance")[0].option_key
     assert client.post("/api/settings", json={"counsel_mode": "self"}).status_code == 200
     stale = client.post(
         "/api/quests/accept",
-        json={"giver": "running", "option_key": stale_key},
+        json={"giver": "endurance", "option_key": stale_key},
     )
     assert stale.status_code == 400
     assert (row_count("quests"), row_count("counsel_attributions")) == (0, 0)
     assert row_count("ledger") == 1
     new_profile("malformed", "self")
     write_fresh_sync()
-    valid_key = offers("running")[0].option_key
+    valid_key = offers("endurance")[0].option_key
     malformed = (
         {"giver": "unknown", "option_key": valid_key},
-        {"giver": "running"},
-        {"giver": "running", "option_key": 7},
-        {"giver": "running", "offer_id": "7"},
-        {"giver": "running", "offer_id": True},
-        {"giver": "running", "offer_id": 7},
+        {"giver": "endurance"},
+        {"giver": "endurance", "option_key": 7},
+        {"giver": "endurance", "offer_id": "7"},
+        {"giver": "endurance", "offer_id": True},
+        {"giver": "endurance", "offer_id": 7},
         {"giver": "strength", "option_key": valid_key},
-        {"giver": "running", "option_key": "forged"},
+        {"giver": "endurance", "option_key": "forged"},
     )
     assert all(
         client.post("/api/quests/accept", json=payload).status_code == 400

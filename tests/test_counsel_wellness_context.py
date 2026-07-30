@@ -153,7 +153,7 @@ def request_mobility_with_context() -> Tuple[
 
     counsel_context.assemble = capture
     try:
-        response = client.get("/api/offers/mobility")
+        response = client.get("/api/offers/recovery")
     finally:
         counsel_context.assemble = original
     return response.status_code, response.content, tuple(contexts)
@@ -186,7 +186,7 @@ def mobility_at_midnight(boundary: datetime) -> MobilityClockResult:
     quests.now = adversarial_quest_now
     quests.today = adversarial_quest_today
     try:
-        response = client.get("/api/offers/mobility")
+        response = client.get("/api/offers/recovery")
     finally:
         game.now = original_game_now
         quests.now = original_quest_now

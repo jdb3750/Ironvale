@@ -147,8 +147,8 @@ def main() -> None:
         # When: typed context and all ordinary public Council surfaces render.
         captured = counsel_context.assemble(NOW)
         state = client.get("/api/state")
-        mobility = client.get("/api/offers/mobility")
-        running = client.get("/api/offers/running")
+        mobility = client.get("/api/offers/recovery")
+        running = client.get("/api/offers/endurance")
 
         # Then: valid readings, disclosure, and response bytes stay characterized.
         assert captured.wellness.aggregate_freshness == "fresh"
@@ -164,17 +164,17 @@ def main() -> None:
         expected = {
             "mobility": (
                 866,
-                "c606fa5ff31217cc1dded3324dbe6786a11088d0ca1f34f4dcc1766adb07987f",
+                "0fadb7dfab1f7ec0ff1311d720f7a54e7229028f7aa4c3c8df42afad8fd5e7dc",
             ),
-            "running": (
-                825,
-                "6819b4808eb72c10b07a52cc29b88725ed958090a1376a2c5b524079f3b31f8e",
+            "endurance": (
+                830,
+                "95d3ceb5e46b5010b7dc95f4a1aa3d1229bc46198633977ada4bb8aefd490c0b",
             ),
         }
         assert state.status_code == 200
         for label, response in (
             ("mobility", mobility),
-            ("running", running),
+            ("endurance", running),
         ):
             assert response.status_code == 200
             observed = (
@@ -192,8 +192,8 @@ def main() -> None:
         # When: context and public disclosures consume the qualified snapshot.
         captured = counsel_context.assemble(NOW)
         state = client.get("/api/state")
-        running_status, _, running_source = source("/api/offers/running")
-        mobility_status, _, mobility_source = source("/api/offers/mobility")
+        running_status, _, running_source = source("/api/offers/endurance")
+        mobility_status, _, mobility_source = source("/api/offers/recovery")
 
         # Then: no consumer can observe or use the inadmissible date.
         assert state.status_code == running_status == mobility_status == 200
@@ -217,7 +217,7 @@ def main() -> None:
 
         # When: trend readings are assembled and published.
         captured = counsel_context.assemble(NOW)
-        running_status, _, _ = source("/api/offers/running")
+        running_status, _, _ = source("/api/offers/endurance")
 
         # Then: only qualified rows survive the assembly boundary.
         assert running_status == 200
@@ -234,7 +234,7 @@ def main() -> None:
         write_status(TODAY, TODAY, TODAY)
         baseline_context = counsel_context.assemble(NOW)
         baseline_rules = counsel_rules.rule_state(context=baseline_context)
-        baseline_response = client.get("/api/offers/running")
+        baseline_response = client.get("/api/offers/endurance")
         baseline_payload = RunningPayload.model_validate_json(
             baseline_response.content,
         )
@@ -271,7 +271,7 @@ def main() -> None:
             seed_row(f"{YESTERDAY}~{index:02d}", 100.0, 20.0)
         crowded_context = counsel_context.assemble(NOW)
         crowded_rules = counsel_rules.rule_state(context=crowded_context)
-        crowded_response = client.get("/api/offers/running")
+        crowded_response = client.get("/api/offers/endurance")
 
         # Then: qualification precedes retention for context, rules, and HTTP.
         assert crowded_context.wellness_field("hrv").readings == expected_hrv
@@ -299,8 +299,8 @@ def main() -> None:
         # When: nudge, running, and mobility traverse the real HTTP routes.
         captured = counsel_context.assemble(NOW)
         state = client.get("/api/state")
-        running_status, _, running_source = source("/api/offers/running")
-        mobility_status, _, mobility_source = source("/api/offers/mobility")
+        running_status, _, running_source = source("/api/offers/endurance")
+        mobility_status, _, mobility_source = source("/api/offers/recovery")
 
         # Then: no false current reading or false freshness can escape.
         assert state.status_code == running_status == mobility_status == 200
@@ -319,12 +319,12 @@ def main() -> None:
         seed_row(TODAY, 61.0, 49.0)
         tomorrow = (NOW.date() + timedelta(days=1)).isoformat()
         write_status(tomorrow, tomorrow, tomorrow)
-        first_status, _, first_source = source("/api/offers/running")
+        first_status, _, first_source = source("/api/offers/endurance")
 
         # When: the same profile receives valid authoritative metadata.
         write_status(TODAY, TODAY, TODAY)
-        second_status, second_body, second_source = source("/api/offers/running")
-        third_status, third_body, third_source = source("/api/offers/running")
+        second_status, second_body, second_source = source("/api/offers/endurance")
+        third_status, third_body, third_source = source("/api/offers/endurance")
 
         # Then: invalid state never leaks and valid bytes recover deterministically.
         assert first_status == second_status == third_status == 200
@@ -338,8 +338,8 @@ def main() -> None:
             len(second_body),
             hashlib.sha256(second_body).hexdigest(),
         ) == (
-            825,
-            "6819b4808eb72c10b07a52cc29b88725ed958090a1376a2c5b524079f3b31f8e",
+            830,
+            "95d3ceb5e46b5010b7dc95f4a1aa3d1229bc46198633977ada4bb8aefd490c0b",
         )
 
     def extreme_succeeded_at_degrades_to_missing() -> None:
@@ -356,8 +356,8 @@ def main() -> None:
         # When: context, nudge, running, and mobility traverse public routes.
         captured = counsel_context.assemble(NOW)
         state = client.get("/api/state")
-        running_status, _, running_source = source("/api/offers/running")
-        mobility_status, _, mobility_source = source("/api/offers/mobility")
+        running_status, _, running_source = source("/api/offers/endurance")
+        mobility_status, _, mobility_source = source("/api/offers/recovery")
 
         # Then: the timestamp is missing evidence, never a server error.
         assert state.status_code == running_status == mobility_status == 200
@@ -389,8 +389,8 @@ def main() -> None:
         captured = counsel_context.assemble(NOW)
         rules = counsel_rules.rule_state(context=captured)
         state = client.get("/api/state")
-        running = client.get("/api/offers/running")
-        mobility = client.get("/api/offers/mobility")
+        running = client.get("/api/offers/endurance")
+        mobility = client.get("/api/offers/recovery")
 
         # Then: aggregate freshness and exact parent public behavior stay mixed.
         assert state.status_code == running.status_code == mobility.status_code == 200
@@ -407,19 +407,29 @@ def main() -> None:
             "wellness_data_mixed",
             "hard_suppressed_wellness_unknown",
         )
-        assert (
+        running_observed = (
             len(running.content),
             hashlib.sha256(running.content).hexdigest(),
-        ) == (
-            883,
-            "5df0e294bb14c593deb92a18057ad96af17826ecb921cb1c3cb4f1997218637b",
         )
-        assert (
+        running_expected = (
+            887,
+            "5ff723b218b88a8591914451c2b1a4d8b8de715495650285c4e0c95c77ef3fea",
+        )
+        assert running_observed == running_expected, (
+            running_observed,
+            running_expected,
+        )
+        mobility_observed = (
             len(mobility.content),
             hashlib.sha256(mobility.content).hexdigest(),
-        ) == (
+        )
+        mobility_expected = (
             922,
-            "b21ae30a0535d5be34702a26bcad770ee0678e6705ee09d1ed7d88c8c15e3fec",
+            "4e816a6ebaf41fff85b692082c391412b44d2889f6155c0fd9c5e24b40161377",
+        )
+        assert mobility_observed == mobility_expected, (
+            mobility_observed,
+            mobility_expected,
         )
         for response in (running, mobility):
             payload = OfferPayload.model_validate_json(response.content)

@@ -132,7 +132,7 @@ def _climb(
     candidates = tuple(
         quests.QuestCandidate(
             candidate.candidate_key,
-            {**candidate.payload, "giver": "running"},
+            {**candidate.payload, "giver": "endurance"},
             candidate.target_groups,
         )
         for candidate in candidates

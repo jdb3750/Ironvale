@@ -80,7 +80,7 @@ def mode_snapshot_acceptance_is_immutable():
         json={"timezone": "UTC", "counsel_mode": "considered"},
     )
     ok("mode snapshot starts in considered mode", settings.status_code == 200)
-    offers = client.get("/api/offers/running")
+    offers = client.get("/api/offers/endurance")
     ok("mode snapshot reads current offers", offers.status_code == 200)
     selected = offers.json()["offers"][0]
 
@@ -100,7 +100,7 @@ def mode_snapshot_acceptance_is_immutable():
     try:
         accepted = client.post(
             "/api/quests/accept",
-            json={"giver": "running", "option_key": selected["option_key"]},
+            json={"giver": "endurance", "option_key": selected["option_key"]},
         )
     finally:
         counsel._game_mode = original_mode
@@ -138,8 +138,8 @@ def mode_snapshot_acceptance_is_immutable():
 # When: a player accepts the offer. Then: its quest payload and reward fields
 # remain unchanged and the historical path has no attribution.
 reset_profile("legacy")
-legacy_offer = quests.get_offers("running")[0]
-legacy_quest_id = quests.accept_offer("running", legacy_offer["offer_id"])
+legacy_offer = quests.get_offers("endurance")[0]
+legacy_quest_id = quests.accept_offer("endurance", legacy_offer["offer_id"])
 legacy_row = db.q("SELECT * FROM quests WHERE id=?", (legacy_quest_id,)).fetchone()
 legacy_details = json.loads(legacy_row["details"])
 legacy_rewards = {key: legacy_details[key] for key in ("xp", "gold", "vigor")}
@@ -200,7 +200,7 @@ def valid_create_is_atomic():
 
     db.commit = counted_commit
     try:
-        quest_id = quests.create_quest_from_offer("running", offer, attribution)
+        quest_id = quests.create_quest_from_offer("endurance", offer, attribution)
     finally:
         db.commit = original_commit
 
@@ -249,7 +249,7 @@ def malformed_inputs_leave_no_rows():
                 tuple(offered_keys),
                 chosen_key,
             )
-            quests.create_quest_from_offer("running", fresh_offer(), attribution)
+            quests.create_quest_from_offer("endurance", fresh_offer(), attribution)
         except counsel.AttributionValidationError:
             rejected = True
         except sqlite3.DatabaseError:
@@ -276,7 +276,7 @@ def duplicate_attribution_preserves_original():
         ["run:easy", "run:steady"],
         "run:easy",
     )
-    quest_id = quests.create_quest_from_offer("running", fresh_offer(), original)
+    quest_id = quests.create_quest_from_offer("endurance", fresh_offer(), original)
     duplicate = counsel.validate_attribution(
         "counsel",
         ["run:steady"],
@@ -312,7 +312,7 @@ def malformed_stored_json_is_typed():
     # Given: a corrupt historical offered-key payload. When: it is queried.
     # Then: the persistence seam reports a typed data error, not raw JSON.
     reset_profile("corrupt-json")
-    quest_id = quests.create_quest_from_offer("running", fresh_offer(), None)
+    quest_id = quests.create_quest_from_offer("endurance", fresh_offer(), None)
     db.q(
         "INSERT INTO counsel_attributions "
         "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key) "
@@ -342,7 +342,7 @@ def attribution_insert_failure_rolls_back_quest():
     )
     rejected = False
     try:
-        quests.create_quest_from_offer("running", fresh_offer(), attribution)
+        quests.create_quest_from_offer("endurance", fresh_offer(), attribution)
     except sqlite3.OperationalError:
         rejected = True
     ok(

@@ -45,7 +45,7 @@ def _line(
     reason: str,
     focus_days: Dict[str, int],
 ) -> str:
-    giver = "mobility" if focus == "recovery" else _giver_for_focus(focus)
+    giver = "recovery" if focus == "recovery" else _giver_for_focus(focus)
     name = game.GIVERS[giver]["name"]
     if reason == "strain":
         return f"The omens counsel rest today. {name}'s willow shades the way."
@@ -76,7 +76,7 @@ def _payload(
     reason: str,
     focus_days: Dict[str, int],
 ) -> JsonMap:
-    giver = "mobility" if focus == "recovery" else _giver_for_focus(focus)
+    giver = "recovery" if focus == "recovery" else _giver_for_focus(focus)
     return {
         "focus": focus,
         "giver": giver,

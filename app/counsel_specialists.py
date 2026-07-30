@@ -111,13 +111,13 @@ def iron(
     context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[OptionDraft, ...]:
     program = programs.build_program_offer(
-        "kettlebell",
+        "strength",
         context.latest_weight,
         context.current.date().isoformat(),
     )
     if program is not None:
         key = programs.active_program(
-            "kettlebell",
+            "strength",
             context.current.date().isoformat(),
         )
         progression = {
@@ -170,7 +170,7 @@ def iron(
         draft_option(
             quests.build_lift_candidate(
                 quests.LiftCandidateContext(
-                    "kettlebell",
+                    "strength",
                     style,
                     history.focus,
                     history.exercises,

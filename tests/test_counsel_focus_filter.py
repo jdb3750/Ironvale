@@ -32,9 +32,9 @@ def charter_narrows_the_road() -> None:
     new_profile("focus-considered")
     write_fresh_sync()
     seed_three_endurance_roads()
-    assert offers("running")[0].modality == "swim"
+    assert offers("endurance")[0].modality == "swim"
     set_charter("run", ["strength"])
-    narrowed = offers("running")
+    narrowed = offers("endurance")
     assert len(narrowed) == 1
     assert narrowed[0].modality == "run"
     assert "focus_charter" in narrowed[0].reason_codes
@@ -46,9 +46,9 @@ def charter_narrows_every_tier() -> None:
     new_profile("focus-self", "self")
     write_fresh_sync()
     seed_three_endurance_roads()
-    assert {option.modality for option in offers("running")} == {"swim"}
+    assert {option.modality for option in offers("endurance")} == {"swim"}
     set_charter("run", [])
-    tiers = offers("running")
+    tiers = offers("endurance")
     assert len(tiers) == 3
     assert {option.modality for option in tiers} == {"run"}
     assert all("focus_charter" in option.reason_codes for option in tiers)
@@ -61,7 +61,7 @@ def focus_narrows_but_never_gates() -> None:
     write_fresh_sync()
     seed_three_endurance_roads()
     set_charter("climb", ["strength"])
-    fallback = offers("running")
+    fallback = offers("endurance")
     assert len(fallback) == 1
     assert fallback[0].modality == "swim"
     assert "focus_charter" not in fallback[0].reason_codes
@@ -75,7 +75,7 @@ def charter_ignores_unpracticed_roads() -> None:
     for days_ago in (1, 2, 3):
         seed_activity("Run", days_ago, 40)
     set_charter("ride", ["swim"])
-    offered = offers("running")
+    offered = offers("endurance")
     assert offered[0].modality == "run"
     assert "focus_charter" not in offered[0].reason_codes
 
@@ -87,7 +87,7 @@ def unset_charter_keeps_recency() -> None:
     write_fresh_sync()
     seed_three_endurance_roads()
     assert game.get_settings()["counsel_charter"] is None
-    unchanged = offers("running")
+    unchanged = offers("endurance")
     assert unchanged[0].modality == "swim"
     assert "focus_charter" not in unchanged[0].reason_codes
 
@@ -102,14 +102,14 @@ def climb_and_run_charters_filter_fenn() -> None:
     for days_ago in (7, 8, 9):
         seed_activity("Climbing", days_ago, 75)
 
-    assert {option.modality for option in offers("running")} == {"climb"}
+    assert {option.modality for option in offers("endurance")} == {"climb"}
     set_charter("climb", [])
-    climbing = offers("running")
+    climbing = offers("endurance")
     assert {option.modality for option in climbing} == {"climb"}
     assert all("focus_charter" in option.reason_codes for option in climbing)
 
     set_charter("run", [])
-    running = offers("running")
+    running = offers("endurance")
     assert {option.modality for option in running} == {"run"}
     assert all("focus_charter" in option.reason_codes for option in running)
 

@@ -154,7 +154,7 @@ def assemble(
     movements, weights, sessions, lower_body = summarize_lifts(
         lifts,
         captured,
-        tuple(game.GIVER_ARCHETYPES["kettlebell"]["modalities"]),
+        tuple(game.GIVER_ARCHETYPES["strength"]["modalities"]),
     )
     return QualifiedTrainingContext(
         captured,

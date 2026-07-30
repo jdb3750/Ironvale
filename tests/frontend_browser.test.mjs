@@ -45,7 +45,7 @@ let giverProfileSequence = 0;
 
 const GIVER_BOARD_CASES = [
   {
-    giver: 'running',
+    giver: 'endurance',
     stateName: 'fenn-running',
     identity: 'Old Fenn the Wayfarer',
     portrait: 'fenn',
@@ -53,7 +53,7 @@ const GIVER_BOARD_CASES = [
     warnedTier: 'quality',
   },
   {
-    giver: 'kettlebell',
+    giver: 'strength',
     stateName: 'grunhilda-kettlebell',
     identity: 'Grunhilda Iron-Bell',
     portrait: 'grunhilda',
@@ -61,7 +61,7 @@ const GIVER_BOARD_CASES = [
     warnedTier: 'strength',
   },
   {
-    giver: 'mobility',
+    giver: 'recovery',
     stateName: 'elowen-mobility',
     identity: 'Sage Elowen of the Willow',
     portrait: 'elowen',
@@ -375,7 +375,7 @@ test('global type tokens drive text roles without scanlines or focus zoom', asyn
     });
     const scaleAfterFocus = await page.evaluate(() => window.visualViewport?.scale || 1);
 
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     const giverStyles = await page.evaluate(() => {
       const read = selector => {
         const style = getComputedStyle(document.querySelector(selector));
@@ -838,7 +838,7 @@ test('pixelSelect button summaries center their labels without changing Grunhild
       { display: 'flex', alignItems: 'center' },
     );
 
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     const inlineSummary = page.locator(
       '.iron-today-control .pixel-select-summary',
     );
@@ -1004,7 +1004,7 @@ test('floating pickers close predictably without affecting ordinary disclosures'
     );
     assert.equal(await timezonePicker.evaluate(element => element.open), true);
 
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     const disclosure = page.locator('.phone-disclosure.offer-lore').first();
     await disclosure.locator('summary').click();
     assert.equal(await disclosure.evaluate(element => element.open), true);
@@ -1036,7 +1036,7 @@ test('every live pixel dropdown call site uses the shared floating menu', async 
       );
     }
 
-    await page.evaluate(() => nav('doctrines', { giver: 'kettlebell' }));
+    await page.evaluate(() => nav('doctrines', { giver: 'strength' }));
     await page.locator('#rb-ex').waitFor({ state: 'attached' });
     assert.equal(
       await page.locator('#rb-ex').locator('..').locator('.pixel-select-menu')
@@ -1052,7 +1052,7 @@ test('every live pixel dropdown call site uses the shared floating menu', async 
       'absolute',
     );
 
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     assert.equal(
       await page.locator('.iron-today-control .pixel-select-menu')
         .evaluate(element => getComputedStyle(element).position),
@@ -1164,7 +1164,7 @@ test('raised surfaces share tone and shadow while only modal trim is gold', asyn
     await createGiverProfile(page, 'considered');
     for (const [viewportName, viewport] of viewports) {
       await page.setViewportSize(viewport);
-      await openGiverBoard(page, 'kettlebell');
+      await openGiverBoard(page, 'strength');
       const selector = page.locator('.iron-today-control .pixel-select');
       const followingTop = () => page.locator('.counsel-path-card').first()
         .evaluate(element => element.getBoundingClientRect().top);
@@ -1369,7 +1369,7 @@ test('picker option rows reserve gold for hover and selected state', async () =>
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     const selector = page.locator('.iron-today-control .pixel-select');
     await selector.locator('.pixel-select-summary').evaluate(summary => summary.click());
     const optionChrome = async (locator) => locator.evaluate(element => {
@@ -1413,7 +1413,7 @@ test('picker option rows and summaries keep visible keyboard focus', async () =>
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     const selector = page.locator('.iron-today-control .pixel-select');
     const summary = selector.locator('.pixel-select-summary');
     await summary.evaluate(element => element.click());
@@ -1557,7 +1557,7 @@ test('giver characterization preserves identity, active continuation, and refusa
       }
     });
 
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
     assert.match(await page.locator('.npc-name').innerText(), /Old Fenn the Wayfarer/);
     assert.equal(await page.locator('[data-portrait="fenn"]').count(), 1);
     assert.match(
@@ -1570,7 +1570,7 @@ test('giver characterization preserves identity, active continuation, and refusa
     await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
     assert.equal(acceptStatus, 200);
     assert.deepEqual(Object.keys(acceptPayload).sort(), ['giver', 'offer_id']);
-    assert.equal(acceptPayload.giver, 'running');
+    assert.equal(acceptPayload.giver, 'endurance');
     assert.equal(Number.isInteger(acceptPayload.offer_id), true);
     assert.equal(await page.evaluate(() => S.params.react), 'accept');
     assert.match(await page.locator('.npc-name').innerText(), /Old Fenn the Wayfarer/);
@@ -1579,7 +1579,7 @@ test('giver characterization preserves identity, active continuation, and refusa
     assert.equal(
       await page.evaluate(async () => {
         const state = await api('/state');
-        return state.active_quests.filter(quest => quest.giver === 'running').length;
+        return state.active_quests.filter(quest => quest.giver === 'endurance').length;
       }),
       1,
     );
@@ -1589,7 +1589,7 @@ test('giver characterization preserves identity, active continuation, and refusa
       try {
         await api('/quests/accept', {
           method: 'POST',
-          body: { giver: 'running', offer_id: -1 },
+          body: { giver: 'endurance', offer_id: -1 },
         });
       } catch {
         // The shared api() helper owns the visible refusal toast.
@@ -1601,10 +1601,44 @@ test('giver characterization preserves identity, active continuation, and refusa
     assert.equal(
       await page.evaluate(async () => {
         const state = await api('/state');
-        return state.active_quests.filter(quest => quest.giver === 'running').length;
+        return state.active_quests.filter(quest => quest.giver === 'endurance').length;
       }),
       1,
     );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('legacy completion thanks migrate giver keys without colliding with the strength focus name', async () => {
+  const { context, failures, page } = await openMainProfile(GIVER_VIEWPORTS.phone);
+  try {
+    const migrated = await page.evaluate(() => {
+      localStorage.setItem('iv_lastq', JSON.stringify({
+        title: 'A Legacy Quest',
+        ts: Date.now(),
+        thanked: {
+          running: true,
+          kettlebell: true,
+          strength: true,
+          mobility: true,
+        },
+      }));
+      return lastQuestDone();
+    });
+    assert.deepEqual(migrated.thanked, {
+      endurance: true,
+      strength: true,
+      bram: true,
+      recovery: true,
+    });
+    assert.equal(migrated.giverKeys, 2);
+
+    const stored = await page.evaluate(
+      () => JSON.parse(localStorage.getItem('iv_lastq')),
+    );
+    assert.deepEqual(stored, migrated);
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -1619,7 +1653,7 @@ test('giver navigation waits for the requested giver instead of stale outgoing D
   let releaseOffer = () => {};
   try {
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
     await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).click();
     await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
 
@@ -1630,14 +1664,14 @@ test('giver navigation waits for the requested giver instead of stale outgoing D
     const heldOffer = new Promise(resolve => {
       releaseOffer = resolve;
     });
-    await page.route('**/api/offers/strength', async route => {
+    await page.route('**/api/offers/bram', async route => {
       markRequestHeld();
       await heldOffer;
       await route.continue();
     });
 
     let openingSettled = false;
-    const opening = openGiverBoard(page, 'strength').then(() => {
+    const opening = openGiverBoard(page, 'bram').then(() => {
       openingSettled = true;
     });
     await requestHeld;
@@ -1657,7 +1691,7 @@ test('giver navigation waits for the requested giver instead of stale outgoing D
       ),
       renderedGiver: document.querySelector('.giver-dialogue')?.dataset.giver || null,
       requestedGiver,
-    }), 'strength');
+    }), 'bram');
     const settledWhileStale = openingSettled;
 
     releaseOffer();
@@ -1665,7 +1699,7 @@ test('giver navigation waits for the requested giver instead of stale outgoing D
 
     assert.equal(staleEvidence.oldActiveBranch, true);
     assert.equal(staleEvidence.oldRetiredBranch, true);
-    assert.equal(staleEvidence.renderedGiver, 'running');
+    assert.equal(staleEvidence.renderedGiver, 'endurance');
     assert.equal(
       settledWhileStale,
       false,
@@ -1673,7 +1707,7 @@ test('giver navigation waits for the requested giver instead of stale outgoing D
     );
     assert.equal(
       await page.locator('.giver-dialogue').getAttribute('data-giver'),
-      'strength',
+      'bram',
     );
     assert.match(await page.locator('.npc-name').textContent(), /Ser Bram/);
     assert.deepEqual(failures, []);
@@ -1830,7 +1864,7 @@ test('giver counsel boards render deterministic one-or-three paths across respon
     }
     assert.equal(matrix.length, 18);
     await page.setViewportSize(GIVER_VIEWPORTS.phone);
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
     const hardWarningCard = page.locator('.counsel-path-card.has-wellness-warning');
     await hardWarningCard.scrollIntoViewIfNeeded();
     assert.equal(
@@ -1905,7 +1939,7 @@ connection.close()
 
     for (const mode of ['considered', 'self']) {
       await setCounselMode(page, mode);
-      for (const giver of ['running', 'mobility']) {
+      for (const giver of ['endurance', 'recovery']) {
         await openGiverBoard(page, giver);
         await page.waitForFunction(() => (
           !renderLoop
@@ -1915,7 +1949,7 @@ connection.close()
         const cards = page.locator('.counsel-path-card');
         assert.equal(await cards.count(), mode === 'considered' ? 1 : 3);
 
-        if (giver === 'running') {
+        if (giver === 'endurance') {
           const climbTiers = (await page.locator('.counsel-tier-label').allTextContents())
             .map(value => value.trim().toLowerCase());
           if (mode === 'self') {
@@ -2027,7 +2061,7 @@ test('town keeps all four giver identities while Bram has no offer board', async
         });
       }
 
-      await openGiverBoard(page, 'strength');
+      await openGiverBoard(page, 'bram');
       assert.match(await page.locator('.npc-name').innerText(), /Ser Bram the Old Knight at Rest/);
       assert.match(await page.locator('#dlg').innerText(), /set no tasks now/i);
       assert.equal(await page.locator('.giver-offer-board').count(), 0);
@@ -2083,7 +2117,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     await createGiverProfile(page, 'self');
     for (const [viewportName, viewport] of viewports) {
       await page.setViewportSize(viewport);
-      await openGiverBoard(page, 'running');
+      await openGiverBoard(page, 'endurance');
       const hardWarningCard = page.locator('.counsel-path-card.has-wellness-warning');
       await hardWarningCard.waitFor();
       await hardWarningCard.scrollIntoViewIfNeeded();
@@ -2269,7 +2303,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '109'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '110'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
@@ -2286,7 +2320,7 @@ test('an open giver board follows breakpoint changes without replacing its state
   const observables = [];
   try {
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
 
     const capture = async (label, phone) => {
       await waitForGiverResponsiveState(page, phone);
@@ -2330,7 +2364,7 @@ test('an open giver board follows breakpoint changes without replacing its state
 
     await page.evaluate(() => nav('town'));
     await page.locator('.town-scene').waitFor();
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
     const afterNavigation = await readGiverResponsiveState(page);
     assert.equal(afterNavigation.dialogueCount, 1);
     assert.equal(afterNavigation.panelCount, 1);
@@ -2370,7 +2404,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
         acceptStatuses.push(response.status());
       }
     });
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
     await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).click();
     await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
     const successToast = page.locator('.toast:not(.err)');
@@ -2380,7 +2414,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
     assert.equal(
       await page.evaluate(async () => {
         const state = await api('/state');
-        return state.active_quests.filter(quest => quest.giver === 'running').length;
+        return state.active_quests.filter(quest => quest.giver === 'endurance').length;
       }),
       1,
     );
@@ -2391,7 +2425,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
     }
 
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'running');
+    await openGiverBoard(page, 'endurance');
     const staleOfferId = Number(
       await page.locator('.counsel-path-card').first().getAttribute('data-offer-id'),
     );
@@ -2400,7 +2434,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
       try {
         await api('/quests/accept', {
           method: 'POST',
-          body: { giver: 'running', offer_id: offerId },
+          body: { giver: 'endurance', offer_id: offerId },
         });
       } catch {
         // The error toast is the player-visible refusal.
@@ -2421,7 +2455,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
       try {
         await api('/quests/accept', {
           method: 'POST',
-          body: { giver: 'running', option_key: { malformed: true } },
+          body: { giver: 'endurance', option_key: { malformed: true } },
         });
       } catch {
         // The error toast is the player-visible refusal.
@@ -2503,7 +2537,7 @@ test('override paths: Iron doctrine and Rest Writ each render one path in both m
     await page.evaluate(async () => {
       await api('/programs/select', {
         method: 'POST',
-        body: { giver: 'kettlebell', key: 'starting_strength' },
+        body: { giver: 'strength', key: 'starting_strength' },
       });
       await refreshState();
     });
@@ -2511,7 +2545,7 @@ test('override paths: Iron doctrine and Rest Writ each render one path in both m
       await setCounselMode(page, mode);
       for (const viewportName of ['phone', 'desktop']) {
         await page.setViewportSize(GIVER_VIEWPORTS[viewportName]);
-        await openGiverBoard(page, 'kettlebell');
+        await openGiverBoard(page, 'strength');
         await page.waitForFunction(() => (
           !renderLoop
           && !queuedRender
@@ -2580,7 +2614,7 @@ connection.close()
       await setCounselMode(page, mode);
       for (const viewportName of ['phone', 'desktop']) {
         await page.setViewportSize(GIVER_VIEWPORTS[viewportName]);
-        await openGiverBoard(page, 'mobility');
+        await openGiverBoard(page, 'recovery');
         await page.waitForFunction(() => (
           !renderLoop
           && !queuedRender
@@ -2619,7 +2653,7 @@ test("Grunhilda's iron selector is closed by default and hides implement choices
   );
   try {
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
 
     const intro = page.locator('.giver-board-intro');
     const selector = page.locator('.iron-today-control .pixel-select');
@@ -2688,7 +2722,7 @@ test("Grunhilda's inline iron selector floats without displacing her offer", asy
     );
     try {
       await createGiverProfile(page, 'considered');
-      await openGiverBoard(page, 'kettlebell');
+      await openGiverBoard(page, 'strength');
 
       const intro = page.locator('.giver-board-intro');
       const control = intro.locator('.iron-today-control');
@@ -2779,7 +2813,7 @@ test("Grunhilda's floating menu renders every option label without clipping", as
     );
     try {
       await createGiverProfile(page, 'considered');
-      await openGiverBoard(page, 'kettlebell');
+      await openGiverBoard(page, 'strength');
       const selector = page.locator('.iron-today-control .pixel-select');
       await selector.locator('.pixel-select-summary').click();
       await selector.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
@@ -2834,7 +2868,7 @@ test("only Grunhilda's giver intro contains the iron selector", async () => {
   );
   try {
     await createGiverProfile(page, 'considered');
-    for (const giver of ['running', 'mobility']) {
+    for (const giver of ['endurance', 'recovery']) {
       await openGiverBoard(page, giver);
       const intro = page.locator('.giver-board-intro');
       assert.equal(
@@ -2915,7 +2949,7 @@ test("Grunhilda's collapsed iron selector shows today's active override", async 
       });
       await refreshState();
     });
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
 
     const selector = page.locator('.iron-today-control .pixel-select');
     assert.equal(await selector.evaluate(element => element.open), false);
@@ -2944,7 +2978,7 @@ test("Grunhilda's iron selector persists a pick and refreshes her offer", async 
   );
   try {
     await createGiverProfile(page, 'considered');
-    await openGiverBoard(page, 'kettlebell');
+    await openGiverBoard(page, 'strength');
     assert.equal(
       await page.getByText('Grunhilda kept this path to the iron you named for today.').count(),
       0,
@@ -3053,9 +3087,9 @@ test('daily pointer bubbles on its giver building, once per local day, never blo
     await page.setViewportSize(GIVER_VIEWPORTS.phone);
 
     // Ignoring it costs nothing: another building is still reachable.
-    await page.evaluate(() => nav('giver', { giver: 'mobility' }));
+    await page.evaluate(() => nav('giver', { giver: 'recovery' }));
     await page.waitForFunction(() => (
-      document.querySelector('.giver-offer-board')?.dataset.giver === 'mobility'
+      document.querySelector('.giver-offer-board')?.dataset.giver === 'recovery'
     ));
     await page.evaluate(() => nav('town'));
     await page.locator('.town-scene').waitFor();
@@ -3097,7 +3131,7 @@ test('daily pointer bubbles on its giver building, once per local day, never blo
       exact: true,
     }).click();
     await page.waitForFunction(() => (
-      document.querySelector('.giver-offer-board')?.dataset.giver === 'running'
+      document.querySelector('.giver-offer-board')?.dataset.giver === 'endurance'
     ));
     assert.equal(await page.locator('.counsel-nudge-wrap').count(), 0);
     assert.deepEqual(failures, []);
@@ -3128,9 +3162,9 @@ test('daily pointer storage fallbacks keep town visible and suppress same-sessio
       await page.locator('.counsel-nudge-wrap').waitFor();
       assert.equal(await page.locator('.counsel-nudge-wrap').count(), 1);
 
-      await page.evaluate(() => nav('giver', { giver: 'mobility' }));
+      await page.evaluate(() => nav('giver', { giver: 'recovery' }));
       await page.waitForFunction(() => (
-        document.querySelector('.giver-offer-board')?.dataset.giver === 'mobility'
+        document.querySelector('.giver-offer-board')?.dataset.giver === 'recovery'
       ));
       await page.evaluate(() => nav('town'));
       await page.locator('.town-scene').waitFor();
@@ -3216,7 +3250,7 @@ test('daily pointer yields the building bubble to an existing deed notice', asyn
       await refreshState();
       S.fennQueue = [{
         activity_id: 'nudge-deed-precedence',
-        giver: 'running',
+        giver: 'endurance',
         title: 'Road run',
         minutes: 30,
         xp: 10,

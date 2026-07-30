@@ -60,7 +60,7 @@ def create_iron_routine(name: str, exercise_names: list[str]) -> str:
         "/api/routines",
         json={
             "name": name,
-            "giver": "kettlebell",
+            "giver": "strength",
             "exercises": [
                 {"exercise": exercise, "sets": 3, "reps": 8}
                 for exercise in exercise_names
@@ -72,7 +72,7 @@ def create_iron_routine(name: str, exercise_names: list[str]) -> str:
     routine_id = routine["id"]
     selected = client.post(
         "/api/programs/select",
-        json={"giver": "kettlebell", "key": f"custom:{routine_id}"},
+        json={"giver": "strength", "key": f"custom:{routine_id}"},
     )
     assert selected.status_code == 200
     return routine_id
@@ -84,16 +84,16 @@ def override_restricts_generic_iron_in_both_modes() -> None:
         new_profile(f"iron-equipment-{mode}", mode)
         write_fresh_sync()
         seed_recent_barbell()
-        before_response = offer_response("kettlebell")
+        before_response = offer_response("strength")
         before = before_response.offers
         assert tuple(before_response.modalities) == tuple(
-            game.GIVER_ARCHETYPES["kettlebell"]["modalities"],
+            game.GIVER_ARCHETYPES["strength"]["modalities"],
         )
         assert option_equipment(before) == {"barbell"}
 
         # When: the player says only kettlebells are available today.
         set_iron_today("kettlebell")
-        after = offers("kettlebell")
+        after = offers("strength")
 
         # Then: every offered tier uses kettlebells and explains the narrowing.
         assert option_equipment(after) == {"kettlebell"}
@@ -106,13 +106,13 @@ def override_expires_after_the_profile_day() -> None:
     write_fresh_sync()
     seed_recent_barbell()
     set_iron_today("kettlebell")
-    assert option_equipment(offers("kettlebell")) == {"kettlebell"}
+    assert option_equipment(offers("strength")) == {"kettlebell"}
 
     # When: the profile clock rolls into tomorrow.
     original_now = game.now
     game.now = lambda: NOW + timedelta(days=1)
     try:
-        expired = offers("kettlebell")
+        expired = offers("strength")
         normalized = game.get_settings()["counsel_iron_today"]
     finally:
         game.now = original_now
@@ -173,10 +173,10 @@ def incompatible_doctrine_waits_without_advancing_in_both_modes() -> None:
         write_fresh_sync()
         selected = client.post(
             "/api/programs/select",
-            json={"giver": "kettlebell", "key": "starting_strength"},
+            json={"giver": "strength", "key": "starting_strength"},
         )
         assert selected.status_code == 200
-        before = offers("kettlebell")
+        before = offers("strength")
         assert len(before) == 1
         assert before[0].program is True
         assert before[0].progression is not None
@@ -185,7 +185,7 @@ def incompatible_doctrine_waits_without_advancing_in_both_modes() -> None:
 
         # When: only a kettlebell is available today.
         set_iron_today("kettlebell")
-        after = offers("kettlebell")
+        after = offers("strength")
 
         # Then: generic kettlebell work replaces only today's offer.
         assert option_equipment(after) == {"kettlebell"}
@@ -195,7 +195,7 @@ def incompatible_doctrine_waits_without_advancing_in_both_modes() -> None:
             "doctrine_equipment_mismatch" in option.reason_codes
             for option in after
         )
-        assert programs.active_program("kettlebell") == "starting_strength"
+        assert programs.active_program("strength") == "starting_strength"
         assert db.kv_get("program_state", {}) == program_state
 
 
@@ -206,13 +206,13 @@ def compatible_doctrine_remains_offered_in_both_modes() -> None:
         write_fresh_sync()
         selected = client.post(
             "/api/programs/select",
-            json={"giver": "kettlebell", "key": "simple_sinister"},
+            json={"giver": "strength", "key": "simple_sinister"},
         )
         assert selected.status_code == 200
 
         # When: today's available implement is also a kettlebell.
         set_iron_today("kettlebell")
-        current = offers("kettlebell")
+        current = offers("strength")
 
         # Then: the doctrine remains the one offer and carries the day's reason.
         assert len(current) == 1
@@ -230,11 +230,11 @@ def off_catalog_doctrine_survives_without_override() -> None:
     routine_id = create_iron_routine("Sandbag Day", ["Sandbag Carry"])
 
     # When: Grunhilda's board is opened without a same-day override.
-    response = client.get("/api/offers/kettlebell")
+    response = client.get("/api/offers/strength")
 
     # Then: the legacy doctrine remains readable and offered exactly as written.
     assert response.status_code == 200
-    current = offer_response("kettlebell").offers
+    current = offer_response("strength").offers
     assert len(current) == 1
     assert current[0].program is True
     assert current[0].progression is not None
@@ -251,18 +251,18 @@ def off_catalog_doctrine_waits_with_override() -> None:
 
     # When: only kettlebells are declared for today.
     set_iron_today("kettlebell")
-    response = client.get("/api/offers/kettlebell")
+    response = client.get("/api/offers/strength")
 
     # Then: the board stays available and serves generic kettlebell work instead.
     assert response.status_code == 200
-    current = offer_response("kettlebell").offers
+    current = offer_response("strength").offers
     assert option_equipment(current) == {"kettlebell"}
     assert all(option.program is False for option in current)
     assert all(
         "doctrine_equipment_mismatch" in option.reason_codes
         for option in current
     )
-    assert programs.active_program("kettlebell") == f"custom:{routine_id}"
+    assert programs.active_program("strength") == f"custom:{routine_id}"
     assert db.kv_get("program_state", {}) == program_state
 
 
@@ -277,7 +277,7 @@ def bodyweight_does_not_block_matching_iron_doctrine() -> None:
 
     # When: the player declares a barbell-only day.
     set_iron_today("barbell")
-    current = offers("kettlebell")
+    current = offers("strength")
 
     # Then: every movement is performable and the doctrine remains offered.
     assert len(current) == 1
@@ -297,7 +297,7 @@ def logged_bodyweight_movement_is_offered_without_a_load() -> None:
     seed_recent_pull_up()
 
     # When: her ordinary board is generated without an equipment override.
-    current = offers("kettlebell")
+    current = offers("strength")
 
     # Then: the recorded movement leads each routine and invents no external load.
     assert current
@@ -313,7 +313,7 @@ def loaded_bodyweight_movement_keeps_its_weight() -> None:
     seed_recent_pull_up(10.0, sessions=3)
 
     # When: Grunhilda builds the ordinary Strength offer.
-    current = offers("kettlebell")
+    current = offers("strength")
 
     # Then: the catalog's bodyweight tag does not erase the recorded load.
     assert current
@@ -329,7 +329,7 @@ def bodyweight_session_counts_as_strength_history() -> None:
 
     # When: the qualified snapshot and offers are assembled.
     context = counsel_context.assemble(NOW)
-    current = offers("kettlebell")
+    current = offers("strength")
 
     # Then: the day personalizes Strength instead of reporting a cold start.
     assert context.iron_session_count == 1
@@ -341,7 +341,7 @@ def bodyweight_is_a_valid_today_declaration() -> None:
     # Given: Grunhilda's board exposes its declared modalities.
     new_profile("strength-bodyweight-option")
     write_fresh_sync()
-    response = offer_response("kettlebell")
+    response = offer_response("strength")
 
     # Then: bodyweight is offered by the server and accepted as today's constraint.
     assert "bodyweight" in response.modalities
@@ -350,7 +350,7 @@ def bodyweight_is_a_valid_today_declaration() -> None:
         "date": NOW.date().isoformat(),
         "equipment": "bodyweight",
     }
-    assert option_equipment(offers("kettlebell")) == {"bodyweight"}
+    assert option_equipment(offers("strength")) == {"bodyweight"}
 
 
 def bodyweight_only_day_obeys_doctrine_equipment() -> None:
@@ -359,13 +359,13 @@ def bodyweight_only_day_obeys_doctrine_equipment() -> None:
     write_fresh_sync()
     selected = client.post(
         "/api/programs/select",
-        json={"giver": "kettlebell", "key": "starting_strength"},
+        json={"giver": "strength", "key": "starting_strength"},
     )
     assert selected.status_code == 200
 
     # When: only bodyweight resistance is available today.
     set_iron_today("bodyweight")
-    mismatched = offers("kettlebell")
+    mismatched = offers("strength")
 
     # Then: the barbell doctrine waits and pure bodyweight work replaces it.
     assert option_equipment(mismatched) == {"bodyweight"}
@@ -374,7 +374,7 @@ def bodyweight_only_day_obeys_doctrine_equipment() -> None:
         "doctrine_equipment_mismatch" in option.reason_codes
         for option in mismatched
     )
-    assert programs.active_program("kettlebell") == "starting_strength"
+    assert programs.active_program("strength") == "starting_strength"
 
     # Given: a pure-bodyweight doctrine is selected on another profile.
     new_profile("strength-bodyweight-pure-doctrine")
@@ -383,7 +383,7 @@ def bodyweight_only_day_obeys_doctrine_equipment() -> None:
 
     # When: the same bodyweight-only declaration is made.
     set_iron_today("bodyweight")
-    matched = offers("kettlebell")
+    matched = offers("strength")
 
     # Then: every movement is performable, so the doctrine remains offered.
     assert len(matched) == 1
@@ -398,12 +398,12 @@ def override_sizing_uses_only_matching_implement_history() -> None:
     new_profile("iron-equipment-truthful-sizing", "self")
     write_fresh_sync()
     seed_recent_barbell()
-    before = offers("kettlebell")
+    before = offers("strength")
     assert all(option.sizing == "personalized" for option in before)
 
     # When: the offered implement is narrowed to kettlebells.
     set_iron_today("kettlebell")
-    after = offers("kettlebell")
+    after = offers("strength")
 
     # Then: sizing, reasons, weights, and provenance all tell the same story.
     assert all(option.sizing == "generic_starter" for option in after)
@@ -424,14 +424,14 @@ def no_override_preserves_current_behavior() -> None:
     new_profile("iron-equipment-none", "self")
     write_fresh_sync()
     seed_recent_barbell()
-    before = offers("kettlebell")
+    before = offers("strength")
     assert option_equipment(before) == {"barbell"}
     assert all(option.sizing == "personalized" for option in before)
     assert all(option.routine[0].suggest_weight == 82.5 for option in before)
 
     # When: the optional declaration is explicitly clear.
     set_iron_today(None)
-    after = offers("kettlebell")
+    after = offers("strength")
 
     # Then: the complete observable offer set is unchanged.
     assert after == before
@@ -458,7 +458,7 @@ def live_override_keeps_one_request_clock() -> None:
     # When: the public giver evaluation captures its qualified context.
     game.now = ticking_now
     try:
-        current = offers("kettlebell")
+        current = offers("strength")
     finally:
         game.now = original_now
 

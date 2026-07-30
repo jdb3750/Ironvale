@@ -6,7 +6,7 @@
    Each entry: the building that anchors the bubble, the quip pool, and the
    claim-button label. */
 const DEED_BUBBLES = {
-  running: {
+  endurance: {
     anchor: 'bld-fenn',
     label: 'FENN LEFT THIS FOR YOU',
     lines: [
@@ -15,7 +15,7 @@ const DEED_BUBBLES = {
       'The road tattled on you. Good thing I don\u2019t hold grudges as long as I hold coin.',
     ],
   },
-  kettlebell: {
+  strength: {
     anchor: 'bld-grun',
     label: 'GRUNHILDA HEARD THE BELL',
     lines: [
@@ -24,7 +24,7 @@ const DEED_BUBBLES = {
       'I felt the ground shake and knew it was you. Here.',
     ],
   },
-  strength: {
+  bram: {
     anchor: 'bld-bram',
     label: 'SER BRAM TOOK NOTE',
     lines: [
@@ -33,7 +33,7 @@ const DEED_BUBBLES = {
       'The keep saw you working. A knight settles his debts.',
     ],
   },
-  mobility: {
+  recovery: {
     anchor: 'bld-elowen',
     label: 'THE WILLOW SAW YOU BEND',
     lines: [
@@ -146,7 +146,7 @@ SCREENS.town = async function () {
   const questRow = (q) => {
     // "log sets" belongs to quests that carry a routine — a climb quest from
     // Ser Bram completes by synced wall time, not the lift logger
-    const lifting = ['kettlebell', 'strength'].includes(q.giver) && !!(q.details && q.details.routine);
+    const lifting = ['strength', 'bram'].includes(q.giver) && !!(q.details && q.details.routine);
     return `<div class="offer" style="margin:8px 0">
       <div><span class="o-title" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(q.title)}</span>
         ${q.kind === 'rest' ? '' : modalityChip(q.details && q.details.modality, q.giver, q.details && q.details.program)}
@@ -175,10 +175,10 @@ SCREENS.town = async function () {
     <div class="town-scene tod-${effectiveTOD}">
       ${devMode ? `<button type="button" class="tod-toggle" aria-label="Cycle town time of day" title="dev: cycle time of day (${devTOD ? 'pinned: ' + devTOD : 'auto: ' + effectiveTOD})" onclick="G.cycleTOD()">${spriteTag(TOD_ICON[effectiveTOD], 22)}</button>` : ''}
       <div class="trow">
-        ${bld('bld_waystone', g.running.name, GIVER_ROLES.running, `nav('giver',{giver:'running'})`, !!activeBy.running, 120, 'bld-fenn')}
-        ${bld('bld_forge', g.kettlebell.name, GIVER_ROLES.kettlebell, `nav('giver',{giver:'kettlebell'})`, !!activeBy.kettlebell, 120, 'bld-grun')}
-        ${bld('bld_keep', g.strength.name, GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength, 120, 'bld-bram')}
-        ${bld('bld_willow', g.mobility.name, GIVER_ROLES.mobility, `nav('giver',{giver:'mobility'})`, !!activeBy.mobility, 120, 'bld-elowen')}
+        ${bld('bld_waystone', g.endurance.name, GIVER_ROLES.endurance, `nav('giver',{giver:'endurance'})`, !!activeBy.endurance, 120, 'bld-fenn')}
+        ${bld('bld_forge', g.strength.name, GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength, 120, 'bld-grun')}
+        ${bld('bld_keep', g.bram.name, GIVER_ROLES.bram, `nav('giver',{giver:'bram'})`, !!activeBy.bram, 120, 'bld-bram')}
+        ${bld('bld_willow', g.recovery.name, GIVER_ROLES.recovery, `nav('giver',{giver:'recovery'})`, !!activeBy.recovery, 120, 'bld-elowen')}
       </div>
       <div class="road-h"></div>
       <div class="trow">
@@ -217,7 +217,7 @@ function showFennBubbleIfQueued() {
   }
   if (!next) return;
   document.querySelectorAll('.counsel-nudge-wrap').forEach(element => element.remove());
-  const deed = DEED_BUBBLES[next.giver] || DEED_BUBBLES.running;
+  const deed = DEED_BUBBLES[next.giver] || DEED_BUBBLES.endurance;
   const anchor = document.getElementById(deed.anchor);
   if (!anchor) return;
   anchor.insertAdjacentHTML('beforeend', `
@@ -521,10 +521,10 @@ G.syncNow = async () => {
    once-per-local-day guard is client-local (localStorage, keyed by profile
    slug) and marked on SHOW, so re-entering town stays quiet. ---- */
 const NUDGE_ANCHORS = {
-  running: 'bld-fenn',
-  kettlebell: 'bld-grun',
-  strength: 'bld-bram',
-  mobility: 'bld-elowen',
+  endurance: 'bld-fenn',
+  strength: 'bld-grun',
+  bram: 'bld-bram',
+  recovery: 'bld-elowen',
 };
 
 const counselNudgeSeenMemory = Object.create(null);

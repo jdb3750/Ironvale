@@ -208,17 +208,17 @@ def npc_notices():
     g = gap_days(d)
     week_runs = _count_since(["run"], 7)
     if g is not None and g <= 1 and km >= 1 and roll():
-        out["running"] = rng.choice([
+        out["endurance"] = rng.choice([
             f"Still dusty from those {km:.1f} kilometers, I see. The milestones were just talking about it.",
             f"{km:.1f} kilometers, {'today' if g == 0 else 'yesterday'}. The road speaks well of you, {name} — and roads are poor liars.",
         ])
     elif week_runs >= 4 and roll():
-        out["running"] = rng.choice([
+        out["endurance"] = rng.choice([
             f"{week_runs} runs inside a week. The crows can barely keep up their reports.",
             f"{week_runs} runs this week, {name} — even the hills have stopped betting against you.",
         ])
     elif g is not None and g >= 10 and roll():
-        out["running"] = rng.choice([
+        out["endurance"] = rng.choice([
             f"Haven't seen your boots on the road in {g} days, {name}. No hurry — it'll be there.",
             f"The road's gone quiet without you, {g} days now. It's not going anywhere, whenever you are.",
         ])
@@ -235,12 +235,12 @@ def npc_notices():
 
     # Grunhilda — the bell
     if recent_sets > 0 and roll():
-        out["kettlebell"] = rng.choice([
+        out["strength"] = rng.choice([
             f"{recent_sets} sets rang out of you these past days. Grandmother heard every one.",
             f"The forge counted {recent_sets} sets off you lately, {name}. It hums when it's pleased.",
         ])
     elif sg is not None and sg >= 10 and roll():
-        out["kettlebell"] = rng.choice([
+        out["strength"] = rng.choice([
             f"The bells have missed your grip these {sg} days, {name}. They'll ring whenever you're ready.",
             f"It's been {sg} days since the iron sang. No judgment here — just saying I noticed.",
         ])
@@ -250,12 +250,12 @@ def npc_notices():
     if heavy and heavy["weight"] and roll():
         wu = get_settings().get("weight_unit", "kg")
         w = round(heavy["weight"] * 2.2046226218) if wu == "lb" else round(heavy["weight"])
-        out["strength"] = rng.choice([
+        out["bram"] = rng.choice([
             f"Word in the keep is a {w}{wu} {heavy['exercise'].lower()} this fortnight. A knight notices such things.",
             f"That {w}{wu} {heavy['exercise'].lower()} did not go unwitnessed, {name}. The plates talk amongst themselves.",
         ])
     elif sg is not None and sg >= 14 and roll():
-        out["strength"] = rng.choice([
+        out["bram"] = rng.choice([
             f"It's been a fortnight and more since the plates felt your hands, {name}. They'll keep, however long.",
             f"{sg} days since that bar moved. Rest is allowed to be rest — just come say hello sometime.",
         ])
@@ -264,12 +264,12 @@ def npc_notices():
     d, _, mins = _last_activity(["mobility"])
     g = gap_days(d)
     if g is not None and g <= 2 and mins and roll():
-        out["mobility"] = rng.choice([
+        out["recovery"] = rng.choice([
             f"I felt those {mins} minutes of stillness from across the square. The willow is still nodding.",
             f"{mins} quiet minutes, {'today' if g == 0 else 'not long ago'}, {name}. Your joints speak more kindly of you already.",
         ])
     elif g is not None and g >= 10 and roll():
-        out["mobility"] = rng.choice([
+        out["recovery"] = rng.choice([
             f"The cushion still holds your shape, {name}, {g} days on. Come sit whenever the world allows it.",
             f"It's been {g} quiet days since we last sat together. No scolding — just glad to see you when you come.",
         ])

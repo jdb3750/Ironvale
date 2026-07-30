@@ -106,11 +106,11 @@ ok("three sessions enable personalized endurance sizing",
 # Given: Iron routines using different implements. When: candidates are built.
 # Then: their keys retain routine identity and zero history never invents weight.
 zero_iron = quests.LiftCandidateContext(
-    giver="kettlebell", style="volume", focus=("legs", "posterior"),
+    giver="strength", style="volume", focus=("legs", "posterior"),
     exercises=("Goblet Squat", "Kettlebell Swing"), weights=(None, None), iron_session_count=0,
 )
 logged_iron = quests.LiftCandidateContext(
-    giver="kettlebell", style="volume", focus=("legs", "posterior"),
+    giver="strength", style="volume", focus=("legs", "posterior"),
     exercises=("Back Squat", "Deadlift"), weights=(82.5, 110.0), iron_session_count=1,
 )
 zero_candidate = quests.build_lift_candidate(zero_iron)

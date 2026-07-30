@@ -1,22 +1,22 @@
 /* The quest-giver screens: giver dialogue and offers, doctrines &
    routines, the training logger, and Wick the Scrivener. */
 const GREETINGS = {
-  running: [
+  endurance: [
     'The roads remember every step. They have been asking after you.',
     'Wind at your back today, friend. A shame to waste it.',
     'I ran these hills before your grandmother was born. Your turn.',
   ],
-  kettlebell: [
+  strength: [
     'The bell does not care how you feel. Lift it anyway.',
     'My grandmother forged these. She could swing two. Just saying.',
     'Iron is honest, friend. It weighs what it weighs.',
   ],
-  strength: [
+  bram: [
     'A knight is measured by what they can carry. Shall we measure you?',
     'The barbell is a dragon that lies very still. Slay it in sets.',
     'Heavy is the head... and the deadlift. Mostly the deadlift.',
   ],
-  mobility: [
+  recovery: [
     'You cannot pour from a torn hamstring, dear. Sit. Breathe.',
     'The willow bends and does not break. Be the willow.',
     'Rest is also training. The impatient learn this the painful way.',
@@ -31,43 +31,50 @@ const GREETINGS = {
 /* NPC reactions to your choices — spoken in the dialog box, not toasted */
 const REACTIONS = {
   accept: {
-    running: ['Good. The road is already listening for your footsteps.', 'Sworn, then. Do not keep the miles waiting.'],
-    kettlebell: ['HA! The bell approves. Go introduce yourselves.', 'Sworn on iron. My grandmother is watching, probably.'],
-    strength: ['A worthy oath. The plates await your argument.', 'So sworn. Carry it well.'],
-    mobility: ['Wise. The body thanks you in advance, quietly.', 'Good. Slowness is also a discipline.'],
+    endurance: ['Good. The road is already listening for your footsteps.', 'Sworn, then. Do not keep the miles waiting.'],
+    strength: ['HA! The bell approves. Go introduce yourselves.', 'Sworn on iron. My grandmother is watching, probably.'],
+    bram: ['A worthy oath. The plates await your argument.', 'So sworn. Carry it well.'],
+    recovery: ['Wise. The body thanks you in advance, quietly.', 'Good. Slowness is also a discipline.'],
   },
   complete: {
-    running: ['You reek of effort. Wonderful. The road speaks highly of you.', 'Back already? The miles yield to you, runner.'],
-    kettlebell: ['LOOK AT YOU. The bell sings your name — off-key, but it sings.', 'Done and done. The iron remembers the honest ones.'],
-    strength: ['The load was borne. You stand taller for it, I see it.', 'Well carried. Even the barbell seems impressed, and it hates everyone.'],
-    mobility: ['See? Softer already. The willow nods to you.', 'The debt is settled. Your joints whisper their thanks.'],
+    endurance: ['You reek of effort. Wonderful. The road speaks highly of you.', 'Back already? The miles yield to you, runner.'],
+    strength: ['LOOK AT YOU. The bell sings your name — off-key, but it sings.', 'Done and done. The iron remembers the honest ones.'],
+    bram: ['The load was borne. You stand taller for it, I see it.', 'Well carried. Even the barbell seems impressed, and it hates everyone.'],
+    recovery: ['See? Softer already. The willow nods to you.', 'The debt is settled. Your joints whisper their thanks.'],
   },
   abandon: {
-    running: ['Hmph. The road forgives. The road also remembers.', 'A quest set down is heavier than one carried. Off with you.'],
-    kettlebell: ['You WHAT? ...Fine. The bell will wait. Bells are patient. I am not.', 'Grandmother saw that. From beyond. She is disappointed.'],
-    strength: ['Setting down a burden is sometimes wisdom. Sometimes. Not always.', 'The oath is released. Do not make a habit of it.'],
-    mobility: ['No shame in it, dear. Come back when the body agrees.', 'Even rivers change course. Go gently.'],
+    endurance: ['Hmph. The road forgives. The road also remembers.', 'A quest set down is heavier than one carried. Off with you.'],
+    strength: ['You WHAT? ...Fine. The bell will wait. Bells are patient. I am not.', 'Grandmother saw that. From beyond. She is disappointed.'],
+    bram: ['Setting down a burden is sometimes wisdom. Sometimes. Not always.', 'The oath is released. Do not make a habit of it.'],
+    recovery: ['No shame in it, dear. Come back when the body agrees.', 'Even rivers change course. Go gently.'],
   },
 };
 
 /* word travels: every NPC congratulates a fresh quest completion */
 const CONGRATS = {
-  running: ['Word reached me of "{q}". Well run, friend. The roads gossip.', 'Ah, the hero of "{q}"! Fenn tips his hood.'],
-  kettlebell: ['I heard about "{q}". The forge rang twice in your honor.', '"{q}", was it? HA! Grandmother would have liked you.'],
-  strength: ['News of "{q}" reached the keep. A knight notices these things.', 'So you carried "{q}" to the end. Well borne.'],
-  mobility: ['The willow whispered of "{q}". Gently done, dear.', 'I felt the calm of "{q}" from across the square. Well done.'],
+  endurance: ['Word reached me of "{q}". Well run, friend. The roads gossip.', 'Ah, the hero of "{q}"! Fenn tips his hood.'],
+  strength: ['I heard about "{q}". The forge rang twice in your honor.', '"{q}", was it? HA! Grandmother would have liked you.'],
+  bram: ['News of "{q}" reached the keep. A knight notices these things.', 'So you carried "{q}" to the end. Well borne.'],
+  recovery: ['The willow whispered of "{q}". Gently done, dear.', 'I felt the calm of "{q}" from across the square. Well done.'],
   wick: ['"{q}" — yes, yes, already inked. Fine work. The ledger smiled, briefly.', 'I recorded "{q}" this very hour. Neat margins. Neater deed.'],
 };
 
 const GIVER_ROLES = {
-  running: 'Quests of the Long Way',
-  kettlebell: 'Quests of Strength',
-  strength: 'The Old Knight at Rest',
-  mobility: 'Quests of Stillness',
+  endurance: 'Quests of the Long Way',
+  strength: 'Quests of Strength',
+  bram: 'The Old Knight at Rest',
+  recovery: 'Quests of Stillness',
 };
 
 const RETIRED_GIVER_LINES = {
-  strength: 'No new oaths from me, friend. I keep faith with the old ones, but I set no tasks now.',
+  bram: 'No new oaths from me, friend. I keep faith with the old ones, but I set no tasks now.',
+};
+
+const LEGACY_GIVER_KEYS = {
+  running: 'endurance',
+  kettlebell: 'strength',
+  strength: 'bram',
+  mobility: 'recovery',
 };
 
 let giverResponsiveQuery = null;
@@ -134,7 +141,19 @@ function counselReasonText(code) {
 function lastQuestDone() {
   try {
     const q = JSON.parse(localStorage.getItem('iv_lastq') || 'null');
-    if (q && Date.now() - q.ts < 12 * 3600 * 1000) return q;
+    if (q && Date.now() - q.ts < 12 * 3600 * 1000) {
+      if (q.giverKeys !== 2) {
+        q.thanked = Object.fromEntries(
+          Object.entries(q.thanked || {}).map(([giver, value]) => [
+            LEGACY_GIVER_KEYS[giver] || giver,
+            value,
+          ]),
+        );
+        q.giverKeys = 2;
+        localStorage.setItem('iv_lastq', JSON.stringify(q));
+      }
+      return q;
+    }
   } catch (e) { /* ignore */ }
   return null;
 }
@@ -143,7 +162,12 @@ function recordQuestDone(title, giver) {
   // the giver's own 'complete' reaction is their thanks — they shouldn't later
   // congratulate you for their own quest like a stranger reading the gazette
   const thanked = giver ? { [giver]: true } : {};
-  localStorage.setItem('iv_lastq', JSON.stringify({ title, ts: Date.now(), thanked }));
+  localStorage.setItem('iv_lastq', JSON.stringify({
+    title,
+    ts: Date.now(),
+    thanked,
+    giverKeys: 2,
+  }));
 }
 
 function congratLine(npcKey) {
@@ -168,8 +192,8 @@ SCREENS.giver = async function () {
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
   else if (!isOfferable && !data.active) line = RETIRED_GIVER_LINES[key];
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
-  const isLiftGiver = ['kettlebell', 'strength'].includes(key);
-  const isIronGiver = key === 'kettlebell';
+  const isLiftGiver = ['strength', 'bram'].includes(key);
+  const isIronGiver = key === 'strength';
   const revealOfferLore = !giverPhoneLayout();
 
   const rewardsLine = (o) => `<div class="o-rewards">reward: <b>+${o.xp} XP</b> &middot; <span class="g">&#9670;${o.gold}+</span> &middot; +${o.vigor} vigor${o.bonus_vigor ? ' (+1 bonus)' : ''}</div>`;
@@ -277,7 +301,7 @@ SCREENS.giver = async function () {
           ${q.details.focus ? `<div class="center" style="margin:6px 0">${bodyMapTag(q.details.focus, 78)}</div>` : ''}
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
             ${isLiftGiver && q.details.routine ? `<button class="btn" onclick="nav('logger',{quest:${q.id}})">OPEN TRAINING LOG</button>` : ''}
-            ${q.giver === 'running' || q.details.modality === 'climb' ? `<button class="btn" onclick="G.syncThenBack('${key}')">SYNC ${({run:'RUNS',ride:'RIDES',swim:'SWIMS',climb:'THE WALL'})[q.details.modality] || 'RUNS'}</button>` : ''}
+            ${q.giver === 'endurance' || q.details.modality === 'climb' ? `<button class="btn" onclick="G.syncThenBack('${key}')">SYNC ${({run:'RUNS',ride:'RIDES',swim:'SWIMS',climb:'THE WALL'})[q.details.modality] || 'RUNS'}</button>` : ''}
             ${isWrit ? ''
               : q.completable
                 ? `<button class="btn green" onclick="G.complete(${q.id}, false)">TURN IN QUEST</button>`
@@ -451,7 +475,7 @@ SCREENS.doctrines = async function () {
   const progs = d.programs.filter(p => p.giver === giver);
   const routines = d.routines.filter(r => r.giver === giver);
   const giverExs = S.exercises.filter(e =>
-    giver === 'kettlebell' ? e.equipment === 'kettlebell' : e.equipment !== 'kettlebell');
+    giver === 'strength' ? e.equipment === 'kettlebell' : e.equipment !== 'kettlebell');
 
   const progCard = (p) => `<div class="prog-card ${active === p.key ? 'active' : ''}">
     <div class="p-name">${esc(p.name)} ${active === p.key ? '<span class="chip program">SWORN</span>' : ''}</div>

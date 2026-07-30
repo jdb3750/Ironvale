@@ -56,6 +56,11 @@ bounded.)
 > **AMENDED 2026-07-28 — the roster collapses to THREE offering givers.** The
 > four-archetype table below is the *historical* Phase 0 decision; read it for
 > context, then read §0c, which supersedes it. The Skill archetype is dissolved.
+>
+> **AMENDED 2026-07-30 — v0.25.0 retires the frozen legacy keys.** The old keys
+> in this historical table explain the original migration avoidance. The live
+> registry and migrated saves now use `endurance`, `strength`, `bram`, and
+> `recovery`; §0c records the current roster.
 
 A giver embodies a **KIND of effort (an archetype)**, not one workout. Four
 archetypes, mapped onto the existing cast — **all four characters already exist
@@ -85,7 +90,7 @@ Calisthenics/plyo/sprints are the Skill archetype's *declared domain* in the
 config but are **deferred content (§8)** — the config names them; nobody builds
 their generators now.
 
-**CRITICAL — do NOT migrate live data.** The DB `giver` keys
+**HISTORICAL PHASE 0 CONSTRAINT — do NOT migrate live data.** The DB `giver` keys
 (`running`/`kettlebell`/`strength`/`mobility`) are opaque IDs on the live
 `quests` table (production history on `main`). **Do not rename them.** Instead add
 **one archetype/ownership config** (giver key → archetype name, display, owned
@@ -93,8 +98,8 @@ modalities) as the single source of truth, and reroute the quest generators to
 it. Consequence: two keys become **intentional legacy misnomers** — `kettlebell`
 is the Iron giver and `strength` is the Skill giver. This is deliberate to avoid
 migrating live data; the config is the source of truth and the player never sees
-a key. Do NOT "fix" this by renaming keys or migrating the table. (A clean key
-migration is a possible *future* opt-in, not Phase 1.)
+a key. This constraint protected Phase 0 and was deliberately superseded by the
+backed-up, ledger-logged v0.25.0 migration before Scheduled mode was built.
 
 **Focus is declared at the MODALITY level, not the archetype level.** The player
 sets e.g. *primary: run; secondary: swim, climb, iron* — modalities, which roll
@@ -115,11 +120,11 @@ several movements that refuse to sit on one side of any line — a muscle-up is
 attempts or sets depending on the day, sprints look more like running than
 climbing.
 
-| Giver | Owns | Recorded as | DB key (still FROZEN) |
+| Giver | Owns | Recorded as | DB key |
 |---|---|---|---|
-| **Old Fenn** | run, ride, swim, **climb** | a timed activity, sized from activity history | `running` |
-| **Grunhilda** | barbell, dumbbell, kettlebell, **bodyweight** | sets/reps/holds in the lift ledger, whatever supplies the resistance | `kettlebell` |
-| **Sage Elowen** | mobility, stretch, easy movement, rest | recovery | `mobility` |
+| **Old Fenn** | run, ride, swim, **climb** | a timed activity, sized from activity history | `endurance` |
+| **Grunhilda** | barbell, dumbbell, kettlebell, **bodyweight** | sets/reps/holds in the lift ledger, whatever supplies the resistance | `strength` |
+| **Sage Elowen** | mobility, stretch, easy movement, rest | recovery | `recovery` |
 
 - **Grunhilda's domain is the load, not the implement:** work performed in sets,
   reps, holds or loaded carries, whether the resistance is iron, a band, rings or
@@ -139,15 +144,15 @@ climbing.
   bodyweight movements so that NO giver could offer them. This collapse restores
   that grouping.
 
-**Ser Bram is retired from quest-giving, NOT deleted.** His `strength` key holds
+**Ser Bram is retired from quest-giving, NOT deleted.** His `bram` key holds
 real completed quests on the live table and several call sites resolve a display
 name from the registry, so:
 
-- **Identity is permanent** — `running`, `kettlebell`, `strength`, `mobility` all
+- **Identity is permanent** — `endurance`, `strength`, `bram`, `recovery` all
   keep resolving forever, for historical quests, chronicle/ledger rendering, and
   his sprite and title.
-- **Offerability is a separate, smaller roster** — `running`, `kettlebell`,
-  `mobility`. Only these generate offers, accept quests, own focuses, or receive
+- **Offerability is a separate, smaller roster** — `endurance`, `strength`,
+  `recovery`. Only these generate offers, accept quests, own focuses, or receive
   nudges.
 - Today the registry conflates the two: `game.GIVERS` gates offers
   (`main.py:301`, `main.py:325`) *and* is shipped whole to the client to draw the
@@ -163,27 +168,15 @@ name from the registry, so:
 Bram's next life is sketched in `ROADMAP.md` (the capability/plugin surface);
 nothing there is approved to build.
 
-## 0d. Loose ends left by the collapse (small, tracked, not blocking)
+## 0d. Loose ends found after the collapse
 
 Found in review as §0c landed. None break anything today; all are the kind of
 stale-declaration or half-truth that becomes an expensive surprise later.
 
-- **`GIVER_ARCHETYPES["strength"]` still lies.** Bram's entry declares
-  `archetype: "Skill"` and `modalities: ("climbing", "calisthenics",
-  "plyometrics", "sprints")`, but the Skill archetype is dissolved, climbing is
-  Fenn's, and Bram owns nothing. It is inert only because `for_giver` gates on
-  `OFFERABLE_GIVERS` and `"Skill"` is no longer in the dispatch map. **This is the
-  same species of stale declaration that orphaned every bodyweight movement in the
-  first place** — zero the modalities out or mark him retired in the config.
-- **Bram's title contradicts his subtitle.** He is displayed as "the Unburdened",
-  a name earned under the dissolved Skill archetype, while his town subtitle now
-  reads "The Old Knight at Rest". He carries nothing at all now; pick one voice.
-- **A weighted pull-up loses its load.** `counsel_specialists._iron_exercises`
-  suppresses the suggested weight for anything tagged `bodyweight`, because
-  `lift_sets.weight` is `NOT NULL` and an unloaded rep stores `0.0`, which would
-  otherwise render as "@ 0". The rule cannot tell *unloaded* from *loaded*, so a
-  Pull-Up logged at 10 kg offers no weight. Suppress on a falsy weight instead of
-  on the equipment tag.
+- **DONE v0.22.4 — Bram's registry entry is retired, owns no modalities, and
+  uses "The Old Knight at Rest" consistently.**
+- **DONE v0.22.4 — loaded bodyweight movements retain their recorded weight;
+  only absent or zero load is suppressed.**
 - **The dead legacy offer path.** `get_offers`, `accept_offer`,
   `gen_lift_offers`, `gen_endurance_offers` and `gen_climb_offers` are reachable
   only from tests — verified caller-by-caller. `gen_mobility_offers` is the sole
@@ -663,10 +656,8 @@ graduating out of Considered is a success, not churn.
 
 Real work, intentionally out of both phases. Each can become its own task/issue:
 
-- **DB giver-key rename.** The frozen keys (`kettlebell`=Iron, `strength`=Skill)
-  are legacy misnomers (§0b). Renaming them to archetype names is worth doing for
-  legibility, but it's a live-data migration on `main`'s `quests` table, so it's
-  its own carefully-scoped task later — NOT Phase 0/1.
+- **DONE v0.25.0 — DB giver-key rename.** The backed-up, ledger-logged migration
+  replaced §0b's frozen legacy keys before Scheduled mode was built.
 - **Scheduled mode** (§5b) — the player-authored weekly plan.
 - **Equipment awareness** (§5c) — gear selection filtering eligible modalities.
 - **New Skill-archetype content** — calisthenics / plyometrics / sprint quest
