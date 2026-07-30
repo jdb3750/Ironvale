@@ -89,6 +89,24 @@ COUNSEL_FOCUS_GIVERS = {
     "swim": "endurance",
     "climb": "endurance",
     "strength": "strength",
+    "rest": "recovery",
+}
+COUNSEL_SCHEDULE_DAYS = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
+COUNSEL_SCHEDULE_TIERS = {
+    "run": ("easy", "steady", "quality"),
+    "ride": ("easy", "steady", "quality"),
+    "swim": ("easy", "steady", "quality"),
+    "climb": ("technique", "volume", "limit-session"),
+    "strength": ("volume", "circuit", "strength"),
+    "rest": (),
 }
 
 
@@ -214,6 +232,91 @@ def _normalize_counsel_iron_today(value, current_date):
     return {"date": current_date, "equipment": equipment}
 
 
+def validate_counsel_schedule(value):
+    if (
+        not isinstance(value, dict)
+        or set(value) != set(COUNSEL_SCHEDULE_DAYS)
+    ):
+        raise ValueError("The weekly counsel plan must name all seven days.")
+    normalized = {}
+    for day in COUNSEL_SCHEDULE_DAYS:
+        slots = value[day]
+        if not isinstance(slots, list):
+            raise ValueError(f"{day.title()}'s counsel paths must be written as a list.")
+        normalized_slots = []
+        occupied = {}
+        for slot in slots:
+            if not isinstance(slot, dict):
+                raise ValueError(f"{day.title()} holds an unrecognized counsel path.")
+            modality = slot.get("modality")
+            if (
+                not isinstance(modality, str)
+                or modality not in COUNSEL_SCHEDULE_TIERS
+            ):
+                raise ValueError(f"{day.title()} names a path the Council does not know.")
+            if modality == "rest" and "tier" in slot:
+                raise ValueError("Rest takes no effort tier.")
+            expected_keys = (
+                {"modality", "optional"}
+                if modality == "rest"
+                else {"modality", "tier", "optional"}
+            )
+            if set(slot) != expected_keys:
+                raise ValueError(f"{day.title()} holds an unrecognized counsel path.")
+            if type(slot["optional"]) is not bool:
+                raise ValueError("A weekly path must be marked optional or sworn.")
+            if modality == "rest":
+                normalized_slot = {
+                    "modality": modality,
+                    "optional": slot["optional"],
+                }
+            else:
+                tier = slot["tier"]
+                if tier not in COUNSEL_SCHEDULE_TIERS[modality]:
+                    raise ValueError(
+                        f"That effort does not belong to {modality} on {day.title()}."
+                    )
+                normalized_slot = {
+                    "modality": modality,
+                    "tier": tier,
+                    "optional": slot["optional"],
+                }
+            lane = COUNSEL_FOCUS_GIVERS[modality]
+            if lane in occupied:
+                prior = occupied[lane]
+                # One-active-quest-per-giver invariant: each mapped lane appears
+                # at most once on a day, before a template can reach offer logic.
+                raise ValueError(
+                    f"{GIVERS[lane]['name']} can hold one path on {day.title()}, "
+                    f"not both {prior} and {modality}."
+                )
+            occupied[lane] = modality
+            normalized_slots.append(normalized_slot)
+        normalized[day] = normalized_slots
+    return normalized
+
+
+def _normalize_counsel_schedule(value):
+    try:
+        return validate_counsel_schedule(value)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def counsel_schedule_options():
+    return {
+        "days": list(COUNSEL_SCHEDULE_DAYS),
+        "modalities": [
+            {
+                "value": modality,
+                "giver": COUNSEL_FOCUS_GIVERS[modality],
+                "tiers": list(tiers),
+            }
+            for modality, tiers in COUNSEL_SCHEDULE_TIERS.items()
+        ],
+    }
+
+
 def get_settings(current_date=None):
     stored = db.kv_get("settings")
     s = stored if isinstance(stored, dict) else {}
@@ -227,6 +330,7 @@ def get_settings(current_date=None):
     s.setdefault("counsel_nudge_enabled", False)
     s.setdefault("counsel_charter", None)
     s.setdefault("counsel_iron_today", None)
+    s.setdefault("counsel_schedule", None)
     if s["counsel_mode"] not in COUNSEL_MODES:
         s["counsel_mode"] = "considered"
     if type(s["counsel_nudge_enabled"]) is not bool:
@@ -238,6 +342,10 @@ def get_settings(current_date=None):
         s["counsel_iron_today"] = _normalize_counsel_iron_today(
             s["counsel_iron_today"],
             current_date or today(),
+        )
+    if s["counsel_schedule"] is not None:
+        s["counsel_schedule"] = _normalize_counsel_schedule(
+            s["counsel_schedule"],
         )
     return s
 

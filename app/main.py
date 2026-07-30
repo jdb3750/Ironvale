@@ -178,6 +178,7 @@ def state():
         "siege_timezone": raid.get_siege_timezone(),
         "givers": game.GIVERS,
         "offerable_givers": game.OFFERABLE_GIVERS,
+        "counsel_schedule_options": game.counsel_schedule_options(),
         "ambition_levels": game.AMBITION,
         "active_quests": actives,
         "inventory": _inventory(),
@@ -258,6 +259,11 @@ async def save_settings(request: Request):
                 not in game.GIVER_ARCHETYPES["strength"]["modalities"]
             ):
                 raise ValueError("Grunhilda does not know that implement.")
+    counsel_schedule = None
+    if "counsel_schedule" in body:
+        counsel_schedule = body["counsel_schedule"]
+        if counsel_schedule is not None:
+            counsel_schedule = game.validate_counsel_schedule(counsel_schedule)
     s = game.get_settings()
     if "timezone" in body:
         name = body["timezone"]
@@ -281,6 +287,8 @@ async def save_settings(request: Request):
         s["counsel_charter"] = charter
     if "counsel_iron_today" in body:
         s["counsel_iron_today"] = iron_today
+    if "counsel_schedule" in body:
+        s["counsel_schedule"] = counsel_schedule
     if body.get("intervals_api_key"):
         s["intervals_api_key"] = body["intervals_api_key"]
     db.kv_set("settings", s)
