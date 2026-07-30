@@ -331,8 +331,10 @@ SCREENS.giver = async function () {
     </div>`;
   }
 
+  // Rendered-giver invariant: identity lives on replaced DOM, not S.params,
+  // because navigation updates route params before this async screen finishes.
   const dialogue = `
-    <div class="win giver-dialogue">
+    <div class="win giver-dialogue" data-giver="${esc(key)}">
       <div class="npc-head">
         ${portraitTag(g.sprite, 128)}
         <div class="dialog"><div class="npc-name">${esc(g.name)} ${esc(g.title)}</div><div id="dlg"></div></div>
