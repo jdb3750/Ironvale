@@ -249,13 +249,7 @@ async function openGiverBoard(page, giver) {
     nav('giver', { giver: giverKey });
   }, giver);
   await page.waitForFunction(giverKey => (
-    document.querySelector('.giver-offer-board')?.dataset.giver === giverKey
-    || /Your Sworn (Quest|Writ)/.test(document.querySelector('.win-title')?.textContent || '')
-    || (
-      S.params.giver === giverKey
-      && !S.state.offerable_givers.includes(giverKey)
-      && document.querySelector('.npc-head')
-    )
+    document.querySelector('#app:not([aria-busy]) .giver-dialogue')?.dataset.giver === giverKey
   ), giver);
   await page.locator('.npc-head').waitFor();
   await page.waitForFunction(() => {
@@ -1617,6 +1611,78 @@ test('giver characterization preserves identity, active continuation, and refusa
   }
 });
 
+test('giver navigation waits for the requested giver instead of stale outgoing DOM', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  let releaseOffer = () => {};
+  try {
+    await createGiverProfile(page, 'considered');
+    await openGiverBoard(page, 'running');
+    await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).click();
+    await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
+
+    let markRequestHeld;
+    const requestHeld = new Promise(resolve => {
+      markRequestHeld = resolve;
+    });
+    const heldOffer = new Promise(resolve => {
+      releaseOffer = resolve;
+    });
+    await page.route('**/api/offers/strength', async route => {
+      markRequestHeld();
+      await heldOffer;
+      await route.continue();
+    });
+
+    let openingSettled = false;
+    const opening = openGiverBoard(page, 'strength').then(() => {
+      openingSettled = true;
+    });
+    await requestHeld;
+    await page.evaluate(() => new Promise(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
+    await new Promise(resolve => setImmediate(resolve));
+
+    const staleEvidence = await page.evaluate(requestedGiver => ({
+      oldActiveBranch: /Your Sworn (Quest|Writ)/.test(
+        document.querySelector('.win-title')?.textContent || '',
+      ),
+      oldRetiredBranch: (
+        S.params.giver === requestedGiver
+        && !S.state.offerable_givers.includes(requestedGiver)
+        && Boolean(document.querySelector('.npc-head'))
+      ),
+      renderedGiver: document.querySelector('.giver-dialogue')?.dataset.giver || null,
+      requestedGiver,
+    }), 'strength');
+    const settledWhileStale = openingSettled;
+
+    releaseOffer();
+    await opening;
+
+    assert.equal(staleEvidence.oldActiveBranch, true);
+    assert.equal(staleEvidence.oldRetiredBranch, true);
+    assert.equal(staleEvidence.renderedGiver, 'running');
+    assert.equal(
+      settledWhileStale,
+      false,
+      `Outgoing DOM satisfied the giver wait: ${JSON.stringify(staleEvidence)}`,
+    );
+    assert.equal(
+      await page.locator('.giver-dialogue').getAttribute('data-giver'),
+      'strength',
+    );
+    assert.match(await page.locator('.npc-name').textContent(), /Ser Bram/);
+    assert.deepEqual(failures, []);
+  } finally {
+    releaseOffer();
+    await context.close();
+  }
+});
+
 test('giver counsel boards render deterministic one-or-three paths across responsive viewports', async () => {
   const { context, failures, page } = await openMainProfile(
     GIVER_VIEWPORTS.phone,
@@ -2203,7 +2269,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '108'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '109'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
