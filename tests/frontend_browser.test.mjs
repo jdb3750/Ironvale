@@ -297,6 +297,92 @@ after(async () => {
   await rm(dataDir, { recursive: true, force: true });
 });
 
+test('global type tokens drive text roles without scanlines or focus zoom', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await page.evaluate(() => nav('settings'));
+    const input = page.locator('#set-name');
+    await input.waitFor();
+    const scaleBeforeFocus = await page.evaluate(() => window.visualViewport?.scale || 1);
+    await input.focus();
+    const settingsStyles = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const read = selector => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return {
+          family: style.fontFamily,
+          size: style.fontSize,
+          weight: style.fontWeight,
+        };
+      };
+      return {
+        tokens: {
+          fine: root.getPropertyValue('--type-fine').trim(),
+          body: root.getPropertyValue('--type-body').trim(),
+          title: root.getPropertyValue('--type-title').trim(),
+          form: root.getPropertyValue('--type-form').trim(),
+        },
+        body: read('body'),
+        button: read('.settings-tabs .btn'),
+        input: read('#set-name'),
+        title: read('.win-title'),
+        helper: read('.counsel-help'),
+        overlay: getComputedStyle(document.body, '::after').backgroundImage,
+      };
+    });
+    const scaleAfterFocus = await page.evaluate(() => window.visualViewport?.scale || 1);
+
+    await openGiverBoard(page, 'kettlebell');
+    const giverStyles = await page.evaluate(() => {
+      const read = selector => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return {
+          family: style.fontFamily,
+          size: style.fontSize,
+          weight: style.fontWeight,
+        };
+      };
+      return {
+        dialogue: read('.dialog'),
+        fine: read('.counsel-tier-label'),
+        tag: read('.chip'),
+      };
+    });
+
+    assert.deepEqual(settingsStyles.tokens, {
+      fine: '10px',
+      body: '12px',
+      title: '14px',
+      form: '16px',
+    });
+    assert.match(settingsStyles.body.family, /quanta-strike-12/);
+    assert.equal(settingsStyles.body.size, '12px');
+    assert.match(settingsStyles.button.family, /quanta-strike-12/);
+    assert.equal(settingsStyles.button.size, '12px');
+    assert.equal(settingsStyles.button.weight, '700');
+    assert.match(settingsStyles.input.family, /quanta-strike-16/);
+    assert.equal(settingsStyles.input.size, '16px');
+    assert.equal(settingsStyles.input.weight, '400');
+    assert.match(settingsStyles.title.family, /quanta-strike-14/);
+    assert.equal(settingsStyles.title.size, '14px');
+    assert.match(settingsStyles.helper.family, /quanta-strike-12/);
+    assert.equal(settingsStyles.helper.size, '12px');
+    assert.match(giverStyles.dialogue.family, /quanta-strike-14/);
+    assert.equal(giverStyles.dialogue.size, '14px');
+    assert.match(giverStyles.fine.family, /quanta-strike-10/);
+    assert.equal(giverStyles.fine.size, '10px');
+    assert.match(giverStyles.tag.family, /quanta-strike-12/);
+    assert.equal(giverStyles.tag.size, '12px');
+    assert.equal(giverStyles.tag.weight, '400');
+    assert.doesNotMatch(settingsStyles.overlay, /repeating-linear-gradient/);
+    assert.match(settingsStyles.overlay, /radial-gradient/);
+    assert.equal(scaleAfterFocus, scaleBeforeFocus);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('phone Scrivener blocks incomplete deeds without a request or overflow', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
@@ -438,7 +524,16 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
     assert.deepEqual(
       (await page.locator('.settings-surface .counsel-label').allTextContents())
         .map(text => text.trim().toUpperCase()),
-      ['TIMEZONE', 'AMBITION', 'GAME LOOP STYLE', 'PRIMARY FOCUS', 'SECONDARY FOCUSES (OPTIONAL)'],
+      [
+        'ROAD UNIT',
+        'WEIGHT UNIT',
+        'SIEGE BELL TIMEZONE',
+        'TIMEZONE',
+        'AMBITION',
+        'GAME LOOP STYLE',
+        'PRIMARY FOCUS',
+        'SECONDARY FOCUSES (OPTIONAL)',
+      ],
     );
     assert.deepEqual(
       await page.locator('.settings-surface .formrow > label, .settings-surface .counsel-label, .settings-surface legend')
@@ -665,8 +760,140 @@ test('shared pixelSelect menus float without shifting content and still select',
     await page.waitForFunction(() => (
       document.querySelector('#set-units')?.value === 'mi'
       && document.querySelector('#set-units')?.closest('.pixel-select')
-        ?.querySelector('.pixel-select-label')?.textContent === 'Road Unit: mi'
+        ?.querySelector('.pixel-select-label')?.textContent === 'mi'
     ));
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('pixelSelect button summaries center their labels without changing Grunhilda’s inline trigger', async () => {
+  const { context, failures, page } = await openMainProfile(GIVER_VIEWPORTS.phone);
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(() => nav('settings'));
+    await page.locator('#settings-game').waitFor();
+
+    const summary = page.locator('#set-units').locator('..').locator('.pixel-select-summary');
+    const alignment = await summary.evaluate((element) => {
+      const summaryRect = element.getBoundingClientRect();
+      const labelRect = element.querySelector('.pixel-select-label').getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        alignItems: style.alignItems,
+        below: summaryRect.bottom - labelRect.bottom,
+        display: style.display,
+        height: summaryRect.height,
+        above: labelRect.top - summaryRect.top,
+      };
+    });
+    assert.ok(alignment.height >= 44, JSON.stringify(alignment));
+    assert.ok(Math.abs(alignment.above - alignment.below) <= 2, JSON.stringify(alignment));
+    assert.deepEqual(
+      { display: alignment.display, alignItems: alignment.alignItems },
+      { display: 'flex', alignItems: 'center' },
+    );
+
+    await openGiverBoard(page, 'kettlebell');
+    const inlineSummary = page.locator(
+      '.iron-today-control .pixel-select-summary',
+    );
+    assert.deepEqual(
+      await inlineSummary.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderTopWidth: style.borderTopWidth,
+          boxShadow: style.boxShadow,
+          display: style.display,
+          textDecorationLine: style.textDecorationLine,
+        };
+      }),
+      {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        borderTopWidth: '0px',
+        boxShadow: 'none',
+        display: 'inline-block',
+        textDecorationLine: 'underline',
+      },
+    );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Settings pixelSelect rows name the setting once and keep value-only options', async () => {
+  const { context, failures, page } = await openMainProfile(GIVER_VIEWPORTS.phone);
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(() => nav('settings'));
+    await page.locator('#settings-game').waitFor();
+
+    const cases = [
+      {
+        id: 'set-units',
+        ariaLabel: 'road unit',
+        rowLabel: 'road unit',
+        values: ['km', 'mi'],
+      },
+      {
+        id: 'set-wu',
+        ariaLabel: 'weight unit',
+        rowLabel: 'weight unit',
+        values: ['kg', 'lb'],
+      },
+      {
+        id: 'set-siege-tz',
+        ariaLabel: 'siege timezone',
+        rowLabel: 'siege bell timezone',
+        values: [
+          'UTC',
+          'America/New_York',
+          'America/Chicago',
+          'America/Denver',
+          'America/Los_Angeles',
+          'Europe/London',
+          'Europe/Berlin',
+          'Australia/Sydney',
+        ],
+      },
+    ];
+    for (const setting of cases) {
+      const input = page.locator(`#${setting.id}`);
+      const picker = input.locator('..');
+      const row = input.locator('xpath=ancestor::div[contains(@class, "formrow")]');
+      const label = row.locator('.counsel-label');
+      assert.equal(await label.isVisible(), true);
+      assert.equal((await label.innerText()).trim().toLowerCase(), setting.rowLabel);
+      assert.equal(
+        await label.evaluate(element => getComputedStyle(element).color),
+        'rgb(106, 160, 200)',
+      );
+      assert.equal(
+        await picker.locator('.pixel-select-summary').getAttribute('aria-label'),
+        setting.ariaLabel,
+      );
+      assert.ok(
+        setting.values.includes((await picker.locator('.pixel-select-label').textContent()).trim()),
+      );
+      assert.deepEqual(
+        (await picker.locator('.pixel-option').allTextContents()).map(value => value.trim()),
+        setting.values,
+      );
+    }
+    if (EVIDENCE_DIR) {
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'settings-selectors-phone.png'),
+        fullPage: true,
+      });
+      await page.setViewportSize(GIVER_VIEWPORTS.desktop);
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'settings-selectors-desktop.png'),
+        fullPage: true,
+      });
+    }
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -831,6 +1058,53 @@ test('every live pixel dropdown call site uses the shared floating menu', async 
       const winRect = win.getBoundingClientRect();
       return menuRect.top >= winRect.top && menuRect.bottom <= winRect.bottom;
     });
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Menagerie hat-picker summary centers its label in the phone touch target', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(async () => {
+      await api('/settings', { method: 'POST', body: { dev_mode: true } });
+      await api('/dev', { method: 'POST', body: { action: 'hats' } });
+      await api('/dev', { method: 'POST', body: { action: 'packs' } });
+      await api('/monsters/rip', { method: 'POST' });
+      await refreshState();
+      nav('ranch');
+    });
+    await page.locator('.mon-tile').first().waitFor();
+    await page.waitForFunction(() => RANCH.actors.length > 0);
+    await page.locator('.mon-tile').first().click();
+
+    const summary = page.locator('.overlay[data-ranch-info] .hat-picker-summary');
+    await summary.waitFor();
+    const geometry = await summary.evaluate(element => {
+      const textNode = [...element.childNodes].find(node => (
+        node.nodeType === Node.TEXT_NODE && node.textContent.trim()
+      ));
+      const range = document.createRange();
+      range.selectNodeContents(textNode);
+      const labelRect = range.getBoundingClientRect();
+      const summaryRect = element.getBoundingClientRect();
+      return {
+        centerDelta: Math.abs(
+          (labelRect.top + labelRect.bottom) / 2
+          - (summaryRect.top + summaryRect.bottom) / 2
+        ),
+        summaryHeight: summaryRect.height,
+      };
+    });
+    assert.ok(geometry.summaryHeight >= 44, JSON.stringify(geometry));
+    assert.ok(geometry.centerDelta <= 2, JSON.stringify(geometry));
+    if (EVIDENCE_DIR) {
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'hat-picker-summary-phone.png'),
+      });
+    }
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -1169,6 +1443,135 @@ test('giver counsel boards render deterministic one-or-three paths across respon
   }
 });
 
+test('Fenn climb and Elowen offers share the approved tier-tag-title heading grid', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    const slug = await page.evaluate(async () => (await api('/profiles')).current);
+    const seed = spawnSync(
+      path.join(ROOT, '.venv/bin/python'),
+      ['-c', `
+import sqlite3, sys
+connection = sqlite3.connect(sys.argv[1])
+connection.execute(
+    "INSERT INTO activities (id, source, start, type, name, moving_time) VALUES (?,?,?,?,?,?)",
+    ("browser-climb-heading", "intervals.icu", sys.argv[2], "Climbing", "Gym climbing", 3600),
+)
+connection.commit()
+connection.close()
+`, path.join(dataDir, `${slug}.db`), new Date(Date.now() - 86_400_000).toISOString().slice(0, 19)],
+      { encoding: 'utf8' },
+    );
+    assert.equal(seed.status, 0, `Climb heading seed failed: ${seed.stderr || seed.stdout}`);
+    await page.evaluate(async () => {
+      await api('/settings', {
+        method: 'POST',
+        body: {
+          counsel_charter: { primary: 'climb', secondary: [] },
+        },
+      });
+      await refreshState();
+    });
+
+    for (const mode of ['considered', 'self']) {
+      await setCounselMode(page, mode);
+      for (const giver of ['running', 'mobility']) {
+        await openGiverBoard(page, giver);
+        await page.waitForFunction(() => (
+          !renderLoop
+          && !queuedRender
+          && !document.getElementById('app')?.hasAttribute('aria-busy')
+        ));
+        const cards = page.locator('.counsel-path-card');
+        assert.equal(await cards.count(), mode === 'considered' ? 1 : 3);
+
+        if (giver === 'running') {
+          const climbTiers = (await page.locator('.counsel-tier-label').allTextContents())
+            .map(value => value.trim().toLowerCase());
+          if (mode === 'self') {
+            assert.deepEqual(climbTiers, ['technique', 'volume', 'limit-session']);
+          } else {
+            assert.equal(climbTiers.length, 1);
+            assert.ok(['technique', 'volume', 'limit-session'].includes(climbTiers[0]));
+          }
+          assert.equal(
+            await cards.locator('.chip.mod-climb').count(),
+            mode === 'considered' ? 1 : 3,
+          );
+        }
+
+        const headings = await cards.locator('.offer-heading').evaluateAll(elements => (
+          elements.map((heading) => {
+            const tier = heading.querySelector('.counsel-tier-row');
+            const detail = heading.querySelector('.counsel-tier-detail');
+            const title = heading.querySelector('.o-title');
+            const tags = heading.querySelector('.offer-title-tags');
+            const chip = tags.querySelector('.chip');
+            const headingRect = heading.getBoundingClientRect();
+            const tierRect = tier.getBoundingClientRect();
+            const titleRect = title.getBoundingClientRect();
+            const tagsRect = tags.getBoundingClientRect();
+            const chipStyle = getComputedStyle(chip);
+            return {
+              chipMarginRight: chipStyle.marginRight,
+              chipPaddingLeft: chipStyle.paddingLeft,
+              chipPaddingRight: chipStyle.paddingRight,
+              detailDisplay: getComputedStyle(detail).display,
+              display: getComputedStyle(heading).display,
+              tagsDisplay: getComputedStyle(tags).display,
+              titleCenterDelta: Math.abs(
+                (titleRect.left + titleRect.right) / 2
+                  - (headingRect.left + headingRect.right) / 2,
+              ),
+              titleStartsBelowFirstRow: titleRect.top
+                >= Math.max(tierRect.bottom, tagsRect.bottom) - 1,
+              tierAndTagsShareLine: Math.max(tierRect.top, tagsRect.top)
+                < Math.min(tierRect.bottom, tagsRect.bottom),
+            };
+          })
+        ));
+        assert.equal(
+          headings.every(heading => (
+            heading.display === 'grid'
+            && heading.tagsDisplay === 'flex'
+            && heading.detailDisplay === 'none'
+            && heading.chipMarginRight === '0px'
+            && heading.chipPaddingLeft === heading.chipPaddingRight
+            && heading.tierAndTagsShareLine
+            && heading.titleStartsBelowFirstRow
+            && heading.titleCenterDelta <= 1
+          )),
+          true,
+          JSON.stringify(headings),
+        );
+        if (EVIDENCE_DIR) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({
+            path: path.join(EVIDENCE_DIR, `heading-grid-${mode}-${giver}-phone.png`),
+          });
+          await page.setViewportSize(GIVER_VIEWPORTS.desktop);
+          await openGiverBoard(page, giver);
+          await page.waitForFunction(() => (
+            !renderLoop
+            && !queuedRender
+            && !document.getElementById('app')?.hasAttribute('aria-busy')
+          ));
+          await page.screenshot({
+            path: path.join(EVIDENCE_DIR, `heading-grid-${mode}-${giver}-desktop.png`),
+          });
+          await page.setViewportSize(GIVER_VIEWPORTS.phone);
+        }
+      }
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('town keeps all four giver identities while Bram has no offer board', async () => {
   const { context, failures, page } = await openMainProfile(
     GIVER_VIEWPORTS.phone,
@@ -1184,6 +1587,7 @@ test('town keeps all four giver identities while Bram has no offer board', async
         assert.equal(
           await page.getByRole('button', { name: new RegExp(`Visit ${name}`) }).count(),
           1,
+          `${name} is visible at ${viewportName}`,
         );
       }
       assert.match(
@@ -1363,7 +1767,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
     }
     assert.ok(observations.every(item => item.warningRatio >= 4.5), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.chipRatio >= 4.5), JSON.stringify(observations, null, 2));
-    assert.ok(observations.every(item => item.assetVersion === '102'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '105'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
@@ -1603,15 +2007,32 @@ test('override paths: Iron doctrine and Rest Writ each render one path in both m
     });
     for (const mode of ['considered', 'self']) {
       await setCounselMode(page, mode);
-      await openGiverBoard(page, 'kettlebell');
-      assert.equal(await page.locator('.counsel-path-card').count(), 1);
-      assert.equal(await page.locator('.counsel-path-card .chip.program').count(), 1);
-      assert.equal(await page.locator('.counsel-tier-label').count(), 1);
-      if (EVIDENCE_DIR) {
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await page.screenshot({
-          path: path.join(EVIDENCE_DIR, `override-doctrine-grunhilda-${mode}.png`),
-        });
+      for (const viewportName of ['phone', 'desktop']) {
+        await page.setViewportSize(GIVER_VIEWPORTS[viewportName]);
+        await openGiverBoard(page, 'kettlebell');
+        await page.waitForFunction(() => (
+          !renderLoop
+          && !queuedRender
+          && !document.getElementById('app')?.hasAttribute('aria-busy')
+        ));
+        assert.equal(await page.locator('.counsel-path-card').count(), 1);
+        assert.equal(await page.locator('.counsel-path-card .chip.program').count(), 1);
+        assert.equal(await page.locator('.counsel-tier-label').count(), 1);
+        assert.equal(
+          await page.locator('.offer-heading').evaluate(
+            element => getComputedStyle(element).display,
+          ),
+          'grid',
+        );
+        if (EVIDENCE_DIR) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({
+            path: path.join(
+              EVIDENCE_DIR,
+              `override-doctrine-grunhilda-${mode}-${viewportName}.png`,
+            ),
+          });
+        }
       }
     }
 
@@ -1655,15 +2076,32 @@ connection.close()
 
     for (const mode of ['considered', 'self']) {
       await setCounselMode(page, mode);
-      await openGiverBoard(page, 'mobility');
-      assert.equal(await page.locator('.counsel-path-card').count(), 1);
-      assert.equal(await page.locator('.counsel-path-card.writ').count(), 1);
-      assert.equal(await page.locator('.counsel-path-card .chip.rest').count(), 1);
-      if (EVIDENCE_DIR) {
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await page.screenshot({
-          path: path.join(EVIDENCE_DIR, `override-writ-elowen-${mode}.png`),
-        });
+      for (const viewportName of ['phone', 'desktop']) {
+        await page.setViewportSize(GIVER_VIEWPORTS[viewportName]);
+        await openGiverBoard(page, 'mobility');
+        await page.waitForFunction(() => (
+          !renderLoop
+          && !queuedRender
+          && !document.getElementById('app')?.hasAttribute('aria-busy')
+        ));
+        assert.equal(await page.locator('.counsel-path-card').count(), 1);
+        assert.equal(await page.locator('.counsel-path-card.writ').count(), 1);
+        assert.equal(await page.locator('.counsel-path-card .chip.rest').count(), 1);
+        assert.equal(
+          await page.locator('.offer-heading').evaluate(
+            element => getComputedStyle(element).display,
+          ),
+          'grid',
+        );
+        if (EVIDENCE_DIR) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({
+            path: path.join(
+              EVIDENCE_DIR,
+              `override-writ-elowen-${mode}-${viewportName}.png`,
+            ),
+          });
+        }
       }
     }
     assert.deepEqual(failures, []);

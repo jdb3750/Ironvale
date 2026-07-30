@@ -36,7 +36,7 @@ SCREENS.colosseum = async function () {
     <button type="button" class="col-contestant ${COL.picked === i ? 'picked' : ''}" style="font-family:inherit;color:inherit" aria-pressed="${COL.picked === i}" aria-label="Select ${esc(c.name)}, odds ${d.odds[i]} to 1" data-col-input onclick="G.colPick(${i})"${COL.animating ? ' disabled' : ''}>
       ${monsterTag(c.dna, c.rarity, 56, c.hat)}
       <span class="cc-name r-${c.rarity}" style="display:block">${esc(c.name)}${c.is_buddy ? ' <span style="color:#e05070">&#9829;</span>' : ''}</span>
-      <span class="muted" style="display:block;font-size:12px;text-transform:uppercase">${c.rarity}</span>
+      <span class="muted" style="display:block;font-family: var(--font-fine); font-size: var(--type-fine);text-transform:uppercase">${c.rarity}</span>
       <span class="cc-odds" style="display:block">${d.odds[i]}&times;</span>
     </button>`;
 
@@ -53,7 +53,7 @@ SCREENS.colosseum = async function () {
         </div>
       </div>
       <div class="col-enter-wrap"><button type="button" class="btn big green" id="col-enter-btn" data-col-input onclick="G.colEnter()"${COL.animating ? ' disabled aria-busy="true"' : ''}>PLACE BET &amp; BEGIN</button></div>
-      <div class="muted center" style="font-size:15px;margin-top:6px">you carry ${spriteTag('icon_coin', 14)}${d.gold} gold</div>
+      <div class="muted center" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:6px">you carry ${spriteTag('icon_coin', 14)}${d.gold} gold</div>
     </div>
     <div class="win center">
       <canvas class="col-stage" id="col-stage" width="640" height="220"></canvas>

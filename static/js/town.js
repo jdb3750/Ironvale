@@ -148,10 +148,10 @@ SCREENS.town = async function () {
     // Ser Bram completes by synced wall time, not the lift logger
     const lifting = ['kettlebell', 'strength'].includes(q.giver) && !!(q.details && q.details.routine);
     return `<div class="offer" style="margin:8px 0">
-      <div><span class="o-title" style="font-size:20px">${esc(q.title)}</span>
+      <div><span class="o-title" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(q.title)}</span>
         ${q.kind === 'rest' ? '' : modalityChip(q.details && q.details.modality, q.giver, q.details && q.details.program)}
         <span class="muted">— ${esc(st.givers[q.giver].name)}</span></div>
-      <div class="${q.completable ? '' : 'muted'}" style="font-size:17px">${q.completable ? '&#10004; ' : ''}${esc(q.progress_note)}</div>
+      <div class="${q.completable ? '' : 'muted'}" style="font-family: var(--font-body); font-size: var(--type-body)">${q.completable ? '&#10004; ' : ''}${esc(q.progress_note)}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">
         ${lifting ? `<button type="button" class="btn small" style="min-width:0" onclick="nav('logger',{quest:${q.id}})">LOG SETS</button>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
@@ -301,7 +301,7 @@ G.ackWillowBubble = async () => {
     showModal(`<div class="win center" style="max-width:380px">
       <span class="win-title">The Writ Slipped Away</span>
       <p style="margin:10px 0">${esc(n.detail || 'Training')} broke the stillness. The willow bends; it does not break \u2014 and neither, apparently, do you.</p>
-      <p class="muted" style="font-size:16px">No penalty. The omens will be read again tomorrow.</p>
+      <p class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">No penalty. The omens will be read again tomorrow.</p>
       <button class="btn" onclick="G.closeOverlay(this.closest('.overlay'))">ONWARD</button>
     </div>`);
   }
@@ -340,7 +340,7 @@ function siegeBannerHtml(siege) {
       const open = SIEGE.leaderOpen[i] === x.name;
       const blows = (x.blows || []).map(b =>
         `<div class="sg-blow"><span class="sg-blow-dmg">+${b.dmg}</span> ${esc(b.label)} <span class="muted">${b.ts.slice(5, 16).replace('T', ' ')}</span></div>`
-      ).join('') || '<div class="muted" style="font-size:14px">no blows recorded</div>';
+      ).join('') || '<div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">no blows recorded</div>';
       return `<div class="sg-leader ${open ? 'open' : ''}">
         <button type="button" class="sg-leader-row" style="width:100%;border:0;font:inherit;color:inherit;text-align:left" onclick="G.siegeLeader(${i})" aria-expanded="${open}">
           <span class="sg-rank">${i + 1}</span>
@@ -374,9 +374,9 @@ function siegeBannerHtml(siege) {
     </div>
     <div class="sg-divider"><span>&#9670; &#9670; &#9670;</span></div>
     <div class="sg-warparty">
-      <div class="sg-board-title">THE WAR PARTY <span class="muted" style="font-size:13px">&mdash; tap a name for their blows</span></div>
+      <div class="sg-board-title">THE WAR PARTY <span class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">&mdash; tap a name for their blows</span></div>
       <div class="sg-board">${board}</div>
-      <div class="muted" style="font-size:13px;margin-top:6px">1 active minute = 10 damage &middot; every adventurer's workouts count</div>
+      <div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);margin-top:6px">1 active minute = 10 damage &middot; every adventurer's workouts count</div>
     </div>
   </section>`;
 }
@@ -421,14 +421,14 @@ G.raidClaim = async () => {
   showModal(`<div class="win ceremony">
     <h2>SPOILS OF THE SIEGE</h2>
     <div style="margin:12px auto;display:flex;justify-content:center">${spriteTag(r.trophy.sprite, 72)}</div>
-    <div class="r-legendary" style="font-size:26px">${esc(r.trophy.name)}</div>
-    <div class="muted" style="font-size:16px">${esc(r.trophy.desc)}</div>
+    <div class="r-legendary" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(r.trophy.name)}</div>
+    <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(r.trophy.desc)}</div>
     <div class="reward-line" style="margin-top:10px">+ a Monster Pack</div>
     <div class="reward-line" style="color:var(--blue)">&#9678; + ${r.tokens} brass tokens</div>
     ${cap ? `<div class="sg-capture">
       <div style="display:flex;justify-content:center;margin:6px 0">${bossTag(cap.dna, 84)}</div>
-      <div class="r-legendary" style="font-size:20px">${esc(cap.name)} YIELDS</div>
-      <div class="muted" style="font-size:15px">it did not die — it follows you home. A siege beast joins your Menagerie.</div>
+      <div class="r-legendary" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(cap.name)} YIELDS</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">it did not die — it follows you home. A siege beast joins your Menagerie.</div>
     </div>` : ''}
     <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <button class="btn big" style="width:auto" onclick="G.closeOverlay(this.closest('.overlay'),()=>nav('ranch'))">TO THE MENAGERIE</button>

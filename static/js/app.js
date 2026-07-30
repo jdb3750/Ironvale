@@ -427,8 +427,8 @@ function header() {
     : 'No streak burning. Complete any quest to light the flame.';
   return `<div class="hdr">
     <button type="button" class="hdr-brand control-reset illustrated-control" aria-label="Return to Town" onclick="nav('town')">
-      <div class="pixel-title" style="font-size:26px">IRON VALE</div>
-      <div class="muted" style="font-size:16px">a village that pays in gold for sweat</div>
+      <div class="pixel-title" style="font-size: var(--type-title)">IRON VALE</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">a village that pays in gold for sweat</div>
     </button>
     <div class="hdr-streak ${st.count > 0 ? '' : 'cold'}" title="${streakTip}">
       ${spriteTag('icon_flame', 26)}
@@ -484,10 +484,10 @@ function footer() {
       <button type="button" class="btn small"${current('settings')} onclick="nav('settings')">SETTINGS</button>
       <button type="button" class="btn small toggle ${SFX.muted ? '' : 'green'}" data-sound-btn onclick="G.mute()">${SFX.muted ? 'SOUND: OFF' : 'SOUND: ON'}</button>
     </div>
-    <div style="font-size:16px">
+    <div style="font-family: var(--font-body); font-size: var(--type-body)">
       ${syncStatusHTML(st)}
     </div>
-    ${st.version ? `<div class="muted" style="font-size:14px;margin-top:4px">v${esc(st.version)}</div>` : ''}
+    ${st.version ? `<div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine);margin-top:4px">v${esc(st.version)}</div>` : ''}
   </div>
   <nav class="phone-dock" aria-label="Iron Vale commands">
     <button type="button" class="dock-action" data-route-back onclick="G.back()" ${canGoBack ? '' : 'disabled'} aria-label="Back">&larr;<span>BACK</span></button>
@@ -760,14 +760,14 @@ function showCeremony(rewards, title, routeToken = captureRouteToken()) {
   if (S.state && S.state.buddy) {
     const b = S.state.buddy;
     lines.push(`<div class="reward-line" style="display:flex;align-items:center;justify-content:center;gap:8px">
-      ${monsterTag(b.dna, b.rarity, 30, b.hat)} <span class="muted" style="font-size:17px">${esc(b.name)} squeaks with pride.</span></div>`);
+      ${monsterTag(b.dna, b.rarity, 30, b.hat)} <span class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(b.name)} squeaks with pride.</span></div>`);
   }
 
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.innerHTML = `<div class="win ceremony">
     <h2>QUEST COMPLETE</h2>
-    <div style="font-size:24px;color:var(--gold-bright);margin-bottom:10px">${esc(title)}</div>
+    <div style="font-family: var(--font-title); font-size: var(--type-title);color:var(--gold-bright);margin-bottom:10px">${esc(title)}</div>
     <div class="muted" style="margin-bottom:8px">${esc(rewards.note || '')}</div>
     <div id="cere-lines"></div>
     <div style="margin-top:16px"><button id="cere-glory" class="btn big" disabled>revealing...</button></div>
@@ -821,7 +821,7 @@ function renderLogin() {
   root.innerHTML = `
     <div style="max-width:380px;margin:80px auto">
       <div class="win center">
-        <div class="pixel-title" style="font-size:22px;margin-bottom:14px">IRON VALE</div>
+        <div class="pixel-title" style="font-size: var(--type-title);margin-bottom:14px">IRON VALE</div>
         <p class="muted">The gate is barred. Speak the word.</p>
         <div class="formrow"><input type="password" id="pw" placeholder="password" onkeydown="if(event.key==='Enter')G.login()"></div>
         <button class="btn big" onclick="G.login()">ENTER</button>
@@ -929,7 +929,7 @@ G.apRedraw = () => {
   const ap = S.state.character.appearance || { skin: 0, hair: 1, hair_color: 0, shirt: 2, pants: 0 };
   const row = (label, key, count) => `
     <div class="ap-row" style="justify-content:space-between;margin:6px 0">
-      <span class="muted" style="font-size:16px;text-transform:uppercase">${label}</span>
+      <span class="muted" style="font-family: var(--font-body); font-size: var(--type-body);text-transform:uppercase">${label}</span>
       <span style="display:inline-flex;align-items:center;gap:8px">
         <button class="btn small" style="min-width:0" onclick="G.apStep('${key}',-1,${count})">&#9668;</button>
         <span class="muted" style="min-width:40px;text-align:center">${((ap[key] || 0) % count) + 1}/${count}</span>
@@ -976,9 +976,9 @@ function renderProfilePicker(profs) {
         ${heroTag(ap, 56)}
         ${p.buddy ? `<span class="profile-buddy" title="${esc(p.buddy.name)}">${monsterTag(p.buddy.dna, p.buddy.rarity, 26, p.buddy.hat)}</span>` : ''}
       </div>
-      <div style="color:var(--gold-bright);font-size:19px">${esc(p.name)}</div>
-      ${p.level ? `<div class="muted" style="font-size:13px">LV ${p.level}</div>` : ''}
-      ${p.has_pin && !open ? '<div class="muted" style="font-size:14px">&#128274; PIN</div>' : ''}
+      <div style="color:var(--gold-bright);font-family: var(--font-body); font-size: var(--type-body)">${esc(p.name)}</div>
+      ${p.level ? `<div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">LV ${p.level}</div>` : ''}
+      ${p.has_pin && !open ? '<div class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">&#128274; PIN</div>' : ''}
       ${open ? `<div onclick="event.stopPropagation()">
         <input type="password" inputmode="numeric" maxlength="4" id="pin-${p.slug}" class="pin-input" placeholder="&#8226;&#8226;&#8226;&#8226;"
           onkeydown="if(event.key==='Enter')G.submitPin('${p.slug}')">
@@ -989,13 +989,13 @@ function renderProfilePicker(profs) {
   root.innerHTML = `
     <div style="max-width:560px;margin:60px auto">
       <div class="win center">
-        <div class="pixel-title" style="font-size:26px;margin-bottom:4px">IRON VALE</div>
+        <div class="pixel-title" style="font-size: var(--type-title);margin-bottom:4px">IRON VALE</div>
         <div class="muted" style="margin-bottom:14px">WHO GOES THERE?</div>
         <div class="profile-grid">
           ${PICKER.profiles.map(card).join('')}
           <div class="profile-card new" role="button" tabindex="0" aria-label="Create a new adventurer" onclick="G.showCreate()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();G.showCreate()}">
-            <div style="font-size:40px;color:var(--green)">+</div>
-            <div class="muted" style="font-size:17px">NEW ADVENTURER</div>
+            <div style="font-family: var(--font-title); font-size: var(--type-title);color:var(--green)">+</div>
+            <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">NEW ADVENTURER</div>
           </div>
         </div>
         ${PICKER.creating ? `
@@ -1005,7 +1005,7 @@ function renderProfilePicker(profs) {
             onkeydown="if(event.key==='Enter')G.createProfile()"></div>
           <div class="center"><button class="btn wide green" onclick="G.createProfile()">BEGIN THE LEGEND</button></div>
         </div>` : ''}
-        <div class="muted" style="font-size:15px;margin-top:14px">this device remembers you until you switch adventurers</div>
+        <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:14px">this device remembers you until you switch adventurers</div>
       </div>
     </div>`;
   hydrateSprites();

@@ -228,15 +228,19 @@ SCREENS.giver = async function () {
     return `<div class="offer counsel-path-card ${isWrit ? 'writ' : ''} ${o.wellness_warning ? 'has-wellness-warning' : ''}"
         data-offer-id="${Number(o.offer_id)}" data-tier-label="${esc(o.tier_label)}">
       <div class="offer-primary">
-        <div class="counsel-tier-row">
-          <span class="counsel-tier-label">${esc(o.tier_label)}</span>
-          <span class="counsel-tier-detail">${esc(o.tier_detail)}</span>
+        <div class="offer-heading">
+          <div class="counsel-tier-row">
+            <span class="counsel-tier-label">${esc(o.tier_label)}</span>
+            <span class="counsel-tier-detail">${esc(o.tier_detail)}</span>
+          </div>
+          <span class="o-title">${esc(o.title)}</span>
+          <span class="offer-title-tags">
+            ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
+            ${modalityChip(o.modality, o.giver, o.program)}
+            ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${o.intensity}">${o.intensity}</span>`}
+            ${o.target_minutes ? `<span class="o-kind">~${o.target_minutes} min</span>` : ''}
+          </span>
         </div>
-        <div><span class="o-title">${esc(o.title)}</span>
-          ${o.program ? '<span class="chip program">DOCTRINE</span>' : ''}
-          ${modalityChip(o.modality, o.giver, o.program)}
-          ${isWrit ? '<span class="chip rest">REST WRIT</span>' : `<span class="chip ${o.intensity}">${o.intensity}</span>`}
-          ${o.target_minutes ? `<span class="o-kind">~${o.target_minutes} min</span>` : ''}</div>
         <div class="o-struct">${esc(o.structure)}</div>
         ${routine}
         ${rewardsLine(o)}
@@ -449,7 +453,7 @@ SCREENS.doctrines = async function () {
 
   const progCard = (p) => `<div class="prog-card ${active === p.key ? 'active' : ''}">
     <div class="p-name">${esc(p.name)} ${active === p.key ? '<span class="chip program">SWORN</span>' : ''}</div>
-    <div class="muted" style="font-size:18px">${esc(p.desc)}</div>
+    <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">${esc(p.desc)}</div>
     <div class="o-struct">${p.sessions.map(s =>
       `&#9656; <b style="color:var(--blue)">${esc(s.label)}</b>: ${s.exercises.map(e => `${esc(e[0])} ${e[1]}&times;${e[2]}`).join(', ')}`
     ).join('<br>')}</div>
@@ -734,8 +738,8 @@ function loggerCard(row, index) {
       <span class="setdots" id="logger-dots-${index}">${loggerDots(index)}</span>
     </summary>
     <div class="logger-card-body">
-      <div class="muted logger-groups" style="font-size:16px">${(row.groups || []).map(esc).join(' / ')}</div>
-      ${how ? `<div class="muted" id="logger-how-${index}" hidden style="font-size:17px;border-left:2px solid var(--gold);padding-left:8px;margin:6px 0">${esc(how)}</div>` : ''}
+      <div class="muted logger-groups" style="font-family: var(--font-body); font-size: var(--type-body)">${(row.groups || []).map(esc).join(' / ')}</div>
+      ${how ? `<div class="muted" id="logger-how-${index}" hidden style="font-family: var(--font-body); font-size: var(--type-body);border-left:2px solid var(--gold);padding-left:8px;margin:6px 0">${esc(how)}</div>` : ''}
       <div class="logger-fields">
         ${unit === 'seconds' ? '' : loggerField(row, index, 'weight')}
         ${loggerField(row, index, 'count')}
@@ -755,7 +759,7 @@ SCREENS.logger = async function () {
   const quest = questId ? S.state.active_quests.find(candidate => candidate.id === questId) : null;
   if (!quest) {
     $app().innerHTML = shell(`<div class="win center">
-      <p class="muted">No quest in hand. Accept one from Grunhilda or Ser Bram first.</p>
+      <p class="muted">No strength quest in hand. Accept one from Grunhilda first.</p>
     </div>`);
     return;
   }
@@ -1122,7 +1126,7 @@ SCREENS.scrivener = async function () {
   $app().innerHTML = shell(`
     ${isCompactPhone() ? '' : wickWin}
     <div class="win deed-form"><span class="win-title">Confess a Deed (unverified)</span>
-      <div class="muted" style="font-size:17px;margin-bottom:8px">Forgot your tracker at the crag? Swear it before Wick.
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:8px">Forgot your tracker at the crag? Swear it before Wick.
         No witness means prorated pay: seven coins in ten.</div>
       <div class="formrow">
         ${pixelSelect('cl-kind', types.map(t => ({ value: t.kind, label: t.label })),
@@ -1142,7 +1146,7 @@ SCREENS.scrivener = async function () {
       </div>`).join('') || ''}
       <div id="scrivener-lifts">${W.sets.map(scrivenerSetMarkup).join('')}</div>
       <div class="muted" id="scrivener-empty" ${recent.activities.length || W.sets.length ? 'hidden' : ''}>Nothing recorded today.</div>
-      <div class="muted" style="font-size:16px;margin-top:6px">older entries: Hall of Records &rarr; Calendar &rarr; tap a day</div>
+      <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-top:6px">older entries: Hall of Records &rarr; Calendar &rarr; tap a day</div>
     </div>
     ${isCompactPhone() ? wickWin : ''}
   `);
