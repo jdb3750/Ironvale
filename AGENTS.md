@@ -321,8 +321,10 @@ builds its own scratch and deletes it).
 
 Frontend logic and browser regressions are repeatable too:
 `npm run test:frontend` runs the DOM harness, while `npm run test:browser`
-launches a scratch server on port 8322 and drives headless Chromium through
-phone validation, profile/PIN switching, and sync-failure visibility. Run
+launches a scratch server on an OS-assigned ephemeral port and drives headless
+Chromium through phone validation, profile/PIN switching, and sync-failure
+visibility. Port 8322 remains the human scratch-preview port; set
+`IRON_VALE_BROWSER_PORT` only when an exact test port is required. Run
 `npm install && npx playwright install chromium` once on a new checkout.
 
 ## Gotchas
