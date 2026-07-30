@@ -53,6 +53,27 @@ need before designing extension points, and it can only be produced by walking
 the code.** The registry then becomes "more capabilities, declared rather than
 hardcoded" — an increment rather than an architecture.
 
+### A likely first capability: font packs
+
+Raised 2026-07-29 — a player (including Joe) may dislike a font or need a more
+legible one, so **typeface should be a user choice**, and it is a natural early
+capability under this model.
+
+**The constraint that shapes it:** Quanta-Strike's strikes are size-bound, and
+12px Quanta-Strike is roughly the apparent size of 17–20px in a conventional
+outline font. A font pack therefore cannot swap `font-family` alone — swap a
+system font in at 12px and it renders microscopic. **Family and scale must travel
+together as one swappable unit.**
+
+Consequence, applied while the type system was being built rather than
+retrofitted: the scale lives in **CSS custom properties**, not ~128 hardcoded
+`font-size` declarations. A font pack sets the family and the scale tokens
+together. This also closes the "no typography tokens" gap `DESIGN.md` §3 records.
+
+A legibility-first pack (a conventional, larger, non-pixel face) is the obvious
+second pack after the default, and it is the honest answer to accessibility
+concerns that a fixed pixel font cannot serve on its own.
+
 ### Deliberate non-goals (for now)
 
 - **It is not a marketplace yet, and should not be called one.** With one user, a
