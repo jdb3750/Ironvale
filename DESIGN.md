@@ -22,7 +22,7 @@ other hues carry status, rarity, and game meaning.
 
 ### Palette
 
-There is one dark theme. These are the 18 color custom properties currently
+There is one dark theme. These are the 21 color custom properties currently
 declared in `:root`; typography tokens are documented in §3. The stylesheet
 also contains raw, one-off colors that have not yet been promoted to tokens.
 
@@ -32,6 +32,9 @@ also contains raw, one-off colors that have not yet been promoted to tokens.
 | Primary panel | `--panel` | `#121220` | Windows and major contained surfaces |
 | Secondary panel | `--panel2` | `#191928` | Buttons, cards, rows, secondary contained surfaces |
 | Raised surface | `--surface-raised` | `#24243b` | Floating menus, modal windows, toasts, and bubbles |
+| Quiet edge | `--edge` | `#3a3450` | Passive dividers, frames, rows, and scroller borders |
+| Lit edge | `--edge-lit` | `#5a526b` | Top and left edges of raised surfaces |
+| Shaded edge | `--edge-shade` | `#211f33` | Right and bottom edges of raised surfaces |
 | Primary text | `--ink` | `#d8cfa8` | Body copy and form text |
 | Muted text | `--dim` | `#776f8e` | Labels, metadata, disabled-looking copy |
 | Readable muted text | `--dim-readable` | `#958ca8` | Small helper copy and enabled muted controls on panels |
@@ -52,11 +55,18 @@ also contains raw, one-off colors that have not yet been promoted to tokens.
 - Use `--bg`, `--panel`, and `--panel2` as the core tonal hierarchy.
   `--surface-raised` is lighter than that hierarchy because it represents
   content physically floating above it.
+- `--edge` names the existing quiet structural border without changing its
+  value. Raised surfaces start with `--edge-lit` and `--edge-shade` for a
+  neutral top-left bevel; their tone and cast shadow, not gold, communicate
+  depth. A dimming backdrop may override that edge with the existing gold
+  bevel to signal interruption.
 - Use `--ink` for readable copy and `--dim` for supporting information.
   Small helper copy and enabled muted controls use `--dim-readable` so their
   supporting role remains distinct without falling below the AA contrast target.
-- Gold is both structural and interactive: `--gold` outlines ordinary windows
-  and controls; `--gold-bright` carries titles and stronger emphasis.
+- Gold remains structural on ordinary windows and interactive controls;
+  `--gold-bright` carries titles, selection, and stronger emphasis. Passive
+  raised chrome is neutral so gold remains legible as an interactive state
+  within it.
 - Red, green, blue, and purple already have game semantics. Rarity tokens are
   aliases by meaning even when their values match a status hue.
 - The former counsel-only warning value is now the general `--danger-ink`
@@ -516,11 +526,21 @@ the shared `--surface-raised` background, which is perceptibly lighter than
 `--panel2`. These surfaces cast the same unblurred `4px 4px 0` southeast shadow
 onto the content beneath them.
 
-The light source is consistently top-left. Raised surfaces therefore use a
-bright top edge, gold left edge, and darker right and bottom edges. This bevel
-distinguishes their elevation from the uniform gold rule and concentric rings
-of an ordinary `.win`. Menus omit the edge attached to their trigger, including
+The light source is consistently top-left. Every raised surface starts with
+`--edge-lit` on the top and left and `--edge-shade` on the right and bottom.
+This neutral bevel distinguishes elevation without spending the accent on a
+passive container. Menus omit the edge attached to their trigger, including
 when they flip upward, but retain the same bevel and shadow direction.
+
+Elevation and interruption are separate axes. A surface that dims the world
+behind it blocks interaction and demands a response, so it additionally takes
+the existing dimensional gold bevel: gold marks interruption, not elevation.
+A surface that floats over otherwise-live content keeps the neutral bevel
+because it coexists with the page rather than claiming the player's attention.
+
+Inset picker rows rest on `--edge`. Hover, keyboard focus, and selection return
+their border and marker to gold, so the accent identifies interaction and the
+current value rather than merely outlining the menu.
 
 Readable muted helper copy on a raised surface uses `--dim-readable`. Small
 danger copy uses `--danger-ink`, while `--red` remains the structural danger

@@ -47,6 +47,9 @@
   --panel: #121220;
   --panel2: #191928;
   --surface-raised: #24243b;
+  --edge: #3a3450;
+  --edge-lit: #5a526b;
+  --edge-shade: #211f33;
   --ink: #d8cfa8;
   --dim: #776f8e;
   --dim-readable: #958ca8;
@@ -424,7 +427,7 @@ h1, h2, h3 { font-weight: normal; }
 }
 
 /* ---- logger ---- */
-.ex-row { border: 2px solid #3a3450; background: var(--panel2); padding: 8px 10px; margin: 8px 0; }
+.ex-row { border: 2px solid var(--edge); background: var(--panel2); padding: 8px 10px; margin: 8px 0; }
 .ex-row .ex-name { color: var(--gold-bright); font-family: var(--font-title); font-size: var(--type-title); }
 .ex-row .ex-target { color: var(--dim); }
 .stepper { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
@@ -541,7 +544,7 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 .r-legendary { color: var(--rarity-legendary); text-shadow: 0 0 8px rgba(224,160,48,0.6); }
 
 .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
-.inv-item { border: 2px solid #3a3450; background: var(--panel2); padding: 8px; text-align: center; cursor: pointer; }
+.inv-item { border: 2px solid var(--edge); background: var(--panel2); padding: 8px; text-align: center; cursor: pointer; }
 .inv-item:hover { border-color: var(--gold); }
 .inv-item .icon { font-family: var(--font-title); font-size: var(--type-title); }
 .inv-item .qty { color: var(--dim); font-family: var(--font-body); font-size: var(--type-body); }
@@ -623,7 +626,7 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 .dev-console > .win-title { color: var(--green); }
 .dev-console-output {
   min-height: 220px; max-height: 48vh; overflow-y: auto;
-  background: #000; border: 2px solid #3a3450; padding: 10px;
+  background: #000; border: 2px solid var(--edge); padding: 10px;
   font-family: var(--font-body); font-size: var(--type-body); line-height: 1.25; text-align: left;
 }
 /* Shared scrollable surfaces use one square, token-driven scrollbar treatment.
@@ -692,7 +695,7 @@ html::-webkit-scrollbar-thumb,
 .backrow { margin: 6px 4px; }
 .muted { color: var(--dim); }
 .center { text-align: center; }
-hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
+hr.rule { border: none; border-top: 1px solid var(--edge); margin: 10px 0; }
 
 /* ---- town scene ---- */
 /* Sky + ground: Joe's hand-drawn tiles, both scaled 3x so their native
@@ -812,7 +815,7 @@ hr.rule { border: none; border-top: 1px solid #3a3450; margin: 10px 0; }
   content: ''; position: absolute; top: 100%; left: 50%;
   border: 10px solid transparent;
 }
-.fenn-bubble::after { border-top-color: var(--gold-bright); margin-left: -10px; }
+.fenn-bubble::after { border-top-color: var(--edge-lit); margin-left: -10px; }
 .fenn-bubble::before { border-top-color: var(--surface-raised); margin-left: -8px; border-width: 8px; margin-top: -1px; }
 .fenn-bubble .fb-line {
   font-style: italic; color: var(--ink); font-family: var(--font-body); font-size: var(--type-body); line-height: 1.35;
@@ -987,7 +990,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .ranch-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); text-align: center; padding: 20px; }
 .mon-card { text-align: center; }
 .mon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-.mon-tile { border: 2px solid #3a3450; background: var(--panel2); padding: 6px 4px; text-align: center; cursor: pointer; }
+.mon-tile { border: 2px solid var(--edge); background: var(--panel2); padding: 6px 4px; text-align: center; cursor: pointer; }
 .mon-tile .mn { font-family: var(--font-body); font-size: var(--type-body); }
 .mon-tile.r-common { border-color: var(--rarity-common); }
 .mon-tile.r-uncommon { border-color: var(--rarity-uncommon); }
@@ -1011,7 +1014,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .pen-hats { display: flex; gap: 6px; flex-wrap: wrap; }
 .hat-slot {
   display: inline-flex; align-items: center; gap: 2px;
-  padding: 4px 6px; border: 2px solid #3a3450; cursor: grab;
+  padding: 4px 6px; border: 2px solid var(--edge); cursor: grab;
   background: #10101c; touch-action: none; user-select: none;
 }
 .hat-slot:hover { border-color: var(--gold); }
@@ -1030,7 +1033,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .profile-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .profile-card {
   width: 120px; padding: 12px 8px; cursor: pointer; text-align: center;
-  border: 2px solid #3a3450; background: var(--panel2);
+  border: 2px solid var(--edge); background: var(--panel2);
 }
 .profile-card:hover { border-color: var(--gold); }
 .profile-card.new { border-style: dashed; }
@@ -1090,7 +1093,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 @keyframes packrip { 30% { transform: scale(1.15) rotate(3deg); } 100% { transform: scale(0) rotate(20deg); opacity: 0; } }
 .pack-cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
 .pack-card {
-  border: 2px solid #3a3450; background: var(--panel2); padding: 8px 6px; width: 96px;
+  border: 2px solid var(--edge); background: var(--panel2); padding: 8px 6px; width: 96px;
   animation: cardpop 0.45s cubic-bezier(.34,1.8,.64,1) both;
 }
 .pack-card .pc-name { font-family: var(--font-body); font-size: var(--type-body); }
@@ -1125,7 +1128,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 /* ---- the long road (lifetime pilgrimage map, The Road tab) ---- */
 .road-scroll {
   overflow-x: auto; overflow-y: hidden;
-  border: 2px solid #3a3450; background: #0c0c14;
+  border: 2px solid var(--edge); background: #0c0c14;
   scrollbar-width: thin;
 }
 .road-scroll canvas { display: block; image-rendering: pixelated; cursor: pointer; }
@@ -1138,7 +1141,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 /* ---- the tapestry (year weave, Calendar tab) ---- */
 .tapestry-scroll {
   overflow-x: auto; overflow-y: hidden;
-  border: 2px solid #3a3450; background: #0c0c14;
+  border: 2px solid var(--edge); background: #0c0c14;
   scrollbar-width: thin;
 }
 .tapestry-scroll canvas { display: block; cursor: pointer; }
@@ -1151,7 +1154,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 /* ---- Maud's almanac (monthly edition, Hall of Records) ---- */
 .almanac-page {
   border: 2px solid #6a5a30;
-  box-shadow: inset 0 0 0 2px #14141f, inset 0 0 0 4px #3a3450;
+  box-shadow: inset 0 0 0 2px #14141f, inset 0 0 0 4px var(--edge);
   background: linear-gradient(#16141f, #1a1724);
   padding: 14px 16px;
 }
@@ -1168,14 +1171,14 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .almanac-page table.rpg td:last-child { text-align: left; }
 .alm-nav {
   display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid #3a3450; margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid var(--edge); margin-top: 10px; padding-top: 8px;
 }
 
 /* ---- sleep panel (Hall of Rest, Vitals tab) ---- */
 .sleep-panel { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
 .sleep-stat {
   flex: 1; min-width: 90px; text-align: center;
-  border: 2px solid #3a3450; background: var(--panel2); padding: 8px 6px;
+  border: 2px solid var(--edge); background: var(--panel2); padding: 8px 6px;
   display: flex; flex-direction: column; gap: 4px;
 }
 .sleep-stat .muted { font-family: var(--font-fine); font-size: var(--type-fine); letter-spacing: 1px; }
@@ -1351,7 +1354,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .col-field { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 10px 0; }
 .col-contestant {
   width: 108px; text-align: center; padding: 8px 6px; cursor: pointer;
-  border: 2px solid #3a3450; background: var(--panel2);
+  border: 2px solid var(--edge); background: var(--panel2);
 }
 .col-contestant:hover { border-color: var(--gold); }
 .col-contestant.picked { border-color: var(--gold-bright); box-shadow: 0 0 10px rgba(240,208,128,0.35); }
@@ -1455,7 +1458,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .phone-dock { display: none; }
 
 .logger-card {
-  border: 2px solid #3a3450;
+  border: 2px solid var(--edge);
   background: var(--panel2);
   margin: 8px 0;
   min-inline-size: 0;
@@ -1585,9 +1588,9 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   inset-block-end: 100%;
 }
 
-/* Raised-surface invariant: menus, modal windows, transient notices and
-   callouts sit closer to the viewer than panel2. One top-left light source
-   gives them the same bevel and the same unblurred southeast cast shadow. */
+/* Raised-surface invariant: elevation owns the lighter tone, neutral bevel and
+   unblurred southeast cast shadow. Interruption is a separate axis: only a
+   surface whose backdrop dims the live world overrides that bevel with gold. */
 .pixel-select-menu,
 .hat-picker-menu,
 .overlay .win,
@@ -1595,8 +1598,12 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .fenn-bubble {
   background: var(--surface-raised);
   border: 2px solid;
-  border-color: var(--gold-bright) #7a5f28 #52401c var(--gold);
+  border-color: var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit);
   box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+}
+
+.overlay .win {
+  border-color: var(--gold-bright) #7a5f28 #52401c var(--gold);
 }
 
 .hat-picker-menu,
@@ -1605,7 +1612,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 }
 .hat-picker.picker-opens-up > .hat-picker-menu,
 .pixel-select.picker-opens-up > .pixel-select-menu {
-  border-top: 2px solid var(--gold-bright);
+  border-top: 2px solid var(--edge-lit);
   border-bottom: 0;
 }
 
@@ -1621,15 +1628,17 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 .hat-picker-menu .hat-option,
 .pixel-select-menu .pixel-option {
   width: 100%;
-  border: 1px solid #4a3d20;
+  border: 1px solid var(--edge);
   box-shadow: none;
   background: var(--panel2);
   text-align: left;
 }
 .hat-picker-menu .hat-option::before,
-.pixel-select-menu .pixel-option::before { content: '\25b8'; color: var(--gold); margin-right: 6px; }
+.pixel-select-menu .pixel-option::before { content: '\25b8'; color: var(--edge); margin-right: 6px; }
 .hat-picker-menu .hat-option:hover,
-.pixel-select-menu .pixel-option:hover {
+.hat-picker-menu .hat-option:focus-visible,
+.pixel-select-menu .pixel-option:hover,
+.pixel-select-menu .pixel-option:focus-visible {
   /* these rows are flattened .btn keys (no bevel, no depth); pin their
      hover to a plain gold border on the dark panel2 background so they
      read as menu rows, not raised keys */
@@ -1637,10 +1646,17 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   background: var(--panel2);
   color: var(--gold-bright);
 }
+.hat-picker-menu .hat-option:hover::before,
+.hat-picker-menu .hat-option:focus-visible::before,
+.pixel-select-menu .pixel-option:hover::before,
+.pixel-select-menu .pixel-option:focus-visible::before {
+  color: var(--gold);
+}
 .pixel-select-menu .pixel-option.selected {
   border-color: var(--gold-bright);
   color: var(--gold-bright);
 }
+.pixel-select-menu .pixel-option.selected::before { color: var(--gold-bright); }
 
 .settings-tabs {
   margin: 12px 4px 16px;
