@@ -142,20 +142,20 @@ entries are open work with the removal path worked out.
   player to a giver who cannot help them. A one-line fix, but it needs a `?v=`
   bump because it touches `static/`, so fold it into the next task that already
   changes a static asset rather than spending a bump on it alone.
-- **The browser suite silently tests against a foreign server on its port.**
-  `tests/frontend_browser.test.mjs` spawns its own uvicorn on 8322, but if
-  something is already listening there it connects to that instead and produces a
-  spray of unrelated failures with no hint of the cause. This cost three separate
-  debugging detours in one day, each time from a leftover preview server. The
-  suite should refuse to run — loudly — when 8322 is occupied by a process it did
-  not start, rather than testing the wrong app.
-- **A browser-suite helper can report navigation complete before the DOM
-  settles.** Observed while adding retired-giver coverage: the helper's
-  completion can race the render when screenshot writing shifts timing. Nothing
-  fails today, but a helper that returns early produces intermittent failures
-  that get blamed on whatever change happens to be in flight. Worth hardening
-  before it costs someone a debugging session — this suite already burned one
-  today through a port collision.
+- ~~**The browser suite silently tests against a foreign server on its port.**~~
+  **FIXED in v0.24.3.** Root cause was not stray processes: `AGENTS.md` documented
+  **8322 for both** the human scratch preview and the browser suite, so the two
+  collided by design whenever a preview was open for review — which is the normal
+  working state. The suite now takes an OS-assigned ephemeral port and reads back
+  what uvicorn bound; `IRON_VALE_BROWSER_PORT` remains for exact-port needs and
+  refuses loudly when that port is occupied, since the caller named it on purpose.
+- ~~**A browser-suite helper can report navigation complete before the DOM
+  settles.**~~ **FIXED in v0.24.3.** Worse than first described: two of
+  `openGiverBoard`'s three wait branches proved nothing about *which* giver had
+  rendered — a sworn-quest title matches any giver holding a quest, and `nav()`
+  sets route params synchronously while a portrait exists on every giver screen.
+  The dialogue block now carries `data-giver`, and one identity check inside a
+  finished render replaces all three branches.
 
 - **A weighted pull-up loses its load.** `counsel_specialists._iron_exercises`
   suppresses the suggested weight for anything tagged `bodyweight`, because
