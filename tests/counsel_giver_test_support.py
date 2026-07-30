@@ -241,15 +241,15 @@ def assert_single_iron_implement(option: QuestOption) -> None:
         for row in option.routine
     }
     assert len(equipment) == 1
-    assert equipment <= set(game.GIVER_ARCHETYPES["kettlebell"]["modalities"])
+    assert equipment <= set(game.GIVER_ARCHETYPES["strength"]["modalities"])
 
 
 def assert_active_continuation(expected: QuestOption, quest_id: int) -> None:
-    continued = offer_response("running").active
+    continued = offer_response("endurance").active
     assert continued is not None
     refused = client.post(
         "/api/quests/accept",
-        json={"giver": "running", "option_key": expected.option_key},
+        json={"giver": "endurance", "option_key": expected.option_key},
     )
     assert continued.id == quest_id and refused.status_code == 400
     assert continued.details.option_key == expected.option_key

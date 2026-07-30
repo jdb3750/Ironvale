@@ -24,7 +24,7 @@ offer = {
     "gold": 12,
     "vigor": 1,
 }
-quest_id = quests.create_quest_from_offer("running", offer, None)
+quest_id = quests.create_quest_from_offer("endurance", offer, None)
 
 # Given: a real Phase 1 quest. When: Phase 2's reserved mode is written directly.
 # Then: storage accepts it while the Phase 1 attribution boundary still refuses it.

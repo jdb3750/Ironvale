@@ -70,7 +70,7 @@ def charter_cadence() -> None:
     seed_activity("WeightTraining", 1, 30)
     enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     first = nudge()
-    assert first is not None and (first["focus"], first["giver"]) == ("run", "running")
+    assert first is not None and (first["focus"], first["giver"]) == ("run", "endurance")
     assert first["reason"] == "cadence" and first["days_since"] == 3
 
     new_profile("nudge-cadence-flip")
@@ -79,7 +79,7 @@ def charter_cadence() -> None:
     enable(counsel_charter={"primary": "run", "secondary": ["strength"]})
     flipped = nudge()
     assert flipped is not None
-    assert (flipped["focus"], flipped["giver"]) == ("strength", "kettlebell")
+    assert (flipped["focus"], flipped["giver"]) == ("strength", "strength")
 
     new_profile("nudge-nothing-due")
     seed_activity("Run", 1, 30)
@@ -156,7 +156,7 @@ def malformed_persisted_charter_is_normalized() -> None:
     )
     pointed = nudge()
     assert game.get_settings()["counsel_charter"] is None
-    assert pointed is not None and pointed["giver"] == "running"
+    assert pointed is not None and pointed["giver"] == "endurance"
 
 
 def legacy_iron_charter_survives_as_strength() -> None:
@@ -180,8 +180,8 @@ def legacy_iron_charter_survives_as_strength() -> None:
 
 
 def focus_resolution_is_explicit() -> None:
-    assert counsel_nudge._giver_for_focus("strength") == "kettlebell"
-    assert counsel_nudge._giver_for_focus("climb") == "running"
+    assert counsel_nudge._giver_for_focus("strength") == "strength"
+    assert counsel_nudge._giver_for_focus("climb") == "endurance"
 
     try:
         counsel_nudge._giver_for_focus("unmapped")
@@ -204,7 +204,7 @@ def climb_nudge_routes_to_fenn() -> None:
     assert pointed is not None
     assert (pointed["focus"], pointed["giver"], pointed["giver_name"]) == (
         "climb",
-        "running",
+        "endurance",
         "Old Fenn",
     )
 
@@ -248,14 +248,14 @@ def strain_routes_to_practiced_recovery_only() -> None:
     enable()
     strained = nudge()
     assert strained is not None
-    assert (strained["giver"], strained["reason"]) == ("mobility", "strain")
+    assert (strained["giver"], strained["reason"]) == ("recovery", "strain")
 
     new_profile("nudge-strain-unpracticed")
     seed_activity("Run", 3, 30)
     seed_adverse_wellness()
     enable()
     unpracticed = nudge()
-    assert unpracticed is not None and unpracticed["giver"] != "mobility"
+    assert unpracticed is not None and unpracticed["giver"] != "recovery"
 
 
 def read_only() -> None:
@@ -279,7 +279,7 @@ def attribution_is_untouched() -> None:
     enable()
     considered_pointer = nudge()
     assert considered_pointer is not None
-    assert considered_pointer["giver"] == "running"
+    assert considered_pointer["giver"] == "endurance"
     considered = client.post(
         "/api/quests/accept",
         json={
@@ -296,7 +296,7 @@ def attribution_is_untouched() -> None:
     enable()
     self_pointer = nudge()
     assert self_pointer is not None
-    assert self_pointer["giver"] == "running"
+    assert self_pointer["giver"] == "endurance"
     chosen = client.post(
         "/api/quests/accept",
         json={

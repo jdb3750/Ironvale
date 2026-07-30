@@ -7,6 +7,7 @@ import json
 import os
 import sqlite3
 import threading
+from datetime import datetime, timezone
 
 DATA_DIR = os.environ.get(
     "DATA_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -16,6 +17,17 @@ DB_PATH = os.path.join(DATA_DIR, "ironvale.db")
 
 _local = threading.local()
 _profile_path = contextvars.ContextVar("iv_profile_path", default=None)
+_migration_lock = threading.Lock()
+
+# Collision invariant: the retired giver must vacate "strength" before
+# Grunhilda claims it. Never derive or reorder this sequence.
+GIVER_KEY_RENAMES = (
+    ("strength", "bram"),
+    ("kettlebell", "strength"),
+    ("running", "endurance"),
+    ("mobility", "recovery"),
+)
+GIVER_KEY_MIGRATION_MARKER = "migration:giver-keys-v1"
 
 
 def set_profile(path):
@@ -116,24 +128,166 @@ CREATE INDEX IF NOT EXISTS idx_ledger_kind_ts ON ledger(kind, ts);
 """
 
 
+def _migration_is_current(connection):
+    table = connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kv'",
+    ).fetchone()
+    if not table:
+        return False
+    return connection.execute(
+        "SELECT 1 FROM kv WHERE key=?",
+        (GIVER_KEY_MIGRATION_MARKER,),
+    ).fetchone() is not None
+
+
+def _rename_settings_givers(settings):
+    if not isinstance(settings, dict):
+        return settings
+    renamed = dict(settings)
+    for old, new in GIVER_KEY_RENAMES:
+        old_key = f"program_{old}"
+        new_key = f"program_{new}"
+        if old_key not in renamed:
+            continue
+        if new_key in renamed:
+            raise RuntimeError(
+                f"Cannot migrate {old_key}: {new_key} already exists.",
+            )
+        renamed[new_key] = renamed.pop(old_key)
+    return renamed
+
+
+def _rename_list_givers(value):
+    if not isinstance(value, list):
+        return value
+    replacements = dict(GIVER_KEY_RENAMES)
+    renamed = []
+    for item in value:
+        if isinstance(item, dict) and item.get("giver") in replacements:
+            item = {**item, "giver": replacements[item["giver"]]}
+        renamed.append(item)
+    return renamed
+
+
+def _migrate_json_value(connection, key, transform):
+    row = connection.execute(
+        "SELECT value FROM kv WHERE key=?",
+        (key,),
+    ).fetchone()
+    if row is None:
+        return
+    value = json.loads(row["value"])
+    renamed = transform(value)
+    if renamed != value:
+        connection.execute(
+            "UPDATE kv SET value=? WHERE key=?",
+            (json.dumps(renamed), key),
+        )
+
+
+def _migrate_giver_keys(connection):
+    if _migration_is_current(connection):
+        return False
+
+    replacements = dict(GIVER_KEY_RENAMES)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        for old, new in GIVER_KEY_RENAMES:
+            source_count = connection.execute(
+                "SELECT COUNT(*) AS count FROM quests WHERE giver=?",
+                (old,),
+            ).fetchone()["count"]
+            target_count = connection.execute(
+                "SELECT COUNT(*) AS count FROM quests WHERE giver=?",
+                (new,),
+            ).fetchone()["count"]
+            if source_count and target_count:
+                raise RuntimeError(
+                    f"Cannot migrate giver {old!r}: target {new!r} already has quests.",
+                )
+            connection.execute(
+                "UPDATE quests SET giver=? WHERE giver=?",
+                (new, old),
+            )
+
+        for row in connection.execute(
+            "SELECT id, details FROM quests",
+        ).fetchall():
+            details = json.loads(row["details"])
+            if not isinstance(details, dict) or details.get("giver") not in replacements:
+                continue
+            details["giver"] = replacements[details["giver"]]
+            connection.execute(
+                "UPDATE quests SET details=? WHERE id=?",
+                (json.dumps(details), row["id"]),
+            )
+
+        _migrate_json_value(connection, "settings", _rename_settings_givers)
+        _migrate_json_value(connection, "routines", _rename_list_givers)
+        _migrate_json_value(
+            connection,
+            "unguided_bonus_candidates",
+            _rename_list_givers,
+        )
+        # Offer caches are derivative and embed legacy giver identities;
+        # invalidation avoids serving payloads from the retired namespace.
+        connection.execute(
+            "DELETE FROM kv "
+            "WHERE key LIKE 'offerbump:%' OR key LIKE 'offers:archetype-v2:%'",
+        )
+        connection.execute(
+            "INSERT INTO kv (key, value) VALUES (?, 'true')",
+            (GIVER_KEY_MIGRATION_MARKER,),
+        )
+        log_event(
+            datetime.now(timezone.utc).isoformat(),
+            "migration",
+            "The ledger's quest-giver keys were renamed without changing their oaths.",
+            connection,
+        )
+        connection.commit()
+    except (json.JSONDecodeError, sqlite3.Error, RuntimeError):
+        connection.rollback()
+        raise
+    return True
+
+
 def conn():
     path = current_path()
     if not hasattr(_local, "conns"):
         _local.conns = {}
     c = _local.conns.get(path)
     if c is None:
-        c = sqlite3.connect(path)
-        c.row_factory = sqlite3.Row
-        c.execute("PRAGMA foreign_keys=ON")
-        c.execute("PRAGMA journal_mode=WAL")
-        c.executescript(SCHEMA)
-        for _col, _decl in (("hat", "TEXT"), ("boss", "INTEGER DEFAULT 0")):
-            try:  # additive migrations for the monsters table
-                c.execute(f"ALTER TABLE monsters ADD COLUMN {_col} {_decl}")
-            except sqlite3.OperationalError:
-                pass
-        c.commit()
-        _local.conns[path] = c
+        with _migration_lock:
+            is_new = not os.path.exists(path)
+            c = sqlite3.connect(path)
+            c.row_factory = sqlite3.Row
+            needs_giver_migration = not is_new and not _migration_is_current(c)
+            if needs_giver_migration:
+                from . import vault
+
+                vault.ensure_snapshot_before_migration()
+            try:
+                c.execute("PRAGMA foreign_keys=ON")
+                c.execute("PRAGMA journal_mode=WAL")
+                c.executescript(SCHEMA)
+                for _col, _decl in (("hat", "TEXT"), ("boss", "INTEGER DEFAULT 0")):
+                    try:  # additive migrations for the monsters table
+                        c.execute(f"ALTER TABLE monsters ADD COLUMN {_col} {_decl}")
+                    except sqlite3.OperationalError:
+                        pass
+                if is_new:
+                    c.execute(
+                        "INSERT INTO kv (key, value) VALUES (?, 'true')",
+                        (GIVER_KEY_MIGRATION_MARKER,),
+                    )
+                    c.commit()
+                else:
+                    _migrate_giver_keys(c)
+                _local.conns[path] = c
+            except Exception:
+                c.close()
+                raise
     return c
 
 
@@ -196,6 +350,11 @@ def inv_all():
     }
 
 
-def log_event(ts, kind, text):
-    q("INSERT INTO ledger (ts, kind, text) VALUES (?, ?, ?)", (ts, kind, text))
-    commit()
+def log_event(ts, kind, text, connection=None):
+    target = connection or conn()
+    target.execute(
+        "INSERT INTO ledger (ts, kind, text) VALUES (?, ?, ?)",
+        (ts, kind, text),
+    )
+    if connection is None:
+        target.commit()

@@ -97,11 +97,10 @@ sketches. Neither is scoped.
 
 ## 2. Known app-wide follow-ups
 
-- **DB giver-key rename.** `kettlebell` names the Strength giver and `strength`
-  names a retired giver who no longer offers anything. These are deliberate frozen
-  misnomers (`COUNCIL_REDESIGN.md` §0b/§0c) because renaming means migrating live
-  data on `main`. The three-giver collapse makes the case stronger, not weaker —
-  but it is still its own carefully-scoped task.
+- **DONE v0.25.0 — DB giver-key rename.** The backed-up, idempotent migration
+  replaced `running`/`kettlebell`/`strength`/`mobility` with
+  `endurance`/`strength`/`bram`/`recovery` before Scheduled mode could make the
+  misleading namespace more expensive.
 - **ExerciseDB integration** — a larger exercise catalog with form cues and
   muscle-group targeting. Unverified: nobody has checked its licence, shape or
   fit against `exercises.py`. Needs a small spike before anyone estimates it.
@@ -175,13 +174,11 @@ entries are open work with the removal path worked out.
   that no longer exists. **The contract is: the writer accepts any name; readers
   must tolerate unknown ones.** Documented here rather than enforced in code.
 
-**Stale declarations (inert now, traps later)**
+**Resolved stale declarations**
 
-- **`GIVER_ARCHETYPES["strength"]` claims Bram owns climbing.** Full detail in
-  `COUNCIL_REDESIGN.md` §0d. This is the same failure mode that orphaned every
-  bodyweight movement, so it is the one I would clear first.
-- **Bram's title contradicts his subtitle** — "the Unburdened" versus "The Old
-  Knight at Rest". See §0d.
+- **DONE v0.22.4 — Bram's registry entry is retired and owns no modalities.**
+- **DONE v0.22.4 — Bram's title and subtitle both read "The Old Knight at
+  Rest".**
 
 **Dead code**
 
@@ -213,6 +210,6 @@ entries are open work with the removal path worked out.
 
 - ~~**Copy living in CSS.**~~ **DONE in v0.22.3** — the `within reach today:`
   lead-in moved from a `content:` rule into the `giver.js` template.
-- **`strength` means two things.** In `COUNSEL_FOCUS_GIVERS` it is both a focus
-  value (-> Grunhilda) and a giver key (Bram). Correct but hostile to read; it
-  resolves itself with the DB key rename in §2.
+- **DONE v0.25.0 — `strength` no longer names Bram.** It remains a focus value
+  and now maps to Grunhilda's matching giver key; Bram's permanent identity key
+  is `bram`.

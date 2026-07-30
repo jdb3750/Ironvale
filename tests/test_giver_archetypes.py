@@ -15,17 +15,17 @@ from app import counsel_candidates, counsel_context, db, game, programs  # noqa:
 db.set_profile(db.DB_PATH)
 context = counsel_context.assemble()
 expected_titles = {
-    "running": ("Old Fenn", "the Wayfarer"),
-    "kettlebell": ("Grunhilda", "Iron-Bell"),
-    "strength": ("Ser Bram", "the Old Knight at Rest"),
-    "mobility": ("Sage Elowen", "of the Willow"),
+    "endurance": ("Old Fenn", "the Wayfarer"),
+    "strength": ("Grunhilda", "Iron-Bell"),
+    "bram": ("Ser Bram", "the Old Knight at Rest"),
+    "recovery": ("Sage Elowen", "of the Willow"),
 }
 assert tuple(game.GIVER_ARCHETYPES) == tuple(expected_titles)
 assert tuple(game.GIVERS) == tuple(expected_titles)
-assert game.OFFERABLE_GIVERS == ("running", "kettlebell", "mobility")
-assert game.GIVER_ARCHETYPES["running"]["modalities"] == counsel_candidates.FENN_MODALITIES
-assert game.GIVER_ARCHETYPES["strength"]["archetype"] == "Retired"
-assert game.GIVER_ARCHETYPES["strength"]["modalities"] == ()
+assert game.OFFERABLE_GIVERS == ("endurance", "strength", "recovery")
+assert game.GIVER_ARCHETYPES["endurance"]["modalities"] == counsel_candidates.FENN_MODALITIES
+assert game.GIVER_ARCHETYPES["bram"]["archetype"] == "Retired"
+assert game.GIVER_ARCHETYPES["bram"]["modalities"] == ()
 for giver, (name, title) in expected_titles.items():
     ownership = game.GIVER_ARCHETYPES[giver]
     assert ownership["display"]["name"] == name
@@ -37,7 +37,7 @@ for giver in game.OFFERABLE_GIVERS:
         for option in counsel_candidates.for_giver(giver, context)
     )
 assert all(
-    programs.PROGRAMS[key]["giver"] == "kettlebell"
+    programs.PROGRAMS[key]["giver"] == "strength"
     for key in ("starting_strength", "stronglifts", "simple_sinister", "armor_building")
 )
 

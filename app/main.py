@@ -255,7 +255,7 @@ async def save_settings(request: Request):
                 raise ValueError("Today's iron must be sworn for the current day.")
             if (
                 iron_today["equipment"]
-                not in game.GIVER_ARCHETYPES["kettlebell"]["modalities"]
+                not in game.GIVER_ARCHETYPES["strength"]["modalities"]
             ):
                 raise ValueError("Grunhilda does not know that implement.")
     s = game.get_settings()
@@ -310,7 +310,7 @@ def offers(giver: str):
         "offers": out,
         "active": active,
     }
-    if giver == "kettlebell":
+    if giver == "strength":
         response["modalities"] = list(game.GIVER_ARCHETYPES[giver]["modalities"])
     return response
 
@@ -654,7 +654,7 @@ def program_list():
     return {
         "programs": [{"key": k, **{kk: vv for kk, vv in v.items() if kk != "inc"}} for k, v in programs.PROGRAMS.items()],
         "routines": programs.get_routines(),
-        "active": {g: programs.active_program(g) for g in ("kettlebell", "strength")},
+        "active": {g: programs.active_program(g) for g in ("strength", "bram")},
     }
 
 

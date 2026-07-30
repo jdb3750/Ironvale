@@ -12,7 +12,7 @@ from . import db, exercises, game, quests
 PROGRAMS = {
     "starting_strength": {
         "name": "Starting Strength",
-        "giver": "kettlebell",
+        "giver": "strength",
         "desc": "Rippetoe's novice barbell doctrine. Squat every day it meets you. Add weight every session.",
         "inc": {"Deadlift": 5.0, "default": 2.5},
         "sessions": [
@@ -22,7 +22,7 @@ PROGRAMS = {
     },
     "stronglifts": {
         "name": "StrongLifts 5x5",
-        "giver": "kettlebell",
+        "giver": "strength",
         "desc": "Five sets of five, alternating days. Simple, brutal, effective.",
         "inc": {"Deadlift": 5.0, "default": 2.5},
         "sessions": [
@@ -32,7 +32,7 @@ PROGRAMS = {
     },
     "simple_sinister": {
         "name": "Simple & Sinister",
-        "giver": "kettlebell",
+        "giver": "strength",
         "desc": "Pavel's daily rite: 100 one-hand swings, 10 get-ups. Same bell until it feels like a toy.",
         "inc": {"default": 0.0},
         "sessions": [
@@ -41,7 +41,7 @@ PROGRAMS = {
     },
     "armor_building": {
         "name": "Armor Building Complex",
-        "giver": "kettlebell",
+        "giver": "strength",
         "desc": "Dan John's double-bell complex: 2 cleans, 1 press, 3 front squats. Rounds until dignified.",
         "inc": {"default": 0.0},
         "sessions": [
@@ -74,7 +74,7 @@ def save_routine(payload):
     r = {
         "id": "r" + uuid.uuid4().hex[:8],
         "name": payload["name"].strip()[:40],
-        "giver": payload.get("giver", "strength"),
+        "giver": payload.get("giver", "bram"),
         "exercises": exs,
     }
     routines.append(r)
@@ -88,7 +88,7 @@ def delete_routine(rid):
     # deselect if active anywhere
     s = game.get_settings()
     changed = False
-    for g in ("kettlebell", "strength"):
+    for g in ("strength", "bram"):
         if s.get(f"program_{g}") == f"custom:{rid}":
             s[f"program_{g}"] = None
             changed = True

@@ -99,7 +99,7 @@ for i in range(6):
     db.q("INSERT INTO lift_sets (ts, exercise, weight, reps) "
          "VALUES (?, 'Goblet Squat', 24, 10)", (iso(2, 17),))
 db.q("INSERT INTO quests (giver, kind, title, details, status, accepted_at, completed_at, honor) "
-     "VALUES ('running', 'run', 'old quest', '{}', 'done', ?, ?, 1)", (iso(40), iso(40, 9)))
+     "VALUES ('endurance', 'run', 'old quest', '{}', 'done', ?, ?, 1)", (iso(40), iso(40, 9)))
 db.q("INSERT INTO monsters (name, dna, rarity, personality, born, source) "
      "VALUES ('Smokey', 42, 'common', 'calm', ?, 'smoke')", (iso(6),))
 db.q("INSERT INTO ledger (ts, kind, text) VALUES (?, 'death', 'smoke death')", (iso(9),))
@@ -142,18 +142,18 @@ get("/api/claim/types", keys=["types"])
 get("/api/lifts/recent")
 get("/api/quests/log")
 get("/api/profiles")
-for giver in ("running", "kettlebell", "strength", "mobility"):
+for giver in ("endurance", "strength", "bram", "recovery"):
     get(f"/api/offers/{giver}", keys=["offers"])
 get("/api/colosseum/fight")
 get("/api/dungeon", keys=["state", "stats", "theme", "enter_cost"])
 
 # ---- quest lifecycle: accept -> matching deed -> completable -> complete --
 print("quest lifecycle:")
-offers = client.get("/api/offers/running").json()["offers"]
+offers = client.get("/api/offers/endurance").json()["offers"]
 ok("Fenn considers one owned activity path",
    len(offers) == 1 and offers[0].get("modality") in {"run", "ride", "swim", "climb"})
-bram_response = client.get("/api/offers/strength").json()
-grunhilda_offers = client.get("/api/offers/kettlebell").json()["offers"]
+bram_response = client.get("/api/offers/bram").json()
+grunhilda_offers = client.get("/api/offers/strength").json()["offers"]
 iron_equipment = {
     exercises.EXERCISES[row["exercise"]]["equipment"]
     for offer in grunhilda_offers
@@ -167,12 +167,12 @@ ok("Bram remains known but offers no new quests",
    bram_response == {"offers": [], "active": None})
 bram_accept = client.post(
     "/api/quests/accept",
-    json={"giver": "strength", "option_key": "retired-bram"},
+    json={"giver": "bram", "option_key": "retired-bram"},
 )
 ok("Bram refuses new quest acceptance",
    bram_accept.status_code == 400
    and "no longer sets quests" in bram_accept.json()["error"].casefold())
-r = client.post("/api/quests/accept", json={"giver": "running", "offer_id": offers[0]["offer_id"]})
+r = client.post("/api/quests/accept", json={"giver": "endurance", "offer_id": offers[0]["offer_id"]})
 ok("accept quest", r.status_code == 200)
 q = client.get("/api/state").json()["active_quests"]
 ok("quest is active", len(q) == 1)
@@ -211,11 +211,11 @@ climb = next(c for c in pending if c["activity_id"] == "smoke-free-climb")
 other = next(c for c in pending if c["activity_id"] == "smoke-free-other")
 ok("unguided climb queued", climb["title"])
 ok("unguided other activity queued", other["title"])
-ok("deed attributed to its archetype giver", climb["giver"] == "strength")
+ok("deed attributed to its archetype giver", climb["giver"] == "bram")
 ok("unclassifiable deed reaches Wick", other["giver"] == "wick")
-ok("iron deeds belong to Grunhilda", quests.deed_giver("HIIT") == "kettlebell"
-   and quests.deed_giver("WeightTraining") == "kettlebell"
-   and quests.deed_giver("OpenWaterSwim") == "running")
+ok("iron deeds belong to Grunhilda", quests.deed_giver("HIIT") == "strength"
+   and quests.deed_giver("WeightTraining") == "strength"
+   and quests.deed_giver("OpenWaterSwim") == "endurance")
 rewards = quests.claim_unguided_bonus("smoke-free-climb")
 ok("unguided climb reward claimed", rewards["xp"] > 0)
 ok("unguided title returned", rewards["quest_title"] == climb["title"])
@@ -318,7 +318,7 @@ farmer_details = {
 }
 farmer_quest = db.q(
     "INSERT INTO quests (giver, kind, title, details, status, accepted_at) VALUES (?,?,?,?,?,?)",
-    ("kettlebell", "strength", "Carry the Vale", json.dumps(farmer_details), "active", game.now_iso()),
+    ("strength", "strength", "Carry the Vale", json.dumps(farmer_details), "active", game.now_iso()),
 )
 farmer_quest_id = farmer_quest.lastrowid
 db.commit()
@@ -602,7 +602,7 @@ try:
     reconcile_now = game.now_iso()
     reconcile_quest = db.q(
         "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
-        "VALUES ('running', 'run', 'The Late Raven', ?, 'active', ?)",
+        "VALUES ('endurance', 'run', 'The Late Raven', ?, 'active', ?)",
         (json.dumps({"modality": "run", "target_minutes": 30}), reconcile_now),
     )
     db.commit()
@@ -650,7 +650,7 @@ try:
     uncounted_now = game.now_iso()
     uncounted_quest = db.q(
         "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
-        "VALUES ('running', 'run', 'The Uncounted Raven', ?, 'active', ?)",
+        "VALUES ('endurance', 'run', 'The Uncounted Raven', ?, 'active', ?)",
         (json.dumps({"modality": "run", "target_minutes": 30}), uncounted_now),
     )
     db.commit()

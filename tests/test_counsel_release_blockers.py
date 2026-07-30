@@ -25,7 +25,7 @@ def lower_body_gate_is_targeted() -> None:
             (NOW.isoformat(timespec="seconds"), "Back Squat", 82.5, 5),
         )
     db.commit()
-    five_sets = offers("kettlebell")[0]
+    five_sets = offers("strength")[0]
     assert five_sets.intensity == "hard"
 
     db.q(
@@ -34,8 +34,8 @@ def lower_body_gate_is_targeted() -> None:
     )
     seed_activity("Swim", 1, 45)
     db.commit()
-    six_sets = offers("kettlebell")[0]
-    non_lower_body = offers("running")[0]
+    six_sets = offers("strength")[0]
+    non_lower_body = offers("endurance")[0]
     assert six_sets.intensity != "hard"
     assert non_lower_body.modality == "swim"
     assert non_lower_body.intensity == "hard"
@@ -59,7 +59,7 @@ def mixed_iron_gate_uses_all_routine_targets() -> None:
         )
     db.commit()
 
-    five_set = client.get("/api/offers/kettlebell").json()["offers"][0]
+    five_set = client.get("/api/offers/strength").json()["offers"][0]
     assert five_set["intensity"] == "hard"
     assert five_set["focus"][:3] == ["back", "arms", "chest"]
     assert [row["exercise"] for row in five_set["routine"]] == [
@@ -78,7 +78,7 @@ def mixed_iron_gate_uses_all_routine_targets() -> None:
         (older, "Kettlebell Deadlift", 24.0, 8),
     )
     db.commit()
-    six_set = client.get("/api/offers/kettlebell").json()["offers"][0]
+    six_set = client.get("/api/offers/strength").json()["offers"][0]
     assert six_set["intensity"] != "hard"
 
 
@@ -103,7 +103,7 @@ def provenance_tracks_sizing_rows() -> None:
         )
     db.commit()
 
-    first_response = client.get("/api/offers/running")
+    first_response = client.get("/api/offers/endurance")
     assert first_response.status_code == 200
     first = first_response.json()["offers"][0]
     assert first["sizing"] == "personalized"
@@ -127,7 +127,7 @@ def provenance_tracks_sizing_rows() -> None:
         ),
     )
     db.commit()
-    second_response = client.get("/api/offers/running")
+    second_response = client.get("/api/offers/endurance")
     assert second_response.status_code == 200
     second = second_response.json()["offers"][0]
     assert (second["sizing"], second["target_minutes"]) == ("personalized", 35)
@@ -145,7 +145,7 @@ def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
         (NOW.isoformat(timespec="seconds"), "Back Squat", 82.5, 5),
     )
     db.commit()
-    manual = offers("kettlebell")[0]
+    manual = offers("strength")[0]
     assert manual.source.provider == "Iron Vale lift ledger"
     assert manual.source.activity_source == "Iron Vale lift ledger"
 
@@ -205,7 +205,7 @@ def disclosure_uses_candidate_provenance_and_one_snapshot() -> None:
 
     counsel_context.intervals.get_sync_status = changing_sync_status
     try:
-        selected = counsel.giver_options("running")[0]
+        selected = counsel.giver_options("endurance")[0]
     finally:
         counsel_context.intervals.get_sync_status = original_sync_status
     source = selected["source"]

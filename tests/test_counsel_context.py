@@ -142,8 +142,8 @@ def unchanged_characterization() -> None:
     db.commit()
     for index, days_ago in enumerate((3, 2, 1), 1):
         activity(f"run-{index}", "Run", days_ago, 40)
-    first_response = client.get("/api/offers/running")
-    second_response = client.get("/api/offers/running")
+    first_response = client.get("/api/offers/endurance")
+    second_response = client.get("/api/offers/endurance")
     assert first_response.content == second_response.content
     first = first_response.json()["offers"][0]
     assert (
@@ -160,14 +160,14 @@ def zero_duration_does_not_change_endurance_recency() -> None:
     new_profile("zero-duration")
     activity("recent-run", "Run", 1, 35)
     activity("stale-swim", "Swim", 20, 30)
-    before = offer("running")
+    before = offer("endurance")
     assert before["modality"] == "swim"
     before_as_of = before["source"]["activity_as_of"]
 
     # When a newer zero-duration Swim marker arrives, it cannot become
     # practice. Then selection and disclosure remain on the valid Swim row.
     activity("zero-swim", "Swim", 0, 0)
-    after = offer("running")
+    after = offer("endurance")
     assert after["modality"] == "swim", {
         "before": before["modality"],
         "after_zero": after["modality"],
@@ -184,13 +184,13 @@ def ineligible_activities_change_nothing() -> None:
     new_profile("ineligible", nudge=True)
     activity("valid-run", "Run", 1, 35)
     activity("valid-swim", "Swim", 9, 30)
-    before_offer = offer("running")
+    before_offer = offer("endurance")
     before_nudge = client.get("/api/state").json()["counsel_nudge"]
 
     activity("manual-swim", "Swim", 0, 120, source="manual")
     activity("future-swim", "Swim", -2, 180)
     activity("zero-swim", "Swim", 0, 0)
-    after_offer = offer("running")
+    after_offer = offer("endurance")
     after_nudge = client.get("/api/state").json()["counsel_nudge"]
 
     assert after_offer == before_offer, {
@@ -220,7 +220,7 @@ def logged_movements_own_iron_context() -> None:
     new_profile("logged-iron")
     lift("Kettlebell Row", 1, 28.0)
     activity("weight-marker", "WeightTraining", 1, 90)
-    iron = offer("kettlebell")
+    iron = offer("strength")
     assert iron["sizing"] == "personalized"
     assert iron["focus"] == ["back", "arms"], iron["focus"]
     assert (iron["routine"][0]["exercise"], iron["routine"][0]["suggest_weight"]) == ("Kettlebell Row", 28.0)
@@ -273,13 +273,13 @@ def request_training_reads_are_consolidated() -> None:
     game.modality_history = counted_history
     counsel_context.assemble = counted_assemble
     try:
-        offered = client.get("/api/offers/running")
+        offered = client.get("/api/offers/endurance")
         assert offered.status_code == 200
         chosen = offered.json()["offers"][0]
         assert client.get("/api/state").status_code == 200
         accepted = client.post(
             "/api/quests/accept",
-            json={"giver": "running", "option_key": chosen["option_key"]},
+            json={"giver": "endurance", "option_key": chosen["option_key"]},
         )
         assert accepted.status_code == 200
     finally:

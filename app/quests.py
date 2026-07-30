@@ -116,7 +116,7 @@ def _endurance_candidate(
     complete = {
         **payload,
         "modality": modality,
-        "giver": "running",
+        "giver": "endurance",
         "title": ENDURANCE_FLAVOR[modality][variant][0],
         "sizing": sizing,
         "reason_codes": ["cold_start"] if sizing == "generic_starter" else [],
@@ -263,7 +263,7 @@ def gen_endurance_offers(rng):
     rng.shuffle(offers)
     for o in offers:
         o["title"] = rng.choice(ENDURANCE_FLAVOR[o["modality"]][o["kind"].split("_")[1]])
-        o["giver"] = "running"
+        o["giver"] = "endurance"
         _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
     return offers
 
@@ -371,7 +371,7 @@ def build_climb_candidates(
         complete = {
             **payload,
             "modality": "climb",
-            "giver": "strength",
+            "giver": "bram",
             "title": CLIMB_FLAVOR[variant][0],
         }
         _price_offer(complete, minutes=complete["target_minutes"], intensity=complete["intensity"])
@@ -390,7 +390,7 @@ def gen_climb_offers(rng):
     offers = _climb_pool(rng)
     rng.shuffle(offers)
     for o in offers:
-        o["giver"] = "strength"
+        o["giver"] = "bram"
         o["title"] = rng.choice(CLIMB_FLAVOR[str(o["kind"]).split("_")[1]])
         _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
     return offers
@@ -408,7 +408,7 @@ def gen_lift_offers(rng):
         "SELECT DISTINCT substr(ts, 1, 10) AS day FROM lift_sets WHERE ts >= ?",
         ((now() - timedelta(days=60)).date().isoformat(),),
     ).fetchall())
-    for i, equipment in enumerate(GIVER_ARCHETYPES["kettlebell"]["modalities"]):
+    for i, equipment in enumerate(GIVER_ARCHETYPES["strength"]["modalities"]):
         style = styles[i % len(styles)]
         focus = focus_sets[i % len(focus_sets)]
         names = [
@@ -417,7 +417,7 @@ def gen_lift_offers(rng):
         ]
         chosen = _pick_exercises(rng, names, focus)
         candidate = build_lift_candidate(LiftCandidateContext(
-            giver="kettlebell",
+            giver="strength",
             style=style,
             focus=tuple(focus),
             exercises=tuple(chosen),
@@ -444,7 +444,7 @@ def gen_mobility_offers(rng):
     offers = []
     for name, minutes, struct in picks:
         o = {
-            "kind": "mobility", "giver": "mobility",
+            "kind": "mobility", "giver": "recovery",
             "title": rng.choice(MOBILITY_FLAVOR),
             "intensity": "low", "target_minutes": minutes,
             "structure": struct, "blurb": name + ". The body keeps the score; settle the debt.",
@@ -573,7 +573,7 @@ def _rest_writ_offer(
         return None
     rng = random.Random(f"writ:{writ_day}")
     return {
-        "kind": "rest", "giver": "mobility",
+        "kind": "rest", "giver": "recovery",
         "title": REST_WRIT_TITLE,
         "intensity": "low",
         "writ_day": writ_day,
@@ -702,13 +702,13 @@ def get_offers(giver, reroll=False):
     cached = db.kv_get(key)
     if cached is None:
         rng = random.Random(f"{giver}:{today()}:{bump}")
-        if giver == "running":
+        if giver == "endurance":
             cached = gen_endurance_offers(rng)
-        elif giver == "kettlebell":
-            cached = gen_lift_offers(rng)
         elif giver == "strength":
+            cached = gen_lift_offers(rng)
+        elif giver == "bram":
             cached = gen_climb_offers(rng)
-        elif giver == "mobility":
+        elif giver == "recovery":
             cached = gen_mobility_offers(rng)
         else:
             raise ValueError("unknown giver")
@@ -716,14 +716,14 @@ def get_offers(giver, reroll=False):
             o["offer_id"] = i
         db.kv_set(key, cached)
     # an active doctrine's next session leads the offers (built fresh — weights progress)
-    if giver == "kettlebell":
+    if giver == "strength":
         from . import programs
         po = programs.build_program_offer(giver)
         if po:
             po["offer_id"] = 99
             return [po] + cached[:2]
     # a rest writ leads Elowen's offers (built fresh — the omens change with each sync)
-    if giver == "mobility":
+    if giver == "recovery":
         ro = rest_writ_offer()
         if ro:
             ro["offer_id"] = 98
@@ -813,13 +813,13 @@ def find_matching_activity(quest):
     if modality in CATEGORIES:
         types = CATEGORIES[modality]
         need_s = details.get("target_minutes", 20) * 60 * 0.7
-    elif g == "running":
+    elif g == "endurance":
         types = RUN_TYPES
         need_s = details.get("target_minutes", 20) * 60 * 0.7
-    elif g == "mobility":
+    elif g == "recovery":
         types = CATEGORIES["mobility"] + CATEGORIES["walk"]
         need_s = details.get("target_minutes", 15) * 60 * 0.7
-    else:  # kettlebell / strength
+    else:
         types = CATEGORIES["strength"]
         need_s = max(15 * 60, details.get("total_sets", 12) * 90)
     ph = ",".join("?" * len(types))
@@ -858,9 +858,9 @@ def quest_completable(quest):
     if modality in ("ride", "swim", "climb"):
         label = {"ride": "ride", "swim": "swim", "climb": "climb session"}[modality]
         return False, f"No matching {label} found yet. Sync your log, or swear on your honor.", None
-    if g == "running":
+    if g == "endurance":
         return False, "No matching run found yet. Sync your log, or swear on your honor.", None
-    if g in ("kettlebell", "strength"):
+    if g in ("strength", "bram"):
         need = quest["details"].get("total_sets", 12)
         done = lift_progress(quest)
         if done >= math.ceil(need * 0.6):
@@ -976,7 +976,12 @@ def complete_quest(quest_id, honor=False, _writ=False):
         # the synthetic activity's type follows the quest's modality so the
         # calendar/records stay truthful — an honored swim IS a swim
         modality_types = {"run": "Run", "ride": "Ride", "swim": "Swim", "climb": "Climbing"}
-        giver_types = {"running": "Run", "mobility": "Yoga", "kettlebell": "WeightTraining", "strength": "WeightTraining"}
+        giver_types = {
+            "endurance": "Run",
+            "recovery": "Yoga",
+            "strength": "WeightTraining",
+            "bram": "WeightTraining",
+        }
         act_type = modality_types.get(details.get("modality")) or giver_types.get(quest["giver"], "Workout")
         mins = details.get("target_minutes") or details.get("total_sets", 12) * 3
         linked_id = intervals.add_manual_activity({
@@ -994,11 +999,11 @@ def complete_quest(quest_id, honor=False, _writ=False):
     # stat gains by discipline
     gains = {}
     g = quest["giver"]
-    if g == "running":
+    if g == "endurance":
         gains["end"] = 2 if details.get("intensity") == "hard" else 1
-    elif g in ("kettlebell", "strength"):
+    elif g in ("strength", "bram"):
         gains["str"] = 2 if details.get("intensity") == "hard" else 1
-    elif g == "mobility":
+    elif g == "recovery":
         gains["spr"] = 1
 
     # a kept writ credits the RESTED day (yesterday), not the resolution day
@@ -1099,29 +1104,29 @@ UNGUIDED_STAT_BY_CATEGORY = {
 }
 
 DEED_GIVER_BY_CATEGORY = {
-    "run": "running", "ride": "running", "walk": "running", "swim": "running",
-    "climb": "strength", "strength": "kettlebell",
-    "mobility": "mobility",
+    "run": "endurance", "ride": "endurance", "walk": "endurance", "swim": "endurance",
+    "climb": "bram", "strength": "strength",
+    "mobility": "recovery",
     "other": "wick",
 }
 
 DEED_NOTES = {
-    "running": [
+    "endurance": [
         "Fenn saw you out there, oath or no oath, and paid you anyway.",
         "No quest was sworn for this one. The road told him regardless.",
         "You trained without asking. Fenn noticed. Fenn always notices.",
     ],
-    "kettlebell": [
+    "strength": [
         "You swung without her blessing. The bell heard it anyway.",
         "Sweat without a writ still rings true. Grunhilda pays what rings true.",
         "The forge does not ask who ordered the fire. Well struck.",
     ],
-    "strength": [
+    "bram": [
         "The wall remembers every move, sworn or not. Ser Bram settles his debts.",
         "You climbed without orders. Good. Initiative suits you.",
         "The keep watched you on the stone. A knight pays what honor owes.",
     ],
-    "mobility": [
+    "recovery": [
         "Stillness taken unbidden is stillness all the same.",
         "The willow saw you bend, and it approves. Quietly.",
         "No writ asked for this practice. The practice counts. It always counts.",
@@ -1218,7 +1223,7 @@ def _record_unguided_completion(cand, rewards, completed_at):
     db.q(
         "INSERT INTO quests (giver, kind, title, details, status, accepted_at, completed_at, "
         "honor, activity_id, rewards) VALUES (?,?,?,?, 'done', ?, ?, 0, ?, ?)",
-        ("running", "unguided_activity", title, json.dumps(details), accepted_at,
+        ("endurance", "unguided_activity", title, json.dumps(details), accepted_at,
          completed_at, cand["activity_id"], json.dumps(rewards)),
     )
     db.commit()
@@ -1300,7 +1305,7 @@ def unguided_pending():
     for c in cands:
         # candidates queued before per-giver attribution lack the field;
         # they were all Fenn's back then (load-bearing JSON: .setdefault)
-        c.setdefault("giver", "running")
+        c.setdefault("giver", "endurance")
     return cands
 
 
