@@ -134,25 +134,59 @@ def mode_snapshot_acceptance_is_immutable():
     ok("mode snapshot preserves the later self setting", saved_mode == "self")
 
 
-# Given: the existing offer-acceptance path with no counsel metadata.
-# When: a player accepts the offer. Then: its quest payload and reward fields
-# remain unchanged and the historical path has no attribution.
-reset_profile("legacy")
-legacy_offer = quests.get_offers("endurance")[0]
-legacy_quest_id = quests.accept_offer("endurance", legacy_offer["offer_id"])
-legacy_row = db.q("SELECT * FROM quests WHERE id=?", (legacy_quest_id,)).fetchone()
-legacy_details = json.loads(legacy_row["details"])
-legacy_rewards = {key: legacy_details[key] for key in ("xp", "gold", "vigor")}
-ok("legacy accept creates one active quest and ledger event",
-   legacy_row["status"] == "active" and row_count("ledger") == 1)
-ok("legacy accept preserves the selected offer payload", legacy_details == legacy_offer)
-ok("legacy accept preserves offer rewards",
-   legacy_rewards == {key: legacy_offer[key] for key in ("xp", "gold", "vigor")})
-ok("legacy accept creates no attribution", attribution_count(legacy_quest_id) == 0)
-emit("LEGACY QUEST", {
-    "quest_id": legacy_quest_id, "giver": legacy_row["giver"],
-    "kind": legacy_row["kind"], "status": legacy_row["status"],
-    "rewards": legacy_rewards, "attribution_count": attribution_count(legacy_quest_id),
+# Given: a synced run performed without accepting a quest. When: its live
+# unguided reward is claimed. Then: the resulting quest preserves its activity
+# and reward record without inventing a Council attribution.
+reset_profile("unguided")
+activity_id = "attribution-free-run"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time) "
+    "VALUES (?,?,?,?,?,?)",
+    (activity_id, "intervals.icu", ACCEPTED_AT, "Run", "An unsworn run", 1800),
+)
+db.commit()
+quests.grant_unguided_run_bonus()
+candidate = next(
+    item for item in quests.unguided_pending()
+    if item["activity_id"] == activity_id
+)
+rewards = quests.claim_unguided_bonus(activity_id)
+unguided_row = db.q(
+    "SELECT * FROM quests WHERE activity_id=?",
+    (activity_id,),
+).fetchone()
+unguided_details = json.loads(unguided_row["details"])
+stored_rewards = json.loads(unguided_row["rewards"])
+ok(
+    "unguided completion creates one completed quest and ledger event",
+    unguided_row["status"] == "done" and row_count("ledger") == 1,
+)
+ok(
+    "unguided completion preserves its concrete activity record",
+    unguided_details
+    == {
+        "unguided": True,
+        "activity_id": activity_id,
+        "target_minutes": 30,
+        "activity_type": "Run",
+        "category": "run",
+    },
+)
+ok(
+    "unguided completion preserves its rewards",
+    stored_rewards == rewards and rewards["quest_title"] == candidate["title"],
+)
+ok(
+    "unguided completion creates no attribution",
+    attribution_count(unguided_row["id"]) == 0,
+)
+emit("UNGUIDED QUEST", {
+    "quest_id": unguided_row["id"],
+    "giver": unguided_row["giver"],
+    "kind": unguided_row["kind"],
+    "status": unguided_row["status"],
+    "activity_id": unguided_row["activity_id"],
+    "attribution_count": attribution_count(unguided_row["id"]),
 })
 
 print("COUNSEL ATTRIBUTION CHARACTERIZATION PASSED")

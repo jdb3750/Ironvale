@@ -172,7 +172,7 @@ def _climb(
         ),
         context.ambition_multiplier,
     )
-    # The dead legacy generator keeps Bram's historical payload; only live
+    # The shared candidate builder keeps Bram's historical payload; only live
     # Council climb offers cross this ownership boundary to Fenn.
     candidates = tuple(
         quests.QuestCandidate(
