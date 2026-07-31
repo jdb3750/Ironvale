@@ -813,6 +813,9 @@ def find_matching_activity(quest):
     if modality in CATEGORIES:
         types = CATEGORIES[modality]
         need_s = details.get("target_minutes", 20) * 60 * 0.7
+    elif g == "bram":
+        types = CATEGORIES["climb"]
+        need_s = details.get("target_minutes", 20) * 60 * 0.7
     elif g == "endurance":
         types = RUN_TYPES
         need_s = details.get("target_minutes", 20) * 60 * 0.7
@@ -860,7 +863,9 @@ def quest_completable(quest):
         return False, f"No matching {label} found yet. Sync your log, or swear on your honor.", None
     if g == "endurance":
         return False, "No matching run found yet. Sync your log, or swear on your honor.", None
-    if g in ("strength", "bram"):
+    if g == "bram":
+        return False, "No matching climb session found yet. Sync your log, or swear on your honor.", None
+    if g == "strength":
         need = quest["details"].get("total_sets", 12)
         done = lift_progress(quest)
         if done >= math.ceil(need * 0.6):
@@ -980,7 +985,7 @@ def complete_quest(quest_id, honor=False, _writ=False):
             "endurance": "Run",
             "recovery": "Yoga",
             "strength": "WeightTraining",
-            "bram": "WeightTraining",
+            "bram": "Climbing",
         }
         act_type = modality_types.get(details.get("modality")) or giver_types.get(quest["giver"], "Workout")
         mins = details.get("target_minutes") or details.get("total_sets", 12) * 3
@@ -999,9 +1004,9 @@ def complete_quest(quest_id, honor=False, _writ=False):
     # stat gains by discipline
     gains = {}
     g = quest["giver"]
-    if g == "endurance":
+    if g in ("endurance", "bram"):
         gains["end"] = 2 if details.get("intensity") == "hard" else 1
-    elif g in ("strength", "bram"):
+    elif g == "strength":
         gains["str"] = 2 if details.get("intensity") == "hard" else 1
     elif g == "recovery":
         gains["spr"] = 1
@@ -1105,6 +1110,7 @@ UNGUIDED_STAT_BY_CATEGORY = {
 
 DEED_GIVER_BY_CATEGORY = {
     "run": "endurance", "ride": "endurance", "walk": "endurance", "swim": "endurance",
+    # Retirement ends quest-giving, not character acknowledgement: Bram still notices unsworn climbs.
     "climb": "bram", "strength": "strength",
     "mobility": "recovery",
     "other": "wick",

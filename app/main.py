@@ -680,7 +680,7 @@ def program_list():
     return {
         "programs": [{"key": k, **{kk: vv for kk, vv in v.items() if kk != "inc"}} for k, v in programs.PROGRAMS.items()],
         "routines": programs.get_routines(),
-        "active": {g: programs.active_program(g) for g in ("strength", "bram")},
+        "active": {"strength": programs.active_program("strength")},
     }
 
 
