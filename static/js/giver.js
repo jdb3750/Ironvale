@@ -128,6 +128,8 @@ const COUNSEL_REASON_COPY = {
   recent_lower_body_six_sets: 'Recent lower-body Iron still weighs on the legs.',
   hard_option_suppressed: 'A harder path was set aside for today.',
   hard_option_wellness_warning: 'This harder path remains yours to choose, but the omens advise caution.',
+  schedule_hard_downgrade: 'Today’s signs favor the next steadier version of the path written in your plan.',
+  schedule_tier_unavailable: 'The Council has not seen enough of this road to size the planned effort yet, so it offers the closest path it can measure.',
   equipment_today: 'Grunhilda kept this path to the iron you named for today.',
   doctrine_equipment_mismatch: 'Your selected doctrine calls for other iron, so it waits unchanged for another day.',
 };
@@ -191,6 +193,9 @@ SCREENS.giver = async function () {
   let line;
   if (S.params.react) line = pickLine(REACTIONS[S.params.react][key]);
   else if (!isOfferable && !data.active) line = RETIRED_GIVER_LINES[key];
+  else if (data.schedule_status === 'no_slot_today' && !data.active) {
+    line = 'No path of mine is written for today. The weekly plan keeps this door quiet.';
+  }
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
   const isLiftGiver = ['strength', 'bram'].includes(key);
   const isIronGiver = key === 'strength';
@@ -322,10 +327,21 @@ SCREENS.giver = async function () {
     body = '';
   } else {
     const mode = data.offers[0]?.counsel_mode || S.state.settings?.counsel_mode || 'considered';
-    const boardTitle = mode === 'self' ? 'Choose Your Path' : 'Today’s Considered Path';
-    const boardHelp = mode === 'self'
-      ? 'The counsel lays out each eligible effort. The choice remains yours.'
-      : 'One eligible path, chosen from this giver’s work for today.';
+    const scheduleEmpty = data.schedule_status === 'no_slot_today';
+    const boardTitle = scheduleEmpty
+      ? 'No Path Written'
+      : mode === 'self'
+        ? 'Choose Your Path'
+        : mode === 'scheduled'
+          ? 'Today’s Scheduled Path'
+          : 'Today’s Considered Path';
+    const boardHelp = scheduleEmpty
+      ? 'Your weekly plan names no work from this giver today.'
+      : mode === 'self'
+        ? 'The counsel lays out each eligible effort. The choice remains yours.'
+        : mode === 'scheduled'
+          ? 'One path, called forward from the plan you wrote.'
+          : 'One eligible path, chosen from this giver’s work for today.';
     const selectedIron = S.state.settings?.counsel_iron_today?.equipment || '';
     const selectedIronLabel = selectedIron || 'any iron';
     // The day constraint stays inside Grunhilda's server-owned modalities;

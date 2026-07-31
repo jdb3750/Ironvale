@@ -316,15 +316,21 @@ async def save_settings(request: Request):
 def offers(giver: str):
     if giver not in game.GIVERS:
         raise ValueError("No such quest-giver.")
-    out = counsel.giver_options(giver) if giver in game.OFFERABLE_GIVERS else ()
+    result = (
+        counsel.giver_offer_result(giver)
+        if giver in game.OFFERABLE_GIVERS
+        else counsel.GiverOfferResult((), None)
+    )
     active = next((q for q in quests.active_quests() if q["giver"] == giver), None)
     if active:
         ok, note, _ = quests.quest_completable(active)
         active = {**active, "completable": ok, "progress_note": note}
     response = {
-        "offers": out,
+        "offers": result.options,
         "active": active,
     }
+    if result.schedule_status is not None:
+        response["schedule_status"] = result.schedule_status
     if giver == "strength":
         response["modalities"] = list(game.GIVER_ARCHETYPES[giver]["modalities"])
     return response

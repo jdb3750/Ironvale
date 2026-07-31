@@ -1899,6 +1899,82 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+.counsel-schedule-grid {
+  display: grid;
+  grid-template-columns: 16px repeat(7, minmax(44px, 64px));
+  justify-content: center;
+  gap: 4px;
+  min-inline-size: 0;
+  margin: 10px auto;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.counsel-schedule-grid-head,
+.counsel-schedule-grid-row {
+  display: contents;
+}
+.counsel-schedule-day-heading,
+.counsel-schedule-row-heading {
+  align-self: center;
+  font-family: var(--font-fine);
+  font-size: var(--type-fine);
+  font-weight: 400;
+  line-height: 1;
+  text-align: center;
+}
+.counsel-schedule-day-heading {
+  color: var(--blue);
+}
+.counsel-schedule-row-heading {
+  color: var(--dim-readable);
+}
+.counsel-schedule-cell {
+  --key-travel: 2px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  inline-size: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  line-height: 1;
+  box-shadow:
+    0 2px 0 #3a2c10,
+    0 4px 0 rgba(0,0,0,0.5);
+}
+.counsel-schedule-cell canvas {
+  display: block;
+}
+.counsel-schedule-cell-empty {
+  color: var(--gold);
+  font-family: var(--font-title);
+  font-size: var(--type-title);
+}
+.counsel-schedule-tier-mark,
+.counsel-schedule-optional-mark {
+  position: absolute;
+  font-family: var(--font-fine);
+  font-size: var(--type-fine);
+  font-weight: 400;
+  line-height: 1;
+}
+.counsel-schedule-tier-mark {
+  right: 3px;
+  bottom: 3px;
+  color: var(--dim-readable);
+}
+.counsel-schedule-optional-mark {
+  top: 3px;
+  left: 3px;
+  color: var(--green);
+}
+.counsel-schedule-any-path {
+  color: var(--gold-bright);
+  font-family: var(--font-title);
+  font-size: var(--type-title);
+  font-weight: 400;
+}
 .counsel-schedule-label {
   display: block;
   color: var(--blue);
@@ -1908,103 +1984,41 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   text-transform: uppercase;
   letter-spacing: 1px;
 }
-.counsel-schedule-days {
+.counsel-schedule-chooser {
+  max-width: 380px;
+  text-align: left;
+}
+.counsel-schedule-chooser-close {
+  display: block;
+  min-block-size: 44px;
+  margin: 0 0 8px auto;
+}
+.counsel-schedule-current {
+  margin-bottom: 10px;
+  color: var(--dim-readable);
+  text-align: center;
+}
+.counsel-schedule-chooser-choices {
   display: grid;
   gap: 8px;
-  margin: 10px 0;
-}
-.counsel-schedule-day {
-  min-inline-size: 0;
-}
-.counsel-schedule-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-width: 0;
-  min-block-size: 44px;
-  text-align: left;
-  list-style: none;
-}
-.counsel-schedule-summary::-webkit-details-marker { display: none; }
-.counsel-schedule-summary::after {
-  content: '+';
-  margin-inline-start: auto;
-  color: var(--gold);
-}
-.counsel-schedule-day[open] > .counsel-schedule-summary::after {
-  content: '\2212';
-}
-.counsel-schedule-day-name {
-  flex: 0 0 3.5rem;
-  color: var(--blue);
-}
-.counsel-schedule-day-plan {
-  min-inline-size: 0;
-  color: var(--dim-readable);
-  font-weight: 400;
-  overflow-wrap: anywhere;
-}
-.counsel-schedule-day-body {
-  padding: 8px;
-  border: 2px solid #4a3d20;
-  border-top: 0;
-  background: var(--panel);
-}
-.counsel-schedule-choices,
-.counsel-schedule-tiers,
-.counsel-schedule-shapes {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
   margin-top: 8px;
+}
+.counsel-schedule-chooser-choices .btn {
+  min-block-size: 44px;
+  width: 100%;
 }
 .counsel-schedule-choice.active {
   border-color: var(--gold-bright);
   background: var(--gold);
   color: var(--bg);
 }
-.counsel-schedule-slot {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #4a3d20;
-}
-.counsel-schedule-slot-head {
+.counsel-schedule-chooser-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
-}
-.counsel-schedule-slot-head .counsel-label {
-  margin-top: 0;
-}
-.counsel-schedule-slot-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-.counsel-schedule-shape-note {
-  display: block;
-  margin-top: 8px;
-  color: var(--gold-bright);
-  text-align: center;
-}
-.counsel-schedule-slot-fields {
-  display: grid;
-  gap: 8px;
-  margin-top: 8px;
-}
-.counsel-schedule-picker {
-  min-inline-size: 0;
-}
-.counsel-schedule-picker .pixel-select-summary {
-  width: 100%;
-}
-.counsel-schedule-forge {
-  justify-self: center;
+  margin-top: 12px;
 }
 .counsel-schedule-save {
   display: block;
@@ -2043,11 +2057,37 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   border-bottom: 1px solid #4a3d20;
 }
 @media (max-width: 420px) {
+  .counsel-schedule {
+    margin-inline: -12px;
+    padding-inline: 2px;
+  }
+  .counsel-schedule-grid {
+    grid-template-columns: 10px repeat(7, minmax(44px, 1fr));
+    column-gap: 1px;
+    row-gap: 4px;
+  }
+  .counsel-schedule-cell {
+    min-inline-size: 44px;
+  }
   .counsel-schedule-routine-measure {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   }
   .counsel-schedule-routine-measure > .btn {
     grid-column: 1 / -1;
+  }
+}
+@media (max-width: 359px) {
+  /* The 320px contract still keeps seven 44px steps visible; the tiny row
+     heading may overhang its zero-width gutter, but it never steals cell
+     width from the scrollbar-reduced document. */
+  .counsel-schedule-grid {
+    position: relative;
+    left: 50%;
+    grid-template-columns: 0 repeat(7, 44px);
+    column-gap: 0;
+    inline-size: max-content;
+    margin-inline: 0;
+    transform: translateX(calc(-50% - 1px));
   }
 }
 /* In-world confirm dialog (replaces window.confirm). */

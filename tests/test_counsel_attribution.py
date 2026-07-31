@@ -84,26 +84,26 @@ def mode_snapshot_acceptance_is_immutable():
     ok("mode snapshot reads current offers", offers.status_code == 200)
     selected = offers.json()["offers"][0]
 
-    original_mode = counsel._game_mode
+    original_assemble = counsel.counsel_context.assemble
     mode_reads = []
 
-    def changing_mode():
-        mode = original_mode()
-        mode_reads.append(mode)
+    def changing_context():
+        context = original_assemble()
+        mode_reads.append(context.counsel_mode)
         if len(mode_reads) == 1:
             changed = game.get_settings()
             changed["counsel_mode"] = "self"
             db.kv_set("settings", changed)
-        return mode
+        return context
 
-    counsel._game_mode = changing_mode
+    counsel.counsel_context.assemble = changing_context
     try:
         accepted = client.post(
             "/api/quests/accept",
             json={"giver": "endurance", "option_key": selected["option_key"]},
         )
     finally:
-        counsel._game_mode = original_mode
+        counsel.counsel_context.assemble = original_assemble
     ok("mode snapshot accepts the current option", accepted.status_code == 200)
     payload = accepted.json()
 
@@ -232,7 +232,7 @@ def malformed_inputs_leave_no_rows():
     # Given: malformed mode, offered-key, and chosen-key inputs. When: each is
     # validated for creation. Then: it is rejected with no committed rows.
     cases = (
-        ("invalid-mode", "schedule", ["run:easy"], "run:easy"),
+        ("invalid-mode", "invalid", ["run:easy"], "run:easy"),
         ("empty-offered", "counsel", [], "run:easy"),
         ("empty-key", "counsel", ["run:easy", ""], "run:easy"),
         ("non-string-key", "counsel", ["run:easy", json.loads("7")], "run:easy"),

@@ -422,6 +422,25 @@ Object.assign(SPRITES, {
   icon_token: { p: { b: '#4a7a9a', B: '#7ab0d0', k: '#2a4a5e' }, r: ['..bbbb..', '.bBBBBb.', 'bBkkkkBb', 'bBkBBkBb', 'bBkBBkBb', 'bBkkkkBb', '.bBBBBb.', '..bbbb..'] },
   icon_flame: { p: { r: '#e05020', o: '#f08030', y: '#f8d060', w: '#fff8d0' }, r: ['....r.....', '...rr..r..', '..rrr.rr..', '.rrorrrr..', '.rooorrr..', 'rrooyoorr.', 'rooyyyoor.', 'royywyyor.', '.royyyyor.', '..rooor...'] },
 
+  schedule_run: { p: { g: '#c9a24b', G: '#f0d080' }, r: [
+    '...gg...', '..gGG...', '..gg....', '...gg...', '..ggg...', '.gg.gg..', 'gg...gg.', '........',
+  ]},
+  schedule_ride: { p: { g: '#c9a24b', G: '#f0d080' }, r: [
+    '........', '..GG....', '...g....', '.ggggg..', 'g.G..gg.', 'GgG.ggG.', 'gGg..Gg.', '........',
+  ]},
+  schedule_swim: { p: { g: '#c9a24b', G: '#f0d080' }, r: [
+    '........', '...GG...', '..gggg..', 'gg..gg..', '........', 'g.g.g.g.', '.g.g.g.g', '........',
+  ]},
+  schedule_climb: { p: { g: '#c9a24b', G: '#f0d080' }, r: [
+    '...G....', '..gg....', '...g.G..', '..gggg..', '.gg.gg..', '.g...gg.', 'gg....g.', '........',
+  ]},
+  schedule_strength: { p: { g: '#c9a24b', G: '#f0d080' }, r: [
+    '........', '........', '.gg..gg.', 'gGGggGGg', '.gg..gg.', '........', '........', '........',
+  ]},
+  schedule_rest: { p: { g: '#c9a24b', G: '#f0d080' }, r: [
+    '....gg..', '..gGGG..', '.gGGG...', '.gGG....', '.gGGG...', '..gGGG..', '....gg..', '........',
+  ]},
+
   /* ---- dev-mode time-of-day toggle ---- */
   icon_tod_sun: { p: { o: '#e08020', y: '#ffd860' }, r: [
     '..y..y..', '........', '.oyyyyo.', 'yoyyyyoy', 'yoyyyyoy', '.oyyyyo.', '........', '..y..y..',

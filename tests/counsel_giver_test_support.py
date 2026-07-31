@@ -52,6 +52,7 @@ class QuestOption(BaseModel):
     vigor: int
     modality: Optional[str] = None
     sizing: Optional[str] = None
+    structure: Optional[str] = None
     routine: list[RoutineRow] = Field(default_factory=list)
     program: bool = False
     progression: Optional[ProgressionDetail] = None
@@ -70,6 +71,7 @@ class OfferResponse(BaseModel):
     offers: list[QuestOption]
     active: Optional[ActiveQuest]
     modalities: list[str] = Field(default_factory=list)
+    schedule_status: Optional[str] = None
 
 
 class AcceptanceResponse(BaseModel):

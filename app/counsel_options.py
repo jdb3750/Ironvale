@@ -5,7 +5,7 @@ import pydantic
 from . import counsel_context, quests
 
 
-GameMode = Literal["considered", "self"]
+GameMode = Literal["considered", "self", "scheduled"]
 
 
 class TierMeta(NamedTuple):

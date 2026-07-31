@@ -2,7 +2,17 @@ from typing import Dict, NamedTuple, Optional, Tuple
 
 import pydantic
 
-from . import counsel_candidates, counsel_context, counsel_rules, game, quests
+from . import (
+    counsel_candidates,
+    counsel_context,
+    counsel_rules,
+    game,
+    quests,
+)
+from .counsel_schedule import (
+    considered_drafts as considered_schedule_drafts,
+    resolve as resolve_schedule,
+)
 from .counsel_rules import (
     RuleState as RuleState,
     rule_state as rule_state,
@@ -24,28 +34,20 @@ class OptionIdentity(NamedTuple):
     offer_id: Optional[int]
 
 
+class GiverOfferResult(NamedTuple):
+    options: Tuple[Dict[str, pydantic.JsonValue], ...]
+    schedule_status: Optional[str]
+
+
 class OfferValidationError(ValueError):
     pass
-
-
-def _game_mode_for_date(current_date: Optional[str]) -> counsel_candidates.GameMode:
-    mode = game.get_settings(current_date)["counsel_mode"]
-    if mode == "considered":
-        return "considered"
-    if mode == "self":
-        return "self"
-    raise OfferValidationError("Choose one of the available game loops.")
-
-
-def _game_mode() -> counsel_candidates.GameMode:
-    return _game_mode_for_date(None)
 
 
 def _giver_options(
     giver: str,
     mode: counsel_candidates.GameMode,
     context: counsel_context.QualifiedTrainingContext,
-) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
+) -> GiverOfferResult:
     if giver not in game.GIVERS:
         raise OfferValidationError("No such quest-giver.")
     if giver not in game.OFFERABLE_GIVERS:
@@ -53,44 +55,40 @@ def _giver_options(
     rules = counsel_rules.rule_state(context=context)
     drafts = counsel_candidates.for_giver(giver, context)
     hard_suppressed = False
-    if mode == "considered" and len(drafts) > 1:
-        eligible = tuple(
-            draft
-            for draft in drafts
-            if draft.payload["intensity"] != "hard"
-            or (
-                not rules.suppresses_hard
-                and not (
-                    rules.lower_body_active
-                    and any(
-                        group in ("legs", "posterior")
-                        for group in draft.target_groups
-                    )
-                )
-            )
+    schedule_status = None
+    if mode == "scheduled":
+        scheduled = resolve_schedule(giver, context, rules)
+        drafts = scheduled.drafts
+        hard_suppressed = scheduled.hard_was_suppressed
+        schedule_status = scheduled.status
+    elif mode == "considered":
+        drafts, hard_suppressed = considered_schedule_drafts(
+            drafts,
+            rules,
         )
-        hard_suppressed = len(eligible) != len(drafts)
-        drafts = eligible[-1:]
-    return tuple(
-        counsel_candidates.finalize(
-            draft,
-            counsel_candidates.OptionContext(
-                mode,
-                rules.reason_codes,
-                counsel_rules.source_disclosure(
-                    rules,
-                    context,
-                    draft.provenance,
+    return GiverOfferResult(
+        tuple(
+            counsel_candidates.finalize(
+                draft,
+                counsel_candidates.OptionContext(
+                    mode,
+                    rules.reason_codes,
+                    counsel_rules.source_disclosure(
+                        rules,
+                        context,
+                        draft.provenance,
+                    ),
+                    rules.suppresses_hard,
+                    hard_suppressed,
                 ),
-                rules.suppresses_hard,
-                hard_suppressed,
-            ),
-        )
-        for draft in drafts
+            )
+            for draft in drafts
+        ),
+        schedule_status,
     )
 
 
-def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
+def giver_offer_result(giver: str) -> GiverOfferResult:
     if giver not in game.GIVERS:
         raise OfferValidationError("No such quest-giver.")
     if giver not in game.OFFERABLE_GIVERS:
@@ -98,13 +96,16 @@ def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
     context = counsel_context.assemble()
     return _giver_options(
         giver,
-        _game_mode_for_date(context.current.date().isoformat()),
+        context.counsel_mode,
         context,
     )
 
 
+def giver_options(giver: str) -> Tuple[Dict[str, pydantic.JsonValue], ...]:
+    return giver_offer_result(giver).options
+
+
 def accept_current_option(giver: str, identity: OptionIdentity) -> int:
-    mode = _game_mode()
     if giver not in game.GIVERS:
         raise OfferValidationError("No such quest-giver.")
     if giver not in game.OFFERABLE_GIVERS:
@@ -116,7 +117,8 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
                 f"You already carry a quest from {name}. Finish or abandon it first.",
             )
     context = counsel_context.assemble()
-    current = _giver_options(giver, mode, context)
+    mode = context.counsel_mode
+    current = _giver_options(giver, mode, context).options
     chosen = next(
         (
             option
@@ -129,7 +131,11 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
     if chosen is None:
         raise OfferValidationError("That offer has faded.")
     attribution = validate_attribution(
-        "counsel" if mode == "considered" else "self",
+        {
+            "considered": "counsel",
+            "self": "self",
+            "scheduled": "schedule",
+        }[mode],
         tuple(str(option["option_key"]) for option in current),
         str(chosen["option_key"]),
     )
