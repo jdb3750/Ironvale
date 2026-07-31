@@ -65,6 +65,27 @@ def schedule_routine_keys():
     return (*PROGRAMS.keys(), *custom)
 
 
+def scheduled_routine_giver(key: str) -> Optional[str]:
+    if key.startswith("custom:"):
+        routine = next(
+            (
+                item
+                for item in get_routines()
+                if item["id"] == key[7:]
+            ),
+            None,
+        )
+        if not isinstance(routine, dict):
+            return None
+        giver = routine.get("giver")
+        return giver if isinstance(giver, str) else None
+    program = PROGRAMS.get(key)
+    if program is None:
+        return None
+    giver = program.get("giver")
+    return giver if isinstance(giver, str) else None
+
+
 def save_routine(payload):
     routines = get_routines()
     exs = []
@@ -164,10 +185,18 @@ def build_program_offer(
     current_date=None,
 ):
     """The doctrine's next session as a quest offer, or None."""
-    lookup = weight_for or game.last_weight
     key = active_program(giver, current_date)
     if not key:
         return None
+    return build_scheduled_routine_offer(key, giver, weight_for)
+
+
+def build_scheduled_routine_offer(
+    key: str,
+    giver: str,
+    weight_for=None,
+):
+    lookup = weight_for or game.last_weight
     if key.startswith("custom:"):
         r = next((x for x in get_routines() if x["id"] == key[7:]), None)
         if not r:

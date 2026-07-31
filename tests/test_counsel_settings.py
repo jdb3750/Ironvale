@@ -58,15 +58,26 @@ try:
         valid_charter.status_code == 200 and settings_with_charter["counsel_charter"] == saved_charter,
     )
 
-    invalid_modes = tuple(
-        client.post("/api/settings", json={"counsel_mode": mode})
-        for mode in ("schedule", "scheduled")
+    scheduled_mode = client.post(
+        "/api/settings",
+        json={"counsel_mode": "scheduled"},
+    )
+    scheduled_settings = client.get("/api/state").json()["settings"]
+    ok(
+        "scheduled is a live game loop",
+        scheduled_mode.status_code == 200
+        and scheduled_settings["counsel_mode"] == "scheduled",
+    )
+
+    invalid_mode = client.post(
+        "/api/settings",
+        json={"counsel_mode": "schedule"},
     )
     after_invalid_mode = client.get("/api/state").json()["settings"]
     ok(
         "invalid loop rejects without mutating saved settings",
-        all(response.status_code == 400 for response in invalid_modes)
-        and after_invalid_mode == settings_with_charter,
+        invalid_mode.status_code == 400
+        and after_invalid_mode == scheduled_settings,
     )
 
     invalid_focus = client.post(
@@ -79,7 +90,7 @@ try:
     after_invalid_focus = client.get("/api/state").json()["settings"]
     ok(
         "invalid focus rejects the complete request without mutation",
-        invalid_focus.status_code == 400 and after_invalid_focus == settings_with_charter,
+        invalid_focus.status_code == 400 and after_invalid_focus == scheduled_settings,
     )
 
     cleared = client.post("/api/settings", json={"counsel_charter": None})

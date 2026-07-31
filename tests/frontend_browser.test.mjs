@@ -539,7 +539,7 @@ test('phone Settings keeps the persistent raven status within the viewport', asy
   }
 });
 
-test('Settings retains an optional focus charter across the two Phase 1 loops', async () => {
+test('Settings retains a focus charter and disables it only when the active loop owns focus', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
     await page.evaluate(async () => {
@@ -762,13 +762,30 @@ test('Settings retains an optional focus charter across the two Phase 1 loops', 
       await page.evaluate(() => S.state.settings.counsel_charter),
       { primary: 'run', secondary: ['strength'] },
     );
+
+    await page.locator('#set-counsel-mode').locator('..').locator('summary').click();
+    await page.getByRole('menuitemradio', { name: 'Scheduled' }).click();
+    await page.getByText('Your schedule is your focus.', { exact: true }).waitFor();
+    await page.locator('#counsel-focus[disabled]').waitFor();
+    assert.equal(
+      await page.locator('#counsel-focus-hint').innerText(),
+      'Your schedule is your focus.',
+    );
+
+    await page.locator('#set-counsel-mode').locator('..').locator('summary').click();
+    await page.getByRole('menuitemradio', { name: 'Considered' }).click();
+    await page.locator('#counsel-focus:not([disabled])').waitFor();
+    assert.match(
+      await page.locator('#counsel-focus-hint').innerText(),
+      /Optional\. Focus only guides the daily pointer/,
+    );
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
   }
 });
 
-test('Settings authors a compact inert seven-day counsel template', async () => {
+test('Settings authors the weekly counsel plan through the sequencer grid', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
     await createGiverProfile(page, 'considered');
@@ -777,49 +794,185 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
 
     const schedule = page.locator('#counsel-schedule');
     await schedule.waitFor();
-    assert.equal(await schedule.locator('[data-schedule-day]').count(), 7);
-    assert.equal(await schedule.locator('[data-schedule-day][open]').count(), 0);
+    assert.deepEqual(
+      await schedule.locator('[data-schedule-day-heading]').allTextContents(),
+      ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+    );
+    assert.equal(await schedule.locator('[data-schedule-row]').count(), 1);
+    assert.equal(await schedule.locator('[data-schedule-cell]').count(), 7);
+    assert.deepEqual(
+      await schedule.locator('[data-schedule-cell]').allTextContents()
+        .then(labels => labels.map(label => label.trim())),
+      ['+', '+', '+', '+', '+', '+', '+'],
+    );
     assert.deepEqual(
       await page.locator('#set-counsel-mode').locator('..').locator('[role="menuitemradio"]').allTextContents()
         .then(labels => labels.map(label => label.trim())),
-      ['Considered', 'Choose-your-own'],
+      ['Considered', 'Choose-your-own', 'Scheduled'],
     );
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       true,
     );
 
-    const monday = schedule.locator('[data-schedule-day="monday"]');
-    await monday.locator('summary').click();
-    await monday.locator('[data-add-schedule-shape="sized"]').click();
+    const initialMetrics = await schedule.locator('[data-schedule-cell]').evaluateAll(cells => ({
+      sizes: cells.map(cell => {
+        const rect = cell.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      }),
+      noOverflow: Math.max(
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth,
+      ) <= document.documentElement.clientWidth,
+      gridFits: cells[0].closest('.counsel-schedule-grid').scrollWidth
+        <= cells[0].closest('.counsel-schedule-grid').clientWidth,
+    }));
+    assert.equal(initialMetrics.noOverflow, true);
+    assert.equal(initialMetrics.gridFits, true);
+    assert.equal(
+      initialMetrics.sizes.every(size => size.width >= 44 && size.height >= 44),
+      true,
+      JSON.stringify(initialMetrics.sizes),
+    );
+    await page.setViewportSize({ width: 320, height: 812 });
+    const narrowMetrics = await schedule.locator('[data-schedule-cell]').evaluateAll(cells => ({
+      sizes: cells.map(cell => {
+        const rect = cell.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      }),
+      cellsVisible: cells.every(cell => {
+        const rect = cell.getBoundingClientRect();
+        return rect.left >= 0 && rect.right <= document.documentElement.clientWidth;
+      }),
+      firstCell: (() => {
+        const rect = cells[0].getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      })(),
+      lastCell: (() => {
+        const rect = cells.at(-1).getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      })(),
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+      noOverflow: Math.max(
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth,
+      ) <= document.documentElement.clientWidth,
+      gridClientWidth: cells[0].closest('.counsel-schedule-grid').clientWidth,
+      gridScrollWidth: cells[0].closest('.counsel-schedule-grid').scrollWidth,
+      gridFits: cells[0].closest('.counsel-schedule-grid').scrollWidth
+        <= cells[0].closest('.counsel-schedule-grid').clientWidth,
+    }));
+    assert.equal(narrowMetrics.noOverflow, true, JSON.stringify(narrowMetrics));
+    assert.equal(narrowMetrics.gridFits, true, JSON.stringify(narrowMetrics));
+    assert.equal(narrowMetrics.cellsVisible, true, JSON.stringify(narrowMetrics));
+    assert.equal(
+      narrowMetrics.sizes.every(size => size.width >= 44 && size.height >= 44),
+      true,
+      JSON.stringify(narrowMetrics.sizes),
+    );
+    await page.setViewportSize({ width: 375, height: 812 });
+    if (EVIDENCE_DIR) {
+      await writeFile(
+        path.join(EVIDENCE_DIR, 'counsel-schedule-grid-metrics.json'),
+        JSON.stringify({
+          phone375: {
+            viewport: { width: 375, height: 812 },
+            cell: initialMetrics.sizes[0],
+            documentFits: initialMetrics.noOverflow,
+            gridFits: initialMetrics.gridFits,
+          },
+          phone320: {
+            viewport: { width: 320, height: 812 },
+            cell: narrowMetrics.sizes[0],
+            documentFits: narrowMetrics.noOverflow,
+            gridFits: narrowMetrics.gridFits,
+          },
+        }, null, 2),
+      );
+      await schedule.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-empty-375.png'),
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await schedule.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-empty-1280.png'),
+      });
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await schedule.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-empty-768.png'),
+      });
+      await page.setViewportSize({ width: 375, height: 812 });
+    }
+
+    const cell = (day, row) => schedule.locator(
+      `[data-schedule-cell="${day}-${row}"]`,
+    );
+    const chooser = () => page.locator('.counsel-schedule-chooser');
+
+    await cell('monday', 0).click();
+    if (EVIDENCE_DIR) {
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-chooser-root-375.png'),
+      });
+    }
+    await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Run', exact: true }).click();
+    if (EVIDENCE_DIR) {
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-chooser-effort-375.png'),
+      });
+    }
+    await chooser().getByRole('button', { name: 'Easy', exact: true }).click();
     assert.equal(await page.locator('.toast').count(), 0);
-    await monday.getByRole('button', { name: 'Long', exact: true }).click();
-    await monday.locator('[data-add-schedule-shape="sized"]').click();
-    const secondSlot = monday.locator('[data-schedule-slot-index="1"]');
-    await secondSlot.locator('summary[aria-label="Slot 2 modality"]').click();
-    await secondSlot.locator('.pixel-option[data-value="climb"]').click();
-    await secondSlot.getByRole('button', { name: 'Volume', exact: true }).click();
+    assert.equal(await schedule.locator('[data-schedule-row]').count(), 2);
     assert.deepEqual(
-      await monday.locator('[data-schedule-slot-shape="sized"] input[type="hidden"]').evaluateAll(
-        elements => elements.map(element => element.value),
-      ),
-      ['run', 'climb'],
+      await cell('monday', 0).evaluate(element => ({
+        shape: element.dataset.scheduleSlotShape,
+        sprite: element.querySelector('canvas')?.dataset.sprite,
+        mark: element.querySelector('[data-schedule-tier-mark]')?.textContent,
+      })),
+      { shape: 'sized', sprite: 'schedule_run', mark: 'E' },
     );
 
-    await monday.locator('[data-add-schedule-shape="open"]').click();
-    assert.equal(
-      await monday.locator('[data-schedule-slot-index="2"] input[type="hidden"]').inputValue(),
-      '',
+    await cell('monday', 1).click();
+    await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Climb', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Volume', exact: true }).click();
+    assert.equal(await schedule.locator('[data-schedule-row]').count(), 3);
+
+    await cell('tuesday', 0).click();
+    await chooser().getByRole('button', { name: 'Strength', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Starting Strength', exact: true }).click();
+    assert.deepEqual(
+      await cell('tuesday', 0).evaluate(element => ({
+        shape: element.dataset.scheduleSlotShape,
+        sprite: element.querySelector('canvas')?.dataset.sprite,
+        mark: element.querySelector('[data-schedule-tier-mark]')?.textContent,
+      })),
+      { shape: 'routine', sprite: 'schedule_strength', mark: 'R' },
     );
-    await monday.locator('[data-add-schedule-shape="routine"]').click();
-    const routineSlot = monday.locator('[data-schedule-slot-index="3"]');
+
+    await cell('wednesday', 0).click();
+    await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Ride', exact: true }).click();
     assert.equal(
-      await routineSlot.locator('input[type="hidden"]').inputValue(),
-      'starting_strength',
+      await chooser().locator('[data-schedule-choice]').last().innerText(),
+      'LET THE COUNSEL CHOOSE',
     );
+    await chooser().getByRole('button', { name: 'Let the counsel choose', exact: true }).click();
+    assert.equal(await cell('wednesday', 0).getAttribute('data-schedule-slot-shape'), 'open');
+
+    await cell('thursday', 0).click();
+    await chooser().getByRole('button', { name: 'Close chooser', exact: true }).click();
+    assert.equal(await cell('thursday', 0).getAttribute('data-schedule-slot-shape'), 'open');
+    assert.equal(await cell('thursday', 0).locator('[data-schedule-any-path]').count(), 1);
+
+    await cell('friday', 0).click();
+    await chooser().getByRole('button', { name: 'Strength', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Create a new routine', exact: true }).click();
     assert.equal(await page.locator('.toast').count(), 0);
 
-    await routineSlot.getByRole('button', { name: 'FORGE A ROUTINE', exact: true }).click();
     assert.equal(
       await page.locator('.counsel-schedule-routine-builder label').evaluateAll(labels => (
         labels.every(label => getComputedStyle(label).color === 'rgb(106, 160, 200)')
@@ -867,32 +1020,44 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
     assert.equal((await routineWrite).status(), 200);
     await page.getByText('Routine forged into the weekly plan.', { exact: true }).waitFor();
     await page.locator('.overlay').waitFor({ state: 'detached' });
-    const customRoutineKey = await monday.locator(
-      '[data-schedule-slot-index="3"] input[type="hidden"]',
-    ).inputValue();
-    assert.match(customRoutineKey, /^custom:r[0-9a-f]{8}$/);
-    await monday.getByRole('button', { name: 'Slot 4 optional: off', exact: true }).click();
-    assert.equal(await schedule.locator('[data-schedule-day][open]').count(), 1);
+    assert.equal(await cell('friday', 0).getAttribute('data-schedule-slot-shape'), 'routine');
+
+    await cell('saturday', 0).click();
+    await chooser().getByRole('button', { name: 'Recovery', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Rest', exact: true }).click();
     assert.deepEqual(
-      await monday.locator('[data-schedule-slot-index="0"] [data-schedule-tier="long"]').evaluate(element => ({
-        background: getComputedStyle(element).backgroundColor,
-        border: getComputedStyle(element).borderTopColor,
+      await cell('saturday', 0).evaluate(element => ({
+        sprite: element.querySelector('canvas')?.dataset.sprite,
+        mark: element.querySelector('[data-schedule-tier-mark]')?.textContent,
       })),
-      {
-        background: 'rgb(201, 162, 75)',
-        border: 'rgb(240, 208, 128)',
-      },
+      { sprite: 'schedule_rest', mark: 'R' },
     );
+
+    await cell('sunday', 0).click();
+    await chooser().getByRole('button', { name: 'Strength', exact: true }).click();
+    assert.equal(
+      await chooser().locator('[data-schedule-choice]').last().innerText(),
+      'LET THE COUNSEL CHOOSE',
+    );
+    await chooser().getByRole('button', { name: 'Let the counsel choose', exact: true }).click();
+
+    await cell('monday', 0).click();
+    assert.match(
+      await page.locator('[data-schedule-current]').innerText(),
+      /run · easy/i,
+    );
+    await chooser().getByRole('button', { name: 'Optional: off', exact: true }).click();
+    await page.waitForFunction(() => (
+      document.activeElement?.getAttribute('aria-label') === 'Optional: on'
+    ));
+    await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Run', exact: true }).click();
+    await chooser().getByRole('button', { name: 'Steady', exact: true }).click();
+    await cell('monday', 1).click();
+    await chooser().getByRole('button', { name: 'Remove slot', exact: true }).click();
+    assert.equal(await schedule.locator('[data-schedule-row]').count(), 2);
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-      true,
-    );
-    assert.equal(
-      await schedule.locator('summary, button').evaluateAll(elements => (
-        elements
-          .filter(element => element.getClientRects().length)
-          .every(element => element.getBoundingClientRect().height >= 43)
-      )),
       true,
     );
 
@@ -906,15 +1071,32 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
     assert.deepEqual(
       await page.evaluate(() => S.state.settings.counsel_schedule.monday),
       [
-        { optional: false, tier: 'long', modality: 'run' },
-        { optional: false, tier: 'volume', modality: 'climb' },
-        { optional: false },
-        { routine: customRoutineKey, optional: true },
+        { optional: true, tier: 'steady', modality: 'run' },
       ],
     );
     assert.deepEqual(
       await page.evaluate(() => S.state.settings.counsel_schedule.tuesday),
-      [],
+      [{ routine: 'starting_strength', optional: false }],
+    );
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_schedule.wednesday),
+      [{ modality: 'ride', optional: false }],
+    );
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_schedule.thursday),
+      [{ optional: false }],
+    );
+    assert.match(
+      await page.evaluate(() => S.state.settings.counsel_schedule.friday[0].routine),
+      /^custom:r[0-9a-f]{8}$/,
+    );
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_schedule.saturday),
+      [{ modality: 'rest', optional: false }],
+    );
+    assert.deepEqual(
+      await page.evaluate(() => S.state.settings.counsel_schedule.sunday),
+      [{ modality: 'strength', optional: false }],
     );
     assert.equal(
       await page.evaluate(() => S.state.settings.counsel_mode),
@@ -922,28 +1104,147 @@ test('Settings authors a compact inert seven-day counsel template', async () => 
     );
 
     if (EVIDENCE_DIR) {
-      await page.locator('[data-schedule-day="monday"] > summary').click();
       await page.waitForFunction(() => (
         document.querySelectorAll('.key-pop-ghost').length === 0
       ));
-      await page.screenshot({
-        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-phone.png'),
-        fullPage: true,
-      });
-      await page.locator('#counsel-schedule').scrollIntoViewIfNeeded();
-      await page.screenshot({
-        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-phone-viewport.png'),
+      await page.locator('.toast').waitFor({ state: 'detached' });
+      await schedule.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-populated-375.png'),
       });
       await page.setViewportSize({ width: 1280, height: 900 });
-      await page.locator('#counsel-schedule').scrollIntoViewIfNeeded();
-      await page.screenshot({
-        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-desktop-viewport.png'),
+      await schedule.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-populated-1280.png'),
       });
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await schedule.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-populated-768.png'),
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await cell('monday', 0).click();
       await page.screenshot({
-        path: path.join(EVIDENCE_DIR, 'counsel-schedule-settings-desktop.png'),
-        fullPage: true,
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-chooser-filled-1280.png'),
+      });
+      await chooser().getByRole('button', { name: 'Close chooser', exact: true }).click();
+
+      await page.setViewportSize({ width: 320, height: 812 });
+      await cell('thursday', 1).click();
+      await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+      await chooser().getByRole('button', { name: 'Swim', exact: true }).click();
+      await chooser().getByRole('button', { name: 'Quality', exact: true }).click();
+      await cell('friday', 1).click();
+      await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+      await chooser().getByRole('button', { name: 'Climb', exact: true }).click();
+      await chooser().getByRole('button', { name: 'Volume', exact: true }).click();
+      assert.equal(
+        await page.evaluate(() => Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth,
+        ) <= document.documentElement.clientWidth),
+        true,
+      );
+      assert.equal(
+        await schedule.locator('.counsel-schedule-grid').evaluate(grid => (
+          grid.scrollWidth <= grid.clientWidth
+        )),
+        true,
+      );
+      await page.waitForFunction(() => (
+        document.querySelectorAll('.key-pop-ghost').length === 0
+      ));
+      await schedule.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-all-glyphs-320.png'),
       });
     }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Settings renders v0.27 routine and open slots in the sequencer grid', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(async () => {
+      const days = S.state.counsel_schedule_options.days;
+      const counsel_schedule = Object.fromEntries(days.map(day => [day, []]));
+      counsel_schedule.monday = [
+        { routine: 'starting_strength', optional: false },
+        { modality: 'climb', optional: true },
+        { optional: false },
+      ];
+      await api('/settings', { method: 'POST', body: { counsel_schedule } });
+      await refreshState();
+      nav('settings');
+    });
+
+    const schedule = page.locator('#counsel-schedule');
+    await schedule.waitFor();
+    assert.equal(await schedule.locator('[data-schedule-row]').count(), 4);
+    assert.deepEqual(
+      await schedule.locator('[data-schedule-cell^="monday-"]').evaluateAll(cells => (
+        cells.slice(0, 3).map(cell => ({
+          shape: cell.dataset.scheduleSlotShape,
+          sprite: cell.querySelector('canvas')?.dataset.sprite || null,
+          anyPath: Boolean(cell.querySelector('[data-schedule-any-path]')),
+          optional: Boolean(cell.querySelector('[data-schedule-optional-mark]')),
+        }))
+      )),
+      [
+        { shape: 'routine', sprite: 'schedule_strength', anyPath: false, optional: false },
+        { shape: 'open', sprite: 'schedule_climb', anyPath: false, optional: true },
+        { shape: 'open', sprite: null, anyPath: true, optional: false },
+      ],
+    );
+    await schedule.locator('[data-schedule-cell="monday-0"]').click();
+    assert.match(
+      await page.locator('[data-schedule-current]').innerText(),
+      /starting strength/i,
+    );
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Scheduled mode serves the written giver path and names an unwritten board', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(async () => {
+      const days = S.state.counsel_schedule_options.days;
+      const counsel_schedule = Object.fromEntries(
+        days.map(day => [day, [{ modality: 'run', tier: 'easy', optional: false }]]),
+      );
+      await api('/settings', {
+        method: 'POST',
+        body: { counsel_mode: 'scheduled', counsel_schedule },
+      });
+      await refreshState();
+    });
+
+    await openGiverBoard(page, 'endurance');
+    assert.equal(await page.locator('.counsel-path-card').count(), 1);
+    assert.equal(
+      await page.locator('.counsel-path-card').getAttribute('data-tier-label'),
+      'easy',
+    );
+    assert.equal(
+      await page.locator('.giver-offer-board').getAttribute('data-counsel-mode'),
+      'scheduled',
+    );
+
+    await openGiverBoard(page, 'strength');
+    assert.equal(await page.locator('.counsel-path-card').count(), 0);
+    assert.equal(
+      await page.locator('.giver-offer-board .win-title').innerText(),
+      'NO PATH WRITTEN',
+    );
+    await page.waitForFunction(() => (
+      document.getElementById('dlg')?.textContent
+        ?.includes('No path of mine is written for today.')
+    ));
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -2485,7 +2786,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '112'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '114'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

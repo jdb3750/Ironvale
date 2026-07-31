@@ -28,6 +28,7 @@ ENDURANCE_TIERS: Final[Dict[str, TierMeta]] = {
     "easy": TierMeta("easy", "Easy, conversational work.", ("easy_effort",)),
     "steady": TierMeta("steady", "Steady, comfortable work.", ("steady_effort",)),
     "quality": TierMeta("quality", "Purposeful quality work.", ("quality_effort",)),
+    "long": TierMeta("long", "Long, patient endurance work.", ("long_effort",)),
 }
 CLIMB_TIERS: Final[Dict[str, TierMeta]] = {
     "technique": TierMeta("technique", "Deliberate movement practice.", ("easy_moves", "skill_focus")),
@@ -115,6 +116,50 @@ def _endurance_road(
     )
 
 
+def scheduled_modality(
+    modality: str,
+    context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
+    from . import counsel_specialists
+
+    if modality == "strength":
+        return counsel_specialists.generic_iron(context)
+    if modality == "rest":
+        return counsel_specialists.mobility(context)
+    if modality == "climb":
+        return _climb(context)
+    if modality not in ("run", "ride", "swim"):
+        raise ValueError(f"No Council candidate builder serves {modality!r}.")
+    history = context.history(modality)
+    candidates = quests.build_endurance_candidates(
+        modality,
+        quests.CandidateHistory(
+            history.session_count,
+            history.median_minutes,
+            history.p80_minutes,
+        ),
+        context.ambition_multiplier,
+    )
+    by_tier = {}
+    for candidate in candidates:
+        tier = (
+            "quality"
+            if candidate.payload["intensity"] == "hard"
+            else str(candidate.payload["kind"]).split("_", 1)[1]
+        )
+        if tier not in by_tier:
+            by_tier[tier] = candidate
+    return tuple(
+        draft_option(
+            by_tier[tier],
+            ENDURANCE_TIERS[tier],
+            history.provenance,
+        )
+        for tier in ("easy", "steady", "quality", "long")
+        if tier in by_tier
+    )
+
+
 def _climb(
     context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[OptionDraft, ...]:
@@ -174,7 +219,10 @@ def finalize(draft: OptionDraft, context: OptionContext) -> Dict[str, pydantic.J
     if context.hard_was_suppressed:
         reasons.append("hard_option_suppressed")
     warning = (
-        context.mode == "self"
+        (
+            context.mode == "self"
+            or (context.mode == "scheduled" and draft.progression is not None)
+        )
         and context.rules_suppress_hard
         and draft.payload["intensity"] == "hard"
     )

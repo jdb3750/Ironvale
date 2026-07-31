@@ -2,7 +2,8 @@ from typing import Dict, Final, Optional
 
 import pydantic
 
-from . import counsel_context, counsel_rules, game
+from . import counsel_context, counsel_rules, game, programs
+from .counsel_schedule import next_planned_slot
 
 
 PRIMARY_CADENCE_DAYS, SECONDARY_CADENCE_DAYS = 2, 4
@@ -95,6 +96,39 @@ def daily_nudge(
     if not settings["counsel_nudge_enabled"]:
         return None
     mode = settings["counsel_mode"]
+    if mode == "scheduled":
+        slot = next_planned_slot(captured)
+        if slot is None:
+            return None
+        if slot.routine is not None:
+            giver = programs.scheduled_routine_giver(slot.routine)
+            focus = "strength" if giver == "strength" else slot.routine
+        else:
+            focus = slot.modality
+            giver = (
+                game.COUNSEL_FOCUS_GIVERS.get(focus)
+                if focus is not None
+                else None
+            )
+        if focus is None or giver not in game.OFFERABLE_GIVERS:
+            return None
+        name = game.GIVERS[giver]["name"]
+        detail = (
+            f"{slot.tier} {focus}"
+            if slot.tier is not None
+            else focus
+        )
+        return {
+            "focus": focus,
+            "giver": giver,
+            "giver_name": name,
+            "days_since": 0,
+            "reason": "schedule",
+            "line": (
+                f"Today's plan points to {name}'s door. "
+                f"The {detail} path is already written."
+            ),
+        }
     practiced = _days_since_practice(captured)
     focus_days = {
         focus: days

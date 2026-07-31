@@ -4,6 +4,7 @@ from typing import Final, Literal, NamedTuple, Optional, Tuple
 
 
 TrainingKind = Literal["run", "ride", "swim", "climb", "iron", "recovery"]
+CounselGameMode = Literal["considered", "self", "scheduled"]
 WellnessFieldName = Literal["hrv", "resting_hr"]
 ACTIVITY_LOOKBACK_DAYS: Final[int] = 60
 LOWER_BODY_SET_GATE: Final[int] = 6
@@ -89,9 +90,18 @@ class WellnessSnapshot(NamedTuple):
     recovery_days: Tuple[RecoveryWellnessDay, ...]
 
 
+class CounselScheduleSlot(NamedTuple):
+    modality: Optional[str]
+    tier: Optional[str]
+    routine: Optional[str]
+    optional: bool
+
+
 class QualifiedTrainingContext(NamedTuple):
     current: datetime
     timezone: str
+    counsel_mode: CounselGameMode
+    schedule_slots: Tuple[CounselScheduleSlot, ...]
     ambition_multiplier: float
     declared_focuses: Tuple[str, ...]
     iron_equipment: Optional[str]

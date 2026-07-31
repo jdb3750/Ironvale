@@ -26,8 +26,7 @@ offer = {
 }
 quest_id = quests.create_quest_from_offer("endurance", offer, None)
 
-# Given: a real Phase 1 quest. When: Phase 2's reserved mode is written directly.
-# Then: storage accepts it while the Phase 1 attribution boundary still refuses it.
+# Given: a real quest. When: Scheduled mode accepts it. Then: storage and attribution agree.
 db.q(
     "INSERT INTO counsel_attributions "
     "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key) "
@@ -42,11 +41,7 @@ stored_mode = db.q(
 ).fetchone()["mode"]
 assert stored_mode == "schedule"
 
-phase_1_rejected = False
-try:
-    counsel.validate_attribution("schedule", ["run:easy"], "run:easy")
-except counsel.AttributionValidationError:
-    phase_1_rejected = True
-assert phase_1_rejected
+attribution = counsel.validate_attribution("schedule", ["run:easy"], "run:easy")
+assert attribution.mode == "schedule"
 
 print("COUNSEL SCHEDULE RESERVATION PASSED")

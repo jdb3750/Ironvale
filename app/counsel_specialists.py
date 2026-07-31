@@ -107,6 +107,32 @@ def _iron_exercises(
     )
 
 
+def generic_iron(
+    context: counsel_context.QualifiedTrainingContext,
+) -> Tuple[OptionDraft, ...]:
+    history = _iron_exercises(context)
+    drafts = tuple(
+        draft_option(
+            quests.build_lift_candidate(
+                quests.LiftCandidateContext(
+                    "strength",
+                    style,
+                    history.focus,
+                    history.exercises,
+                    history.weights,
+                    history.session_count,
+                ),
+            ),
+            IRON_TIERS[style],
+            history.provenance,
+        )
+        for style in ("volume", "circuit", "strength")
+    )
+    if context.iron_equipment is None:
+        return drafts
+    return tuple(with_reason(draft, "equipment_today") for draft in drafts)
+
+
 def iron(
     context: counsel_context.QualifiedTrainingContext,
 ) -> Tuple[OptionDraft, ...]:
@@ -165,32 +191,12 @@ def iron(
                 if context.iron_equipment
                 else draft,
             )
-    history = _iron_exercises(context)
-    drafts = tuple(
-        draft_option(
-            quests.build_lift_candidate(
-                quests.LiftCandidateContext(
-                    "strength",
-                    style,
-                    history.focus,
-                    history.exercises,
-                    history.weights,
-                    history.session_count,
-                ),
-            ),
-            IRON_TIERS[style],
-            history.provenance,
-        )
-        for style in ("volume", "circuit", "strength")
-    )
-    if context.iron_equipment is None:
+    drafts = generic_iron(context)
+    if context.iron_equipment is None or program is None:
         return drafts
-    narrowed = tuple(with_reason(draft, "equipment_today") for draft in drafts)
-    if program is None:
-        return narrowed
     return tuple(
         with_reason(draft, "doctrine_equipment_mismatch")
-        for draft in narrowed
+        for draft in drafts
     )
 
 

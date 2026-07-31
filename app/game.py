@@ -81,7 +81,7 @@ GIVERS = {giver: ownership["display"] for giver, ownership in GIVER_ARCHETYPES.i
 # generate or accept new quests.
 OFFERABLE_GIVERS = ("endurance", "strength", "recovery")
 
-COUNSEL_MODES = ("considered", "self")
+COUNSEL_MODES = ("considered", "self", "scheduled")
 COUNSEL_FOCUSES = ("run", "ride", "swim", "climb", "strength")
 COUNSEL_FOCUS_GIVERS = {
     "run": "endurance",

@@ -4,10 +4,11 @@ from typing import Dict, Final, Literal, NamedTuple, Optional, Sequence, Tuple
 from . import db
 
 
-CounselMode = Literal["counsel", "self"]
+CounselMode = Literal["counsel", "self", "schedule"]
 VALID_ATTRIBUTION_MODES: Final[Dict[str, CounselMode]] = {
     "counsel": "counsel",
     "self": "self",
+    "schedule": "schedule",
 }
 
 
@@ -51,11 +52,14 @@ def validate_attribution(
     chosen_option_key: str,
 ) -> Attribution:
     if not isinstance(mode, str):
-        raise AttributionValidationError("mode", "must be counsel or self")
+        raise AttributionValidationError("mode", "must be counsel, self, or schedule")
     try:
         parsed_mode = VALID_ATTRIBUTION_MODES[mode]
     except KeyError as exc:
-        raise AttributionValidationError("mode", "must be counsel or self") from exc
+        raise AttributionValidationError(
+            "mode",
+            "must be counsel, self, or schedule",
+        ) from exc
     if isinstance(offered_option_keys, str):
         raise AttributionValidationError(
             "offered_option_keys",

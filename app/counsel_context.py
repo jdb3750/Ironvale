@@ -2,11 +2,13 @@ import math
 from datetime import datetime, timedelta
 from typing import Dict, Final, Optional, Tuple
 
-from . import counsel_wellness, db, exercises, game, intervals
+from . import counsel_wellness, db, exercises, game, intervals, programs
 from .counsel_context_model import (
     ACTIVITY_LOOKBACK_DAYS as ACTIVITY_LOOKBACK_DAYS,
     ActivityHistory as ActivityHistory,
     CandidateProvenance as CandidateProvenance,
+    CounselGameMode as CounselGameMode,
+    CounselScheduleSlot as CounselScheduleSlot,
     QualifiedActivity as QualifiedActivity,
     QualifiedLiftSet as QualifiedLiftSet,
     QualifiedTrainingContext as QualifiedTrainingContext,
@@ -148,7 +150,25 @@ def assemble(
     current: Optional[datetime] = None,
 ) -> QualifiedTrainingContext:
     captured = current or game.now()
-    settings = game.get_settings(captured.date().isoformat())
+    settings = game.get_settings(
+        captured.date().isoformat(),
+        programs.schedule_routine_keys(),
+    )
+    schedule = settings["counsel_schedule"]
+    weekday = captured.strftime("%A").lower()
+    raw_slots = schedule.get(weekday, []) if isinstance(schedule, dict) else []
+    slots = tuple(
+        CounselScheduleSlot(
+            slot.get("modality"),
+            slot.get("tier"),
+            slot.get("routine"),
+            slot["optional"],
+        )
+        for slot in raw_slots
+    )
+    mode = settings["counsel_mode"]
+    if mode not in game.COUNSEL_MODES:
+        mode = "considered"
     activities = _qualified_activities(captured)
     lifts = _qualified_lifts(captured)
     movements, weights, sessions, lower_body = summarize_lifts(
@@ -159,6 +179,8 @@ def assemble(
     return QualifiedTrainingContext(
         captured,
         str(captured.tzinfo),
+        mode,
+        slots,
         game.ambition_mult(settings),
         declared_focuses(settings),
         declared_iron_equipment(settings),
