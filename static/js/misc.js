@@ -19,7 +19,7 @@ SCREENS.crank = function () {
   const canPull = canPay && !crankBusy;
   $app().innerHTML = shell(`
     <div class="win crank">
-      <div class="pixel-title" style="font-size: var(--type-title);margin-bottom:8px">THE CRANKWERK</div>
+      <div class="pixel-title" style="margin-bottom:8px">THE CRANKWERK</div>
       <div class="muted">It vends delights for the Menagerie: hats, finery, whole packs of creatures.<br>
         <b style="color:var(--gold-bright)">Grip the lever. Pull it all the way down.</b></div>
       <div class="crank-stage">
@@ -542,11 +542,11 @@ function paintCounselScheduleChooser(focusSelector = '[data-schedule-choice]') {
     : '';
   win.innerHTML = `
     <span class="win-title">${state.day.slice(0, 3).toUpperCase()} · SLOT ${state.index + 1}</span>
-    <button type="button" class="btn small counsel-schedule-chooser-close"
-      aria-label="Close chooser" onclick="G.closeCounselScheduleChooser()">CLOSE</button>
     ${current}
     ${counselScheduleChooserStepHTML(state, slot)}
-    <div class="counsel-schedule-chooser-actions">${back}${filledActions}</div>`;
+    <div class="counsel-schedule-chooser-actions">${back}${filledActions}</div>
+    <button type="button" class="lens-box-close"
+      aria-label="Close chooser" onclick="G.closeCounselScheduleChooser()">&#10005;</button>`;
   hydrateSprites(win);
   requestAnimationFrame(() => {
     win.querySelector(focusSelector)?.focus({ preventScroll: true });
@@ -557,6 +557,11 @@ G.openCounselScheduleChooser = (day, index) => {
   const slots = ensureCounselScheduleDraft()[day];
   if (!slots) return;
   const target = Math.min(index, slots.length);
+  // Slot-editor invariant: + creates the open draft before first paint, so
+  // optional and removal controls always describe state that already exists.
+  if (target === slots.length) {
+    counselScheduleWriteSlot(day, target, { optional: false });
+  }
   const overlay = showModal(
     '<div class="win counsel-surface counsel-schedule-chooser"></div>',
     { backdropClose: false },
@@ -564,7 +569,6 @@ G.openCounselScheduleChooser = (day, index) => {
   counselScheduleChooser = {
     day,
     index: target,
-    isNew: target === slots.length,
     step: 'root',
     category: counselScheduleChooserCategory(slots[target]),
     modality: slots[target]?.modality || null,
@@ -585,13 +589,6 @@ G.openCounselScheduleChooser = (day, index) => {
 G.closeCounselScheduleChooser = () => {
   const state = counselScheduleChooser;
   if (!state) return;
-  if (state.isNew && state.step === 'root') {
-    state.index = counselScheduleWriteSlot(
-      state.day,
-      state.index,
-      { optional: false },
-    );
-  }
   counselScheduleChooser = null;
   G.closeOverlay(state.overlay, () => {
     refreshCounselScheduleEditor(state.day, state.index);
