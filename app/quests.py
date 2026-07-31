@@ -13,15 +13,14 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, Optional, Tuple
 
 import pydantic
 
-from . import counsel_wellness, db, exercises, items, raid
+from . import db, exercises, items, raid
 from .counsel_context_model import (
     RecoveryWellnessDay,
     WellnessSnapshot,
 )
 from .game import (
-    CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVER_ARCHETYPES, GIVERS, RUN_TYPES,
-    ambition_mult, apply_xp, category, get_char, last_weight,
-    modality_history, muscle_recency, now, now_iso, run_history, save_char, today,
+    CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, RUN_TYPES, apply_xp, category,
+    get_char, now, now_iso, save_char, today,
 )
 
 if TYPE_CHECKING:
@@ -43,8 +42,8 @@ RUN_FLAVOR = {
 }
 
 # Fenn serves every endurance road, wet and turning ones included — a
-# profile that swims or rides sees those quests on his board (see
-# _endurance_mix). Same voice, different weather.
+# profile that swims or rides sees those quests on his board. Same voice,
+# different weather.
 SWIM_FLAVOR = {
     "easy":      ["The Quiet Water", "The Miller's Pond Round", "Soft Strokes Home"],
     "steady":    ["The Ferryman's Wage", "Crossing the Grey Mere", "The Long Stroke"],
@@ -65,7 +64,6 @@ CLIMB_FLAVOR = {
     "technique": ["Quiet Feet", "The Spider's Lesson", "Statecraft of the Foothold"],
 }
 
-ENDURANCE_MODALITIES = ("run", "ride", "swim")
 ENDURANCE_FLAVOR = {"run": RUN_FLAVOR, "ride": RIDE_FLAVOR, "swim": SWIM_FLAVOR}
 
 LIFT_FLAVOR = ["The Iron Communion", "Trial of the Bell", "Grunhilda's Reckoning", "The Bell Tolls for Thee", "Rites of the Forge-Daughter"]
@@ -96,14 +94,6 @@ class LiftCandidateContext(NamedTuple):
     exercises: Tuple[str, ...]
     weights: Tuple[Optional[float], ...]
     iron_session_count: int
-
-
-def _history_context(history) -> CandidateHistory:
-    return CandidateHistory(
-        session_count=history["n"],
-        median_minutes=history["median"],
-        p80_minutes=history["p80"],
-    )
 
 
 def _endurance_candidate(
@@ -214,81 +204,6 @@ def build_endurance_candidates(
     return tuple(_endurance_candidate(modality, payload, sizing) for payload in pool)
 
 
-def _run_pool(rng):
-    del rng
-    return [dict(candidate.payload) for candidate in build_endurance_candidates(
-        "run", _history_context(run_history()), ambition_mult()
-    )]
-
-
-def _swim_pool(rng):
-    del rng
-    return [dict(candidate.payload) for candidate in build_endurance_candidates(
-        "swim", _history_context(modality_history("swim", default_median=20)), ambition_mult()
-    )]
-
-
-def _ride_pool(rng):
-    del rng
-    return [dict(candidate.payload) for candidate in build_endurance_candidates(
-        "ride", _history_context(modality_history("ride", default_median=40)), ambition_mult()
-    )]
-
-
-def _endurance_mix():
-    """Split Fenn's three offer slots among the endurance modalities this
-    profile actually practices (last 28 days). Every practiced modality gets
-    at least one slot (up to three); leftover slots go to the most practiced.
-    Cold start — no endurance history at all — deals the classic all-run
-    board. Counts are deterministic per day, so the daily offer cache stays
-    stable regardless of how often this runs."""
-    counts = {m: modality_history(m, days=28)["n"] for m in ENDURANCE_MODALITIES}
-    practiced = [m for m in ENDURANCE_MODALITIES if counts[m] > 0]
-    if not practiced:
-        return {"run": 3}
-    practiced.sort(key=lambda m: -counts[m])
-    practiced = practiced[:3]
-    mix = {m: 1 for m in practiced}
-    for _ in range(3 - len(practiced)):
-        mix[practiced[0]] += 1
-    return mix
-
-
-def gen_endurance_offers(rng):
-    pools = {"run": _run_pool, "ride": _ride_pool, "swim": _swim_pool}
-    offers = []
-    for m, slots in _endurance_mix().items():
-        pool = pools[m](rng)
-        offers += rng.sample(pool, min(slots, len(pool)))
-    rng.shuffle(offers)
-    for o in offers:
-        o["title"] = rng.choice(ENDURANCE_FLAVOR[o["modality"]][o["kind"].split("_")[1]])
-        o["giver"] = "endurance"
-        _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
-    return offers
-
-
-def _pick_exercises(rng, names, focus_groups, count=4):
-    """2 exercises hitting focus groups, then fill with variety."""
-    chosen = []
-
-    def hits(ex, g):
-        return g in exercises.EXERCISES[ex]["groups"]
-
-    for g in focus_groups:
-        cands = [n for n in names if hits(n, g) and n not in chosen]
-        if cands:
-            chosen.append(rng.choice(cands))
-    rest = [n for n in names if n not in chosen]
-    rng.shuffle(rest)
-    while len(chosen) < count and rest:
-        nxt = rest.pop()
-        covered = {g for c in chosen for g in exercises.EXERCISES[c]["groups"]}
-        if set(exercises.EXERCISES[nxt]["groups"]) - covered or len(rest) == 0:
-            chosen.append(nxt)
-    return chosen[:count]
-
-
 def build_lift_candidate(context: LiftCandidateContext) -> QuestCandidate:
     routine = []
     for index, name in enumerate(context.exercises):
@@ -379,60 +294,8 @@ def build_climb_candidates(
     return tuple(candidates)
 
 
-def _climb_pool(rng):
-    del rng
-    return [dict(candidate.payload) for candidate in build_climb_candidates(
-        _history_context(modality_history("climb", default_median=60)), ambition_mult()
-    )]
-
-
-def gen_climb_offers(rng):
-    offers = _climb_pool(rng)
-    rng.shuffle(offers)
-    for o in offers:
-        o["giver"] = "bram"
-        o["title"] = rng.choice(CLIMB_FLAVOR[str(o["kind"]).split("_")[1]])
-        _price_offer(o, minutes=o["target_minutes"], intensity=o["intensity"])
-    return offers
-
-
-def gen_lift_offers(rng):
-    rec = muscle_recency()
-    # stale-first: groups untrained the longest get priority
-    ranked = sorted(exercises.GROUPS, key=lambda g: -rec[g]["days_since"])
-    offers = []
-    styles: list[LiftStyle] = ["strength", "volume", "circuit"]
-    rng.shuffle(styles)
-    focus_sets = [ranked[0:2], ranked[1:3], [ranked[0], ranked[3]]]
-    iron_session_count = len(db.q(
-        "SELECT DISTINCT substr(ts, 1, 10) AS day FROM lift_sets WHERE ts >= ?",
-        ((now() - timedelta(days=60)).date().isoformat(),),
-    ).fetchall())
-    for i, equipment in enumerate(GIVER_ARCHETYPES["strength"]["modalities"]):
-        style = styles[i % len(styles)]
-        focus = focus_sets[i % len(focus_sets)]
-        names = [
-            name for name, exercise in exercises.EXERCISES.items()
-            if exercise["equipment"] == equipment
-        ]
-        chosen = _pick_exercises(rng, names, focus)
-        candidate = build_lift_candidate(LiftCandidateContext(
-            giver="strength",
-            style=style,
-            focus=tuple(focus),
-            exercises=tuple(chosen),
-            weights=tuple(
-                None if equipment == "bodyweight" else last_weight(name)
-                for name in chosen
-            ),
-            iron_session_count=iron_session_count,
-        ))
-        o = dict(candidate.payload)
-        o["title"] = rng.choice(LIFT_FLAVOR)
-        offers.append(o)
-    return offers
-
-
+# Mobility has no Council candidate builder; counsel_specialists.mobility calls
+# this legacy-shaped generator directly, so it remains live after its neighbors.
 def gen_mobility_offers(rng):
     sessions = [
         ("Stretch & Breathe", 15, "15 min: hip openers, couch stretch, hamstring floss, deep breathing."),
@@ -547,24 +410,6 @@ def _rest_writ_signal(
     return None
 
 
-def rest_writ_signal():
-    """Read the omens. Returns a list of in-world reason strings when recovery
-    data says today should be a rest day, else None.
-
-    Fires on any ONE strong signal or TWO weak ones:
-      HRV week-avg vs prior baseline:  strong <= -8%,  weak <= -5%
-      RHR week-avg vs prior baseline:  strong >= +4bpm, weak >= +2.5bpm
-      sleep: last night < 5h (strong); 7-night avg < 6h (strong) / < 6.5h (weak)
-
-    Requires a wellness reading within the last 2 days — no writ without
-    fresh evidence (stale data must never spawn writs forever)."""
-    current = now()
-    return _rest_writ_signal(
-        counsel_wellness.qualified_recovery_days(current),
-        current,
-    )
-
-
 def _rest_writ_offer(
     reasons: Optional[list[str]],
     writ_day: str,
@@ -598,20 +443,6 @@ def rest_writ_offer_for_context(
         _rest_writ_signal(wellness.recovery_days, current),
         writ_day,
     )
-
-
-def rest_writ_offer():
-    """Elowen's leading offer when the omens call for rest, else None.
-    At most one writ per calendar day, in ANY status — an abandoned or broken
-    writ means the player chose to train; the willow does not nag."""
-    if db.q(
-        "SELECT 1 FROM quests WHERE kind='rest' AND accepted_at LIKE ? LIMIT 1",
-        (today() + "%",),
-    ).fetchone():
-        return None
-    reasons = rest_writ_signal()
-    writ_day = today()
-    return _rest_writ_offer(reasons, writ_day)
 
 
 def _writ_hard_activity(quest):
@@ -691,46 +522,6 @@ def ack_writ_notice(ts=None):
     return n
 
 
-def get_offers(giver, reroll=False):
-    key = f"offers:archetype-v2:{giver}:{today()}"
-    bump_key = f"offerbump:{giver}:{today()}"
-    bump = db.kv_get(bump_key, 0)
-    if reroll:
-        bump += 1
-        db.kv_set(bump_key, bump)
-        db.kv_del(key)
-    cached = db.kv_get(key)
-    if cached is None:
-        rng = random.Random(f"{giver}:{today()}:{bump}")
-        if giver == "endurance":
-            cached = gen_endurance_offers(rng)
-        elif giver == "strength":
-            cached = gen_lift_offers(rng)
-        elif giver == "bram":
-            cached = gen_climb_offers(rng)
-        elif giver == "recovery":
-            cached = gen_mobility_offers(rng)
-        else:
-            raise ValueError("unknown giver")
-        for i, o in enumerate(cached):
-            o["offer_id"] = i
-        db.kv_set(key, cached)
-    # an active doctrine's next session leads the offers (built fresh — weights progress)
-    if giver == "strength":
-        from . import programs
-        po = programs.build_program_offer(giver)
-        if po:
-            po["offer_id"] = 99
-            return [po] + cached[:2]
-    # a rest writ leads Elowen's offers (built fresh — the omens change with each sync)
-    if giver == "recovery":
-        ro = rest_writ_offer()
-        if ro:
-            ro["offer_id"] = 98
-            return [ro] + cached[:2]
-    return cached
-
-
 # ---------------- quest lifecycle ----------------
 
 def active_quests():
@@ -752,7 +543,7 @@ def _quest_row(r):
 def create_quest_from_offer(
     giver: str,
     offer: dict[str, pydantic.JsonValue],
-    attribution: Optional["Attribution"] = None,
+    attribution: Optional["Attribution"],
 ) -> int:
     from . import counsel_attribution
 
@@ -777,17 +568,6 @@ def create_quest_from_offer(
         db.rollback()
         raise
     return quest_id
-
-
-def accept_offer(giver, offer_id):
-    for q_ in active_quests():
-        if q_["giver"] == giver:
-            raise ValueError(f"You already carry a quest from {GIVERS[giver]['name']}. Finish or abandon it first.")
-    offers = get_offers(giver)
-    offer = next((o for o in offers if o["offer_id"] == offer_id), None)
-    if not offer:
-        raise ValueError("That offer has faded.")
-    return create_quest_from_offer(giver, offer)
 
 
 def abandon_quest(quest_id):
