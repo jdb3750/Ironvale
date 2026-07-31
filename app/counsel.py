@@ -11,6 +11,7 @@ from . import (
 )
 from .counsel_schedule import (
     considered_drafts as considered_schedule_drafts,
+    current_slot as current_schedule_slot,
     resolve as resolve_schedule,
 )
 from .counsel_rules import (
@@ -118,6 +119,11 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
             )
     context = counsel_context.assemble()
     mode = context.counsel_mode
+    schedule_slot = (
+        current_schedule_slot(giver, context)
+        if mode == "scheduled"
+        else None
+    )
     current = _giver_options(giver, mode, context).options
     chosen = next(
         (
@@ -139,4 +145,6 @@ def accept_current_option(giver: str, identity: OptionIdentity) -> int:
         tuple(str(option["option_key"]) for option in current),
         str(chosen["option_key"]),
     )
+    if schedule_slot is not None:
+        attribution = attribution._replace(optional=schedule_slot.optional)
     return quests.create_quest_from_offer(giver, chosen, attribution)

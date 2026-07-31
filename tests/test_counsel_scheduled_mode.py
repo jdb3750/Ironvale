@@ -194,24 +194,26 @@ def scheduled_long_fallback_boundary() -> None:
 
 
 def scheduled_attribution() -> None:
-    # Given: scheduled work. When: it is accepted. Then: the server records schedule attribution.
-    new_profile("scheduled-attribution")
-    write_fresh_sync()
-    save_plan([{"modality": "run", "tier": "easy", "optional": False}])
-    current = offers("endurance")
-    accepted = client.post(
-        "/api/quests/accept",
-        json={
-            "giver": "endurance",
-            "option_key": current[0].option_key,
-            "mode": "self",
-        },
-    )
-    assert accepted.status_code == 200
-    quest_id = AcceptanceResponse.model_validate(accepted.json()).quest_id
-    attribution = counsel.get_attribution(quest_id)
-    assert attribution is not None
-    assert attribution.mode == "schedule"
+    # Given: required and optional scheduled work. When accepted, the server captures each oath.
+    for optional in (False, True):
+        new_profile(f"scheduled-attribution-{optional}")
+        write_fresh_sync()
+        save_plan([{"modality": "run", "tier": "easy", "optional": optional}])
+        current = offers("endurance")
+        accepted = client.post(
+            "/api/quests/accept",
+            json={
+                "giver": "endurance",
+                "option_key": current[0].option_key,
+                "mode": "self",
+            },
+        )
+        assert accepted.status_code == 200
+        quest_id = AcceptanceResponse.model_validate(accepted.json()).quest_id
+        attribution = counsel.get_attribution(quest_id)
+        assert attribution is not None
+        assert attribution.mode == "schedule"
+        assert attribution.optional is optional
 
 
 def prior_modes_ignore_the_plan() -> None:

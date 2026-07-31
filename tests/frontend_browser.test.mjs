@@ -1454,6 +1454,91 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
   }
 });
 
+test('weekly planner reports kept oaths without grading a poor week', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  const renderAdherence = async (done, planned) => {
+    await page.evaluate(async ({ completed, total }) => {
+      const days = S.state.counsel_schedule_options.days;
+      S.state.settings.counsel_schedule = Object.fromEntries(days.map((day, index) => [
+        day,
+        index < 5
+          ? [{ modality: 'run', tier: 'easy', optional: false }]
+          : [],
+      ]));
+      S.state.counsel_schedule_adherence = completed === null
+        ? null
+        : { done: completed, planned: total };
+      counselScheduleDraft = null;
+      await render();
+    }, { completed: done, total: planned });
+    await page.locator('#counsel-schedule').waitFor();
+  };
+  try {
+    await createGiverProfile(page, 'scheduled');
+    await page.evaluate(() => nav('settings'));
+    await page.locator('#counsel-schedule').waitFor();
+
+    await renderAdherence(5, 5);
+    const good = page.locator('.counsel-schedule-adherence');
+    assert.equal(await good.innerText(), 'Sworn paths kept this week: 5 of 5.');
+    const goodPresentation = await good.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        className: element.className,
+        background: style.backgroundColor,
+        border: style.border,
+        color: style.color,
+        fontWeight: style.fontWeight,
+      };
+    });
+    assert.doesNotMatch(
+      await page.locator('#counsel-schedule').innerText(),
+      /\b(?:CTL|ATL|HRV|streak|weight)\b/i,
+    );
+    if (EVIDENCE_DIR) {
+      await page.locator('#counsel-schedule').screenshot({
+        path: path.join(EVIDENCE_DIR, 'schedule-adherence-good-375.png'),
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#counsel-schedule').screenshot({
+        path: path.join(EVIDENCE_DIR, 'schedule-adherence-good-1280.png'),
+      });
+    }
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await renderAdherence(1, 5);
+    const poor = page.locator('.counsel-schedule-adherence');
+    assert.equal(await poor.innerText(), 'Sworn paths kept this week: 1 of 5.');
+    const poorPresentation = await poor.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        className: element.className,
+        background: style.backgroundColor,
+        border: style.border,
+        color: style.color,
+        fontWeight: style.fontWeight,
+      };
+    });
+    assert.deepEqual(poorPresentation, goodPresentation);
+    assert.doesNotMatch(await poor.getAttribute('class'), /danger|good|poor|success|warning/);
+    if (EVIDENCE_DIR) {
+      await page.locator('#counsel-schedule').screenshot({
+        path: path.join(EVIDENCE_DIR, 'schedule-adherence-poor-375.png'),
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.locator('#counsel-schedule').screenshot({
+        path: path.join(EVIDENCE_DIR, 'schedule-adherence-poor-1280.png'),
+      });
+    }
+
+    await renderAdherence(null, null);
+    assert.equal(await page.locator('.counsel-schedule-adherence').count(), 0);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('Hall tapestry and sequencer share promoted activity colours', async () => {
   const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
   try {
@@ -3166,7 +3251,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '116'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '117'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

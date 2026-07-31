@@ -173,7 +173,7 @@ def schema_is_lean():
     ok("schema adds only counsel_attributions", tables == {"counsel_attributions"})
     ok("attribution schema stores only lean fields",
        tuple(columns) == ("quest_id", "mode", "accepted_at",
-                          "offered_option_keys", "chosen_option_key"))
+                          "offered_option_keys", "chosen_option_key", "optional"))
     ok("quest identity is unique", columns["quest_id"]["pk"] == 1)
     ok("quest identity references quests",
        len(foreign_keys) == 1 and foreign_keys[0]["table"] == "quests"
@@ -219,7 +219,8 @@ def valid_create_is_atomic():
        and record.accepted_at == ACCEPTED_AT
        and quest_row["accepted_at"] == record.accepted_at
        and record.offered_option_keys == ("run:easy", "run:steady")
-       and record.chosen_option_key == "run:steady")
+       and record.chosen_option_key == "run:steady"
+       and record.optional is None)
     emit("CREATED ATTRIBUTION", {
         "quest_id": quest_id, "linked_quest_rows": linked_quests,
         "mode": raw["mode"], "accepted_at": raw["accepted_at"],

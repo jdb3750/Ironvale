@@ -391,6 +391,10 @@ function counselScheduleCellHTML(day, row, slot, addable) {
 function counselScheduleEditorHTML() {
   const schedule = ensureCounselScheduleDraft();
   const config = S.state.counsel_schedule_options;
+  const adherence = S.state.counsel_schedule_adherence;
+  const adherenceCaption = adherence
+    ? `<div class="counsel-schedule-adherence">Sworn paths kept this week: ${adherence.done} of ${adherence.planned}.</div>`
+    : '';
   const rowCount = Math.max(...config.days.map(day => schedule[day].length), 0) + 1;
   return `<fieldset id="counsel-schedule" class="counsel-schedule">
     <legend>Weekly template</legend>
@@ -411,6 +415,7 @@ function counselScheduleEditorHTML() {
         </div>
       `).join('')}
     </div>
+    ${adherenceCaption}
     <button type="button" class="btn small counsel-schedule-save" onclick="G.saveCounselSchedule()">SAVE WEEKLY PLAN</button>
   </fieldset>`;
 }
