@@ -189,19 +189,20 @@ entries are open work with the removal path worked out.
   that no longer exists. **The contract is: the writer accepts any name; readers
   must tolerate unknown ones.** Documented here rather than enforced in code.
 
-**Stale declarations (inert now, traps later)**
-
-- **Two `bram` leftovers in the doctrine code.** `programs.py:77` defaults a custom
-  routine's giver to `"bram"` — a retired giver who offers nothing, so a routine
-  created without an explicit giver would be unofferable. Unreachable today only
-  because the UI always passes one. And `/api/programs` in `main.py` builds its
-  `active` map over `("strength", "bram")`, querying a doctrine slot for a giver
-  who cannot hold one. Both are rename-era residue: before the three-giver collapse
-  `strength` *was* Bram and legitimately took doctrines. Neither breaks anything;
-  both are declarations that outlived their meaning and will mislead the next
-  reader. Surfaced while briefing Scheduled seam A-prime.
-
 **Resolved stale declarations**
+
+- **DONE v0.30.1 — Ser Bram's literals no longer call him a lifter.** Larger than
+  the two entries first logged: the sweep found seven places two archetype changes
+  behind. He gave iron until Phase 0 handed it to Grunhilda, then climbing until the
+  collapse gave that to Fenn — but the code still queried his doctrine slot,
+  measured his quests against lifting sets they could never accrue, filed them as
+  weight training, paid them in strength, defaulted ownerless routines to him, and
+  showed doctrine affordances on his retired board.
+
+  **One reference stays on purpose:** `DEED_GIVER_BY_CATEGORY` still credits an
+  *unsworn climb* to Bram. §0c retired him from setting tasks, not from noticing,
+  and the flavour was already written for it. A comment marks it at the mapping and
+  a test guards it — **do not "clean it up" in a future sweep.**
 
 - **DONE v0.22.4 — Bram's registry entry is retired and owns no modalities.**
 - **DONE v0.22.4 — Bram's title and subtitle both read "The Old Knight at
