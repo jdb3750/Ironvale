@@ -354,15 +354,24 @@ function counselScheduleSlotSprite(slot) {
   return COUNSEL_SCHEDULE_SPRITES[slot.modality] || null;
 }
 
-function counselScheduleCellHTML(day, row, slot) {
+function counselScheduleColorModality(slot) {
+  if (slot.routine) return 'strength';
+  return slot.modality === 'rest' ? 'mobility' : slot.modality;
+}
+
+function counselScheduleCellHTML(day, row, slot, addable) {
   const dayName = counselScheduleDisplayName(day);
-  if (!slot) {
+  if (!slot && addable) {
     return `<button type="button" class="btn small counsel-schedule-cell counsel-schedule-cell-empty"
       data-schedule-cell="${day}-${row}" data-schedule-slot-shape="empty"
       aria-label="${dayName} slot ${row + 1}: add a path"
       onclick="G.openCounselScheduleChooser('${day}',${row})">+</button>`;
   }
+  if (!slot) {
+    return `<span class="counsel-schedule-cell-gap" data-schedule-gap="${day}-${row}" aria-hidden="true"></span>`;
+  }
   const shape = counselScheduleSlotShape(slot);
+  const modality = counselScheduleColorModality(slot);
   const sprite = counselScheduleSlotSprite(slot);
   const glyph = sprite
     ? spriteTag(sprite, 24)
@@ -371,7 +380,7 @@ function counselScheduleCellHTML(day, row, slot) {
     ? '<span class="counsel-schedule-optional-mark" data-schedule-optional-mark aria-hidden="true">O</span>'
     : '';
   return `<button type="button" class="btn small counsel-schedule-cell counsel-schedule-cell-filled"
-    data-schedule-cell="${day}-${row}" data-schedule-slot-shape="${shape}"
+    data-schedule-cell="${day}-${row}" data-schedule-slot-shape="${shape}" data-schedule-modality="${modality || ''}"
     aria-label="${dayName} slot ${row + 1}: ${esc(counselScheduleSlotLabel(slot))}"
     onclick="G.openCounselScheduleChooser('${day}',${row})">
       ${optional}${glyph}
@@ -383,7 +392,7 @@ function counselScheduleEditorHTML() {
   const schedule = ensureCounselScheduleDraft();
   const config = S.state.counsel_schedule_options;
   const rowCount = Math.max(...config.days.map(day => schedule[day].length), 0) + 1;
-  return `<fieldset id="counsel-schedule" class="counsel-schedule counsel-block">
+  return `<fieldset id="counsel-schedule" class="counsel-schedule">
     <legend>Weekly template</legend>
     <div class="counsel-schedule-grid" aria-label="Weekly counsel plan">
       <div class="counsel-schedule-grid-head">
@@ -393,7 +402,12 @@ function counselScheduleEditorHTML() {
       ${Array.from({ length: rowCount }, (_, row) => `
         <div class="counsel-schedule-grid-row" data-schedule-row="${row}">
           <span class="counsel-schedule-row-heading" aria-label="Slot ${row + 1}">${row + 1}</span>
-          ${config.days.map(day => counselScheduleCellHTML(day, row, schedule[day][row])).join('')}
+          ${config.days.map(day => counselScheduleCellHTML(
+            day,
+            row,
+            schedule[day][row],
+            row === schedule[day].length,
+          )).join('')}
         </div>
       `).join('')}
     </div>

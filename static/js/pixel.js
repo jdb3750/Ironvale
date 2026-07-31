@@ -930,12 +930,13 @@ function drawSprite(canvas, key) {
   const rows = s.r, h = rows.length, w = rows[0].length;
   const scale = Math.floor(canvas.width / w) || 1;
   const ctx = canvas.getContext('2d');
+  const tint = getComputedStyle(canvas).getPropertyValue('--sprite-tint').trim();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const c = s.p[rows[y][x]];
       if (!c) continue;
-      ctx.fillStyle = c;
+      ctx.fillStyle = tint || c;
       ctx.fillRect(x * scale, y * scale, scale, scale);
     }
   }
