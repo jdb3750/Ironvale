@@ -24,24 +24,16 @@ offer = {
     "gold": 12,
     "vigor": 1,
 }
-quest_id = quests.create_quest_from_offer("endurance", offer, None)
+attribution = counsel.validate_attribution("schedule", ["run:easy"], "run:easy")
+quest_id = quests.create_quest_from_offer("endurance", offer, attribution)
 
 # Given: a real quest. When: Scheduled mode accepts it. Then: storage and attribution agree.
-db.q(
-    "INSERT INTO counsel_attributions "
-    "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key) "
-    "VALUES (?, 'schedule', '2026-07-26T12:00:00+00:00', "
-    "'[\"run:easy\"]', 'run:easy')",
-    (quest_id,),
-)
-db.commit()
 stored_mode = db.q(
     "SELECT mode FROM counsel_attributions WHERE quest_id=?",
     (quest_id,),
 ).fetchone()["mode"]
 assert stored_mode == "schedule"
 
-attribution = counsel.validate_attribution("schedule", ["run:easy"], "run:easy")
 assert attribution.mode == "schedule"
 
 print("COUNSEL SCHEDULE RESERVATION PASSED")

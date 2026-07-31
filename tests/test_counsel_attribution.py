@@ -6,6 +6,7 @@ import sqlite3
 import sys
 import tempfile
 from datetime import datetime, timezone
+from typing import get_args, get_type_hints
 
 from fastapi.testclient import TestClient
 
@@ -263,6 +264,19 @@ def valid_create_is_atomic():
     })
 
 
+def quest_creation_requires_attribution():
+    # Given: the shared quest-creation boundary. When: its runtime type hints
+    # are resolved. Then: attribution cannot admit None.
+    hints = get_type_hints(
+        quests.create_quest_from_offer,
+        globalns={**vars(quests), "Attribution": counsel.Attribution},
+    )
+    ok(
+        "quest creation requires attribution",
+        type(None) not in get_args(hints["attribution"]),
+    )
+
+
 def malformed_inputs_leave_no_rows():
     # Given: malformed mode, offered-key, and chosen-key inputs. When: each is
     # validated for creation. Then: it is rejected with no committed rows.
@@ -347,12 +361,16 @@ def malformed_stored_json_is_typed():
     # Given: a corrupt historical offered-key payload. When: it is queried.
     # Then: the persistence seam reports a typed data error, not raw JSON.
     reset_profile("corrupt-json")
-    quest_id = quests.create_quest_from_offer("endurance", fresh_offer(), None)
+    attribution = counsel.validate_attribution(
+        "counsel",
+        ["run:easy"],
+        "run:easy",
+    )
+    quest_id = quests.create_quest_from_offer("endurance", fresh_offer(), attribution)
     db.q(
-        "INSERT INTO counsel_attributions "
-        "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key) "
-        "VALUES (?, 'counsel', ?, 'not-json', 'run:easy')",
-        (quest_id, ACCEPTED_AT),
+        "UPDATE counsel_attributions SET offered_option_keys='not-json' "
+        "WHERE quest_id=?",
+        (quest_id,),
     )
     db.commit()
     rejected = False
@@ -403,6 +421,7 @@ def run_scenario(label, scenario):
 
 run_scenario("lean schema", schema_is_lean)
 run_scenario("valid atomic create", valid_create_is_atomic)
+run_scenario("required attribution type", quest_creation_requires_attribution)
 run_scenario("malformed input rollback", malformed_inputs_leave_no_rows)
 run_scenario("duplicate attribution", duplicate_attribution_preserves_original)
 run_scenario("defensive query", malformed_stored_json_is_typed)

@@ -543,7 +543,7 @@ def _quest_row(r):
 def create_quest_from_offer(
     giver: str,
     offer: dict[str, pydantic.JsonValue],
-    attribution: Optional["Attribution"],
+    attribution: "Attribution",
 ) -> int:
     from . import counsel_attribution
 
@@ -557,8 +557,7 @@ def create_quest_from_offer(
         quest_id = cursor.lastrowid
         if quest_id is None:
             raise sqlite3.IntegrityError("quest insert did not return an id")
-        if attribution is not None:
-            counsel_attribution.insert_attribution(quest_id, accepted_at, attribution)
+        counsel_attribution.insert_attribution(quest_id, accepted_at, attribution)
         db.q(
             "INSERT INTO ledger (ts, kind, text) VALUES (?, 'quest', ?)",
             (now_iso(), f"Accepted quest: {offer['title']}"),
