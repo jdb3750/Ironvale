@@ -364,13 +364,24 @@ test('global type tokens drive text roles without scanlines or focus zoom', asyn
           body: root.getPropertyValue('--type-body').trim(),
           title: root.getPropertyValue('--type-title').trim(),
           form: root.getPropertyValue('--type-form').trim(),
+          displayTitle: root.getPropertyValue('--type-display-title').trim(),
+          displayGate: root.getPropertyValue('--type-display-gate').trim(),
+          displayCeremony: root.getPropertyValue('--type-display-ceremony').trim(),
+          displayDeath: root.getPropertyValue('--type-display-death').trim(),
         },
         body: read('body'),
         button: read('.settings-tabs .btn'),
         input: read('#set-name'),
         title: read('.win-title'),
+        logo: read('.hdr .pixel-title'),
         helper: read('.counsel-help'),
         overlay: getComputedStyle(document.body, '::after').backgroundImage,
+        quantaSizes: [...document.querySelectorAll('*')]
+          .map(element => getComputedStyle(element))
+          .filter(style => style.fontFamily.includes('quanta-strike'))
+          .map(style => style.fontSize)
+          .filter((size, index, sizes) => sizes.indexOf(size) === index)
+          .sort(),
       };
     });
     const scaleAfterFocus = await page.evaluate(() => window.visualViewport?.scale || 1);
@@ -397,6 +408,10 @@ test('global type tokens drive text roles without scanlines or focus zoom', asyn
       body: '12px',
       title: '14px',
       form: '16px',
+      displayTitle: '26px',
+      displayGate: '22px',
+      displayCeremony: '18px',
+      displayDeath: '26px',
     });
     assert.match(settingsStyles.body.family, /quanta-strike-12/);
     assert.equal(settingsStyles.body.size, '12px');
@@ -408,8 +423,15 @@ test('global type tokens drive text roles without scanlines or focus zoom', asyn
     assert.equal(settingsStyles.input.weight, '400');
     assert.match(settingsStyles.title.family, /quanta-strike-14/);
     assert.equal(settingsStyles.title.size, '14px');
+    assert.match(settingsStyles.logo.family, /PressStart/);
+    assert.equal(settingsStyles.logo.size, '26px');
     assert.match(settingsStyles.helper.family, /quanta-strike-12/);
     assert.equal(settingsStyles.helper.size, '12px');
+    assert.equal(
+      settingsStyles.quantaSizes.every(size => ['10px', '12px', '14px', '16px'].includes(size)),
+      true,
+      JSON.stringify(settingsStyles.quantaSizes),
+    );
     assert.match(giverStyles.dialogue.family, /quanta-strike-14/);
     assert.equal(giverStyles.dialogue.size, '14px');
     assert.match(giverStyles.fine.family, /quanta-strike-10/);
@@ -420,6 +442,195 @@ test('global type tokens drive text roles without scanlines or focus zoom', asyn
     assert.doesNotMatch(settingsStyles.overlay, /repeating-linear-gradient/);
     assert.match(settingsStyles.overlay, /radial-gradient/);
     assert.equal(scaleAfterFocus, scaleBeforeFocus);
+
+    const displayFixture = await page.evaluate(() => {
+      const fixture = document.createElement('div');
+      fixture.innerHTML = '<div class="ceremony"><h2>QUEST COMPLETE</h2></div><div class="youdied">YOU DIED</div>';
+      document.body.appendChild(fixture);
+      const describe = selector => {
+        const style = getComputedStyle(fixture.querySelector(selector));
+        return { family: style.fontFamily, size: style.fontSize };
+      };
+      const result = {
+        ceremony: describe('.ceremony h2'),
+        death: describe('.youdied'),
+      };
+      fixture.remove();
+      return result;
+    });
+    assert.match(displayFixture.ceremony.family, /PressStart/);
+    assert.equal(displayFixture.ceremony.size, '18px');
+    assert.match(displayFixture.death.family, /PressStart/);
+    assert.equal(displayFixture.death.size, '26px');
+
+    const styleSource = await readFile(path.join(ROOT, 'static/style.css'), 'utf8');
+    const displayRule = selector => {
+      const start = styleSource.indexOf(`${selector} {`);
+      return start < 0 ? '' : styleSource.slice(start, styleSource.indexOf('}', start) + 1);
+    };
+    assert.match(displayRule('.pixel-title'), /font-size:\s*var\(--type-display-title\)/);
+    assert.match(displayRule('.ceremony h2'), /font-size:\s*var\(--type-display-ceremony\)/);
+    assert.match(displayRule('.youdied'), /font-size:\s*var\(--type-display-death\)/);
+    assert.doesNotMatch(displayRule('.pixel-title'), /--type-title/);
+    assert.doesNotMatch(displayRule('.ceremony h2'), /--type-title/);
+    assert.doesNotMatch(displayRule('.youdied'), /--type-title/);
+
+    const gateContext = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    try {
+      const gatePage = await gateContext.newPage();
+      await gatePage.goto(BASE_URL);
+      const gateLogo = await gatePage.locator('.pixel-title').evaluate(element => {
+        const style = getComputedStyle(element);
+        return { family: style.fontFamily, size: style.fontSize };
+      });
+      assert.match(gateLogo.family, /PressStart/);
+      assert.equal(gateLogo.size, '22px');
+    } finally {
+      await gateContext.close();
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('weekly planner chooser opens a complete slot editor with a readable selected state', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
+  const contrastRatio = (foreground, background) => {
+    const parse = value => value.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number);
+    const luminance = value => parse(value)
+      .map(channel => channel / 255)
+      .map(channel => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
+      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const foregroundLuminance = luminance(foreground);
+    const backgroundLuminance = luminance(background);
+    return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+      / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+  };
+  try {
+    await createGiverProfile(page, 'considered');
+    await page.evaluate(() => nav('settings'));
+    const schedule = page.locator('#counsel-schedule');
+    await schedule.waitFor();
+
+    if (EVIDENCE_DIR) {
+      await page.locator('.hdr-brand').screenshot({
+        path: path.join(EVIDENCE_DIR, 'weekly-planner-logo-375.png'),
+      });
+    }
+
+    await schedule.locator('[data-schedule-cell="monday-0"]').click();
+    const chooser = page.locator('.counsel-schedule-chooser');
+    const close = chooser.getByRole('button', { name: 'Close chooser', exact: true });
+    await chooser.waitFor();
+    assert.match(await chooser.locator('[data-schedule-current]').innerText(), /current:\s*open/i);
+    assert.equal(await chooser.getByRole('button', { name: 'Optional: off', exact: true }).count(), 1);
+    assert.equal(await chooser.getByRole('button', { name: 'Remove slot', exact: true }).count(), 1);
+    assert.equal(await chooser.getByRole('button', { name: 'Endurance', exact: true }).count(), 1);
+    assert.deepEqual(
+      await page.evaluate(() => counselScheduleDraft.monday),
+      [{ optional: false }],
+    );
+    const closeState = await chooser.evaluate(win => {
+      const closeButton = win.querySelector('[aria-label="Close chooser"]');
+      const title = win.querySelector('.win-title');
+      const current = win.querySelector('[data-schedule-current]');
+      const style = getComputedStyle(closeButton);
+      const titleStyle = getComputedStyle(title);
+      const root = getComputedStyle(document.documentElement);
+      const resolveColor = token => {
+        const probe = document.createElement('span');
+        probe.style.color = token;
+        document.body.appendChild(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      const rect = closeButton.getBoundingClientRect();
+      const chooserRect = win.getBoundingClientRect();
+      const titleTextRange = document.createRange();
+      titleTextRange.selectNodeContents(title);
+      const titleTextRect = titleTextRange.getBoundingClientRect();
+      return {
+        usesSharedClose: closeButton.classList.contains('lens-box-close'),
+        text: closeButton.textContent.trim(),
+        position: style.position,
+        top: style.top,
+        right: style.right,
+        borderStyle: style.borderTopStyle,
+        color: style.color,
+        dim: resolveColor(root.getPropertyValue('--dim')),
+        titlePaddingLeft: titleStyle.paddingLeft,
+        titlePaddingRight: titleStyle.paddingRight,
+        titleTextAlign: titleStyle.textAlign,
+        currentFollowsTitle: title.nextElementSibling === current,
+        titleCenterDelta: Math.abs(
+          (titleTextRect.left + titleTextRect.width / 2) - (chooserRect.left + chooserRect.width / 2),
+        ),
+        width: rect.width,
+        height: rect.height,
+      };
+    });
+    assert.equal(closeState.usesSharedClose, true);
+    assert.equal(closeState.text, '✕');
+    assert.equal(closeState.position, 'absolute');
+    assert.equal(closeState.top, '4px');
+    assert.equal(closeState.right, '6px');
+    assert.equal(closeState.borderStyle, 'none');
+    assert.equal(closeState.color, closeState.dim);
+    assert.equal(closeState.titlePaddingLeft, closeState.titlePaddingRight);
+    assert.notEqual(closeState.titlePaddingLeft, '0px');
+    assert.equal(closeState.currentFollowsTitle, true);
+    assert.ok(closeState.titleCenterDelta <= 1, JSON.stringify(closeState));
+    assert.ok(closeState.width >= 44 && closeState.height >= 44, JSON.stringify(closeState));
+    if (EVIDENCE_DIR) {
+      await chooser.screenshot({
+        path: path.join(EVIDENCE_DIR, 'weekly-planner-chooser-375.png'),
+      });
+    }
+
+    await chooser.getByRole('button', { name: 'Endurance', exact: true }).click();
+    await chooser.getByRole('button', { name: 'Run', exact: true }).click();
+    await chooser.getByRole('button', { name: 'Easy', exact: true }).click();
+    await schedule.locator('[data-schedule-cell="monday-0"]').click();
+    const selected = chooser.getByRole('button', { name: 'Endurance', exact: true });
+    const resting = await selected.evaluate(element => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color };
+    });
+    await selected.hover();
+    const hovered = await selected.evaluate(element => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color };
+    });
+    assert.deepEqual(hovered, resting);
+    assert.ok(contrastRatio(hovered.color, hovered.background) >= 4.5, JSON.stringify(hovered));
+    if (EVIDENCE_DIR) {
+      await chooser.screenshot({
+        path: path.join(EVIDENCE_DIR, 'weekly-planner-selected-hover-375.png'),
+      });
+    }
+    await close.click();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    if (EVIDENCE_DIR) {
+      await page.locator('.hdr-brand').screenshot({
+        path: path.join(EVIDENCE_DIR, 'weekly-planner-logo-1280.png'),
+      });
+    }
+    await schedule.locator('[data-schedule-cell="monday-0"]').click();
+    await page.mouse.move(0, 0);
+    if (EVIDENCE_DIR) {
+      await chooser.screenshot({
+        path: path.join(EVIDENCE_DIR, 'weekly-planner-chooser-1280.png'),
+      });
+    }
+    await selected.hover();
+    if (EVIDENCE_DIR) {
+      await chooser.screenshot({
+        path: path.join(EVIDENCE_DIR, 'weekly-planner-selected-hover-1280.png'),
+      });
+    }
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -2955,7 +3166,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '115'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '116'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

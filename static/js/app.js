@@ -427,7 +427,7 @@ function header() {
     : 'No streak burning. Complete any quest to light the flame.';
   return `<div class="hdr">
     <button type="button" class="hdr-brand control-reset illustrated-control" aria-label="Return to Town" onclick="nav('town')">
-      <div class="pixel-title" style="font-size: var(--type-title)">IRON VALE</div>
+      <div class="pixel-title">IRON VALE</div>
       <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">a village that pays in gold for sweat</div>
     </button>
     <div class="hdr-streak ${st.count > 0 ? '' : 'cold'}" title="${streakTip}">
@@ -821,7 +821,7 @@ function renderLogin() {
   root.innerHTML = `
     <div style="max-width:380px;margin:80px auto">
       <div class="win center">
-        <div class="pixel-title" style="font-size: var(--type-title);margin-bottom:14px">IRON VALE</div>
+        <div class="pixel-title" style="font-size: var(--type-display-gate);margin-bottom:14px">IRON VALE</div>
         <p class="muted">The gate is barred. Speak the word.</p>
         <div class="formrow"><input type="password" id="pw" placeholder="password" onkeydown="if(event.key==='Enter')G.login()"></div>
         <button class="btn big" onclick="G.login()">ENTER</button>
@@ -989,7 +989,7 @@ function renderProfilePicker(profs) {
   root.innerHTML = `
     <div style="max-width:560px;margin:60px auto">
       <div class="win center">
-        <div class="pixel-title" style="font-size: var(--type-title);margin-bottom:4px">IRON VALE</div>
+        <div class="pixel-title" style="font-size: var(--type-display-gate);margin-bottom:4px">IRON VALE</div>
         <div class="muted" style="margin-bottom:14px">WHO GOES THERE?</div>
         <div class="profile-grid">
           ${PICKER.profiles.map(card).join('')}

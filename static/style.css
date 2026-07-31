@@ -76,10 +76,15 @@
   --font-body: 'quanta-strike-12', monospace;
   --font-title: 'quanta-strike-14', monospace;
   --font-form: 'quanta-strike-16', monospace;
+  --font-display: 'PressStart', monospace;
   --type-fine: 10px;
   --type-body: 12px;
   --type-title: 14px;
   --type-form: 16px;
+  --type-display-title: 26px;
+  --type-display-gate: 22px;
+  --type-display-ceremony: 18px;
+  --type-display-death: 26px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,8 +126,8 @@ body::after {
 
 h1, h2, h3 { font-weight: normal; }
 .pixel-title {
-  font-family: 'PressStart', monospace;
-  font-size: var(--type-title);
+  font-family: var(--font-display);
+  font-size: var(--type-display-title);
   color: var(--gold-bright);
   text-shadow: 3px 3px 0 #3a2c10;
   letter-spacing: 2px;
@@ -176,7 +181,9 @@ h1, h2, h3 { font-weight: normal; }
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.btn:hover:not(:disabled) {
+/* Latched selections own their fill and inverse text. The generic resting
+   hover must never repaint an .active key or its label can lose contrast. */
+.btn:hover:not(:disabled):not(.active) {
   background: #242015;
   border-color: var(--gold) #6b5426 #4a3d20 #a8863e;
 }
@@ -602,7 +609,7 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
 }
 .overlay .win { max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .ceremony { text-align: center; }
-.ceremony h2 { font-family: 'PressStart', monospace; font-size: var(--type-title); color: var(--gold-bright); text-shadow: 2px 2px 0 #3a2c10; margin: 8px 0 14px; }
+.ceremony h2 { font-family: var(--font-display); font-size: var(--type-display-ceremony); color: var(--gold-bright); text-shadow: 2px 2px 0 #3a2c10; margin: 8px 0 14px; }
 .ceremony .reward-line { font-family: var(--font-title); font-size: var(--type-title); margin: 6px 0; opacity: 0; animation: popin 0.3s forwards; }
 @keyframes popin { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
 .ceremony .levelup {
@@ -615,7 +622,7 @@ canvas.chart { width: 100%; image-rendering: pixelated; border: 1px solid #33304
   animation: popin 0.3s forwards, pulse 0.7s infinite alternate;
 }
 @keyframes pulse { from { text-shadow: 0 0 4px var(--gold); } to { text-shadow: 0 0 18px var(--gold-bright); } }
-.youdied { font-family: 'PressStart', monospace; font-size: var(--type-title); color: var(--red); text-shadow: 0 0 20px #800; }
+.youdied { font-family: var(--font-display); font-size: var(--type-display-death); color: var(--red); text-shadow: 0 0 20px #800; }
 
 .toast {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -931,7 +938,7 @@ body.megashake #app { animation: bodyshake 0.35s linear 2; }
 /* ---- overlays: keep window titles inside the box (no clipping) ---- */
 .overlay .win > .win-title {
   position: static; display: inline-block;
-  background: none; padding: 0; margin-bottom: 8px;
+  background: none; padding: 0 var(--overlay-title-padding-inline, 0px); margin-bottom: 8px;
 }
 
 @keyframes flamewob { from { transform: scale(1); } to { transform: scale(1.12) translateY(-1px); } }
@@ -2010,13 +2017,13 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   letter-spacing: 1px;
 }
 .counsel-schedule-chooser {
+  --overlay-title-padding-inline: 44px;
   max-width: 380px;
   text-align: left;
 }
-.counsel-schedule-chooser-close {
+.overlay .counsel-schedule-chooser > .win-title {
   display: block;
-  min-block-size: 44px;
-  margin: 0 0 8px auto;
+  text-align: center;
 }
 .counsel-schedule-current {
   margin-bottom: 10px;
@@ -2245,7 +2252,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
     padding-left: max(4px, env(safe-area-inset-left));
   }
   .hdr .pixel-title {
-    font-size: var(--type-title);
+    font-size: var(--type-display-title);
     line-height: 1.2;
     letter-spacing: 1px;
   }

@@ -121,8 +121,18 @@ Quanta size.
 Every active Quanta declaration uses one of these four exact strikes. There is
 no fluid type or intermediate size because rendering a strike away from its
 native pixel size is blurry by design. `.btn.small` and `.btn.big` change
-padding and geometry, not type size. PressStart keeps the three high-impact
-roles listed above and uses the title-size token.
+padding and geometry, not type size.
+
+PressStart is a conventional outline pixel font, not a size-bound strike. It
+therefore has its own display family and scale, independent of the Quanta
+tokens; changing a Quanta font pack must never resize these display roles.
+
+| PressStart role | Family token | Size token |
+| --- | --- | --- |
+| Standard logo and display title | `--font-display` | `--type-display-title: 26px` |
+| Login and adventurer gates | `--font-display` | `--type-display-gate: 22px` |
+| Quest-complete ceremony heading | `--font-display` | `--type-display-ceremony: 18px` |
+| Defeat display | `--font-display` | `--type-display-death: 26px` |
 
 ## 4. Spacing & Layout
 
