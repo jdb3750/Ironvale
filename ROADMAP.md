@@ -135,6 +135,13 @@ entries are open work with the removal path worked out.
 
 **Defects (behaviour is wrong today)**
 
+- **The browser suite flaked once, unidentified.** During the v0.30.3 run the
+  canonical headless suite reported 47 pass / 1 fail, then passed 48/48 on four
+  consecutive re-runs. The failing test's identity was not captured before the
+  re-run, so there is nothing to point at — recorded anyway, because a suite that
+  fails roughly one run in five without a name is exactly what erodes trust in a
+  red result. If it recurs, capture the test name first and log it here before
+  re-running.
 - **Headful screenshot mode hits `innerText` timing failures.** Observed during the
   v0.25.0 migration work: the optional headful capture mode failed twice on
   `innerText` reads while still producing valid captures, and the canonical
