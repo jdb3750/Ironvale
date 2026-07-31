@@ -105,7 +105,7 @@ def save_routine(payload):
     r = {
         "id": "r" + uuid.uuid4().hex[:8],
         "name": payload["name"].strip()[:40],
-        "giver": payload.get("giver", "bram"),
+        "giver": payload.get("giver", "strength"),
         "exercises": exs,
     }
     routines.append(r)
@@ -116,14 +116,9 @@ def save_routine(payload):
 def delete_routine(rid):
     routines = [r for r in get_routines() if r["id"] != rid]
     db.kv_set("routines", routines)
-    # deselect if active anywhere
     s = game.get_settings()
-    changed = False
-    for g in ("strength", "bram"):
-        if s.get(f"program_{g}") == f"custom:{rid}":
-            s[f"program_{g}"] = None
-            changed = True
-    if changed:
+    if s.get("program_strength") == f"custom:{rid}":
+        s["program_strength"] = None
         db.kv_set("settings", s)
 
 

@@ -197,7 +197,7 @@ SCREENS.giver = async function () {
     line = 'No path of mine is written for today. The weekly plan keeps this door quiet.';
   }
   else line = congratLine(key) || (S.state.npc_notices || {})[key] || pickLine(GREETINGS[key]);
-  const isLiftGiver = ['strength', 'bram'].includes(key);
+  const isLiftGiver = key === 'strength';
   const isIronGiver = key === 'strength';
   const revealOfferLore = !giverPhoneLayout();
 

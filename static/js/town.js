@@ -146,7 +146,7 @@ SCREENS.town = async function () {
   const questRow = (q) => {
     // "log sets" belongs to quests that carry a routine — a climb quest from
     // Ser Bram completes by synced wall time, not the lift logger
-    const lifting = ['strength', 'bram'].includes(q.giver) && !!(q.details && q.details.routine);
+    const lifting = q.giver === 'strength' && !!(q.details && q.details.routine);
     return `<div class="offer" style="margin:8px 0">
       <div><span class="o-title" style="font-family: var(--font-title); font-size: var(--type-title)">${esc(q.title)}</span>
         ${q.kind === 'rest' ? '' : modalityChip(q.details && q.details.modality, q.giver, q.details && q.details.program)}

@@ -15,7 +15,7 @@ function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
    DOCTRINE chip already says "lifting" and three chips is a crowd. */
 function modalityChip(modality, giver, isProgram) {
   if (modality) return `<span class="chip mod-${modality}">${modality}</span>`;
-  if (!isProgram && (giver === 'strength' || giver === 'bram')) {
+  if (!isProgram && giver === 'strength') {
     return '<span class="chip mod-lift">lift</span>';
   }
   return '';

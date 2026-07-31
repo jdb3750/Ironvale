@@ -3031,6 +3031,92 @@ test('town keeps all four giver identities while Bram has no offer board', async
   }
 });
 
+test('legacy Bram quests keep his identity without lift or routine affordances', async () => {
+  const { context, failures, page } = await openMainProfile(
+    GIVER_VIEWPORTS.phone,
+    { reducedMotion: 'reduce' },
+  );
+  try {
+    await createGiverProfile(page, 'considered');
+    const slug = await page.evaluate(async () => (await api('/profiles')).current);
+    const details = {
+      target_minutes: 30,
+      intensity: 'easy',
+      structure: 'Thirty minutes on the wall.',
+      xp: 40,
+      gold: 15,
+      vigor: 2,
+      routine: [{ exercise: 'Pull-Up', sets: 3, reps: 5 }],
+    };
+    const seed = spawnSync(
+      path.join(ROOT, '.venv/bin/python'),
+      ['-c', `
+import sqlite3, sys
+connection = sqlite3.connect(sys.argv[1])
+connection.execute(
+    "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+    "VALUES ('bram', 'climb_technique', 'An Old Oath of the Wall', ?, 'active', ?)",
+    (sys.argv[2], sys.argv[3]),
+)
+connection.commit()
+connection.close()
+`, path.join(dataDir, `${slug}.db`), JSON.stringify(details), new Date().toISOString()],
+      { encoding: 'utf8' },
+    );
+    assert.equal(seed.status, 0, `Legacy Bram quest seed failed: ${seed.stderr || seed.stdout}`);
+    await page.evaluate(async () => {
+      S.state = await api('/state');
+    });
+
+    for (const [viewportName, viewport] of Object.entries({
+      phone: GIVER_VIEWPORTS.phone,
+      desktop: GIVER_VIEWPORTS.desktop,
+    })) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => nav('town'));
+      await page.waitForFunction(() => (
+        S.screen === 'town'
+        && document.querySelector('.town-scene')
+        && !renderLoop
+        && !queuedRender
+        && !document.getElementById('app')?.hasAttribute('aria-busy')
+      ));
+      assert.equal(await page.getByRole('button', { name: 'LOG SETS', exact: true }).count(), 0);
+      assert.equal(await page.locator('.chip.mod-lift').count(), 0);
+      const bramBuilding = page.locator('#bld-bram > button');
+      assert.equal(await bramBuilding.count(), 1);
+      assert.equal(await bramBuilding.getAttribute('aria-label'), 'Visit Ser Bram: The Old Knight at Rest');
+
+      await openGiverBoard(page, 'bram');
+      await page.waitForFunction(() => (
+        !renderLoop
+        && !queuedRender
+        && getComputedStyle(document.getElementById('app')).visibility !== 'hidden'
+      ));
+      assert.match(await page.locator('.npc-name').textContent(), /Ser Bram the Old Knight at Rest/);
+      assert.equal(await page.locator('[data-portrait="bram"]').count(), 1);
+      assert.equal(await page.locator('.offer .o-title').textContent(), 'An Old Oath of the Wall');
+      const honorButton = page.getByRole('button', { name: 'COMPLETE ON HONOR', exact: true });
+      await honorButton.waitFor({ state: 'visible' });
+      assert.equal(await honorButton.count(), 1);
+      assert.equal(await page.getByRole('button', { name: 'OPEN TRAINING LOG', exact: true }).count(), 0);
+      assert.equal(await page.getByRole('button', { name: 'DOCTRINES & ROUTINES', exact: true }).count(), 0);
+      assert.equal(await page.locator('.chip.mod-lift').count(), 0);
+      if (EVIDENCE_DIR) {
+        await page.evaluate(() => new Promise(resolve => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `bram-legacy-climb-${viewportName}.png`),
+        });
+      }
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('counsel hard warning and HARD chip meet WCAG AA contrast at all target viewports', async () => {
   const { context, failures, page } = await openMainProfile(
     { width: 375, height: 812 },
@@ -3251,7 +3337,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '117'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '118'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
