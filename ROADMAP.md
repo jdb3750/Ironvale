@@ -101,9 +101,46 @@ sketches. Neither is scoped.
   replaced `running`/`kettlebell`/`strength`/`mobility` with
   `endurance`/`strength`/`bram`/`recovery` before Scheduled mode could make the
   misleading namespace more expensive.
-- **ExerciseDB integration** — a larger exercise catalog with form cues and
-  muscle-group targeting. Unverified: nobody has checked its licence, shape or
-  fit against `exercises.py`. Needs a small spike before anyone estimates it.
+- **ExerciseDB integration — DECIDED 2026-07-31: pursue, but spike first.**
+  Joe's written training week names roughly a dozen movements the 26-exercise
+  catalog lacks (rings, sliders, bands, ab wheel, calf raises, step-ups, hip
+  thrusts, hamstring curls). Custom routines tolerate off-catalog names, but those
+  movements carry no groups, no equipment tag and no scheme — so muscle recency,
+  focus targeting and the "within reach today" filter cannot see them.
+
+  **Shape: bring-your-own-key, in the Settings APIs tab**, the same posture as
+  intervals.icu. Iron Vale never redistributes the data; the player fetches into
+  their own self-hosted instance with their own credentials, which removes the
+  licensing question and makes this the first real instance of §1's capability
+  model rather than a detour from it. Data must be cached locally after import,
+  not fetched per request.
+
+  **The first task is a SPIKE, not an import.** Four things are unresolved, and
+  three of them are not obvious:
+
+  1. **`scheme` has no source.** `EXERCISES[name]["scheme"]` is `(unit, low, high)`
+     with unit in `reps|steps|seconds`, and `quests.py:210` unpacks it for every
+     generated set. ExerciseDB carries no rep prescription. Every imported row needs
+     one — defaulted by equipment or group, inferred, or authored. Biggest gap.
+  2. **`equipment` is part of the ownership model, not a free tag.** The four values
+     ARE `GIVER_ARCHETYPES["strength"]["modalities"]`; `main.py` derives the "within
+     reach today" options from that tuple and `summarize_lifts` uses it to decide
+     what counts as iron history. Adding `band` or `rings` changes giver ownership
+     and the override UI, not just the catalog.
+  3. **`groups` needs a mapping table.** ExerciseDB's muscle vocabulary must fold
+     onto the seven in `exercises.GROUPS`. A silent mis-map degrades muscle recency
+     and focus targeting without erroring.
+  4. **Curation is currently a feature.** `_iron_exercises` fills routines from the
+     catalog filtered by equipment. Coherent at 26 exercises; a lottery at ~1300
+     unless something narrows it.
+
+  Also note `how` (the coaching cue, present on all 26) is written in a specific
+  in-world voice that imported instruction lists will not match, and any image URLs
+  are an external dependency a self-hosted pixel-art app probably does not want.
+
+  The spike should fetch a real sample, map it against `exercises.py`, and report
+  what fits, what does not, and what each unresolved field would cost — before
+  anyone estimates the import.
 
 - **Elevation for overlaid surfaces** — floating menus, overlays and toasts should
   read as *closer to the viewer*: lighter, distinctly bordered, casting a shadow
