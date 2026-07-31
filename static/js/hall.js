@@ -453,9 +453,10 @@ G.strikeDay = async (dstr, n) => {
    colored by that day's dominant activity category, using the same palette
    as the calendar's .cat-* dots so the two read as one system. ---- */
 
-const TAP_COLORS = {
-  run: '#7ab55c', ride: '#6aa0c8', climb: '#e07030', strength: '#c85050',
-  mobility: '#a06ac8', walk: '#5cb5a5', swim: '#4a90d0', other: '#9a9aa8',
+const TAP_COLOR_TOKENS = {
+  run: '--activity-run', ride: '--activity-ride', climb: '--activity-climb',
+  strength: '--activity-strength', mobility: '--activity-mobility',
+  walk: '--activity-walk', swim: '--activity-swim', other: '--activity-other',
 };
 const TAP_CELL = 12, TAP_GAP = 2, TAP_TOP = 18, TAP_LEFT = 26;
 const TAP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -471,6 +472,9 @@ function drawTapestry(tap) {
   cv.style.width = cv.width + 'px';
   cv.style.height = cv.height + 'px';
   const ctx = cv.getContext('2d');
+  const rootStyle = getComputedStyle(document.documentElement);
+  const tapColors = Object.fromEntries(Object.entries(TAP_COLOR_TOKENS)
+    .map(([category, token]) => [category, rootStyle.getPropertyValue(token).trim()]));
   ctx.fillStyle = '#0c0c14';
   ctx.fillRect(0, 0, cv.width, cv.height);
 
@@ -488,7 +492,7 @@ function drawTapestry(tap) {
       ctx.fillStyle = '#776f8e';
       ctx.fillText(TAP_MONTHS[parseInt(d.date.slice(5, 7), 10) - 1], x, TAP_TOP - 6);
     }
-    ctx.fillStyle = d.cat ? TAP_COLORS[d.cat] : '#191928';
+    ctx.fillStyle = d.cat ? tapColors[d.cat] : '#191928';
     ctx.fillRect(x, y, TAP_CELL, TAP_CELL);
     if (i === days.length - 1) {   // today gets a gold border stitch
       ctx.strokeStyle = '#f0d080';

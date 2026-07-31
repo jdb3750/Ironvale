@@ -794,6 +794,11 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
 
     const schedule = page.locator('#counsel-schedule');
     await schedule.waitFor();
+    assert.equal(await schedule.evaluate(element => element.classList.contains('counsel-block')), false);
+    assert.equal(
+      await page.locator('#counsel-focus').evaluate(element => element.classList.contains('counsel-block')),
+      true,
+    );
     assert.deepEqual(
       await schedule.locator('[data-schedule-day-heading]').allTextContents(),
       ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
@@ -804,6 +809,46 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
       await schedule.locator('[data-schedule-cell]').allTextContents()
         .then(labels => labels.map(label => label.trim())),
       ['+', '+', '+', '+', '+', '+', '+'],
+    );
+    const emptyCellColors = await schedule.locator('[data-schedule-cell]').first().evaluate(element => {
+      const style = getComputedStyle(element);
+      const root = getComputedStyle(document.documentElement);
+      const gold = [
+        root.getPropertyValue('--gold').trim(),
+        root.getPropertyValue('--gold-bright').trim(),
+      ].map(color => {
+        const probe = document.createElement('span');
+        probe.style.color = color;
+        document.body.appendChild(probe);
+        const resolved = getComputedStyle(probe).color;
+        probe.remove();
+        return resolved;
+      });
+      return {
+        background: style.backgroundColor,
+        border: [
+          style.borderTopColor,
+          style.borderRightColor,
+          style.borderBottomColor,
+          style.borderLeftColor,
+        ],
+        color: style.color,
+        gold,
+        panel2: (() => {
+          const probe = document.createElement('span');
+          probe.style.color = root.getPropertyValue('--panel2');
+          document.body.appendChild(probe);
+          const resolved = getComputedStyle(probe).color;
+          probe.remove();
+          return resolved;
+        })(),
+      };
+    });
+    assert.equal(emptyCellColors.background, emptyCellColors.panel2);
+    assert.equal(
+      [emptyCellColors.background, emptyCellColors.color, ...emptyCellColors.border]
+        .some(color => emptyCellColors.gold.includes(color)),
+      false,
     );
     assert.deepEqual(
       await page.locator('#set-counsel-mode').locator('..').locator('[role="menuitemradio"]').allTextContents()
@@ -929,17 +974,43 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
     assert.deepEqual(
       await cell('monday', 0).evaluate(element => ({
         shape: element.dataset.scheduleSlotShape,
+        modality: element.dataset.scheduleModality,
         sprite: element.querySelector('canvas')?.dataset.sprite,
         mark: element.querySelector('[data-schedule-tier-mark]')?.textContent,
       })),
-      { shape: 'sized', sprite: 'schedule_run', mark: 'E' },
+      { shape: 'sized', modality: 'run', sprite: 'schedule_run', mark: 'E' },
     );
+    const runGlyphColor = await cell('monday', 0).evaluate(element => {
+      const canvas = element.querySelector('canvas');
+      const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      let first = null;
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (pixels[index + 3] === 0) continue;
+        first = `rgb(${pixels[index]}, ${pixels[index + 1]}, ${pixels[index + 2]})`;
+        break;
+      }
+      const token = getComputedStyle(document.documentElement)
+        .getPropertyValue('--activity-run').trim();
+      const probe = document.createElement('span');
+      probe.style.color = token;
+      document.body.appendChild(probe);
+      const resolvedToken = getComputedStyle(probe).color;
+      probe.remove();
+      return { first, resolvedToken, token };
+    });
+    assert.notEqual(runGlyphColor.token, '');
+    assert.equal(runGlyphColor.first, runGlyphColor.resolvedToken);
 
     await cell('monday', 1).click();
     await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
     await chooser().getByRole('button', { name: 'Climb', exact: true }).click();
     await chooser().getByRole('button', { name: 'Volume', exact: true }).click();
     assert.equal(await schedule.locator('[data-schedule-row]').count(), 3);
+    assert.equal(await schedule.locator('[data-schedule-cell^="monday-"]').count(), 3);
+    assert.equal(await schedule.locator('[data-schedule-cell^="friday-"]').count(), 1);
+    assert.equal(await schedule.locator('[data-schedule-cell="friday-2"]').count(), 0);
+    assert.equal(await schedule.locator('[data-schedule-gap="friday-2"]').count(), 1);
+    assert.equal(await schedule.locator('[data-schedule-cell="monday-2"]').innerText(), '+');
 
     await cell('tuesday', 0).click();
     await chooser().getByRole('button', { name: 'Strength', exact: true }).click();
@@ -1021,16 +1092,19 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
     await page.getByText('Routine forged into the weekly plan.', { exact: true }).waitFor();
     await page.locator('.overlay').waitFor({ state: 'detached' });
     assert.equal(await cell('friday', 0).getAttribute('data-schedule-slot-shape'), 'routine');
+    assert.equal(await schedule.locator('[data-schedule-cell^="friday-"]').count(), 2);
+    assert.equal(await schedule.locator('[data-schedule-gap="friday-2"]').count(), 1);
 
     await cell('saturday', 0).click();
     await chooser().getByRole('button', { name: 'Recovery', exact: true }).click();
     await chooser().getByRole('button', { name: 'Rest', exact: true }).click();
     assert.deepEqual(
       await cell('saturday', 0).evaluate(element => ({
+        modality: element.dataset.scheduleModality,
         sprite: element.querySelector('canvas')?.dataset.sprite,
         mark: element.querySelector('[data-schedule-tier-mark]')?.textContent,
       })),
-      { sprite: 'schedule_rest', mark: 'R' },
+      { modality: 'mobility', sprite: 'schedule_rest', mark: 'R' },
     );
 
     await cell('sunday', 0).click();
@@ -1108,6 +1182,13 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
         document.querySelectorAll('.key-pop-ghost').length === 0
       ));
       await page.locator('.toast').waitFor({ state: 'detached' });
+      await cell('monday', 1).click();
+      await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
+      await chooser().getByRole('button', { name: 'Climb', exact: true }).click();
+      await chooser().getByRole('button', { name: 'Volume', exact: true }).click();
+      await page.waitForFunction(() => (
+        document.querySelectorAll('.key-pop-ghost').length === 0
+      ));
       await schedule.screenshot({
         path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-populated-375.png'),
       });
@@ -1155,6 +1236,94 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
       await page.screenshot({
         path: path.join(EVIDENCE_DIR, 'counsel-schedule-grid-all-glyphs-320.png'),
       });
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Hall tapestry and sequencer share promoted activity colours', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await createGiverProfile(page, 'considered');
+    const days = [
+      ['2026-07-20', 'run'],
+      ['2026-07-21', 'ride'],
+      ['2026-07-22', 'swim'],
+      ['2026-07-23', 'climb'],
+      ['2026-07-24', 'strength'],
+      ['2026-07-25', 'mobility'],
+      ['2026-07-26', null],
+    ].map(([date, cat]) => ({ date, cat }));
+    await page.route('**/api/tapestry', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ days, woven: 6, best_stretch: 6 }),
+    }));
+    await page.evaluate(() => {
+      statsTab = 'calendar';
+      nav('stats');
+    });
+    const tapestry = page.locator('#tapestry-cv');
+    await tapestry.waitFor();
+    if (EVIDENCE_DIR) {
+      await tapestry.screenshot({
+        path: path.join(EVIDENCE_DIR, 'tapestry-shared-colours.png'),
+      });
+    }
+    const colors = await tapestry.evaluate(canvas => {
+      const ctx = canvas.getContext('2d');
+      const root = getComputedStyle(document.documentElement);
+      const categories = ['run', 'ride', 'swim', 'climb', 'strength', 'mobility'];
+      return categories.map((category, row) => {
+        const pixel = ctx.getImageData(27, 19 + row * 14, 1, 1).data;
+        return {
+          category,
+          pixel: `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`,
+          token: root.getPropertyValue(`--activity-${category}`).trim(),
+        };
+      });
+    });
+    assert.equal(colors.every(item => item.token), true, JSON.stringify(colors));
+    assert.deepEqual(
+      colors.map(item => item.pixel),
+      await page.evaluate(values => values.map(value => {
+        const probe = document.createElement('span');
+        probe.style.color = value;
+        document.body.appendChild(probe);
+        const resolved = getComputedStyle(probe).color;
+        probe.remove();
+        return resolved;
+      }), colors.map(item => item.token)),
+    );
+    const contrast = await page.evaluate(categories => {
+      const root = getComputedStyle(document.documentElement);
+      const luminance = color => {
+        const channels = color.match(/[a-f0-9]{2}/gi)
+          .map(value => parseInt(value, 16) / 255)
+          .map(value => value <= 0.04045
+            ? value / 12.92
+            : ((value + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      const background = luminance(root.getPropertyValue('--panel2').trim());
+      return categories.map(category => {
+        const color = root.getPropertyValue(`--activity-${category}`).trim();
+        const foreground = luminance(color);
+        return {
+          category,
+          color,
+          ratio: (Math.max(background, foreground) + 0.05)
+            / (Math.min(background, foreground) + 0.05),
+        };
+      });
+    }, ['run', 'ride', 'climb', 'strength', 'swim', 'mobility']);
+    assert.equal(contrast.every(item => item.ratio >= 3), true, JSON.stringify(contrast));
+    if (EVIDENCE_DIR) {
+      await writeFile(
+        path.join(EVIDENCE_DIR, 'sequencer-modality-contrast.json'),
+        JSON.stringify(contrast, null, 2),
+      );
     }
     assert.deepEqual(failures, []);
   } finally {
@@ -2786,7 +2955,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '114'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '115'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

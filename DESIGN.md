@@ -22,7 +22,7 @@ other hues carry status, rarity, and game meaning.
 
 ### Palette
 
-There is one dark theme. These are the 21 color custom properties currently
+There is one dark theme. These are the 29 color custom properties currently
 declared in `:root`; typography tokens are documented in §3. The stylesheet
 also contains raw, one-off colors that have not yet been promoted to tokens.
 
@@ -49,6 +49,14 @@ also contains raw, one-off colors that have not yet been promoted to tokens.
 | Uncommon rarity | `--rarity-uncommon` | `#7ab55c` | Uncommon item/monster rarity |
 | Rare rarity | `--rarity-rare` | `#6aa0c8` | Rare item/monster rarity |
 | Legendary rarity | `--rarity-legendary` | `#e0a030` | Legendary item/monster rarity and glow |
+| Running activity | `--activity-run` | `#7ab55c` | Run stitches, calendar marks, and sequencer glyphs |
+| Riding activity | `--activity-ride` | `#6aa0c8` | Ride stitches, calendar marks, and sequencer glyphs |
+| Climbing activity | `--activity-climb` | `#e07030` | Climb stitches, calendar marks, and sequencer glyphs |
+| Strength activity | `--activity-strength` | `#c85050` | Strength stitches, calendar marks, and sequencer glyphs |
+| Mobility activity | `--activity-mobility` | `#a06ac8` | Mobility/rest stitches, calendar marks, and sequencer glyphs |
+| Walking activity | `--activity-walk` | `#5cb5a5` | Walk and hike stitches and calendar marks |
+| Swimming activity | `--activity-swim` | `#4a90d0` | Swim stitches, calendar marks, and sequencer glyphs |
+| Other activity | `--activity-other` | `#9a9aa8` | Uncategorized stitches and calendar marks |
 
 ### Usage Rules
 
@@ -69,6 +77,9 @@ also contains raw, one-off colors that have not yet been promoted to tokens.
   within it.
 - Red, green, blue, and purple already have game semantics. Rarity tokens are
   aliases by meaning even when their values match a status hue.
+- Activity tokens are semantic aliases shared by the Hall tapestry, calendar
+  marks, and weekly sequencer. Their repeated values intentionally preserve one
+  category language across those surfaces.
 - The former counsel-only warning value is now the general `--danger-ink`
   token. This deliberately revises its original narrow scope so small danger
   copy remains readable on both `--panel2` and raised surfaces. `--red`
