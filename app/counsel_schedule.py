@@ -60,10 +60,20 @@ def _accepted_today(giver: str, current_date: str) -> int:
     return int(row["n"])
 
 
-def _current_slot(
+def current_slot(
     giver: str,
     context: counsel_context.QualifiedTrainingContext,
 ) -> Optional[counsel_context.CounselScheduleSlot]:
+    open_slot = next(
+        (
+            slot
+            for slot in context.schedule_slots
+            if slot.modality is None and slot.routine is None
+        ),
+        None,
+    )
+    if open_slot is not None:
+        return open_slot
     routed = tuple(
         slot
         for slot in context.schedule_slots
@@ -213,16 +223,13 @@ def resolve(
     context: counsel_context.QualifiedTrainingContext,
     rules: counsel_rules.RuleState,
 ) -> ScheduledDrafts:
-    if any(
-        slot.modality is None and slot.routine is None
-        for slot in context.schedule_slots
-    ):
+    slot = current_slot(giver, context)
+    if slot is not None and slot.modality is None and slot.routine is None:
         drafts, suppressed = considered_drafts(
             counsel_candidates.for_giver(giver, context),
             rules,
         )
         return ScheduledDrafts(drafts, suppressed, None)
-    slot = _current_slot(giver, context)
     if slot is None:
         return ScheduledDrafts((), False, "no_slot_today")
     if slot.routine is not None:

@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS counsel_attributions (
     mode TEXT NOT NULL CHECK (mode IN ('counsel', 'self', 'schedule')),
     accepted_at TEXT NOT NULL,
     offered_option_keys TEXT NOT NULL,
-    chosen_option_key TEXT NOT NULL
+    chosen_option_key TEXT NOT NULL,
+    optional INTEGER
 );
 CREATE TABLE IF NOT EXISTS activities (
     id TEXT PRIMARY KEY,
@@ -276,6 +277,12 @@ def conn():
                         c.execute(f"ALTER TABLE monsters ADD COLUMN {_col} {_decl}")
                     except sqlite3.OperationalError:
                         pass
+                try:
+                    c.execute(
+                        "ALTER TABLE counsel_attributions ADD COLUMN optional INTEGER"
+                    )
+                except sqlite3.OperationalError:
+                    pass
                 if is_new:
                     c.execute(
                         "INSERT INTO kv (key, value) VALUES (?, 'true')",

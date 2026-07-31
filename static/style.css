@@ -2052,6 +2052,11 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
   gap: 8px;
   margin-top: 12px;
 }
+.counsel-schedule-adherence {
+  margin: 8px 0 0;
+  color: var(--blue);
+  text-align: center;
+}
 .counsel-schedule-save {
   display: block;
   margin: 10px auto 0;

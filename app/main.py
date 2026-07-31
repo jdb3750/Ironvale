@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import counsel_adherence
 from . import colosseum, counsel, counsel_nudge, db, dungeon, economy, exercises, game, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
 
 app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
@@ -164,10 +165,13 @@ async def login(request: Request):
 
 @app.get("/api/state")
 def state():
+    current = game.now()
     s = game.get_settings(
+        current_date=current.date().isoformat(),
         schedule_routine_keys=programs.schedule_routine_keys(),
     )
     quests.resolve_rest_writs()  # dawn check: opening the app resolves any kept/broken writ
+    adherence = counsel_adherence.current_week(s["counsel_schedule"], current)
     c = game.get_char()  # read once, after writ resolution (which can mutate it)
     monsters.ensure_starter()
     actives = []
@@ -181,6 +185,7 @@ def state():
         "givers": game.GIVERS,
         "offerable_givers": game.OFFERABLE_GIVERS,
         "counsel_schedule_options": game.counsel_schedule_options(),
+        "counsel_schedule_adherence": adherence._asdict() if adherence else None,
         "ambition_levels": game.AMBITION,
         "active_quests": actives,
         "inventory": _inventory(),

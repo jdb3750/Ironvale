@@ -16,6 +16,7 @@ class Attribution(NamedTuple):
     mode: CounselMode
     offered_option_keys: Tuple[str, ...]
     chosen_option_key: str
+    optional: Optional[bool] = None
 
 
 class AttributionRecord(NamedTuple):
@@ -24,6 +25,7 @@ class AttributionRecord(NamedTuple):
     accepted_at: str
     offered_option_keys: Tuple[str, ...]
     chosen_option_key: str
+    optional: Optional[bool] = None
 
 
 class AttributionValidationError(ValueError):
@@ -94,6 +96,17 @@ def validate_attribution(
     return Attribution(parsed_mode, keys, chosen_option_key)
 
 
+def _validate_optional(
+    mode: CounselMode,
+    optional: Optional[bool],
+) -> Optional[bool]:
+    if optional is not None and type(optional) is not bool:
+        raise AttributionValidationError("optional", "must be true, false, or null")
+    if mode != "schedule" and optional is not None:
+        raise AttributionValidationError("optional", "belongs only to a scheduled path")
+    return optional
+
+
 def insert_attribution(
     quest_id: int,
     accepted_at: str,
@@ -104,23 +117,25 @@ def insert_attribution(
         attribution.offered_option_keys,
         attribution.chosen_option_key,
     )
+    optional = _validate_optional(parsed.mode, attribution.optional)
     db.q(
         "INSERT INTO counsel_attributions "
-        "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "(quest_id, mode, accepted_at, offered_option_keys, chosen_option_key, optional) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
         (
             quest_id,
             parsed.mode,
             accepted_at,
             json.dumps(list(parsed.offered_option_keys), separators=(",", ":")),
             parsed.chosen_option_key,
+            optional,
         ),
     )
 
 
 def get_attribution(quest_id: int) -> Optional[AttributionRecord]:
     row = db.q(
-        "SELECT quest_id, mode, accepted_at, offered_option_keys, chosen_option_key "
+        "SELECT quest_id, mode, accepted_at, offered_option_keys, chosen_option_key, optional "
         "FROM counsel_attributions WHERE quest_id=?",
         (quest_id,),
     ).fetchone()
@@ -135,12 +150,17 @@ def get_attribution(quest_id: int) -> Optional[AttributionRecord]:
         ) from exc
     if not isinstance(raw_offered_keys, list):
         raise AttributionDataError(quest_id, "offered option keys are not a list")
+    raw_optional = row["optional"]
+    if raw_optional not in (None, 0, 1):
+        raise AttributionDataError(quest_id, "optional flag is not true, false, or null")
+    optional = None if raw_optional is None else bool(raw_optional)
     try:
         parsed = validate_attribution(
             row["mode"],
             raw_offered_keys,
             row["chosen_option_key"],
         )
+        optional = _validate_optional(parsed.mode, optional)
     except AttributionValidationError as exc:
         raise AttributionDataError(quest_id, str(exc)) from exc
     accepted_at = row["accepted_at"]
@@ -152,4 +172,5 @@ def get_attribution(quest_id: int) -> Optional[AttributionRecord]:
         accepted_at,
         parsed.offered_option_keys,
         parsed.chosen_option_key,
+        optional,
     )
