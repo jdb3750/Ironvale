@@ -1,0 +1,61 @@
+{
+  "success": true,
+  "meta": {
+    "total": 1500,
+    "hasNextPage": true,
+    "hasPreviousPage": false,
+    "nextCursor": "03lzqwk"
+  },
+  "data": [
+    {
+      "exerciseId": "01qpYSe",
+      "name": "upward facing dog",
+      "gifUrl": "https://static.exercisedb.dev/media/01qpYSe.gif",
+      "bodyParts": [
+        "back"
+      ],
+      "equipments": [
+        "body weight"
+      ],
+      "targetMuscles": [
+        "spine"
+      ],
+      "secondaryMuscles": [
+        "shoulders",
+        "chest"
+      ],
+      "instructions": [
+        "Step:1 Lie face down on the floor with your legs extended behind you.",
+        "Step:2 Place your hands on the floor next to your lower ribs, fingers pointing forward.",
+        "Step:3 Press your hands firmly into the floor and straighten your arms, lifting your torso and thighs off the ground.",
+        "Step:4 Roll your shoulders back and down, opening your chest and lifting your gaze towards the ceiling.",
+        "Step:5 Hold this position for a few breaths, then slowly lower your body back down to the starting position.",
+        "Step:6 Repeat for the desired number of repetitions."
+      ]
+    },
+    {
+      "exerciseId": "03lzqwk",
+      "name": "assisted hanging knee raise",
+      "gifUrl": "https://static.exercisedb.dev/media/03lzqwk.gif",
+      "bodyParts": [
+        "waist"
+      ],
+      "equipments": [
+        "assisted"
+      ],
+      "targetMuscles": [
+        "abs"
+      ],
+      "secondaryMuscles": [
+        "hip flexors"
+      ],
+      "instructions": [
+        "Step:1 Hang from a pull-up bar with your arms fully extended and your palms facing away from you.",
+        "Step:2 Engage your core muscles and lift your knees towards your chest, bending at the hips and knees.",
+        "Step:3 Pause for a moment at the top of the movement, squeezing your abs.",
+        "Step:4 Slowly lower your legs back down to the starting position.",
+        "Step:5 Repeat for the desired number of repetitions."
+      ]
+    }
+  ]
+}

@@ -33,6 +33,8 @@ def category(activity_type):
 # muscle groups credited by non-lifting activity categories
 CATEGORY_MUSCLES = {"climb": ["back", "arms", "core"]}
 
+NON_TRAINING_IMPORTED_CATEGORIES = {"stretching", "cardio"}
+
 # unverified "sworn" deeds via Wick the Scrivener — prorated rewards (no witness)
 CLAIM_PRORATE = 0.7
 CLAIM_TYPES = {
@@ -431,6 +433,8 @@ def muscle_recency():
     recent_sets = {g: 0 for g in exercises.GROUPS}
     cutoff14 = (now() - timedelta(days=14)).isoformat()
     for r in rows:
+        if exercises.imported_category_for(r["exercise"]) in NON_TRAINING_IMPORTED_CATEGORIES:
+            continue
         for g in exercises.groups_for(r["exercise"]):
             if g not in last or r["ts"] > last[g]:
                 last[g] = r["ts"]
