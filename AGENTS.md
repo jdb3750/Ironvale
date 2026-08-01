@@ -18,7 +18,7 @@ skills under `.opencode/skills/`, loaded on demand:
 - `iron-vale-ops` — redeploy/restart procedure, full testing recipe,
   live-data correction playbook, opening PRs.
 
-Three tracked design documents sit alongside this one:
+Four tracked design documents sit alongside this one:
 
 - `DOCTRINE.md` — the science behind the Council's numbers. Every constant in the
   recommendation engine is either traced to a cited source or honestly labelled a
@@ -33,6 +33,12 @@ Three tracked design documents sit alongside this one:
 - `ROADMAP.md` — app-wide direction beyond the Council: the capability/plugin
   surface and its deliberate non-goals. Nothing in it is approved to build; read
   it before proposing an architecture that would overlap it.
+- `DESIGN.md` — the visual system as built in `static/style.css`, plus the
+  responsive/smartphone interaction contract. Sections describing existing
+  implementation are an extraction; sections labelled **required contract** are
+  binding. **Read it before changing `style.css` or any responsive layout** — it
+  also rules out adding a framework, native client, mobile API, or parallel
+  component library.
 
 This file holds only the always-true rules and quick-reference tables.
 
@@ -112,10 +118,11 @@ Branch from `main`, keep the name specific to the work, merge only after
 verification, then delete the local and remote branch. Do not use issue numbers
 as the only name; `fix/menagerie-rarity` is useful, while `fix/40` is not.
 
-Release tags are annotated SemVer milestones, not tags for every commit or
-branch. Tag the exact verified `main` commit after deployment, and keep the tag
-equal to the root `VERSION` value: `v0.13.8`, `v0.14.0`, `v1.0.0`. Push release
-tags explicitly to `origin`; never move or reuse an existing release tag.
+Release tags are annotated SemVer tags on `VERSION` bumps — not tags for every
+commit or branch. Tag the exact verified `main` commit after deployment, and
+keep the tag equal to the root `VERSION` value: `v0.13.8`, `v0.14.0`, `v1.0.0`.
+Push release tags explicitly to `origin`; never move or reuse an existing
+release tag.
 
 ### Versioning
 
@@ -136,9 +143,16 @@ breaking changes may land via a MINOR bump until the project reaches a stable
 - **Docs/chore only** (editing `AGENTS.md`, restructuring skills): no bump.
 
 Bump `VERSION` in the SAME commit as the change it corresponds to — never a
-separate "bump version" commit (same spirit as the `?v=N` rule). Tagging is
-recommended but not mandatory: `git tag vX.Y.Z` on the bumping commit, for
-easy reference. (The repo has zero tags today; start the habit.)
+separate "bump version" commit (same spirit as the `?v=N` rule).
+
+**Tagging every `VERSION` bump is mandatory — PATCH included.** `main`
+auto-deploys, so every bump is a real release in players' hands, and the tag is
+how anyone answers "what was live when?" later. Once the bumping commit is
+verified and deployed, run `git tag -a vX.Y.Z -m "<summary>"` on that exact
+commit, then push it explicitly: `git push origin vX.Y.Z` — a plain `git push`
+does NOT push tags, and an unpushed tag helps nobody. Never move or reuse a
+tag. Versions before `v0.20.0` are unevenly tagged; that history stands as-is
+and is deliberately not backfilled.
 
 See skill `iron-vale-ops` for the deployment model, testing recipe, and opening PRs.
 
@@ -163,6 +177,7 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   dungeon.py    Roguelike engine, Binding-of-Isaac rules: run-scoped gear/items/trinkets.
   intervals.py  intervals.icu sync (basic auth): activities + wellness.
   syncing.py    One complete manual/background sync flight and durable error status.
+  sync_status.py Typed per-stream sync status: revision, per-field freshness, durable error.
   lifts.py      Lifting-ledger routes, validation, amendments, and day bounds.
   vault.py      Atomic daily realm snapshots with 14-day retention.
   monsters.py   Menagerie: DNA-seeded procedural monsters, packs, hats, buddy, capture.
@@ -172,6 +187,24 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   colosseum.py  Betting mini-games (fight/race/pageant) vs. ephemeral rivals.
   items.py      Item catalog: dungeon gear/consumables/trinkets + Crankwerk cosmetics + packs.
   exercises.py  Exercise catalog with muscle groups + "how" form cues.
+
+  The Council — one cluster, governed by the "One qualified Council snapshot"
+  invariant below. `main.py` enters it ONLY via counsel / counsel_nudge /
+  counsel_adherence; nothing outside the cluster imports counsel_context or
+  counsel_context_model, and that boundary is what keeps the snapshot single.
+  counsel.py               Entry point: per-giver offers, option identity, acceptance.
+  counsel_context.py       Assembles THE qualified snapshot, once, off one captured clock.
+  counsel_context_model.py Snapshot types + admissibility constants (60-day activity
+                           lookback, 6-set lower-body gate); history/lift summaries.
+  counsel_candidates.py    Per-giver option drafts: endurance modality, Road, climb.
+  counsel_specialists.py   Iron drafts (exercise + weight from lift history) and mobility.
+  counsel_schedule.py      Scheduled mode: current/next planned slot, routine drafts, sizing.
+  counsel_rules.py         Wellness trend/quantile rule state and the source disclosure.
+  counsel_wellness.py      Admissible wellness rows, recovery days, per-field freshness.
+  counsel_nudge.py         Daily nudge line from practice cadence per declared focus.
+  counsel_options.py       Shared vocabulary: OptionDraft / TierMeta / OptionContext, reasons.
+  counsel_adherence.py     Current-week schedule adherence (done vs planned).
+  counsel_attribution.py   Which mode (counsel/self/schedule) a quest came from; validated.
 
 static/                  Frontend (script tags, load order matters — see index.html)
   js/pixel.js   SPRITES: hand-authored char-map pixel sprites (p=palette, r=rows).
@@ -299,7 +332,7 @@ TestClient/profile-routing gotchas.
 
 - **Assert player-observable outcomes, not artifacts.** A test that checks a
   reason code, flag or label was produced proves the code ran, not that it
-  worked — 15 browser tests and 221 smoke checks were green while the lower-body
+  worked — the entire browser and smoke suites were green while the lower-body
   gate logged its reason and suppressed nothing. Assert what the player would
   notice: the hard option is *absent*, the 6th set changes the offer, an unlinked
   profile is *not* told its data came from intervals.icu. Where a rule has a
@@ -313,7 +346,7 @@ TestClient/profile-routing gotchas.
   inadmissible dates must degrade to unknown, never raise. `/api/state` is the
   boot endpoint; a 400 there means the game does not load.
 
-**Regression net**: `.venv/bin/python tests/smoke.py` — 215 checks over every
+**Regression net**: `.venv/bin/python tests/smoke.py` — 222 checks over every
 read endpoint plus the quest/dungeon/gacha/scrivener lifecycles on a throwaway
 scratch DB. Run it before AND after any refactor that moves code; identical
 green is the acceptance bar. It must never point at the live `data/` dir (it
@@ -326,6 +359,24 @@ Chromium through phone validation, profile/PIN switching, and sync-failure
 visibility. Port 8322 remains the human scratch-preview port; set
 `IRON_VALE_BROWSER_PORT` only when an exact test port is required. Run
 `npm install && npx playwright install chromium` once on a new checkout.
+
+**Lint**: `.venv/bin/ruff check .` — green means the last line reads `All
+checks passed!`. Ruff is pinned in `requirements-dev.txt`; install it once per
+checkout with `.venv/bin/pip install -r requirements-dev.txt`. Dev tooling is
+deliberately kept OUT of `requirements.txt`, which is the only dependency file
+the Dockerfile installs — a linter has no business shipping to players. There
+is no ruff config in the repo, so it runs on its defaults; bumping the pin is
+its own commit, since a newer Ruff enables new default rules and can redden a
+clean tree without a line of app code changing.
+
+**A command that did not run is not a passing command.** `.venv/` lives in the
+main checkout only, so from a git worktree `.venv/bin/python` and
+`.venv/bin/ruff` both fail with "no such file or directory" — use the main
+checkout's absolute path (`~/Code/iron-vale/.venv/bin/...`). That error is the
+easiest false green there is: it reads as environment noise rather than
+failure. When reporting a suite, quote the tool's own last line — `SMOKE
+PASSED — N checks green`, `All checks passed!`. If you cannot quote it, you
+did not run it.
 
 ## Gotchas
 
