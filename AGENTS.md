@@ -187,6 +187,7 @@ app/                     FastAPI backend (Python, stdlib sqlite3)
   colosseum.py  Betting mini-games (fight/race/pageant) vs. ephemeral rivals.
   items.py      Item catalog: dungeon gear/consumables/trinkets + Crankwerk cosmetics + packs.
   exercises.py  Exercise catalog with muscle groups + "how" form cues.
+  imported_exercises.py Cached imported attribution: raw muscles, fold, and status.
 
   The Council — one cluster, governed by the "One qualified Council snapshot"
   invariant below. `main.py` enters it ONLY via counsel / counsel_nudge /

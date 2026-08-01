@@ -1,6 +1,8 @@
 """Exercise catalog with muscle-group mappings and how-to cues.
 Used for quest generation, recency tracking, and the Compendium."""
 
+from .imported_exercises import category_for, groups_for as imported_groups_for, normalize_name
+
 GROUPS = ["legs", "posterior", "chest", "back", "shoulders", "arms", "core"]
 
 # equipment: kettlebell / barbell / dumbbell / bodyweight
@@ -116,7 +118,20 @@ EXERCISES = {
 
 KB_NAMES = [k for k, v in EXERCISES.items() if v["equipment"] == "kettlebell"]
 
+_MANUAL_GROUPS = {
+    normalize_name(name): exercise["groups"]
+    for name, exercise in EXERCISES.items()
+}
+
 
 def groups_for(exercise):
-    ex = EXERCISES.get(exercise)
-    return ex["groups"] if ex else []
+    manual_groups = _MANUAL_GROUPS.get(normalize_name(exercise))
+    return manual_groups if manual_groups is not None else imported_groups_for(exercise)
+
+
+def imported_category_for(exercise):
+    # Imported rows are attribution-only; quest generation must continue to
+    # select solely from EXERCISES, never from the local imported catalog.
+    if normalize_name(exercise) in _MANUAL_GROUPS:
+        return None
+    return category_for(exercise)
