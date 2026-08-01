@@ -488,6 +488,11 @@ def exercise_list():
     ]}
 
 
+@app.get("/api/catalog")
+def catalog():
+    return {"exercises": exercises.catalog()}
+
+
 # ---------------- stats / calendar / amendments ----------------
 
 @app.get("/api/stats")

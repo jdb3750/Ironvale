@@ -460,6 +460,92 @@ Source-agnostic. Ready to paste.
 
 ---
 
+# BRIEFS A & B — merged catalog + classifications — **DONE 2026-08-01**
+
+Supersedes Brief 4's "show imported rows in a distinct section". Joe ruled for a
+**single consistent catalog** instead: one name per movement, one uniform record
+shape, because two entries for the same lift under different names is worse than
+either alone.
+
+`GET /api/catalog` returns **881 records** (873 imported + 26 sworn − 6 exact-name
+collisions − 12 aliases), every one carrying an identical key set. Assembled as a
+**view at the API boundary** — `EXERCISES` itself is unchanged, so `scheme`, `how`
+and the four-value `equipment` ownership model are untouched and there was no
+migration against live ledger data.
+
+**Do not change `/api/exercises`.** It has five frontend consumers and
+`app/main.py:484` builds it by splatting every key of each `EXERCISES` entry
+except `scheme` — so adding a field to those entries silently changes that
+endpoint. This is why the authored classifications live in a separate mapping.
+`static/js/giver.js:493` filters on `e.equipment === 'kettlebell'` and
+`static/js/misc.js:722` builds a `<select>` of every name; both break if that
+response grows.
+
+### The alias table (Joe's rulings, 2026-08-01)
+
+Sworn name always wins; the upstream name disappears from the catalog.
+
+```
+Farmer Carry -> Farmer's Walk              Deadlift       -> Barbell Deadlift
+Back Squat   -> Barbell Squat              Bench Press    -> Barbell Bench Press - Medium Grip
+Pull-Up      -> Pullups                    Dip            -> Parallel Bar Dip
+Push-Up      -> Pushups                    Barbell Row    -> Bent Over Barbell Row
+Dumbbell Curl-> Dumbbell Bicep Curl        Overhead Press -> Barbell Shoulder Press
+Bulgarian Split Squat -> Suspended Split Squat
+Turkish Get-Up        -> Kettlebell Turkish Get-Up (Lunge style)
+```
+
+**Deliberately NOT aliased — these are different movements, do not "fix" them:**
+
+- `Kettlebell Halo` — upstream "Around The Worlds" is primary `chest`, a dumbbell
+  fly. The Halo is shoulders/core. Name similarity is a trap.
+- `Kettlebell Swing` — upstream has only the one-arm variant; ours is two-hand.
+- `Kettlebell Deadlift` — upstream has only the one-legged variant.
+- `Kettlebell Turkish Get-Up (Squat style)` — only the lunge variant is aliased.
+
+Aliases are Joe's call, not a code decision. Report candidates; do not add them.
+
+### `loaded carry` — a deliberate divergence from the source vocabulary
+
+The source's `force` enum is `pull | push | static`. Iron Vale adds a fourth,
+`loaded carry`, applied to 4 records (Farmer Carry/Farmer's Walk, Rickshaw Carry,
+Yoke Walk, Conan's Wheel).
+
+A carry is neither a push nor a pull, and `static` is **not** the escape hatch:
+this dataset uses `static` for stretching and SMR — quad stretches, foam rolling —
+so a loaded carry filed there would be worse than null. Upstream leaves all four
+carries null, which is honest but unfilterable.
+
+### The override boundary — read before extending anything
+
+An in-memory overlay fills `force` on 12 imported records. The vendored file is
+never modified; its sha256 is asserted in the tests.
+
+It exists to **add a value the source vocabulary lacks** and to **fill omissions
+where the answer is unambiguous** (`Band Assisted Pull-Up` → pull, `Push-Up Wide`
+→ push, and six more). It is **not** for correcting the source's judgment.
+
+**17 records keep a null `force` on purpose**: 13 cardio, where force genuinely
+does not apply, plus `Balance Board`, `Carioca Quick Step`, `Linear Acceleration
+Wall Drill` and `Moving Claw Series`, which are ambiguous and better left
+unspecified than guessed. Any Compendium filter needs an "unspecified" bucket
+regardless — `mechanic` has 87 nulls and `equipment` 77, most of them
+categorically correct (a stretch has no mechanic).
+
+### The eight authored kettlebell movements
+
+18 of the 26 sworn entries inherit classifications from their aliased upstream
+match. The other 8 have no upstream equivalent and were authored by Joe,
+calibrated against the 53 upstream kettlebell records and cross-checked against
+Fitbod. They live in a **separate mapping keyed by sworn name**, never in
+`EXERCISES` (see the `/api/exercises` gotcha above).
+
+Their muscles fold **broader** than their sworn `groups` in seven of eight cases.
+That is expected and matches the merged 18 — `groups` stays Joe's curated coarse
+label and keeps winning attribution; muscles drive the filter and the body map.
+
+---
+
 # BRIEF 3 — Settings APIs connector (BYO key)
 
 **Blocked on AscendAPI granting persistent-storage/bulk rights** (see the email
@@ -498,9 +584,13 @@ Remember safety rule 4: bump `?v=N` on every static asset URL in
 
 Only if wanted. Two separable pieces:
 
-- **Browse**: let the Compendium (`static/js/hall.js:305`) show imported rows in
-  a distinct section, clearly not part of the sworn catalog. Note it currently
-  groups by `equipment`, which imported rows won't reliably have.
+- **Browse — SUPERSEDED.** This originally proposed showing imported rows in a
+  distinct section. Joe ruled for one merged catalog instead; see BRIEFS A & B
+  above. The remaining frontend work is a two-pane Compendium over
+  `GET /api/catalog`: scrollable list on the left third, detail on the right two
+  thirds, with search, filters and sort above. Mobile needs its own layout.
+  `static/js/hall.js:305` currently renders a flat list grouped into four
+  hand-titled equipment sections, which does not survive 881 records.
 - **Per-muscle body map (Joe, hand-pixelled).** Planned 2026-07-31. Colours
   individual muscles rather than the seven broad areas. Brief 2 persists the 17
   source muscle values specifically so this needs no re-import — it reads them
