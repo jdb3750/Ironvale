@@ -26,11 +26,35 @@ FREE_EXERCISE_DB_MUSCLE_GROUPS: Final[Dict[str, Optional[str]]] = {
     "neck": None,
 }
 
+# Iron Vale adds "loaded carry" to the source Force enum: pull | push | static | loaded carry.
+FREE_EXERCISE_DB_FORCE_OVERRIDES: Final[Dict[str, str]] = {
+    "Farmer's Walk": "loaded carry",
+    "Rickshaw Carry": "loaded carry",
+    "Yoke Walk": "loaded carry",
+    "Conan's Wheel": "loaded carry",
+    "Band Assisted Pull-Up": "pull",
+    "Incline Inner Biceps Curl": "pull",
+    "Internal Rotation with Band": "pull",
+    "Push-Up Wide": "push",
+    "Smith Machine Decline Press": "push",
+    "Single Dumbbell Raise": "push",
+    "Inchworm": "static",
+    "Lying Prone Quadriceps": "static",
+}
+
 
 class ImportedExercise(NamedTuple):
     name: str
+    primary_muscles: Tuple[str, ...]
+    secondary_muscles: Tuple[str, ...]
     muscles: Tuple[str, ...]
     category: str
+    equipment: Optional[str]
+    force: Optional[str]
+    level: Optional[str]
+    mechanic: Optional[str]
+    instructions: Tuple[str, ...]
+    exercise_id: Optional[str]
 
 
 class ImportedCatalog(NamedTuple):
@@ -49,6 +73,19 @@ def _muscles(value) -> Optional[Tuple[str, ...]]:
     return tuple(value)
 
 
+def _optional_string(value) -> Optional[str]:
+    return value if isinstance(value, str) else None
+
+
+def _instructions(value) -> Tuple[str, ...]:
+    return tuple(value) if isinstance(value, list) and all(isinstance(step, str) for step in value) else ()
+
+
+def _with_force_override(imported: ImportedExercise) -> ImportedExercise:
+    force = FREE_EXERCISE_DB_FORCE_OVERRIDES.get(imported.name)
+    return imported._replace(force=force) if force is not None else imported
+
+
 def _adapt_free_exercise_db(record) -> Tuple[Optional[ImportedExercise], Optional[str]]:
     if not isinstance(record, dict):
         return None, "invalid record"
@@ -64,7 +101,20 @@ def _adapt_free_exercise_db(record) -> Tuple[Optional[ImportedExercise], Optiona
     unknown = tuple(muscle for muscle in muscles if muscle not in FREE_EXERCISE_DB_MUSCLE_GROUPS)
     if unknown:
         return None, "unknown muscle"
-    return ImportedExercise(name=name, muscles=muscles, category=category), None
+    imported = ImportedExercise(
+        name=name,
+        primary_muscles=primary,
+        secondary_muscles=secondary,
+        muscles=muscles,
+        category=category,
+        equipment=_optional_string(record.get("equipment")),
+        force=_optional_string(record.get("force")),
+        level=_optional_string(record.get("level")),
+        mechanic=_optional_string(record.get("mechanic")),
+        instructions=_instructions(record.get("instructions")),
+        exercise_id=_optional_string(record.get("id")),
+    )
+    return _with_force_override(imported), None
 
 
 @lru_cache(maxsize=None)
@@ -102,6 +152,10 @@ def clear_cache() -> None:
 
 def find(name) -> Optional[ImportedExercise]:
     return _catalog(SOURCE_PATH).rows.get(normalize_name(name))
+
+
+def rows() -> Tuple[ImportedExercise, ...]:
+    return tuple(_catalog(SOURCE_PATH).rows.values())
 
 
 def category_for(name) -> Optional[str]:

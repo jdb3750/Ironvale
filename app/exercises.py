@@ -1,7 +1,15 @@
 """Exercise catalog with muscle-group mappings and how-to cues.
 Used for quest generation, recency tracking, and the Compendium."""
 
-from .imported_exercises import category_for, groups_for as imported_groups_for, normalize_name
+from typing import Optional
+
+from .imported_exercises import (
+    ImportedExercise,
+    category_for,
+    groups_for as imported_groups_for,
+    normalize_name,
+    rows as imported_rows,
+)
 
 GROUPS = ["legs", "posterior", "chest", "back", "shoulders", "arms", "core"]
 
@@ -123,6 +131,61 @@ _MANUAL_GROUPS = {
     for name, exercise in EXERCISES.items()
 }
 
+_MANUAL_SOURCE_ALIASES = {
+    "Farmer Carry": "Farmer's Walk",
+    "Back Squat": "Barbell Squat",
+    "Pull-Up": "Pullups",
+    "Push-Up": "Pushups",
+    "Deadlift": "Barbell Deadlift",
+    "Bench Press": "Barbell Bench Press - Medium Grip",
+    "Dip": "Parallel Bar Dip",
+    "Barbell Row": "Bent Over Barbell Row",
+    "Dumbbell Curl": "Dumbbell Bicep Curl",
+    "Overhead Press": "Barbell Shoulder Press",
+    "Bulgarian Split Squat": "Suspended Split Squat",
+    "Turkish Get-Up": "Kettlebell Turkish Get-Up (Lunge style)",
+}
+
+_VALE_ONLY_CATALOG_CLASSIFICATIONS = {
+    "Kettlebell Swing": {
+        "primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "calves", "shoulders"],
+        "force": "pull", "level": "intermediate", "mechanic": "compound",
+    },
+    "Kettlebell Clean & Press": {
+        "primaryMuscles": ["shoulders"], "secondaryMuscles": ["triceps", "traps", "quadriceps", "glutes", "hamstrings", "lower back", "abdominals", "calves", "middle back"],
+        "force": "push", "level": "intermediate", "mechanic": "compound",
+    },
+    "Kettlebell Snatch": {
+        "primaryMuscles": ["shoulders"], "secondaryMuscles": ["hamstrings", "glutes", "lower back", "traps", "calves", "triceps"],
+        "force": "pull", "level": "expert", "mechanic": "compound",
+    },
+    "Kettlebell Row": {
+        "primaryMuscles": ["middle back"], "secondaryMuscles": ["biceps", "lats"],
+        "force": "pull", "level": "beginner", "mechanic": "compound",
+    },
+    "Kettlebell Floor Press": {
+        "primaryMuscles": ["chest"], "secondaryMuscles": ["triceps", "shoulders"],
+        "force": "push", "level": "beginner", "mechanic": "compound",
+    },
+    "Kettlebell Halo": {
+        "primaryMuscles": ["shoulders"], "secondaryMuscles": [],
+        "force": "push", "level": "beginner", "mechanic": "isolation",
+    },
+    "Kettlebell Lunge": {
+        "primaryMuscles": ["quadriceps"], "secondaryMuscles": ["glutes", "hamstrings", "calves"],
+        "force": "push", "level": "beginner", "mechanic": "compound",
+    },
+    "Kettlebell Deadlift": {
+        "primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "quadriceps", "calves", "abdominals", "middle back"],
+        "force": "pull", "level": "beginner", "mechanic": "compound",
+    },
+}
+
+_DISPLAY_EQUIPMENT = {
+    "kettlebell": "kettlebells",
+    "bodyweight": "body only",
+}
+
 
 def groups_for(exercise):
     manual_groups = _MANUAL_GROUPS.get(normalize_name(exercise))
@@ -135,3 +198,67 @@ def imported_category_for(exercise):
     if normalize_name(exercise) in _MANUAL_GROUPS:
         return None
     return category_for(exercise)
+
+
+def _source_fields(imported: Optional[ImportedExercise]):
+    if imported is None:
+        return {
+            "id": None,
+            "aliases": [],
+            "force": None,
+            "level": None,
+            "mechanic": None,
+            "equipment": None,
+            "primaryMuscles": [],
+            "secondaryMuscles": [],
+            "instructions": [],
+            "category": None,
+        }
+    return {
+        "id": imported.exercise_id,
+        "aliases": [],
+        "force": imported.force,
+        "level": imported.level,
+        "mechanic": imported.mechanic,
+        "equipment": imported.equipment,
+        "primaryMuscles": list(imported.primary_muscles),
+        "secondaryMuscles": list(imported.secondary_muscles),
+        "instructions": list(imported.instructions),
+        "category": imported.category,
+    }
+
+
+def _manual_catalog_record(name, exercise, imported: Optional[ImportedExercise], alias):
+    record = _source_fields(imported)
+    record.update(_VALE_ONLY_CATALOG_CLASSIFICATIONS.get(name, {}))
+    record.update({
+        "name": name,
+        "aliases": [alias] if alias else [],
+        "equipment": _DISPLAY_EQUIPMENT.get(exercise["equipment"], exercise["equipment"]),
+        "groups": list(exercise["groups"]),
+        "scheme": list(exercise["scheme"]),
+        "how": exercise["how"],
+    })
+    return record
+
+
+def _imported_catalog_record(imported: ImportedExercise):
+    record = _source_fields(imported)
+    record.update({
+        "name": imported.name,
+        "groups": imported_groups_for(imported.name),
+        "scheme": None,
+        "how": None,
+    })
+    return record
+
+
+def catalog():
+    imported_by_name = {normalize_name(imported.name): imported for imported in imported_rows()}
+    merged = []
+    for name, exercise in EXERCISES.items():
+        alias = _MANUAL_SOURCE_ALIASES.get(name)
+        imported = imported_by_name.pop(normalize_name(alias or name), None)
+        merged.append(_manual_catalog_record(name, exercise, imported, alias))
+    merged.extend(_imported_catalog_record(imported) for imported in imported_by_name.values())
+    return merged
