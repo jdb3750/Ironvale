@@ -1,0 +1,9 @@
+# Development-only dependencies. NOT installed into the production image —
+# the Dockerfile copies requirements.txt alone, deliberately.
+#
+#   .venv/bin/pip install -r requirements-dev.txt
+#
+# Pinned exactly: a newer Ruff enables new default rules, which would turn a
+# clean tree red without a line of app code changing. Upgrading is a separate,
+# deliberate commit.
+ruff==0.8.5

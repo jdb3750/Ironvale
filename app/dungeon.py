@@ -10,7 +10,6 @@ Vigor (earned by completing workout quests) buys expeditions.
 """
 import math
 import random
-from datetime import datetime
 
 from . import db, items, game
 

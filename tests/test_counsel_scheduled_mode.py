@@ -1,4 +1,3 @@
-import json
 
 from counsel_giver_test_support import (
     AcceptanceResponse,
