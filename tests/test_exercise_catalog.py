@@ -338,4 +338,23 @@ finally:
     imported_exercises.SOURCE_PATH = source_path
     imported_exercises.clear_cache()
 
+
+
+# Given: the app reads its imported catalog from a path outside app/ and
+# static/. When: the container image is built. Then: that path is copied in,
+# because a missing source degrades silently to sworn-only rather than erroring
+# — which is exactly how it shipped broken to production once.
+ROOT = Path(__file__).resolve().parents[1]
+dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+copied = [
+    line.split()[1]
+    for line in dockerfile.splitlines()
+    if line.startswith("COPY ") and len(line.split()) >= 3
+]
+source_rel = imported_exercises.SOURCE_PATH.resolve().relative_to(ROOT)
+ok(
+    f"Dockerfile copies {source_rel.parts[0]}/ so the imported catalog exists in the container",
+    any(source_rel.parts[0] == Path(c).parts[0] for c in copied),
+)
+
 print("EXERCISE CATALOG PASSED")
