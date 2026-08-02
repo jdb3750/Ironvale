@@ -179,6 +179,16 @@ entries are open work with the removal path worked out.
   fails roughly one run in five without a name is exactly what erodes trust in a
   red result. If it recurs, capture the test name first and log it here before
   re-running.
+
+  **It recurred during the v0.33.0 run, and the name was lost again.** 48 pass /
+  1 fail on the run immediately after the `VERSION` bump, then 49/49 on two
+  consecutive re-runs. The name was missed because the run was piped through
+  `grep -E "^ℹ (tests|pass|fail)"`, which shows the counts and discards the
+  failing test's identity — the summary lines are the only thing that survives.
+  So the instruction above is not enough on its own: **capture the full output to
+  a file, then read the counts from it**, e.g.
+  `npm run test:browser > run.log 2>&1` before grepping. Two occurrences now, both
+  unnamed, both a single failure that vanished on retry.
 - **Headful screenshot mode hits `innerText` timing failures.** Observed during the
   v0.25.0 migration work: the optional headful capture mode failed twice on
   `innerText` reads while still producing valid captures, and the canonical

@@ -149,36 +149,47 @@ _MANUAL_SOURCE_ALIASES = {
 _VALE_ONLY_CATALOG_CLASSIFICATIONS = {
     "Kettlebell Swing": {
         "primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "calves", "shoulders"],
-        "force": "pull", "level": "intermediate", "mechanic": "compound",
+        "force": "pull", "level": "intermediate", "mechanic": "compound", "category": "strength",
     },
     "Kettlebell Clean & Press": {
         "primaryMuscles": ["shoulders"], "secondaryMuscles": ["triceps", "traps", "quadriceps", "glutes", "hamstrings", "lower back", "abdominals", "calves", "middle back"],
-        "force": "push", "level": "intermediate", "mechanic": "compound",
+        "force": "push", "level": "intermediate", "mechanic": "compound", "category": "strength",
     },
     "Kettlebell Snatch": {
         "primaryMuscles": ["shoulders"], "secondaryMuscles": ["hamstrings", "glutes", "lower back", "traps", "calves", "triceps"],
-        "force": "pull", "level": "expert", "mechanic": "compound",
+        "force": "pull", "level": "expert", "mechanic": "compound", "category": "strength",
     },
     "Kettlebell Row": {
         "primaryMuscles": ["middle back"], "secondaryMuscles": ["biceps", "lats"],
-        "force": "pull", "level": "beginner", "mechanic": "compound",
+        "force": "pull", "level": "beginner", "mechanic": "compound", "category": "strength",
     },
     "Kettlebell Floor Press": {
         "primaryMuscles": ["chest"], "secondaryMuscles": ["triceps", "shoulders"],
-        "force": "push", "level": "beginner", "mechanic": "compound",
+        "force": "push", "level": "beginner", "mechanic": "compound", "category": "strength",
     },
     "Kettlebell Halo": {
         "primaryMuscles": ["shoulders"], "secondaryMuscles": [],
-        "force": "push", "level": "beginner", "mechanic": "isolation",
+        "force": "push", "level": "beginner", "mechanic": "isolation", "category": "strength",
     },
     "Kettlebell Lunge": {
         "primaryMuscles": ["quadriceps"], "secondaryMuscles": ["glutes", "hamstrings", "calves"],
-        "force": "push", "level": "beginner", "mechanic": "compound",
+        "force": "push", "level": "beginner", "mechanic": "compound", "category": "strength",
     },
     "Kettlebell Deadlift": {
         "primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "quadriceps", "calves", "abdominals", "middle back"],
-        "force": "pull", "level": "beginner", "mechanic": "compound",
+        "force": "pull", "level": "beginner", "mechanic": "compound", "category": "strength",
     },
+}
+
+_VALE_ONLY_CATALOG_IDS = {
+    "Kettlebell Swing": "Kettlebell_Swing",
+    "Kettlebell Clean & Press": "Kettlebell_Clean_&_Press",
+    "Kettlebell Snatch": "Kettlebell_Snatch",
+    "Kettlebell Row": "Kettlebell_Row",
+    "Kettlebell Floor Press": "Kettlebell_Floor_Press",
+    "Kettlebell Halo": "Kettlebell_Halo",
+    "Kettlebell Lunge": "Kettlebell_Lunge",
+    "Kettlebell Deadlift": "Kettlebell_Deadlift",
 }
 
 _DISPLAY_EQUIPMENT = {
@@ -232,6 +243,7 @@ def _manual_catalog_record(name, exercise, imported: Optional[ImportedExercise],
     record = _source_fields(imported)
     record.update(_VALE_ONLY_CATALOG_CLASSIFICATIONS.get(name, {}))
     record.update({
+        "id": record["id"] or _VALE_ONLY_CATALOG_IDS.get(name),
         "name": name,
         "aliases": [alias] if alias else [],
         "equipment": _DISPLAY_EQUIPMENT.get(exercise["equipment"], exercise["equipment"]),
@@ -253,7 +265,7 @@ def _imported_catalog_record(imported: ImportedExercise):
     return record
 
 
-def catalog():
+def _full_catalog():
     imported_by_name = {normalize_name(imported.name): imported for imported in imported_rows()}
     merged = []
     for name, exercise in EXERCISES.items():
@@ -261,4 +273,18 @@ def catalog():
         imported = imported_by_name.pop(normalize_name(alias or name), None)
         merged.append(_manual_catalog_record(name, exercise, imported, alias))
     merged.extend(_imported_catalog_record(imported) for imported in imported_by_name.values())
-    return merged
+    return sorted(merged, key=lambda record: record["name"].casefold())
+
+
+def catalog():
+    return [
+        {key: value for key, value in record.items() if key != "instructions"}
+        for record in _full_catalog()
+    ]
+
+
+def catalog_detail(exercise_id):
+    return next(
+        (record for record in _full_catalog() if record["id"] == exercise_id),
+        None,
+    )

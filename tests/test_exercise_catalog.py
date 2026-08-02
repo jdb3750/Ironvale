@@ -21,7 +21,7 @@ from app.main import app  # noqa: E402
 
 client = TestClient(app)
 
-EXPECTED_KEYS = {
+EXPECTED_LIST_KEYS = {
     "aliases",
     "category",
     "equipment",
@@ -29,7 +29,6 @@ EXPECTED_KEYS = {
     "groups",
     "how",
     "id",
-    "instructions",
     "level",
     "mechanic",
     "name",
@@ -37,6 +36,8 @@ EXPECTED_KEYS = {
     "scheme",
     "secondaryMuscles",
 }
+
+EXPECTED_DETAIL_KEYS = EXPECTED_LIST_KEYS | {"instructions"}
 
 APPROVED_ALIASES = {
     "Farmer Carry": "Farmer's Walk",
@@ -54,14 +55,25 @@ APPROVED_ALIASES = {
 }
 
 VALE_ONLY_CLASSIFICATIONS = {
-    "Kettlebell Swing": {"primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "calves", "shoulders"], "force": "pull", "level": "intermediate", "mechanic": "compound"},
-    "Kettlebell Clean & Press": {"primaryMuscles": ["shoulders"], "secondaryMuscles": ["triceps", "traps", "quadriceps", "glutes", "hamstrings", "lower back", "abdominals", "calves", "middle back"], "force": "push", "level": "intermediate", "mechanic": "compound"},
-    "Kettlebell Snatch": {"primaryMuscles": ["shoulders"], "secondaryMuscles": ["hamstrings", "glutes", "lower back", "traps", "calves", "triceps"], "force": "pull", "level": "expert", "mechanic": "compound"},
-    "Kettlebell Row": {"primaryMuscles": ["middle back"], "secondaryMuscles": ["biceps", "lats"], "force": "pull", "level": "beginner", "mechanic": "compound"},
-    "Kettlebell Floor Press": {"primaryMuscles": ["chest"], "secondaryMuscles": ["triceps", "shoulders"], "force": "push", "level": "beginner", "mechanic": "compound"},
-    "Kettlebell Halo": {"primaryMuscles": ["shoulders"], "secondaryMuscles": [], "force": "push", "level": "beginner", "mechanic": "isolation"},
-    "Kettlebell Lunge": {"primaryMuscles": ["quadriceps"], "secondaryMuscles": ["glutes", "hamstrings", "calves"], "force": "push", "level": "beginner", "mechanic": "compound"},
-    "Kettlebell Deadlift": {"primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "quadriceps", "calves", "abdominals", "middle back"], "force": "pull", "level": "beginner", "mechanic": "compound"},
+    "Kettlebell Swing": {"primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "calves", "shoulders"], "force": "pull", "level": "intermediate", "mechanic": "compound", "category": "strength"},
+    "Kettlebell Clean & Press": {"primaryMuscles": ["shoulders"], "secondaryMuscles": ["triceps", "traps", "quadriceps", "glutes", "hamstrings", "lower back", "abdominals", "calves", "middle back"], "force": "push", "level": "intermediate", "mechanic": "compound", "category": "strength"},
+    "Kettlebell Snatch": {"primaryMuscles": ["shoulders"], "secondaryMuscles": ["hamstrings", "glutes", "lower back", "traps", "calves", "triceps"], "force": "pull", "level": "expert", "mechanic": "compound", "category": "strength"},
+    "Kettlebell Row": {"primaryMuscles": ["middle back"], "secondaryMuscles": ["biceps", "lats"], "force": "pull", "level": "beginner", "mechanic": "compound", "category": "strength"},
+    "Kettlebell Floor Press": {"primaryMuscles": ["chest"], "secondaryMuscles": ["triceps", "shoulders"], "force": "push", "level": "beginner", "mechanic": "compound", "category": "strength"},
+    "Kettlebell Halo": {"primaryMuscles": ["shoulders"], "secondaryMuscles": [], "force": "push", "level": "beginner", "mechanic": "isolation", "category": "strength"},
+    "Kettlebell Lunge": {"primaryMuscles": ["quadriceps"], "secondaryMuscles": ["glutes", "hamstrings", "calves"], "force": "push", "level": "beginner", "mechanic": "compound", "category": "strength"},
+    "Kettlebell Deadlift": {"primaryMuscles": ["hamstrings"], "secondaryMuscles": ["glutes", "lower back", "quadriceps", "calves", "abdominals", "middle back"], "force": "pull", "level": "beginner", "mechanic": "compound", "category": "strength"},
+}
+
+VALE_ONLY_IDS = {
+    "Kettlebell Swing": "Kettlebell_Swing",
+    "Kettlebell Clean & Press": "Kettlebell_Clean_&_Press",
+    "Kettlebell Snatch": "Kettlebell_Snatch",
+    "Kettlebell Row": "Kettlebell_Row",
+    "Kettlebell Floor Press": "Kettlebell_Floor_Press",
+    "Kettlebell Halo": "Kettlebell_Halo",
+    "Kettlebell Lunge": "Kettlebell_Lunge",
+    "Kettlebell Deadlift": "Kettlebell_Deadlift",
 }
 
 IMPORTED_FORCE_OVERRIDES = {
@@ -113,12 +125,60 @@ by_name = {row["name"]: row for row in rows}
 # Given: the sworn and vendored catalogs. When: they are merged. Then: one
 # renderer can consume every row because every key is present on every record.
 ok("adapter retains every vendored source row", imported_exercises.status()["loaded_rows"] == 873)
-ok("all catalog records have one key set", {frozenset(row) for row in rows} == {frozenset(EXPECTED_KEYS)})
+ok(
+    "catalog list records have one prose-free key set",
+    {frozenset(row) for row in rows} == {frozenset(EXPECTED_LIST_KEYS)},
+)
+ok("catalog list omits instructions", all("instructions" not in row for row in rows))
 ok("catalog omits the unused images field", all("images" not in row for row in rows))
 ok("catalog has the expected approved merge count", len(rows) == 881)
+ok("every catalog record has a category", all(row["category"] is not None for row in rows))
+ok(
+    "Vale-only movements are authored as strength",
+    all(by_name[name]["category"] == "strength" for name in VALE_ONLY_CLASSIFICATIONS),
+)
+catalog_names = [row["name"] for row in rows]
+ok(
+    "catalog order is case-insensitive by name",
+    catalog_names == sorted(catalog_names, key=str.casefold),
+)
 ok(
     "catalog has no duplicate normalized names",
     len({imported_exercises.normalize_name(row["name"]) for row in rows}) == len(rows),
+)
+ok("every catalog record has a stable id", all(row["id"] is not None for row in rows))
+ok("catalog ids are unique", len({row["id"] for row in rows}) == len(rows))
+ok(
+    "Vale-only movements use the approved source-style ids",
+    all(by_name[name]["id"] == exercise_id for name, exercise_id in VALE_ONLY_IDS.items()),
+)
+
+# Given: a sworn movement with no upstream prose and a fully imported movement.
+# When: each detail route is read. Then: both return the uniform full record,
+# with instructions explicit even when the source supplied none.
+halo_detail_response = client.get("/api/catalog/Kettlebell_Halo")
+ok("sworn catalog detail is available", halo_detail_response.status_code == 200)
+halo_detail = halo_detail_response.json()
+ok("catalog detail restores the full key set", set(halo_detail) == EXPECTED_DETAIL_KEYS)
+ok(
+    "Vale-only detail carries empty upstream instructions and sworn how",
+    halo_detail["instructions"] == []
+    and halo_detail["how"] == exercises.EXERCISES["Kettlebell Halo"]["how"],
+)
+conan_detail_response = client.get("/api/catalog/Conans_Wheel")
+ok("imported catalog detail is available", conan_detail_response.status_code == 200)
+conan_detail = conan_detail_response.json()
+ok(
+    "imported detail carries source instructions in the shared prose slot",
+    conan_detail["name"] == "Conan's Wheel"
+    and conan_detail["how"] is None
+    and len(conan_detail["instructions"]) > 0,
+)
+missing_detail = client.get("/api/catalog/Not_In_The_Ledger")
+ok("unknown catalog id returns 404", missing_detail.status_code == 404)
+ok(
+    "unknown catalog id has an in-world message",
+    "Compendium" in missing_detail.json()["detail"],
 )
 
 # Given: a sworn movement with a matching vendored row. When: the sources are
@@ -251,9 +311,10 @@ try:
         optional_row["equipment"] is None
         and optional_row["force"] is None
         and optional_row["level"] is None
-        and optional_row["mechanic"] is None
-        and optional_row["instructions"] == [],
+        and optional_row["mechanic"] is None,
     )
+    optional_detail = client.get(f"/api/catalog/{optional_row['id']}").json()
+    ok("missing optional instructions stay explicit in detail", optional_detail["instructions"] == [])
 finally:
     imported_exercises.SOURCE_PATH = source_path
     imported_exercises.clear_cache()

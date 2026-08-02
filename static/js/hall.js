@@ -29,7 +29,8 @@ RESETS.push(() => {
   almMonth = null;
   hallDaySets = new Map();
   hallDayActivities = new Map();
-  COMP.open = {};
+  COMP.selectedId = null;
+  COMP.listScrollTop = 0;
 });
 
 SCREENS.stats = async function () {
@@ -211,6 +212,8 @@ SCREENS.stats = async function () {
     </div>` : '';
     body = tapWin + await calendarBody();
   } else if (statsTab === 'compendium') {
+    await ensureCompendiumCatalog();
+    if (!isRouteTokenCurrent(routeToken)) return;
     body = compendiumBody();
   } else if (statsTab === 'almanac') {
     // plain fetch, not api(): a stale live backend (static JS updates from
@@ -276,9 +279,18 @@ SCREENS.stats = async function () {
     </div>`;
   // phones seat Maud below the records, like the quest givers — her
   // typewriter dialog reflows its window and would shove the nav around
-  $app().innerHTML = shell(isCompactPhone()
-    ? `${hallNav}${body}${curatorWin}`
-    : `${curatorWin}${hallNav}${body}`);
+  $app().innerHTML = shell(`<div class="hall-surface">
+    <div class="hall-curator">${curatorWin}</div>
+    <div class="hall-nav-slot">${hallNav}</div>
+    <div class="hall-body">${body}</div>
+  </div>`);
+  if (statsTab === 'compendium') {
+    const list = document.querySelector('.compendium-list');
+    if (list) {
+      list.scrollTop = COMP.listScrollTop;
+      list.addEventListener('scroll', () => { COMP.listScrollTop = list.scrollTop; });
+    }
+  }
   typewrite(document.getElementById('curator-dlg'),
     CURATOR_LINES[statsTab] || CURATOR_LINES.body, 14, npcPortraitEl());
   if (statsTab === 'deeds') {
@@ -301,33 +313,114 @@ SCREENS.stats = async function () {
 
 /* ---- compendium (Hall of Records tab) ---- */
 
-const COMP = { open: {} };
-function compendiumBody() {
-  const byEquip = {};
-  S.exercises.forEach(e => (byEquip[e.equipment] = byEquip[e.equipment] || []).push(e));
-  const section = (eq, label) => byEquip[eq] ? `
-    <div class="win"><span class="win-title">${label}</span>
-      ${byEquip[eq].map(e => `<button type="button" class="shop-row control-reset" style="width:100%;padding:8px 4px;border-bottom:1px solid #22203a;cursor:pointer"
-        aria-label="${COMP.open[e.name] ? 'Close' : 'Open'} form notes for ${esc(e.name)}" aria-expanded="${!!COMP.open[e.name]}"
-        onclick="G.compToggle(${S.exercises.indexOf(e)})">
-        <span class="grow"><span class="s-name">${esc(e.name)}</span><br>
-          <span class="s-desc">targets: ${e.groups.join(', ')}</span>
-          ${COMP.open[e.name] ? `<span class="muted" style="display:block;font-family: var(--font-body); font-size: var(--type-body);border-left:2px solid var(--gold);padding-left:8px;margin-top:6px">${esc(e.how || '')}</span>` : ''}</span>
-        ${bodyMapTag(e.groups, 90)}
-      </button>`).join('')}
-    </div>` : '';
-  return `<div class="muted center" style="margin:4px 0">The Compendium of Honest Labor — tap a lift for the how.
-      Left figure: front. Right: back.</div>
-    ${section('kettlebell', 'The Bell')}
-    ${section('barbell', 'The Bar')}
-    ${section('dumbbell', 'The Dumbbells')}
-    ${section('bodyweight', 'The Body Itself')}`;
+const COMP = {
+  records: null,
+  selectedId: null,
+  details: new Map(),
+  catalogRequest: null,
+  detailRequests: new Map(),
+  listScrollTop: 0,
+};
+
+async function ensureCompendiumCatalog() {
+  if (COMP.records) return;
+  if (!COMP.catalogRequest) {
+    COMP.catalogRequest = api('/catalog').then(payload => {
+      COMP.records = payload.exercises;
+    });
+  }
+  try {
+    await COMP.catalogRequest;
+  } finally {
+    COMP.catalogRequest = null;
+  }
 }
 
-G.compToggle = (index) => {
-  const exercise = S.exercises[index];
-  if (!exercise) return;
-  COMP.open[exercise.name] = !COMP.open[exercise.name];
+function compendiumBody() {
+  const records = COMP.records || [];
+  const selected = records.find(record => record.id === COMP.selectedId) || null;
+  const fullRecord = selected ? (COMP.details.get(selected.id) || selected) : null;
+  const list = `<section class="win compendium-list-pane">
+    <span class="win-title">Movements</span>
+    <div class="compendium-list" aria-label="Compendium movements">
+      ${records.map((record, index) => `<button type="button"
+        class="control-reset compendium-list-row ${record.id === COMP.selectedId ? 'selected' : ''}"
+        aria-pressed="${record.id === COMP.selectedId}" onclick="G.compSelect(${index})">${esc(record.name)}</button>`).join('')}
+    </div>
+  </section>`;
+  let detail = `<section class="win compendium-detail-pane">
+    <span class="win-title">Open a Page</span>
+    <div class="compendium-detail-scroll compendium-detail-empty">
+      <div class="muted center">Choose a movement. Maud has filed every honest labor under its proper name.</div>
+    </div>
+  </section>`;
+  if (selected && fullRecord) {
+    const muscles = values => values.length ? values.join(', ') : 'none recorded';
+    const value = field => field || 'unrecorded';
+    const scheme = selected.scheme
+      ? `${selected.scheme[1]}-${selected.scheme[2]} ${selected.scheme[0]}`
+      : 'unrecorded';
+    let prose = '<div class="muted">Maud is finding the proper page...</div>';
+    if (selected.how) {
+      prose = `<p>${esc(selected.how)}</p>`;
+    } else if (COMP.details.has(selected.id)) {
+      prose = fullRecord.instructions.length
+        ? `<ol>${fullRecord.instructions.map(step => `<li>${esc(step)}</li>`).join('')}</ol>`
+        : '<div class="muted">No instructions were entered for this movement.</div>';
+    }
+    detail = `<section class="win compendium-detail-pane">
+      <span class="win-title compendium-detail-name">${esc(selected.name)}</span>
+      <div class="compendium-detail-scroll">
+        <button type="button" class="btn small compendium-back" onclick="G.compBack()">Back to the list</button>
+        <div class="compendium-detail-lead">
+          <div class="compendium-body-map">${bodyMapTag(selected.groups, 130)}
+            <span class="muted">front and back</span>
+          </div>
+          <dl class="compendium-facts">
+            <div><dt>Primary muscles</dt><dd>${esc(muscles(selected.primaryMuscles))}</dd></div>
+            <div><dt>Secondary muscles</dt><dd>${esc(muscles(selected.secondaryMuscles))}</dd></div>
+            <div><dt>Equipment</dt><dd>${esc(value(selected.equipment))}</dd></div>
+            <div><dt>Force</dt><dd>${esc(value(selected.force))}</dd></div>
+            <div><dt>Level</dt><dd>${esc(value(selected.level))}</dd></div>
+            <div><dt>Mechanic</dt><dd>${esc(value(selected.mechanic))}</dd></div>
+            <div><dt>Category</dt><dd>${esc(value(selected.category))}</dd></div>
+            <div><dt>Vale prescription</dt><dd>${esc(scheme)}</dd></div>
+          </dl>
+        </div>
+        <div class="compendium-prose" aria-live="polite">
+          <div class="compendium-prose-title">How It Is Done</div>
+          ${prose}
+        </div>
+      </div>
+    </section>`;
+  }
+  return `<div class="muted center compendium-intro">The Compendium of Honest Labor. Choose a movement and read its page before you begin.</div>
+    <div class="compendium-layout ${selected ? 'has-selection' : ''}">${list}${detail}</div>`;
+}
+
+G.compSelect = (index) => {
+  const record = COMP.records?.[index];
+  if (!record) return;
+  const list = document.querySelector('.compendium-list');
+  if (list) COMP.listScrollTop = list.scrollTop;
+  COMP.selectedId = record.id;
+  if (!COMP.details.has(record.id) && !COMP.detailRequests.has(record.id)) {
+    const request = api(`/catalog/${encodeURIComponent(record.id)}`);
+    COMP.detailRequests.set(record.id, request);
+    request.then(detail => {
+      COMP.details.set(record.id, detail);
+      if (S.screen === 'stats' && statsTab === 'compendium' && COMP.selectedId === record.id) {
+        render();
+      }
+    }).catch(() => {}).finally(() => {
+      COMP.detailRequests.delete(record.id);
+    });
+  }
+  render();
+};
+
+G.compBack = () => {
+  COMP.selectedId = null;
   render();
 };
 

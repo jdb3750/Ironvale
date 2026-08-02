@@ -1627,6 +1627,39 @@ test('Hall tapestry and sequencer share promoted activity colours', async () => 
   }
 });
 
+test('Compendium lazily renders the full catalog and opens apostrophe-name detail', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    const bootCatalogRequests = await page.evaluate(() => (
+      performance.getEntriesByType('resource')
+        .map(entry => new URL(entry.name).pathname)
+        .filter(pathname => pathname.startsWith('/api/catalog'))
+    ));
+    assert.deepEqual(bootCatalogRequests, []);
+
+    await page.evaluate(() => {
+      statsTab = 'compendium';
+      nav('stats');
+    });
+    const rows = page.locator('.compendium-list-row');
+    await rows.first().waitFor();
+    assert.equal(await rows.count(), 881);
+    assert.equal(await page.locator('.compendium-list canvas').count(), 0);
+
+    const detailResponse = page.waitForResponse(response => (
+      new URL(response.url()).pathname === '/api/catalog/Conans_Wheel'
+    ));
+    await page.getByRole('button', { name: "Conan's Wheel", exact: true }).click();
+    assert.equal((await detailResponse).status(), 200);
+    await page.locator('.compendium-detail-name').filter({ hasText: "Conan's Wheel" }).waitFor();
+    assert.equal(await page.locator('.compendium-detail-pane canvas').count(), 1);
+    assert.ok(await page.locator('.compendium-prose li').count() > 0);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
 test('Settings renders v0.27 routine and open slots in the sequencer grid', async () => {
   const { context, failures, page } = await openMainProfile({ width: 375, height: 812 });
   try {
@@ -3337,7 +3370,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '118'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '119'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
