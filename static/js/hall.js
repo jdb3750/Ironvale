@@ -31,6 +31,10 @@ RESETS.push(() => {
   hallDayActivities = new Map();
   COMP.selectedId = null;
   COMP.listScrollTop = 0;
+  COMP.visibleRecords = [];
+  COMP.query = '';
+  COMP.includeSecondary = false;
+  COMP.activeChips = [];
 });
 
 SCREENS.stats = async function () {
@@ -285,11 +289,7 @@ SCREENS.stats = async function () {
     <div class="hall-body">${body}</div>
   </div>`);
   if (statsTab === 'compendium') {
-    const list = document.querySelector('.compendium-list');
-    if (list) {
-      list.scrollTop = COMP.listScrollTop;
-      list.addEventListener('scroll', () => { COMP.listScrollTop = list.scrollTop; });
-    }
+    restoreCompendiumListScroll();
   }
   typewrite(document.getElementById('curator-dlg'),
     CURATOR_LINES[statsTab] || CURATOR_LINES.body, 14, npcPortraitEl());
@@ -313,6 +313,14 @@ SCREENS.stats = async function () {
 
 /* ---- compendium (Hall of Records tab) ---- */
 
+const COMP_FILTER_DIMENSIONS = [
+  'group', 'muscle', 'equipment', 'category', 'level', 'force', 'mechanic',
+];
+const COMP_FILTER_LABELS = {
+  group: 'Muscle group', muscle: 'Muscle', equipment: 'Equipment', category: 'Category',
+  level: 'Level', force: 'Force', mechanic: 'Mechanic',
+};
+
 const COMP = {
   records: null,
   selectedId: null,
@@ -320,13 +328,250 @@ const COMP = {
   catalogRequest: null,
   detailRequests: new Map(),
   listScrollTop: 0,
+  visibleRecords: [],
+  filterOptions: null,
+  vocabulary: [],
+  query: '',
+  includeSecondary: false,
+  activeChips: [],
 };
+
+function sortedCatalogValues(records, valuesForRecord) {
+  const values = new Set();
+  records.forEach(record => {
+    valuesForRecord(record).forEach(value => {
+      if (value != null) values.add(value);
+    });
+  });
+  return [...values].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+function buildCompendiumFilterOptions(records) {
+  return {
+    group: sortedCatalogValues(records, record => record.groups),
+    muscle: sortedCatalogValues(records, record => [
+      ...record.primaryMuscles, ...record.secondaryMuscles,
+    ]),
+    equipment: sortedCatalogValues(records, record => [record.equipment]),
+    category: sortedCatalogValues(records, record => [record.category]),
+    level: sortedCatalogValues(records, record => [record.level]),
+    force: sortedCatalogValues(records, record => [record.force]),
+    mechanic: sortedCatalogValues(records, record => [record.mechanic]),
+  };
+}
+
+function buildCompendiumVocabulary(options) {
+  const byValue = new Map();
+  COMP_FILTER_DIMENSIONS.forEach(dimension => {
+    options[dimension].forEach(value => {
+      const key = value.toLocaleLowerCase();
+      if (!byValue.has(key) || dimension === 'muscle') {
+        byValue.set(key, { dimension, value });
+      }
+    });
+  });
+  return [...byValue.values()].sort((a, b) => (
+    b.value.length - a.value.length
+    || a.value.localeCompare(b.value, undefined, { sensitivity: 'base' })
+  ));
+}
+
+function compendiumOptionLabel(value) {
+  return value.replace(/\b[a-z]/g, letter => letter.toUpperCase());
+}
+
+function compendiumTokenBoundary(character) {
+  return !character || /\s|[,;]/.test(character);
+}
+
+function parseCompendiumQuery(query) {
+  const normalized = query.toLocaleLowerCase();
+  const occupied = Array.from({ length: normalized.length }, () => false);
+  const forcedText = [];
+  const matches = [];
+  const selected = Object.fromEntries(COMP_FILTER_DIMENSIONS.map(dimension => [dimension, new Set()]));
+  const quoted = /"([^"]*)"/g;
+  let quoteMatch = quoted.exec(normalized);
+  while (quoteMatch) {
+    const start = quoteMatch.index;
+    const end = start + quoteMatch[0].length;
+    for (let index = start; index < end; index += 1) occupied[index] = true;
+    if (quoteMatch[1].trim()) forcedText.push(quoteMatch[1].trim());
+    quoteMatch = quoted.exec(normalized);
+  }
+
+  COMP.vocabulary.forEach(entry => {
+    const token = entry.value.toLocaleLowerCase();
+    let start = normalized.indexOf(token);
+    while (start !== -1) {
+      const end = start + token.length;
+      const free = occupied.slice(start, end).every(value => !value);
+      const bounded = compendiumTokenBoundary(normalized[start - 1])
+        && compendiumTokenBoundary(normalized[end]);
+      if (free && bounded) {
+        for (let index = start; index < end; index += 1) occupied[index] = true;
+        selected[entry.dimension].add(entry.value);
+        matches.push({ ...entry, start, end });
+      }
+      start = normalized.indexOf(token, end);
+    }
+  });
+
+  const leftover = [...normalized]
+    .map((character, index) => occupied[index] ? ' ' : character)
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const nameText = [...forcedText, leftover].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  return { matches, nameText, selected };
+}
+
+function compendiumRecordMatches(record, parsed) {
+  if (parsed.nameText
+      && !record.name.toLocaleLowerCase().includes(parsed.nameText)) return false;
+  if (parsed.selected.group.size
+      && !record.groups.some(group => parsed.selected.group.has(group))) return false;
+  const muscles = COMP.includeSecondary
+    ? [...record.primaryMuscles, ...record.secondaryMuscles]
+    : record.primaryMuscles;
+  if (parsed.selected.muscle.size
+      && !muscles.some(muscle => parsed.selected.muscle.has(muscle))) return false;
+  return ['equipment', 'category', 'level', 'force', 'mechanic'].every(dimension => (
+    !parsed.selected[dimension].size || parsed.selected[dimension].has(record[dimension])
+  ));
+}
+
+function filteredCompendiumRecords(parsed = parseCompendiumQuery(COMP.query)) {
+  return (COMP.records || []).filter(record => compendiumRecordMatches(record, parsed));
+}
+
+function compendiumActiveChips(parsed) {
+  return COMP_FILTER_DIMENSIONS.flatMap(dimension => (
+    [...parsed.selected[dimension]].map(value => ({ dimension, value }))
+  ));
+}
+
+function compendiumQueryFeedback(parsed, visibleCount, totalCount) {
+  COMP.activeChips = compendiumActiveChips(parsed);
+  const filterChips = COMP.activeChips.map((chip, index) => `
+    <button type="button" class="compendium-query-chip" data-chip-dimension="${chip.dimension}"
+      data-chip-value="${esc(chip.value)}" aria-label="Treat ${esc(chip.value)} as name text"
+      onclick="G.compDemoteToken(${index})">${chip.dimension}: ${esc(chip.value)} ×</button>`).join('');
+  const textChip = parsed.nameText ? `
+    <button type="button" class="compendium-query-chip" data-chip-dimension="text"
+      aria-label="Remove name text from the search" onclick="G.compRemoveText()">text: &quot;${esc(parsed.nameText)}&quot; ×</button>` : '';
+  const clear = COMP.query || COMP.includeSecondary ? `
+    <button type="button" class="btn small compendium-clear" onclick="G.compClearSearch()">Clear the search</button>` : '';
+  return `<div class="compendium-query-chips" aria-label="How Maud reads the search">
+      ${filterChips}${textChip}
+    </div>
+    <div class="compendium-query-status">
+      <span class="muted" aria-live="polite" data-compendium-result-count
+        data-count="${visibleCount}">Maud finds ${visibleCount} of ${totalCount} movements.</span>
+      ${clear}
+    </div>`;
+}
+
+function compendiumVocabularyReference() {
+  return COMP_FILTER_DIMENSIONS.map(dimension => {
+    const entries = COMP.vocabulary
+      .filter(entry => entry.dimension === dimension)
+      .sort((a, b) => a.value.localeCompare(b.value, undefined, { sensitivity: 'base' }));
+    if (!entries.length) return '';
+    return `<div class="compendium-vocabulary-group">
+      <div class="compendium-vocabulary-label">${COMP_FILTER_LABELS[dimension]}</div>
+      <div class="compendium-vocabulary-values">
+        ${entries.map(entry => {
+          const index = COMP.vocabulary.indexOf(entry);
+          return `<button type="button" class="control-reset" data-compendium-vocabulary-value
+            onclick="G.compAppendVocabulary(${index})">${esc(compendiumOptionLabel(entry.value))}</button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function compendiumControls(parsed, visibleCount, totalCount) {
+  const hasMuscleTerms = parsed.selected.muscle.size > 0;
+  return `<div class="compendium-controls">
+    <label for="compendium-search">Search the Compendium</label>
+    <div class="compendium-search-tools">
+      <input type="search" id="compendium-search" class="compendium-search"
+        autocomplete="off" spellcheck="false" placeholder="Name or term"
+        value="${esc(COMP.query)}" oninput="G.compSearch(this.value)">
+      <div class="compendium-vocabulary-reference">
+        <button type="button" class="btn small compendium-vocabulary-toggle"
+          aria-label="Open filter vocabulary" aria-expanded="false"
+          aria-controls="compendium-vocabulary" onclick="G.compToggleVocabulary()">?</button>
+        <div id="compendium-vocabulary" class="compendium-vocabulary" hidden>
+          <div class="compendium-vocabulary-header">
+            <span>Maud's index</span>
+            <button type="button" class="btn small" onclick="G.compToggleVocabulary()">Close the index</button>
+          </div>
+          ${compendiumVocabularyReference()}
+        </div>
+      </div>
+      <button type="button" class="btn small compendium-secondary-toggle ${COMP.includeSecondary ? 'active' : ''}"
+        aria-pressed="${COMP.includeSecondary}" onclick="G.compToggleSecondary()"
+        ${hasMuscleTerms ? '' : 'hidden'}>Include secondary muscles</button>
+    </div>
+    <div class="compendium-query-feedback">
+      ${compendiumQueryFeedback(parsed, visibleCount, totalCount)}
+    </div>
+  </div>`;
+}
+
+function compendiumListContents(records) {
+  if (!records.length) {
+    return `<div class="compendium-list-empty muted center">
+      No page bears all those marks. Clear a filter and Maud will search again.
+    </div>`;
+  }
+  return records.map((record, index) => `<button type="button"
+    class="control-reset compendium-list-row ${record.id === COMP.selectedId ? 'selected' : ''}"
+    ${record.id === COMP.selectedId ? 'aria-current="true"' : ''}
+    onclick="G.compSelect(${index})">${esc(record.name)}</button>`).join('');
+}
+
+function restoreCompendiumListScroll() {
+  const list = document.querySelector('.compendium-list');
+  if (!list) return;
+  list.scrollTop = COMP.listScrollTop;
+  list.addEventListener('scroll', () => { COMP.listScrollTop = list.scrollTop; });
+}
+
+function refreshCompendiumResults() {
+  if (S.screen !== 'stats' || statsTab !== 'compendium') return;
+  const parsed = parseCompendiumQuery(COMP.query);
+  const hasMuscleTerms = parsed.selected.muscle.size > 0;
+  if (!hasMuscleTerms) COMP.includeSecondary = false;
+  const visible = filteredCompendiumRecords(parsed);
+  COMP.visibleRecords = visible;
+  COMP.listScrollTop = 0;
+  const list = document.querySelector('.compendium-list');
+  if (list) {
+    list.innerHTML = compendiumListContents(visible);
+    list.scrollTop = 0;
+  }
+  const feedback = document.querySelector('.compendium-query-feedback');
+  if (feedback) {
+    feedback.innerHTML = compendiumQueryFeedback(parsed, visible.length, COMP.records?.length || 0);
+  }
+  const secondary = document.querySelector('.compendium-secondary-toggle');
+  if (secondary) {
+    secondary.hidden = !hasMuscleTerms;
+    secondary.classList.toggle('active', COMP.includeSecondary);
+    secondary.setAttribute('aria-pressed', String(COMP.includeSecondary));
+  }
+}
 
 async function ensureCompendiumCatalog() {
   if (COMP.records) return;
   if (!COMP.catalogRequest) {
     COMP.catalogRequest = api('/catalog').then(payload => {
       COMP.records = payload.exercises;
+      COMP.filterOptions = buildCompendiumFilterOptions(COMP.records);
+      COMP.vocabulary = buildCompendiumVocabulary(COMP.filterOptions);
     });
   }
   try {
@@ -338,14 +583,16 @@ async function ensureCompendiumCatalog() {
 
 function compendiumBody() {
   const records = COMP.records || [];
+  const parsed = parseCompendiumQuery(COMP.query);
+  const visibleRecords = filteredCompendiumRecords(parsed);
+  COMP.visibleRecords = visibleRecords;
   const selected = records.find(record => record.id === COMP.selectedId) || null;
   const fullRecord = selected ? (COMP.details.get(selected.id) || selected) : null;
   const list = `<section class="win compendium-list-pane">
     <span class="win-title">Movements</span>
+    ${compendiumControls(parsed, visibleRecords.length, records.length)}
     <div class="compendium-list" aria-label="Compendium movements">
-      ${records.map((record, index) => `<button type="button"
-        class="control-reset compendium-list-row ${record.id === COMP.selectedId ? 'selected' : ''}"
-        aria-pressed="${record.id === COMP.selectedId}" onclick="G.compSelect(${index})">${esc(record.name)}</button>`).join('')}
+      ${compendiumListContents(visibleRecords)}
     </div>
   </section>`;
   let detail = `<section class="win compendium-detail-pane">
@@ -398,8 +645,66 @@ function compendiumBody() {
     <div class="compendium-layout ${selected ? 'has-selection' : ''}">${list}${detail}</div>`;
 }
 
+G.compSearch = (query) => {
+  COMP.query = query;
+  refreshCompendiumResults();
+};
+
+G.compToggleSecondary = () => {
+  COMP.includeSecondary = !COMP.includeSecondary;
+  refreshCompendiumResults();
+};
+
+function setCompendiumQuery(query) {
+  COMP.query = query;
+  const search = document.getElementById('compendium-search');
+  if (search) search.value = query;
+  refreshCompendiumResults();
+  if (search) search.focus();
+}
+
+G.compDemoteToken = (chipIndex) => {
+  const chip = COMP.activeChips[chipIndex];
+  if (!chip) return;
+  const parsed = parseCompendiumQuery(COMP.query);
+  const remaining = COMP.activeChips
+    .filter((_, index) => index !== chipIndex)
+    .map(item => item.value);
+  const nameText = [parsed.nameText, chip.value].filter(Boolean).join(' ');
+  setCompendiumQuery([...remaining, `"${nameText}"`].join(' '));
+};
+
+G.compRemoveText = () => {
+  setCompendiumQuery(COMP.activeChips.map(chip => chip.value).join(' '));
+};
+
+G.compAppendVocabulary = (vocabularyIndex) => {
+  const entry = COMP.vocabulary[vocabularyIndex];
+  if (!entry) return;
+  const next = [COMP.query.trim(), entry.value].filter(Boolean).join(' ');
+  const panel = document.querySelector('.compendium-vocabulary');
+  const toggle = document.querySelector('.compendium-vocabulary-toggle');
+  if (panel) panel.hidden = true;
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  setCompendiumQuery(next);
+};
+
+G.compToggleVocabulary = () => {
+  const panel = document.querySelector('.compendium-vocabulary');
+  const toggle = document.querySelector('.compendium-vocabulary-toggle');
+  if (!panel || !toggle) return;
+  panel.hidden = !panel.hidden;
+  toggle.setAttribute('aria-expanded', String(!panel.hidden));
+  if (panel.hidden) toggle.focus();
+};
+
+G.compClearSearch = () => {
+  COMP.includeSecondary = false;
+  setCompendiumQuery('');
+};
+
 G.compSelect = (index) => {
-  const record = COMP.records?.[index];
+  const record = COMP.visibleRecords[index];
   if (!record) return;
   const list = document.querySelector('.compendium-list');
   if (list) COMP.listScrollTop = list.scrollTop;
