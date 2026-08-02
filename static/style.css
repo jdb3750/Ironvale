@@ -454,7 +454,7 @@ h1, h2, h3 { font-weight: normal; }
 .loglist { font-family: var(--font-body); font-size: var(--type-body); color: var(--dim); }
 .loglist b { color: var(--ink); font-weight: normal; }
 
-select, input[type=text], input[type=password], input[type=number] {
+select, input[type=text], input[type=search], input[type=password], input[type=number] {
   font-family: var(--font-form);
   font-size: var(--type-form);
   font-weight: 400;
@@ -523,6 +523,139 @@ label { color: var(--dim); font-family: var(--font-body); font-size: var(--type-
 .compendium-detail-empty .muted,
 .compendium-body-map .muted,
 .compendium-prose > .muted { color: var(--dim-readable); }
+.compendium-controls {
+  flex: none;
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid var(--edge);
+  background: var(--panel2);
+}
+.compendium-controls > label,
+.compendium-vocabulary-label {
+  color: var(--gold);
+  font-family: var(--font-body); font-size: var(--type-body);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.compendium-search-tools {
+  display: flex;
+  position: relative;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.compendium-search {
+  flex: 1 1 120px;
+  min-inline-size: 0;
+  margin: 0;
+}
+.compendium-vocabulary-reference { position: relative; }
+.compendium-vocabulary-toggle {
+  display: grid;
+  place-items: center;
+  min-inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+}
+.compendium-vocabulary-toggle[aria-expanded='true'] {
+  color: var(--bg);
+  background: var(--gold);
+}
+.compendium-vocabulary[hidden] { display: none; }
+.compendium-vocabulary {
+  position: absolute;
+  z-index: 8;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-start: 0;
+  inline-size: min(540px, calc(100vw - 32px));
+  max-block-size: min(420px, 60dvh);
+  overflow-y: auto;
+  padding: 12px;
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit);
+  background: var(--surface-raised);
+  box-shadow: 4px 4px 0 var(--bg);
+}
+.compendium-vocabulary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--gold);
+  font-family: var(--font-body); font-size: var(--type-body);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.compendium-vocabulary-group + .compendium-vocabulary-group { margin-top: 12px; }
+.compendium-vocabulary-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.compendium-vocabulary-values button {
+  min-block-size: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  background: var(--panel2);
+  cursor: pointer;
+}
+.compendium-vocabulary-values button:hover,
+.compendium-vocabulary-values button:focus-visible {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+.compendium-secondary-toggle { min-block-size: 36px; }
+.compendium-secondary-toggle.active {
+  color: var(--bg);
+  background: var(--gold);
+  border-color: var(--gold-bright) var(--gold) var(--panel) var(--gold);
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--panel), 0 4px 0 var(--bg);
+}
+.compendium-query-feedback { margin-top: 8px; }
+.compendium-query-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.compendium-query-chips:empty { display: none; }
+.compendium-query-chip {
+  min-block-size: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+}
+.compendium-query-chip:hover,
+.compendium-query-chip:focus-visible {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+.compendium-query-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.compendium-query-status .muted {
+  color: var(--dim-readable);
+  font-family: var(--font-body); font-size: var(--type-body);
+}
+.compendium-list-empty {
+  min-block-size: 120px;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: var(--dim-readable);
+}
 .compendium-layout {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
@@ -541,6 +674,7 @@ label { color: var(--dim); font-family: var(--font-body); font-size: var(--type-
   overflow: visible;
 }
 .compendium-list {
+  flex: 1;
   min-block-size: 0;
   overflow-y: auto;
   border: 1px solid var(--edge);
@@ -643,6 +777,17 @@ label { color: var(--dim); font-family: var(--font-body); font-size: var(--type-
     display: block;
     min-block-size: 360px;
     block-size: calc(100dvh - 188px);
+  }
+  .compendium-search-tools .btn,
+  .compendium-clear { min-block-size: 44px; }
+  .compendium-vocabulary-toggle { min-inline-size: 44px; block-size: 44px; }
+  .compendium-vocabulary-values button { min-block-size: 44px; }
+  .compendium-vocabulary {
+    position: fixed;
+    inset-block-start: 96px;
+    inset-inline: 12px;
+    inline-size: auto;
+    max-block-size: calc(100dvh - 176px);
   }
   .compendium-layout > .win { block-size: 100%; }
   .compendium-layout:not(.has-selection) .compendium-detail-pane,
@@ -2506,6 +2651,7 @@ canvas.ranch { width: 100%; image-rendering: pixelated; border: 2px solid #3a4a2
 
   select,
   input[type=text],
+  input[type=search],
   input[type=password],
   input[type=number] { min-block-size: 44px; }
 

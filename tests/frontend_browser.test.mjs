@@ -134,6 +134,18 @@ async function openMainProfile(viewport, options = {}) {
   return { context, failures, page };
 }
 
+async function openCompendium(page) {
+  await page.evaluate(() => {
+    statsTab = 'compendium';
+    nav('stats');
+  });
+  await page.locator('[data-compendium-result-count]').waitFor();
+}
+
+async function compendiumResultCount(page) {
+  return Number(await page.locator('[data-compendium-result-count]').getAttribute('data-count'));
+}
+
 async function createGiverProfile(page, mode) {
   giverProfileSequence += 1;
   await page.evaluate(async ({ name, mode: counselMode }) => {
@@ -1657,6 +1669,273 @@ test('Compendium lazily renders the full catalog and opens apostrophe-name detai
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
+  }
+});
+
+test('Compendium parser returns exact catalog counts and keeps apostrophe names usable', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    assert.equal(await compendiumResultCount(page), 881);
+    await search.fill('kettlebells');
+    assert.equal(await compendiumResultCount(page), 62);
+    await search.fill('beginner');
+    assert.equal(await compendiumResultCount(page), 528);
+    await search.fill('kettlebells beginner');
+    assert.equal(await compendiumResultCount(page), 9);
+
+    await search.fill("CONAN'S WHEEL");
+    assert.equal(await compendiumResultCount(page), 1);
+    assert.deepEqual(await page.locator('.compendium-list-row').allTextContents(), ["Conan's Wheel"]);
+    await page.getByRole('button', { name: "Conan's Wheel", exact: true }).click();
+    await page.locator('.compendium-detail-name').filter({ hasText: "Conan's Wheel" }).waitFor();
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium parser uses longest matches and resolves chest as a muscle', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    await search.fill('lower back');
+    assert.equal(await compendiumResultCount(page), 27);
+    assert.deepEqual(await page.locator('.compendium-query-chip').allTextContents(), ['muscle: lower back ×']);
+
+    await search.fill('chest');
+    assert.equal(await page.locator('[data-chip-dimension="muscle"][data-chip-value="chest"]').count(), 1);
+    assert.equal(await page.locator('[data-chip-dimension="group"][data-chip-value="chest"]').count(), 0);
+    assert.equal(await page.locator('[data-compendium-vocabulary-value]').count(), 50);
+
+    await search.fill('legs');
+    assert.equal(await page.locator('[data-chip-dimension="group"][data-chip-value="legs"]').count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'Include secondary muscles' }).isVisible(), false);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium muscle parsing defaults to primary and can include secondary', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    await search.fill('glutes');
+    assert.equal(await compendiumResultCount(page), 22);
+
+    const secondary = page.getByRole('button', { name: 'Include secondary muscles' });
+    assert.equal(await secondary.isVisible(), true);
+    assert.equal(await secondary.getAttribute('aria-pressed'), 'false');
+    await secondary.click();
+    assert.equal(await secondary.getAttribute('aria-pressed'), 'true');
+    assert.equal(await compendiumResultCount(page), 247);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium parser uses OR within dimensions and AND across them', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    await search.fill('barbell');
+    const barbellCount = await compendiumResultCount(page);
+    await search.fill('barbell dumbbell');
+    const twoEquipmentCount = await compendiumResultCount(page);
+    assert.ok(twoEquipmentCount > barbellCount);
+
+    await search.fill('barbell dumbbell legs');
+    const narrowedCount = await compendiumResultCount(page);
+    assert.ok(narrowedCount > 0);
+    assert.ok(narrowedCount < twoEquipmentCount);
+
+    await search.fill('kettlebells glutes');
+    assert.equal(await compendiumResultCount(page), 0);
+    assert.match(await page.locator('.compendium-list-empty').innerText(), /No page/i);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium filter chips demote parsed tokens to literal name text', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    await search.fill('pull');
+    assert.equal(await compendiumResultCount(page), 378);
+    const chip = page.locator('[data-chip-dimension="force"][data-chip-value="pull"]');
+    assert.equal((await chip.innerText()).trim(), 'force: pull ×');
+    await chip.click();
+    assert.equal(await search.inputValue(), '"pull"');
+    assert.equal(await compendiumResultCount(page), 46);
+    assert.equal((await page.locator('[data-chip-dimension="text"]').innerText()).trim(), 'text: "pull" ×');
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium vocabulary reference appends terms without selection state', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    const reference = page.locator('.compendium-vocabulary');
+    await page.getByRole('button', { name: 'Open filter vocabulary' }).click();
+    assert.equal(await reference.isVisible(), true);
+    await page.getByRole('button', { name: 'Close the index' }).click();
+    assert.equal(await reference.isVisible(), false);
+    assert.equal(await search.inputValue(), '');
+    assert.equal(
+      await page.getByRole('button', { name: 'Open filter vocabulary' }).getAttribute('aria-expanded'),
+      'false',
+    );
+    await page.getByRole('button', { name: 'Open filter vocabulary' }).click();
+    const kettlebells = reference.getByRole('button', { name: 'Kettlebells', exact: true });
+    assert.equal(await kettlebells.getAttribute('aria-pressed'), null);
+    await kettlebells.click();
+    assert.equal(await search.inputValue(), 'kettlebells');
+    assert.equal(await compendiumResultCount(page), 62);
+    assert.equal(await page.locator('[data-chip-dimension="equipment"][data-chip-value="kettlebells"]').count(), 1);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium clearing and filtering preserve an open detail and correct ARIA state', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    await page.getByRole('button', { name: "Conan's Wheel", exact: true }).click();
+    await page.locator('.compendium-detail-name').filter({ hasText: "Conan's Wheel" }).waitFor();
+    assert.equal(await page.locator('.compendium-list-row[aria-pressed]').count(), 0);
+    assert.equal(
+      await page.getByRole('button', { name: "Conan's Wheel", exact: true }).getAttribute('aria-current'),
+      'true',
+    );
+
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    await search.fill('Kettlebell Halo');
+    assert.equal(await compendiumResultCount(page), 1);
+    assert.equal(await page.getByRole('button', { name: "Conan's Wheel", exact: true }).count(), 0);
+    assert.equal(await page.locator('.compendium-detail-name').textContent(), "Conan's Wheel");
+
+    await search.fill('a page maud never filed');
+    assert.equal(await compendiumResultCount(page), 0);
+    await page.locator('.compendium-list-empty').waitFor();
+    assert.match(await page.locator('.compendium-list-empty').innerText(), /No page/i);
+    assert.equal(await page.locator('.compendium-detail-name').textContent(), "Conan's Wheel");
+
+    await page.getByRole('button', { name: 'Clear the search' }).click();
+    assert.equal(await compendiumResultCount(page), 881);
+    assert.equal(await search.inputValue(), '');
+    assert.equal(await page.locator('.compendium-detail-name').textContent(), "Conan's Wheel");
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium neck muscle parsing stays independent of the seven groups', async () => {
+  const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
+  try {
+    await openCompendium(page);
+    const search = page.getByRole('searchbox', { name: 'Search the Compendium' });
+    await search.fill('neck');
+    assert.equal(await compendiumResultCount(page), 8);
+    await page.getByRole('button', { name: 'Include secondary muscles' }).click();
+    assert.equal(await compendiumResultCount(page), 9);
+
+    const ungroupedNeckNames = new Set([
+      'Isometric Neck Exercise - Front And Back',
+      'Isometric Neck Exercise - Sides',
+      'Lying Face Down Plate Neck Resistance',
+      'Lying Face Up Plate Neck Resistance',
+      'Neck-SMR',
+      'Seated Head Harness Neck Resistance',
+      'Side Neck Stretch',
+    ]);
+    for (const groupName of ['legs', 'posterior', 'chest', 'back', 'shoulders', 'arms', 'core']) {
+      await search.fill(groupName);
+      const visibleNames = await page.locator('.compendium-list-row').allTextContents();
+      assert.equal(visibleNames.some(name => ungroupedNeckNames.has(name)), false, groupName);
+    }
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+  }
+});
+
+test('Compendium parsing search stays compact at phone, tablet, and desktop', async () => {
+  for (const [label, viewport] of Object.entries(GIVER_VIEWPORTS)) {
+    const { context, failures, page } = await openMainProfile(viewport);
+    try {
+      await openCompendium(page);
+      const geometry = await page.evaluate(() => ({
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        listTop: document.querySelector('.compendium-list-pane').getBoundingClientRect().top,
+        search: (() => {
+          const input = document.querySelector('.compendium-search');
+          const rect = input.getBoundingClientRect();
+          return {
+            width: rect.width,
+            height: rect.height,
+            background: getComputedStyle(input).backgroundColor,
+          };
+        })(),
+      }));
+      assert.ok(geometry.search.width > 0, `${label}: search is visible`);
+      assert.equal(geometry.search.background, 'rgb(0, 0, 0)', `${label}: search uses the shared form skin`);
+      assert.ok(geometry.documentWidth <= geometry.viewportWidth, `${label}: no horizontal overflow`);
+      assert.ok(geometry.listTop < 420, `${label}: movement list starts near the top (${geometry.listTop}px)`);
+      if (viewport.width <= 719) {
+        assert.ok(geometry.search.height >= 44, `${label}: search keeps a phone touch target`);
+        const undersized = await page.locator('.compendium-search-tools button').evaluateAll(buttons => (
+          buttons
+            .map(button => ({ label: button.textContent.trim(), height: button.getBoundingClientRect().height }))
+            .filter(button => button.height > 0 && button.height < 44)
+        ));
+        assert.deepEqual(undersized, [], `${label}: filter controls keep phone targets`);
+      }
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `compendium-search-${label}-default.png`),
+        });
+      }
+
+      await page.getByRole('searchbox', { name: 'Search the Compendium' }).fill('glutes');
+      await page.getByRole('button', { name: 'Include secondary muscles' }).click();
+      await page.getByRole('button', { name: 'Open filter vocabulary' }).click();
+      assert.equal(await compendiumResultCount(page), 247);
+      assert.ok(await page.locator('.compendium-vocabulary').isVisible(), `${label}: vocabulary open`);
+      const expandedGeometry = await page.evaluate(() => ({
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      }));
+      assert.ok(
+        expandedGeometry.documentWidth <= expandedGeometry.viewportWidth,
+        `${label}: expanded filters do not overflow`,
+      );
+      if (EVIDENCE_DIR) {
+        await page.waitForFunction(() => !document.querySelector('.key-pop-ghost'));
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `compendium-search-${label}-vocabulary.png`),
+        });
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
   }
 });
 
@@ -3370,7 +3649,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '119'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '121'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

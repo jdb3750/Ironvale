@@ -354,6 +354,35 @@ be silently normalized during unrelated work.
   rendered by each Hall destination; stale optional endpoints degrade to the
   available base view.
 
+### Compendium Parsing Search
+
+- **Structure:** one labeled search bar sits inside the Movements pane directly
+  above its scrolling list. Parsed catalog terms appear as removable chips
+  beneath the bar beside the result count. A `?` disclosure opens a raised
+  vocabulary reference grouped by muscle group, muscle, equipment, category,
+  level, force, and mechanic; its buttons only append text to the search string
+  and hold no selected or apply state.
+- **Behavior:** the search string is the filter source of truth. Catalog-derived
+  vocabulary is matched longest-first as exact terms; unmatched text remains a
+  case-insensitive name substring. Values OR within one dimension and AND across
+  dimensions. Removing a parsed chip quotes that term in the search string so it
+  becomes literal name text rather than disappearing. Source-muscle matching is
+  primary-only by default; a pressed Include Secondary control appears only for
+  a source-muscle term. Null catalog values remain in ordinary/name results
+  but are not filter tokens. Filtering rebuilds all text rows while an open
+  detail remains intact.
+- **Appearance:** the input uses the shared black form field. Chips, the `?`
+  control, and the conditional secondary control reuse the square `--panel2`,
+  `--edge`, gold-interaction, Quanta 12 language. The vocabulary is a neutral
+  raised surface with the standard hard shadow and readable-muted headings.
+  Empty results retain the list frame and answer in Maud's voice.
+- **Accessibility and responsive:** list rows are ordinary buttons; only the
+  open movement carries `aria-current="true"`, never `aria-pressed`. The search
+  and controls keep 44px phone targets, chips and reference values wrap before
+  overflow, and the compact control no longer delays the first movement below a
+  shelf of options. The existing one-pane phone list/detail handoff and the two
+  named list/detail scroll owners remain unchanged.
+
 ### Counsel Guidance Surface And Settings Tabs
 
 - **Purpose:** this is the reusable presentation language for training guidance
