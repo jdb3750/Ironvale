@@ -490,6 +490,11 @@ label { color: var(--dim); font-family: var(--font-body); font-size: var(--type-
 }
 
 
+.hall-surface {
+  display: flex;
+  flex-direction: column;
+  inline-size: 100%;
+}
 .hall-nav {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -511,6 +516,151 @@ label { color: var(--dim); font-family: var(--font-body); font-size: var(--type-
   font-family: var(--font-body); font-size: var(--type-body);
   letter-spacing: 0;
   white-space: nowrap;
+}
+
+.compendium-intro { margin: 4px 0; }
+.compendium-intro.muted,
+.compendium-detail-empty .muted,
+.compendium-body-map .muted,
+.compendium-prose > .muted { color: var(--dim-readable); }
+.compendium-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  gap: 8px;
+  min-block-size: 360px;
+  block-size: min(620px, 64dvh);
+}
+.compendium-layout > .win {
+  min-inline-size: 0;
+  min-block-size: 0;
+  margin-inline: 4px;
+}
+.compendium-list-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+.compendium-list {
+  min-block-size: 0;
+  overflow-y: auto;
+  border: 1px solid var(--edge);
+  background: var(--panel2);
+}
+.compendium-list-row {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 8px;
+  border-bottom: 1px solid var(--edge);
+  color: var(--ink);
+  background: var(--panel2);
+  cursor: pointer;
+}
+.compendium-list-row:last-child { border-bottom: 0; }
+.compendium-list-row:hover { color: var(--gold-bright); background: var(--panel); }
+.compendium-list-row.selected {
+  color: var(--gold-bright);
+  background: #12100a;
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+.compendium-detail-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+.compendium-detail-scroll {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+.compendium-detail-empty {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.compendium-detail-lead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.compendium-body-map { text-align: center; }
+.compendium-body-map canvas { display: block; margin: 0 auto 4px; }
+.compendium-body-map .muted { font-family: var(--font-fine); font-size: var(--type-fine); }
+.compendium-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-inline-size: 0;
+}
+.compendium-facts > div {
+  min-inline-size: 0;
+  padding: 8px;
+  border: 1px solid var(--edge);
+  background: var(--panel2);
+}
+.compendium-facts dt,
+.compendium-prose-title {
+  color: var(--gold);
+  font-family: var(--font-body); font-size: var(--type-body);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.compendium-facts dd { margin-top: 4px; overflow-wrap: anywhere; }
+.compendium-prose {
+  margin-top: 12px;
+  padding: 12px;
+  border-left: 2px solid var(--gold);
+  background: var(--panel2);
+}
+.compendium-prose p,
+.compendium-prose ol { margin-top: 8px; }
+.compendium-prose ol { padding-inline-start: 20px; }
+.compendium-prose li + li { margin-top: 8px; }
+.compendium-back { display: none; margin-bottom: 12px; }
+
+.compendium-list,
+.compendium-detail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold) var(--panel2);
+}
+.compendium-list::-webkit-scrollbar,
+.compendium-detail-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.compendium-list::-webkit-scrollbar-track,
+.compendium-detail-scroll::-webkit-scrollbar-track,
+.compendium-list::-webkit-scrollbar-corner,
+.compendium-detail-scroll::-webkit-scrollbar-corner { background: var(--panel2); }
+.compendium-list::-webkit-scrollbar-thumb,
+.compendium-detail-scroll::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 0; }
+
+@media (max-width: 719px) {
+  .hall-nav-slot { order: 1; }
+  .hall-body { order: 2; }
+  .hall-curator { order: 3; }
+  .compendium-layout {
+    display: block;
+    min-block-size: 360px;
+    block-size: calc(100dvh - 188px);
+  }
+  .compendium-layout > .win { block-size: 100%; }
+  .compendium-layout:not(.has-selection) .compendium-detail-pane,
+  .compendium-layout.has-selection .compendium-list-pane { display: none; }
+  .compendium-detail-pane > .compendium-detail-name {
+    position: static;
+    align-self: center;
+    max-inline-size: 100%;
+    margin-bottom: 12px;
+    padding: 0;
+    background: transparent;
+    text-align: center;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  .compendium-detail-lead { grid-template-columns: 1fr; }
+  .compendium-facts { grid-template-columns: 1fr; }
+  .compendium-back { display: inline-block; }
 }
 @media (max-width: 860px) {
   .hall-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }

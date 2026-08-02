@@ -5,7 +5,7 @@ import os
 from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -491,6 +491,17 @@ def exercise_list():
 @app.get("/api/catalog")
 def catalog():
     return {"exercises": exercises.catalog()}
+
+
+@app.get("/api/catalog/{exercise_id}")
+def catalog_detail(exercise_id: str):
+    record = exercises.catalog_detail(exercise_id)
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail="That movement has no page in the Compendium.",
+        )
+    return record
 
 
 # ---------------- stats / calendar / amendments ----------------
