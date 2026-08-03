@@ -177,7 +177,6 @@ SCREENS.town = async function () {
       <div class="trow">
         ${bld('bld_waystone', g.endurance.name, GIVER_ROLES.endurance, `nav('giver',{giver:'endurance'})`, !!activeBy.endurance, 120, 'bld-fenn')}
         ${bld('bld_forge', g.strength.name, GIVER_ROLES.strength, `nav('giver',{giver:'strength'})`, !!activeBy.strength, 120, 'bld-grun')}
-        ${bld('bld_keep', g.bram.name, GIVER_ROLES.bram, `nav('giver',{giver:'bram'})`, !!activeBy.bram, 120, 'bld-bram')}
         ${bld('bld_willow', g.recovery.name, GIVER_ROLES.recovery, `nav('giver',{giver:'recovery'})`, !!activeBy.recovery, 120, 'bld-elowen')}
       </div>
       <div class="road-h"></div>
@@ -185,11 +184,12 @@ SCREENS.town = async function () {
         ${bld('bld_ledger', 'The Ledger House', 'Wick: confess & amend', `nav('scrivener')`, false, 120, 'bld-wick')}
         ${bld('bld_hall', 'Hall of Records', 'stats, vitals & the Curator',
           st.almanac_unread ? `statsTab='almanac';nav('stats')` : `nav('stats')`, !!st.almanac_unread)}
-        ${bld('crank', 'The Crankwerk', 'hats for the herd', `nav('crank')`)}
+        ${bld('bld_keep', g.bram.name, GIVER_ROLES.bram, `nav('giver',{giver:'bram'})`, !!activeBy.bram, 120, 'bld-bram')}
       </div>
       <div class="road-h"></div>
       <div class="trow">
         ${bld('bld_ranch', 'The Menagerie', 'your creatures graze here', `nav('ranch')`)}
+        ${bld('crank', 'The Crankwerk', 'hats for the herd', `nav('crank')`)}
         ${bld('bld_colosseum', 'The Colosseum', 'duels, races & pageants', `nav('colosseum')`)}
         ${bld('bld_gate', 'The Undercroft', st.dungeon_active ? 'expedition below!' : `descend — floor ${st.resume_floor}`, `nav('undercroft')`, st.dungeon_active)}
       </div>
