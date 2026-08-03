@@ -189,6 +189,26 @@ entries are open work with the removal path worked out.
   a file, then read the counts from it**, e.g.
   `npm run test:browser > run.log 2>&1` before grepping. Two occurrences now, both
   unnamed, both a single failure that vanished on retry.
+
+  **Third occurrence, v0.35.1 run — and this time it has a name:**
+  `Grunhilda's iron selector is closed by default and hides implement choices`
+  (`tests/frontend_browser.test.mjs:4320`). Capturing to a file worked; the
+  identity survived.
+
+  It is almost certainly the `innerText` problem recorded in the entry below,
+  not a distinct bug. The assertion reads
+  `element.innerText.replace(/\s+/g, ' ').trim()` and got
+  `"…within reach today:"` where it wanted `"…within reach today: any iron"` —
+  a missing *suffix*, the signature of reading a node mid-layout. `innerText` is
+  layout-dependent where `textContent` is not. The seam under test that day
+  touched only `hall.js`, `dev-console.js` and `style.css`; `giver.js` was
+  untouched and the CSS diff contained nothing matching iron/giver/selector. It
+  then passed 3/3 in isolation and 63/63 on a full re-run.
+
+  **The actionable fix**, if it recurs: switch assertions that are checking
+  *content* rather than *layout* from `innerText` to `textContent`. `innerText`
+  is only worth its flakiness when visibility or CSS-driven text is the thing
+  being asserted, which is not the case here.
 - **Headful screenshot mode hits `innerText` timing failures.** Observed during the
   v0.25.0 migration work: the optional headful capture mode failed twice on
   `innerText` reads while still producing valid captures, and the canonical

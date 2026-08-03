@@ -376,6 +376,11 @@ be silently normalized during unrelated work.
   `--edge`, gold-interaction, Quanta 12 language. The vocabulary is a neutral
   raised surface with the standard hard shadow and readable-muted headings.
   Empty results retain the list frame and answer in Maud's voice.
+- **Catalog health:** a fully loaded imported ledger adds no status node and no
+  layout. When the source is absent or unreadable, a red-railed Maud message
+  beside the result count explains that only the 26 sworn movements remain.
+  Skipped imported rows use a quieter gold-railed readable-muted message. Raw
+  source errors remain developer-console detail, never player copy.
 - **Detail muscle map:** the Compendium detail uses the 17 source muscles rather
   than the seven game-attribution groups. Each muscle keeps its authored hue;
   primary work is full-strength, secondary work uses one shared blend toward

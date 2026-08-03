@@ -120,7 +120,7 @@ async function waitForServer() {
   );
 }
 
-async function openMainProfile(viewport, options = {}) {
+async function openMainProfileAt(baseUrl, viewport, options = {}) {
   const context = await browser.newContext({ viewport, ...options });
   const page = await context.newPage();
   const failures = [];
@@ -128,10 +128,81 @@ async function openMainProfile(viewport, options = {}) {
   page.on('requestfailed', request => {
     failures.push(`request failed: ${request.method()} ${request.url()}`);
   });
-  await page.goto(BASE_URL);
+  await page.goto(baseUrl);
   await page.getByRole('button', { name: /Play as Adventurer/ }).click();
   await page.locator('.town-scene').waitFor();
   return { context, failures, page };
+}
+
+async function openMainProfile(viewport, options = {}) {
+  return openMainProfileAt(BASE_URL, viewport, options);
+}
+
+async function startCatalogSourceServer(sourcePath) {
+  const scratchDataDir = await mkdtemp(path.join(tmpdir(), 'iron-vale-catalog-browser-'));
+  const processOutput = { text: '' };
+  const process = spawn(
+    path.join(ROOT, '.venv/bin/python'),
+    ['-c', `
+import sys
+from pathlib import Path
+
+import uvicorn
+from app import imported_exercises
+
+imported_exercises.SOURCE_PATH = Path(sys.argv[1])
+imported_exercises.clear_cache()
+uvicorn.run("app.main:app", host="127.0.0.1", port=0)
+`, sourcePath],
+    {
+      cwd: ROOT,
+      env: {
+        ...globalThis.process.env,
+        DATA_DIR: scratchDataDir,
+        INTERVALS_BASE_URL: 'http://127.0.0.1:9/api/v1',
+        SYNC_INTERVAL_SECONDS: '86400',
+      },
+      stdio: 'pipe',
+    },
+  );
+  process.stdout.on('data', chunk => { processOutput.text += chunk; });
+  process.stderr.on('data', chunk => { processOutput.text += chunk; });
+
+  const deadline = Date.now() + 15_000;
+  let baseUrl = '';
+  while (Date.now() < deadline) {
+    if (process.exitCode !== null) {
+      throw new Error(`Catalog source server exited early.\n${processOutput.text}`);
+    }
+    const portMatch = processOutput.text.match(/Uvicorn running on http:\/\/127\.0\.0\.1:(\d+)/);
+    if (portMatch) {
+      baseUrl = `http://127.0.0.1:${portMatch[1]}`;
+      try {
+        const response = await fetch(`${baseUrl}/api/profiles`);
+        if (response.ok) break;
+      } catch {
+        // The process has announced its port but has not accepted requests yet.
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  if (!baseUrl) {
+    process.kill('SIGTERM');
+    await rm(scratchDataDir, { recursive: true, force: true });
+    throw new Error(`Catalog source server did not start.\n${processOutput.text}`);
+  }
+
+  return {
+    baseUrl,
+    async close() {
+      if (process.exitCode === null) {
+        const exited = new Promise(resolve => process.once('exit', resolve));
+        process.kill('SIGTERM');
+        await exited;
+      }
+      await rm(scratchDataDir, { recursive: true, force: true });
+    },
+  };
 }
 
 async function openCompendium(page) {
@@ -1656,6 +1727,7 @@ test('Compendium lazily renders the full catalog and opens apostrophe-name detai
     const rows = page.locator('.compendium-list-row');
     await rows.first().waitFor();
     assert.equal(await rows.count(), 881);
+    assert.equal(await page.locator('[data-compendium-catalog-status]').count(), 0);
     assert.equal(await page.locator('.compendium-list canvas').count(), 0);
 
     const detailResponse = page.waitForResponse(response => (
@@ -1669,6 +1741,113 @@ test('Compendium lazily renders the full catalog and opens apostrophe-name detai
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
+  }
+});
+
+test('Compendium explains an unreadable imported catalog without exposing developer text', async () => {
+  const sourceDir = await mkdtemp(path.join(tmpdir(), 'iron-vale-catalog-source-'));
+  const sourcePath = path.join(sourceDir, 'malformed-exercises.json');
+  await writeFile(sourcePath, '{not json', 'utf8');
+  const sourceServer = await startCatalogSourceServer(sourcePath);
+  const { context, failures, page } = await openMainProfileAt(
+    sourceServer.baseUrl,
+    { width: 375, height: 812 },
+  );
+  try {
+    const state = await page.evaluate(async () => {
+      const response = await fetch('/api/state');
+      return { body: await response.json(), status: response.status };
+    });
+    assert.equal(state.status, 200);
+    assert.equal(state.body.imported_exercise_catalog.source_error, 'source file is not valid JSON');
+
+    await openCompendium(page);
+    assert.equal(await compendiumResultCount(page), 26);
+    const status = page.locator('[data-compendium-catalog-status="error"]');
+    await status.waitFor();
+    const playerCopy = await status.innerText();
+    assert.match(playerCopy, /could not read the imported ledger/i);
+    assert.match(playerCopy, /only the Vale's 26 sworn movements are listed/i);
+    assert.doesNotMatch(playerCopy, /source file is not valid JSON/i);
+    if (EVIDENCE_DIR) {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-unreadable-phone.png') });
+      await page.setViewportSize(GIVER_VIEWPORTS.tablet);
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-unreadable-tablet.png') });
+      await page.setViewportSize(GIVER_VIEWPORTS.desktop);
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-unreadable-desktop.png') });
+    }
+
+    await page.evaluate(() => G.openDevConsole());
+    const consoleInput = page.getByRole('textbox', { name: 'Console command' });
+    await consoleInput.fill('catalog');
+    await consoleInput.press('Enter');
+    const consoleText = await page.locator('#dev-console-output').innerText();
+    assert.match(consoleText, /loaded_rows: 0/);
+    assert.match(consoleText, /skipped_rows: 0/);
+    assert.match(consoleText, /skipped_by_reason: \{\}/);
+    assert.match(consoleText, /source_error: source file is not valid JSON/);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+    await sourceServer.close();
+    await rm(sourceDir, { recursive: true, force: true });
+  }
+});
+
+test('Compendium quietly reports skipped imported rows and the console gives the breakdown', async () => {
+  const sourceDir = await mkdtemp(path.join(tmpdir(), 'iron-vale-catalog-source-'));
+  const sourcePath = path.join(sourceDir, 'partial-exercises.json');
+  const payload = JSON.parse(await readFile(
+    path.join(ROOT, 'vendor/free-exercise-db/exercises.json'),
+    'utf8',
+  ));
+  payload[0].primaryMuscles = ['review-only muscle'];
+  await writeFile(sourcePath, JSON.stringify(payload), 'utf8');
+  const sourceServer = await startCatalogSourceServer(sourcePath);
+  const { context, failures, page } = await openMainProfileAt(
+    sourceServer.baseUrl,
+    { width: 1280, height: 900 },
+  );
+  try {
+    const state = await page.evaluate(async () => {
+      const response = await fetch('/api/state');
+      return { body: await response.json(), status: response.status };
+    });
+    assert.equal(state.status, 200);
+    assert.deepEqual(state.body.imported_exercise_catalog, {
+      loaded_rows: 872,
+      skipped_rows: 1,
+      skipped_by_reason: { 'unknown muscle': 1 },
+      source_error: null,
+    });
+
+    await openCompendium(page);
+    assert.equal(await compendiumResultCount(page), 880);
+    const status = page.locator('[data-compendium-catalog-status="partial"]');
+    await status.waitFor();
+    assert.match(await status.innerText(), /set aside 1 imported page/i);
+    if (EVIDENCE_DIR) {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-partial-desktop.png') });
+      await page.setViewportSize(GIVER_VIEWPORTS.tablet);
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-partial-tablet.png') });
+      await page.setViewportSize(GIVER_VIEWPORTS.phone);
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-partial-phone.png') });
+    }
+
+    await page.evaluate(() => G.openDevConsole());
+    const consoleInput = page.getByRole('textbox', { name: 'Console command' });
+    await consoleInput.fill('catalog');
+    await consoleInput.press('Enter');
+    const consoleText = await page.locator('#dev-console-output').innerText();
+    assert.match(consoleText, /loaded_rows: 872/);
+    assert.match(consoleText, /skipped_rows: 1/);
+    assert.match(consoleText, /skipped_by_reason: \{"unknown muscle":1\}/);
+    assert.match(consoleText, /source_error: null/);
+    assert.deepEqual(failures, []);
+  } finally {
+    await context.close();
+    await sourceServer.close();
+    await rm(sourceDir, { recursive: true, force: true });
   }
 });
 
@@ -3795,7 +3974,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '123'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '124'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
