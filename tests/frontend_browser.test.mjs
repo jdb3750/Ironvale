@@ -3642,6 +3642,19 @@ test('town keeps all four giver identities while Bram has no offer board', async
       await page.setViewportSize(viewport);
       await page.evaluate(() => nav('town'));
       await page.locator('.town-scene').waitFor();
+      assert.deepEqual(
+        await page.locator('.town-scene > .trow').evaluateAll(rows => rows.map(row => (
+          Array.from(row.querySelectorAll(':scope > .bld > button'))
+            .map(button => button.getAttribute('aria-label').split(':')[0])
+        ))),
+        [
+          ['Visit Old Fenn', 'Visit Grunhilda', 'Visit Sage Elowen'],
+          ['Visit The Ledger House', 'Visit Hall of Records', 'Visit Ser Bram'],
+          ['Visit The Menagerie', 'Visit The Crankwerk', 'Visit The Colosseum', 'Visit The Undercroft'],
+        ],
+        `town rows preserve giver, record-keeper, and diversion groupings at ${viewportName}`,
+      );
+      assert.equal(await page.locator('#bld-bram').count(), 1);
       for (const name of ['Old Fenn', 'Grunhilda', 'Ser Bram', 'Sage Elowen']) {
         assert.equal(
           await page.getByRole('button', { name: new RegExp(`Visit ${name}`) }).count(),
@@ -3657,6 +3670,12 @@ test('town keeps all four giver identities while Bram has no offer board', async
         await page.screenshot({
           path: path.join(EVIDENCE_DIR, `three-giver-town-four-identities__${viewportName}.png`),
         });
+        if (viewportName === 'phone') {
+          await page.screenshot({
+            path: path.join(EVIDENCE_DIR, 'three-giver-town-four-identities__phone-full.png'),
+            fullPage: true,
+          });
+        }
       }
 
       await openGiverBoard(page, 'bram');
@@ -3987,7 +4006,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '124'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '125'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);
