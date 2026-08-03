@@ -195,7 +195,15 @@ entries are open work with the removal path worked out.
   `Visit Old Fenn` buttons at desktop instead of one. This happened before the
   test's text assertion and did not recur in the other nine captures, so it is a
   separate navigation/render race, not the `innerText` defect. It was recorded,
-  not folded into this test-infrastructure fix.
+  not folded into that test-infrastructure fix.
+
+  **Investigation, 2026-08-03: not reproduced.** Twenty more unchanged,
+  separately captured full browser runs all passed 63/63. That rules out a
+  deterministic defect and a shared-state dependency that reliably appears in
+  the current canonical test order. It does not identify or eliminate a rarer
+  render-wipe, navigation-completion or sprite-hydration race: at the observed
+  one-in-twenty sighting rate, a clean twenty-run sample is plausible. No wait or
+  assertion was changed without a demonstrated mechanism.
 - **A mid-day imported database can migrate without its own pre-migration
   snapshot.** `vault.ensure_snapshot_before_migration()` is per-UTC-day, so a
   legacy database imported *after* that day's snapshot already exists reuses it
