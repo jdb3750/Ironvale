@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:frontend": "node --test tests/frontend_history.test.mjs tests/frontend_sync.test.mjs",
+    "test:frontend": "node --test tests/frontend_history.test.mjs tests/frontend_pixel.test.mjs tests/frontend_sync.test.mjs",
     "test:browser": "node --test --test-concurrency=1 tests/frontend_browser.test.mjs"
   },
   "devDependencies": {

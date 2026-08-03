@@ -176,6 +176,13 @@ SCREENS.stats = async function () {
       </table>
     </div>`;
   } else if (statsTab === 'iron') {
+    const recentMuscles = Object.entries(d.per_muscle);
+    const primaryMuscles = recentMuscles
+      .filter(([, muscle]) => muscle.days_since <= 3 && muscle.role === 'primary')
+      .map(([muscle]) => muscle);
+    const secondaryMuscles = recentMuscles
+      .filter(([, muscle]) => muscle.days_since <= 3 && muscle.role === 'secondary')
+      .map(([muscle]) => muscle);
     const rows = Object.entries(d.muscles).map(([g, m]) => {
       const cls = m.days_since <= 3 ? 'fresh-0' : m.days_since <= 7 ? 'fresh-1' : 'fresh-2';
       const label = m.days_since >= 999 ? 'never' : m.days_since === 0 ? 'today' : m.days_since + 'd ago';
@@ -183,8 +190,8 @@ SCREENS.stats = async function () {
         <td class="${cls}">${m.days_since > 7 ? 'NEGLECTED' : m.days_since > 3 ? 'due' : 'fresh'}</td></tr>`;
     }).join('');
     body = `<div class="win"><span class="win-title">Muscle Ledger</span>
-      <div class="center">${bodyMapTag(Object.entries(d.muscles).filter(([, m]) => m.days_since <= 3).map(([g]) => g), 130)}</div>
-      <div class="muted center" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:6px">lit: trained in the last 3 days (climbing counts for back/arms/core)</div>
+      <div class="center">${muscleMapTag(primaryMuscles, secondaryMuscles, 204)}</div>
+      <div class="muted center ledger-map-caption">bright: primary within 3 days &middot; dim: secondary-only &middot; group rows still count climbing</div>
       <table class="rpg"><tr><th>group</th><th>last trained</th><th>sets 14d</th><th>state</th></tr>${rows}</table>
     </div>
     <div class="win"><span class="win-title">Tonnage (12 weeks)</span>
@@ -620,7 +627,7 @@ function compendiumBody() {
       <div class="compendium-detail-scroll">
         <button type="button" class="btn small compendium-back" onclick="G.compBack()">Back to the list</button>
         <div class="compendium-detail-lead">
-          <div class="compendium-body-map">${bodyMapTag(selected.groups, 130)}
+          <div class="compendium-body-map">${muscleMapTag(selected.primaryMuscles, selected.secondaryMuscles, 204)}
             <span class="muted">front and back</span>
           </div>
           <dl class="compendium-facts">

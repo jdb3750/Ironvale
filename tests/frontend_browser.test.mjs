@@ -1672,6 +1672,152 @@ test('Compendium lazily renders the full catalog and opens apostrophe-name detai
   }
 });
 
+test('Compendium renders Kettlebell Halo on a three-times per-muscle map', async () => {
+  for (const [label, viewport] of Object.entries(GIVER_VIEWPORTS)) {
+    const { context, failures, page } = await openMainProfile(viewport);
+    try {
+      await openCompendium(page);
+      await page.getByRole('button', { name: 'Kettlebell Halo', exact: true }).click();
+      await page.locator('.compendium-detail-name').filter({ hasText: 'Kettlebell Halo' }).waitFor();
+
+      const canvas = page.locator('.compendium-detail-pane canvas[data-musclemap]');
+      const halo = await canvas.evaluate(element => {
+        const pixels = element.getContext('2d').getImageData(0, 0, element.width, element.height).data;
+        const colors = new Set();
+        for (let index = 0; index < pixels.length; index += 4) {
+          if (pixels[index + 3] === 0) continue;
+          colors.add(`#${[pixels[index], pixels[index + 1], pixels[index + 2]]
+            .map(channel => channel.toString(16).padStart(2, '0')).join('')}`);
+        }
+        const detail = element.closest('.compendium-detail-scroll');
+        return {
+          colors: [...colors].sort(),
+          detailClientWidth: detail.clientWidth,
+          detailScrollWidth: detail.scrollWidth,
+          height: element.height,
+          primary: JSON.parse(decodeURIComponent(element.dataset.primaryMuscles)),
+          scale: element.width / 68,
+          secondary: JSON.parse(decodeURIComponent(element.dataset.secondaryMuscles)),
+          width: element.width,
+        };
+      });
+      assert.deepEqual(halo.primary, ['shoulders']);
+      assert.deepEqual(halo.secondary, []);
+      assert.deepEqual(halo.colors, ['#272735', '#2c2c3e', '#f0c83c']);
+      assert.equal(halo.scale, 3);
+      assert.equal(halo.width, 204);
+      assert.equal(halo.height, 192);
+      assert.ok(halo.detailScrollWidth <= halo.detailClientWidth, `${label}: detail has no horizontal overflow`);
+      if (EVIDENCE_DIR) {
+        await page.screenshot({ path: path.join(EVIDENCE_DIR, `compendium-muscle-map-${label}-halo.png`) });
+      }
+
+      await page.evaluate(() => G.compBack());
+      await page.getByRole('button', { name: 'Kettlebell Clean & Press', exact: true }).click();
+      await page.locator('.compendium-detail-name').filter({ hasText: 'Kettlebell Clean & Press' }).waitFor();
+      const classifiedColors = await canvas.evaluate(element => {
+        const pixels = element.getContext('2d').getImageData(0, 0, element.width, element.height).data;
+        const colors = new Set();
+        for (let index = 0; index < pixels.length; index += 4) {
+          if (pixels[index + 3] === 0) continue;
+          colors.add(`${pixels[index]},${pixels[index + 1]},${pixels[index + 2]}`);
+        }
+        return colors.size;
+      });
+      assert.ok(classifiedColors > 4, `${label}: primary and secondary identities remain visible`);
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `compendium-muscle-map-${label}-classified.png`),
+        });
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test('Muscle Ledger renders primary and secondary source muscles at three-times scale', async () => {
+  for (const [label, viewport] of Object.entries(GIVER_VIEWPORTS)) {
+    const { context, failures, page } = await openMainProfile(viewport);
+    try {
+      await createGiverProfile(page, 'self');
+      await page.evaluate(async () => {
+        await api('/lifts', {
+          method: 'POST',
+          body: { exercise: 'Seated Head Harness Neck Resistance', weight: 0, reps: 10 },
+        });
+        await api('/lifts', {
+          method: 'POST',
+          body: { exercise: 'Kettlebell Floor Press', weight: 16, reps: 8 },
+        });
+        statsTab = 'iron';
+        nav('stats');
+      });
+
+      const canvas = page.locator('.hall-body canvas[data-musclemap]');
+      await canvas.waitFor();
+      const ledger = await canvas.evaluate(element => ({
+        height: element.height,
+        primary: JSON.parse(decodeURIComponent(element.dataset.primaryMuscles)),
+        scale: element.width / 68,
+        secondary: JSON.parse(decodeURIComponent(element.dataset.secondaryMuscles)),
+        width: element.width,
+      }));
+      assert.deepEqual([...ledger.primary].sort(), ['chest', 'neck']);
+      assert.deepEqual([...ledger.secondary].sort(), ['shoulders', 'triceps']);
+      assert.ok(ledger.scale >= 2, `${label}: Ledger muscle map is rendered above 1x`);
+      assert.equal(ledger.width, 204);
+      assert.equal(ledger.height, 192);
+      assert.equal(await page.locator('.hall-body canvas[data-bodymap]').count(), 0);
+      assert.equal(await page.locator('.hall-body table.rpg').first().locator('tbody tr').count(), 8);
+      const caption = page.locator('.hall-body .ledger-map-caption');
+      assert.match(await caption.textContent(), /bright: primary within 3 days.*dim: secondary-only/);
+      assert.equal(
+        await caption.evaluate(element => getComputedStyle(element).color),
+        'rgb(149, 140, 168)',
+      );
+      if (EVIDENCE_DIR) {
+        await page.screenshot({ path: path.join(EVIDENCE_DIR, `muscle-ledger-${label}.png`) });
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test('Compendium detail contains every field at narrow and wide split-pane widths', async () => {
+  for (const viewport of [{ width: 744, height: 900 }, { width: 1280, height: 900 }]) {
+    const { context, failures, page } = await openMainProfile(viewport);
+    try {
+      await openCompendium(page);
+      await page.getByRole('button', { name: 'Kettlebell Halo', exact: true }).click();
+      await page.locator('.compendium-detail-name').filter({ hasText: 'Kettlebell Halo' }).waitFor();
+      const overflows = await page
+        .locator('.compendium-detail-pane, .compendium-detail-pane *')
+        .evaluateAll(elements => elements
+          .filter(element => element.clientWidth > 0 && element.scrollWidth > element.clientWidth)
+          .map(element => ({
+            className: element.className,
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            tagName: element.tagName,
+            text: element.textContent.trim().slice(0, 80),
+          })));
+      assert.deepEqual(overflows, [], `${viewport.width}px detail overflow:\n${JSON.stringify(overflows, null, 2)}`);
+      if (EVIDENCE_DIR) {
+        await page.screenshot({
+          path: path.join(EVIDENCE_DIR, `compendium-detail-${viewport.width}.png`),
+        });
+      }
+      assert.deepEqual(failures, []);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
 test('Compendium parser returns exact catalog counts and keeps apostrophe names usable', async () => {
   const { context, failures, page } = await openMainProfile({ width: 1280, height: 900 });
   try {
@@ -3649,7 +3795,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '121'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '123'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

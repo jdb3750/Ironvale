@@ -460,6 +460,50 @@ def muscle_recency():
     return out
 
 
+def per_muscle_recency():
+    """Per source muscle recency; the role describes work within three days.
+
+    Lift sets only. CATEGORY_MUSCLES credits non-lift activities (climbing ->
+    back/arms/core) in the seven-group muscle_recency(), and that is deliberately
+    NOT mirrored here: those are game groups with no equivalent in the seventeen
+    source muscles, and inventing one would fabricate anatomy the catalog never
+    stated. A synced climb therefore lights the seven-group ledger table and
+    leaves the per-muscle map dark.
+    """
+    rows = db.q(
+        "SELECT exercise, ts FROM lift_sets WHERE ts >= ?",
+        ((now() - timedelta(days=90)).isoformat(),),
+    ).fetchall()
+    last = {}
+    last_primary = {}
+    recent_sets = {muscle: 0 for muscle in exercises.MUSCLES}
+    cutoff14 = (now() - timedelta(days=14)).isoformat()
+    for row in rows:
+        if exercises.imported_category_for(row["exercise"]) in NON_TRAINING_IMPORTED_CATEGORIES:
+            continue
+        primary, secondary = exercises.muscles_for(row["exercise"])
+        roles = {muscle: False for muscle in secondary}
+        roles.update({muscle: True for muscle in primary})
+        for muscle, is_primary in roles.items():
+            if muscle not in last or row["ts"] > last[muscle]:
+                last[muscle] = row["ts"]
+            if is_primary and (muscle not in last_primary or row["ts"] > last_primary[muscle]):
+                last_primary[muscle] = row["ts"]
+            if row["ts"] >= cutoff14:
+                recent_sets[muscle] = recent_sets.get(muscle, 0) + 1
+    out = {}
+    for muscle in exercises.MUSCLES:
+        days = _days_since(last[muscle]) if muscle in last else 999
+        primary_days = _days_since(last_primary[muscle]) if muscle in last_primary else 999
+        role = "primary" if primary_days <= 3 else "secondary" if days <= 3 else None
+        out[muscle] = {
+            "days_since": days,
+            "sets_14d": recent_sets.get(muscle, 0),
+            "role": role,
+        }
+    return out
+
+
 def _days_since(iso):
     try:
         dt = datetime.fromisoformat(iso)

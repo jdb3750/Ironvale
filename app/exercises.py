@@ -4,14 +4,17 @@ Used for quest generation, recency tracking, and the Compendium."""
 from typing import Optional
 
 from .imported_exercises import (
+    FREE_EXERCISE_DB_MUSCLE_GROUPS,
     ImportedExercise,
     category_for,
+    find as find_imported,
     groups_for as imported_groups_for,
     normalize_name,
     rows as imported_rows,
 )
 
 GROUPS = ["legs", "posterior", "chest", "back", "shoulders", "arms", "core"]
+MUSCLES = tuple(FREE_EXERCISE_DB_MUSCLE_GROUPS)
 
 # equipment: kettlebell / barbell / dumbbell / bodyweight
 EXERCISES = {
@@ -130,6 +133,7 @@ _MANUAL_GROUPS = {
     normalize_name(name): exercise["groups"]
     for name, exercise in EXERCISES.items()
 }
+_MANUAL_NAMES = {normalize_name(name): name for name in EXERCISES}
 
 _MANUAL_SOURCE_ALIASES = {
     "Farmer Carry": "Farmer's Walk",
@@ -239,9 +243,32 @@ def _source_fields(imported: Optional[ImportedExercise]):
     }
 
 
-def _manual_catalog_record(name, exercise, imported: Optional[ImportedExercise], alias):
+def _manual_source_name(name):
+    return _MANUAL_SOURCE_ALIASES.get(name, name)
+
+
+def _manual_source_fields(name, imported: Optional[ImportedExercise]):
     record = _source_fields(imported)
     record.update(_VALE_ONLY_CATALOG_CLASSIFICATIONS.get(name, {}))
+    return record
+
+
+def muscles_for(exercise):
+    manual_name = _MANUAL_NAMES.get(normalize_name(exercise))
+    if manual_name is None:
+        imported = find_imported(exercise)
+        return (
+            (imported.primary_muscles, imported.secondary_muscles)
+            if imported is not None
+            else ((), ())
+        )
+    imported = find_imported(_manual_source_name(manual_name))
+    fields = _manual_source_fields(manual_name, imported)
+    return tuple(fields["primaryMuscles"]), tuple(fields["secondaryMuscles"])
+
+
+def _manual_catalog_record(name, exercise, imported: Optional[ImportedExercise], alias):
+    record = _manual_source_fields(name, imported)
     record.update({
         "id": record["id"] or _VALE_ONLY_CATALOG_IDS.get(name),
         "name": name,
@@ -270,7 +297,7 @@ def _full_catalog():
     merged = []
     for name, exercise in EXERCISES.items():
         alias = _MANUAL_SOURCE_ALIASES.get(name)
-        imported = imported_by_name.pop(normalize_name(alias or name), None)
+        imported = imported_by_name.pop(normalize_name(_manual_source_name(name)), None)
         merged.append(_manual_catalog_record(name, exercise, imported, alias))
     merged.extend(_imported_catalog_record(imported) for imported in imported_by_name.values())
     return sorted(merged, key=lambda record: record["name"].casefold())

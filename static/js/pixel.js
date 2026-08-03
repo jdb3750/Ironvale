@@ -924,6 +924,137 @@ function bodyMapTag(groups, px) {
   return `<canvas data-bodymap="${groups.join(',')}" width="${w * scale}" height="${h * scale}" style="width:${w * scale}px;height:${h * scale}px;image-rendering:pixelated"></canvas>`;
 }
 
+const MUSCLE_MAP_ROWS = [
+  '............#######..............................#######............',
+  '...........#########............................#########...........',
+  '...........#########............................#########...........',
+  '...........#########............................#########...........',
+  '...........#########............................#########...........',
+  '...........#########............................#########...........',
+  '...........#########............................#########...........',
+  '...........#########............................#########...........',
+  '............#######..............................#######............',
+  '.............n###n................................#t#t#.............',
+  '...........ttnn#nntt............................tttt#tttt...........',
+  '........tttttnn#nnttttt......................tttttt###tttttt........',
+  '....ssss######n#n######ssss..............sssttttttt###tttttttsss....',
+  '...sssssccccc#####cccccsssss............ssssttttttt###tttttttssss...',
+  '...ssssscccccc###ccccccsssss............sssssttttttt#tttttttsssss...',
+  '...sssssccccccc#cccccccsssss............sssssttttttt#tttttttsssss...',
+  '..ssssscccccccc#ccccccccsssss..........sssssl#tttttt#tttttt#lsssss..',
+  '..ssssscccccccc#ccccccccsssss..........sssssl##ttttt#ttttt##lsssss..',
+  '..ssss#cccccccc#cccccccc#ssss..........ssssil###tttt#tttt###lissss..',
+  '..ssbbbcccccccc#ccccccccbbbss..........ssiiill###ttt#ttt###lliiiss..',
+  '..#bbbbcccccccc#ccccccccbbbb#..........iiiiilllllltt#ttlllllliiiii..',
+  '..#bbbbbccccccc#cccccccbbbbb#..........iiiiiilllllll#llllllliiiiii..',
+  '..#bbbbb.ccccc###ccccc.bbbbb#..........#iiiii.llllll#llllll.iiiii#..',
+  '..#bbbbb.#############.bbbbb#..........#iiiii.llllll#llllll.iiiii#..',
+  '..##bbbb.###aaa#aaa###.bbbb##..........#iiii#.llllmmmmmllll.#iiii#..',
+  '..######.###aaa#aaa###.######..........##ii##.lllmmmmmmmlll.##ii##..',
+  '..f#####.#############.#####f..........f#i###.lllmmmmmmmlll.###i#f..',
+  '..f###f..###aaa#aaa###..f###f..........f###f..lllmmmmmmmlll..f###f..',
+  '..f###f..####aa#aa####..f###f..........f###f..lllmmmmmmmlll..f###f..',
+  '..ff#ff..#############..ff#ff..........ff#ff..lllmmmmmmmlll..ff#ff..',
+  '..fffff..####aa#aa####..fffff..........fffff..#llmmmmmmmll#..fffff..',
+  '..fffff..####aa#aa####..fffff..........fffff..##rrrrrrrrr##..fffff..',
+  '...ffff..#############..ffff............ffff..ggrrrrrrrrrgg..ffff...',
+  '...ffff..u###aa#aa###u..ffff............ffff..gggrrrrrrrggg..ffff...',
+  '...ffff.uu###aa#aa###uu.ffff............ffff.ggggrrrrrrrgggg.ffff...',
+  '...ffff.uu####a#a####uu.ffff............ffff.gggggrrrrrggggg.ffff...',
+  '..#####.uuq#########quu.#####..........#####.ggggggrrrgggggg.#####..',
+  '..#####.uuqqd#####dqquu.#####..........#####.gggggggrggggggg.#####..',
+  '..#####.uqqqdd...ddqqqu.#####..........#####.gggggg...gggggg.#####..',
+  '..#####.qqqqdd...ddqqqq.#####..........#####.#gggg#...#gggg#.#####..',
+  '...####.qqqqdd...ddqqqq.####............####.#hhhh#...#hhhh#.####...',
+  '........qqqqdd...ddqqqq......................#hhhh#...#hhhh#........',
+  '........qqqqdd...ddqqqq......................#hhhh#...#hhhh#........',
+  '........qqqqqd...dqqqqq......................#hhhh#...#hhhh#........',
+  '........qqqqqd...dqqqqq......................#hhhh#...#hhhh#........',
+  '........qqqqqq...qqqqqq......................#hhhh#...#hhhh#........',
+  '........qqqqqq...qqqqqq......................##hhh#...#hhh##........',
+  '........qqqqqq...qqqqqq......................##hhh#...#hhh##........',
+  '........qqqqqq...qqqqqq......................###h##...##h###........',
+  '.........q###q...q###q........................##h##...##h##.........',
+  '.........#####...#####........................v####...####v.........',
+  '.........#####...#####........................vv#vv...vv#vv.........',
+  '.........#####...#####........................vvvvv...vvvvv.........',
+  '.........v###v...v###v........................vvvvv...vvvvv.........',
+  '.........v###v...v###v........................vvvvv...vvvvv.........',
+  '.........vv##v...v##vv........................vvvvv...vvvvv.........',
+  '.........vv#vv...vv#vv........................vvvvv...vvvvv.........',
+  '.........vv#vv...vv#vv........................vvvvv...vvvvv.........',
+  '.........vv#vv...vv#vv........................vvvvv...vvvvv.........',
+  '.........vv#vv...vv#vv........................vvvvv...vvvvv.........',
+  '.........vv#vv...vv#vv........................vvvvv...vvvvv.........',
+  '.........#vvv#...#vvv#........................#vvv#...#vvv#.........',
+  '.........#####...#####........................#####...#####.........',
+  '........######...######......................######...######........',
+];
+const MUSCLE_MAP_MUSCLES = {
+  n: 'neck', t: 'traps', s: 'shoulders', c: 'chest', l: 'lats', m: 'middle back',
+  r: 'lower back', b: 'biceps', i: 'triceps', f: 'forearms', a: 'abdominals',
+  q: 'quadriceps', h: 'hamstrings', g: 'glutes', d: 'adductors', u: 'abductors',
+  v: 'calves',
+};
+const MUSCLE_COLORS = {
+  neck: '#c678c6', traps: '#e6783c', shoulders: '#f0c83c', chest: '#e45050',
+  lats: '#50b4e6', 'middle back': '#3878dc', 'lower back': '#785ac8',
+  biceps: '#78dc78', triceps: '#38a05a', forearms: '#b4f08c',
+  abdominals: '#f0965a', quadriceps: '#faf078', hamstrings: '#c8508c',
+  glutes: '#f078aa', adductors: '#96dcc8', abductors: '#5ac8b4', calves: '#a096f0',
+};
+const MUSCLE_MAP_STRUCTURE = '#272735';
+const MUSCLE_MAP_UNLIT = '#2c2c3e';
+const MUSCLE_SECONDARY_STRENGTH = 0.55;
+
+function dimMuscleColor(color) {
+  const channels = [1, 3, 5].map(offset => {
+    const lit = Number.parseInt(color.slice(offset, offset + 2), 16);
+    const unlit = Number.parseInt(MUSCLE_MAP_UNLIT.slice(offset, offset + 2), 16);
+    return Math.round(lit * MUSCLE_SECONDARY_STRENGTH + unlit * (1 - MUSCLE_SECONDARY_STRENGTH))
+      .toString(16).padStart(2, '0');
+  });
+  return `#${channels.join('')}`;
+}
+
+const MUSCLE_SECONDARY_COLORS = Object.fromEntries(
+  Object.entries(MUSCLE_COLORS).map(([muscle, color]) => [muscle, dimMuscleColor(color)]),
+);
+
+function drawMuscleMap(canvas, primary, secondary) {
+  const ctx = canvas.getContext('2d');
+  const scale = Math.floor(canvas.width / MUSCLE_MAP_ROWS[0].length) || 1;
+  const primaryMuscles = new Set(primary);
+  const secondaryMuscles = new Set(secondary);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  MUSCLE_MAP_ROWS.forEach((row, y) => {
+    [...row].forEach((character, x) => {
+      if (character === '.') return;
+      if (character === '#') {
+        ctx.fillStyle = MUSCLE_MAP_STRUCTURE;
+      } else {
+        const muscle = MUSCLE_MAP_MUSCLES[character];
+        ctx.fillStyle = primaryMuscles.has(muscle)
+          ? MUSCLE_COLORS[muscle]
+          : secondaryMuscles.has(muscle)
+            ? MUSCLE_SECONDARY_COLORS[muscle]
+            : MUSCLE_MAP_UNLIT;
+      }
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    });
+  });
+}
+
+function muscleMapTag(primary, secondary, px) {
+  const w = MUSCLE_MAP_ROWS[0].length, h = MUSCLE_MAP_ROWS.length;
+  const scale = Math.max(1, Math.floor(px / w));
+  return `<canvas data-musclemap data-primary-muscles="${encodeURIComponent(JSON.stringify(primary))}" data-secondary-muscles="${encodeURIComponent(JSON.stringify(secondary))}" width="${w * scale}" height="${h * scale}" style="width:${w * scale}px;height:${h * scale}px;image-rendering:pixelated"></canvas>`;
+}
+
+function muscleMapData(value) {
+  return JSON.parse(decodeURIComponent(value || '%5B%5D'));
+}
+
 function drawSprite(canvas, key) {
   const s = SPRITES[key];
   if (!s || !canvas) return;
@@ -954,6 +1085,8 @@ function hydrateSprites(root) {
   (root || document).querySelectorAll('canvas[data-sprite]').forEach(c => drawSprite(c, c.dataset.sprite));
   (root || document).querySelectorAll('canvas[data-bodymap]').forEach(c =>
     drawBodyMap(c, c.dataset.bodymap ? c.dataset.bodymap.split(',') : []));
+  (root || document).querySelectorAll('canvas[data-musclemap]').forEach(c =>
+    drawMuscleMap(c, muscleMapData(c.dataset.primaryMuscles), muscleMapData(c.dataset.secondaryMuscles)));
   (root || document).querySelectorAll('canvas[data-hero]').forEach(c => {
     drawHero(c.getContext('2d'), heroApFromCsv(c.dataset.hero), Math.floor(c.width / 12));
   });
