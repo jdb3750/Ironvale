@@ -172,50 +172,30 @@ entries are open work with the removal path worked out.
 
 **Defects (behaviour is wrong today)**
 
-- **The browser suite flaked once, unidentified.** During the v0.30.3 run the
-  canonical headless suite reported 47 pass / 1 fail, then passed 48/48 on four
-  consecutive re-runs. The failing test's identity was not captured before the
-  re-run, so there is nothing to point at — recorded anyway, because a suite that
-  fails roughly one run in five without a name is exactly what erodes trust in a
-  red result. If it recurs, capture the test name first and log it here before
-  re-running.
+- ~~**Browser assertions intermittently read empty or truncated `innerText`.**~~
+  **RESOLVED 2026-08-03.** The unidentified v0.30.3 and v0.33.0 flakes were
+  eventually captured at two unrelated attached elements: Bram's `.npc-name`
+  returned `''`, while Grunhilda's closed iron selector returned a complete
+  prefix ending at `within reach today:` but omitted `any iron`. Waiting for
+  visibility did not help. The common mechanism was a one-shot read of
+  layout-dependent `innerText` while Chromium was still settling a heavy suite;
+  the Compendium's 881-row renders made a pre-existing race easier to trigger.
 
-  **It recurred during the v0.33.0 run, and the name was lost again.** 48 pass /
-  1 fail on the run immediately after the `VERSION` bump, then 49/49 on two
-  consecutive re-runs. The name was missed because the run was piped through
-  `grep -E "^ℹ (tests|pass|fail)"`, which shows the counts and discards the
-  failing test's identity — the summary lines are the only thing that survives.
-  So the instruction above is not enough on its own: **capture the full output to
-  a file, then read the counts from it**, e.g.
-  `npm run test:browser > run.log 2>&1` before grepping. Two occurrences now, both
-  unnamed, both a single failure that vanished on retry.
-
-  **Third occurrence, v0.35.1 run — and this time it has a name:**
-  `Grunhilda's iron selector is closed by default and hides implement choices`
-  (`tests/frontend_browser.test.mjs:4320`). Capturing to a file worked; the
-  identity survived.
-
-  It is almost certainly the `innerText` problem recorded in the entry below,
-  not a distinct bug. The assertion reads
-  `element.innerText.replace(/\s+/g, ' ').trim()` and got
-  `"…within reach today:"` where it wanted `"…within reach today: any iron"` —
-  a missing *suffix*, the signature of reading a node mid-layout. `innerText` is
-  layout-dependent where `textContent` is not. The seam under test that day
-  touched only `hall.js`, `dev-console.js` and `style.css`; `giver.js` was
-  untouched and the CSS diff contained nothing matching iron/giver/selector. It
-  then passed 3/3 in isolation and 63/63 on a full re-run.
-
-  **The actionable fix**, if it recurs: switch assertions that are checking
-  *content* rather than *layout* from `innerText` to `textContent`. `innerText`
-  is only worth its flakiness when visibility or CSS-driven text is the thing
-  being asserted, which is not the case here.
-- **Headful screenshot mode hits `innerText` timing failures.** Observed during the
-  v0.25.0 migration work: the optional headful capture mode failed twice on
-  `innerText` reads while still producing valid captures, and the canonical
-  headless suite passed 41/41. Same family as the `openGiverBoard` race fixed in
-  v0.24.3 — a read that runs before the DOM settles. Low priority because the
-  canonical path is headless, but it will keep producing noise that looks like a
-  real failure.
+  The 37 call sites were classified by what each assertion proves. The 33 content
+  assertions now use `textContent`. Four assertions genuinely depend on rendered
+  text: two verify CSS-transformed uppercase labels, one verifies an uppercase
+  panel title, and Grunhilda's collapsed `<details>` must exclude hidden implement
+  labels. Those four read through `settledInnerText()`, which polls for the same
+  non-empty value twice. Full browser output remains captured before reading
+  counts so any future failure keeps its name and actual value. The corrected
+  suite then passed 63/63 on ten consecutive, separately captured full runs.
+- **Town navigation can expose the previous town DOM for one assertion.** The
+  2026-08-03 ten-run browser stress batch caught one run where
+  `town keeps all four giver identities while Bram has no offer board` found zero
+  `Visit Old Fenn` buttons at desktop instead of one. This happened before the
+  test's text assertion and did not recur in the other nine captures, so it is a
+  separate navigation/render race, not the `innerText` defect. It was recorded,
+  not folded into this test-infrastructure fix.
 - **A mid-day imported database can migrate without its own pre-migration
   snapshot.** `vault.ensure_snapshot_before_migration()` is per-UTC-day, so a
   legacy database imported *after* that day's snapshot already exists reuses it

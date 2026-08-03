@@ -16,9 +16,9 @@ import { chromium } from 'playwright';
       Induce the state you assert on. Verify with:
         node --test --test-name-pattern="<one test>" tests/frontend_browser.test.mjs
    2. innerText vs textContent: innerText returns '' for an element that is not
-      rendered or is display:none (collapsed, inactive tab). Use innerText when the
-      claim really is "the user sees this" AND you have scrolled/opened it
-      first; use textContent when you only mean "the element says this". */
+      rendered or is display:none (collapsed, inactive tab). Use settledInnerText
+      when the claim really is "the user sees this" AND you have scrolled/opened
+      it first; use textContent when you only mean "the element says this". */
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BROWSER_PORT_OVERRIDE = process.env.IRON_VALE_BROWSER_PORT;
 const BROWSER_PORT = BROWSER_PORT_OVERRIDE === undefined
@@ -75,6 +75,19 @@ const GIVER_VIEWPORTS = {
   tablet: { width: 768, height: 1024 },
   desktop: { width: 1280, height: 900 },
 };
+
+async function settledInnerText(locator, { timeout = 2000 } = {}) {
+  await locator.waitFor();
+  let last = await locator.innerText();
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const next = await locator.innerText();
+    if (next === last && next !== '') return next;
+    last = next;
+  }
+  return last;
+}
 
 async function assertExplicitPortAvailable() {
   await new Promise((resolve, reject) => {
@@ -606,7 +619,7 @@ test('weekly planner chooser opens a complete slot editor with a readable select
     const chooser = page.locator('.counsel-schedule-chooser');
     const close = chooser.getByRole('button', { name: 'Close chooser', exact: true });
     await chooser.waitFor();
-    assert.match(await chooser.locator('[data-schedule-current]').innerText(), /current:\s*open/i);
+    assert.match(await chooser.locator('[data-schedule-current]').textContent(), /current:\s*open/i);
     assert.equal(await chooser.getByRole('button', { name: 'Optional: off', exact: true }).count(), 1);
     assert.equal(await chooser.getByRole('button', { name: 'Remove slot', exact: true }).count(), 1);
     assert.equal(await chooser.getByRole('button', { name: 'Endurance', exact: true }).count(), 1);
@@ -763,7 +776,7 @@ test('profile creation, logout, PIN selection, and town return work end to end',
   await page.locator('#pin-browser-ranger').fill('2468');
   await page.getByRole('button', { name: 'ENTER' }).click();
   await page.locator('.town-scene').waitFor();
-  assert.match(await page.locator('.hdr-char').innerText(), /Browser Ranger/);
+  assert.match(await page.locator('.hdr-char').textContent(), /Browser Ranger/);
   await context.close();
 });
 
@@ -779,8 +792,8 @@ test('a failed raven flight becomes a persistent visible status', async () => {
     await page.getByRole('button', { name: 'SEND RAVENS' }).click();
     const status = page.locator('.sync-status-error').first();
     await status.waitFor();
-    assert.match(await status.innerText(), /ravens delayed since/i);
-    assert.equal((await status.innerText()).includes('raven-test-key'), false);
+    assert.match(await status.textContent(), /ravens delayed since/i);
+    assert.equal((await status.textContent()).includes('raven-test-key'), false);
     await page.evaluate(() => nav('settings'));
     await page.getByRole('tab', { name: 'APIS' }).click();
     await page.locator('.sync-status-panel .sync-status-error').waitFor();
@@ -954,7 +967,7 @@ test('Settings retains a focus charter and disables it only when the active loop
       'settings-tab-apis',
     );
     assert.match(
-      await page.locator('#settings-panel-apis').innerText(),
+      await page.locator('#settings-panel-apis').textContent(),
       /intervals\.icu → Settings → Developer\./,
     );
     assert.equal(
@@ -1051,7 +1064,7 @@ test('Settings retains a focus charter and disables it only when the active loop
       await page.locator('#counsel-focus-hint').evaluate(element => getComputedStyle(element).color),
       'rgb(149, 140, 168)',
     );
-    assert.match(await page.locator('#counsel-focus-hint').innerText(), /choosing freely; focus guides the counsel/i);
+    assert.match(await page.locator('#counsel-focus-hint').textContent(), /choosing freely; focus guides the counsel/i);
     assert.deepEqual(
       await page.evaluate(() => S.state.settings.counsel_charter),
       { primary: 'run', secondary: ['strength'] },
@@ -1062,7 +1075,7 @@ test('Settings retains a focus charter and disables it only when the active loop
     await page.getByText('Your schedule is your focus.', { exact: true }).waitFor();
     await page.locator('#counsel-focus[disabled]').waitFor();
     assert.equal(
-      await page.locator('#counsel-focus-hint').innerText(),
+      await page.locator('#counsel-focus-hint').textContent(),
       'Your schedule is your focus.',
     );
 
@@ -1070,7 +1083,7 @@ test('Settings retains a focus charter and disables it only when the active loop
     await page.getByRole('menuitemradio', { name: 'Considered' }).click();
     await page.locator('#counsel-focus:not([disabled])').waitFor();
     assert.match(
-      await page.locator('#counsel-focus-hint').innerText(),
+      await page.locator('#counsel-focus-hint').textContent(),
       /Optional\. Focus only guides the daily pointer/,
     );
     assert.deepEqual(failures, []);
@@ -1304,7 +1317,7 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
     assert.equal(await schedule.locator('[data-schedule-cell^="friday-"]').count(), 1);
     assert.equal(await schedule.locator('[data-schedule-cell="friday-2"]').count(), 0);
     assert.equal(await schedule.locator('[data-schedule-gap="friday-2"]').count(), 1);
-    assert.equal(await schedule.locator('[data-schedule-cell="monday-2"]').innerText(), '+');
+    assert.equal(await schedule.locator('[data-schedule-cell="monday-2"]').textContent(), '+');
 
     await cell('tuesday', 0).click();
     await chooser().getByRole('button', { name: 'Strength', exact: true }).click();
@@ -1322,7 +1335,7 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
     await chooser().getByRole('button', { name: 'Endurance', exact: true }).click();
     await chooser().getByRole('button', { name: 'Ride', exact: true }).click();
     assert.equal(
-      await chooser().locator('[data-schedule-choice]').last().innerText(),
+      await settledInnerText(chooser().locator('[data-schedule-choice]').last()),
       'LET THE COUNSEL CHOOSE',
     );
     await chooser().getByRole('button', { name: 'Let the counsel choose', exact: true }).click();
@@ -1404,14 +1417,14 @@ test('Settings authors the weekly counsel plan through the sequencer grid', asyn
     await cell('sunday', 0).click();
     await chooser().getByRole('button', { name: 'Strength', exact: true }).click();
     assert.equal(
-      await chooser().locator('[data-schedule-choice]').last().innerText(),
+      await settledInnerText(chooser().locator('[data-schedule-choice]').last()),
       'LET THE COUNSEL CHOOSE',
     );
     await chooser().getByRole('button', { name: 'Let the counsel choose', exact: true }).click();
 
     await cell('monday', 0).click();
     assert.match(
-      await page.locator('[data-schedule-current]').innerText(),
+      await page.locator('[data-schedule-current]').textContent(),
       /run · easy/i,
     );
     await chooser().getByRole('button', { name: 'Optional: off', exact: true }).click();
@@ -1563,7 +1576,7 @@ test('weekly planner reports kept oaths without grading a poor week', async () =
 
     await renderAdherence(5, 5);
     const good = page.locator('.counsel-schedule-adherence');
-    assert.equal(await good.innerText(), 'Sworn paths kept this week: 5 of 5.');
+    assert.equal(await good.textContent(), 'Sworn paths kept this week: 5 of 5.');
     const goodPresentation = await good.evaluate(element => {
       const style = getComputedStyle(element);
       return {
@@ -1575,7 +1588,7 @@ test('weekly planner reports kept oaths without grading a poor week', async () =
       };
     });
     assert.doesNotMatch(
-      await page.locator('#counsel-schedule').innerText(),
+      await page.locator('#counsel-schedule').textContent(),
       /\b(?:CTL|ATL|HRV|streak|weight)\b/i,
     );
     if (EVIDENCE_DIR) {
@@ -1591,7 +1604,7 @@ test('weekly planner reports kept oaths without grading a poor week', async () =
     await page.setViewportSize({ width: 375, height: 812 });
     await renderAdherence(1, 5);
     const poor = page.locator('.counsel-schedule-adherence');
-    assert.equal(await poor.innerText(), 'Sworn paths kept this week: 1 of 5.');
+    assert.equal(await poor.textContent(), 'Sworn paths kept this week: 1 of 5.');
     const poorPresentation = await poor.evaluate(element => {
       const style = getComputedStyle(element);
       return {
@@ -1765,7 +1778,7 @@ test('Compendium explains an unreadable imported catalog without exposing develo
     assert.equal(await compendiumResultCount(page), 26);
     const status = page.locator('[data-compendium-catalog-status="error"]');
     await status.waitFor();
-    const playerCopy = await status.innerText();
+    const playerCopy = await status.textContent();
     assert.match(playerCopy, /could not read the imported ledger/i);
     assert.match(playerCopy, /only the Vale's 26 sworn movements are listed/i);
     assert.doesNotMatch(playerCopy, /source file is not valid JSON/i);
@@ -1781,7 +1794,7 @@ test('Compendium explains an unreadable imported catalog without exposing develo
     const consoleInput = page.getByRole('textbox', { name: 'Console command' });
     await consoleInput.fill('catalog');
     await consoleInput.press('Enter');
-    const consoleText = await page.locator('#dev-console-output').innerText();
+    const consoleText = await page.locator('#dev-console-output').textContent();
     assert.match(consoleText, /loaded_rows: 0/);
     assert.match(consoleText, /skipped_rows: 0/);
     assert.match(consoleText, /skipped_by_reason: \{\}/);
@@ -1825,7 +1838,7 @@ test('Compendium quietly reports skipped imported rows and the console gives the
     assert.equal(await compendiumResultCount(page), 880);
     const status = page.locator('[data-compendium-catalog-status="partial"]');
     await status.waitFor();
-    assert.match(await status.innerText(), /set aside 1 imported page/i);
+    assert.match(await status.textContent(), /set aside 1 imported page/i);
     if (EVIDENCE_DIR) {
       await page.screenshot({ path: path.join(EVIDENCE_DIR, 'compendium-catalog-partial-desktop.png') });
       await page.setViewportSize(GIVER_VIEWPORTS.tablet);
@@ -1838,7 +1851,7 @@ test('Compendium quietly reports skipped imported rows and the console gives the
     const consoleInput = page.getByRole('textbox', { name: 'Console command' });
     await consoleInput.fill('catalog');
     await consoleInput.press('Enter');
-    const consoleText = await page.locator('#dev-console-output').innerText();
+    const consoleText = await page.locator('#dev-console-output').textContent();
     assert.match(consoleText, /loaded_rows: 872/);
     assert.match(consoleText, /skipped_rows: 1/);
     assert.match(consoleText, /skipped_by_reason: \{"unknown muscle":1\}/);
@@ -2082,7 +2095,7 @@ test('Compendium parser uses OR within dimensions and AND across them', async ()
 
     await search.fill('kettlebells glutes');
     assert.equal(await compendiumResultCount(page), 0);
-    assert.match(await page.locator('.compendium-list-empty').innerText(), /No page/i);
+    assert.match(await page.locator('.compendium-list-empty').textContent(), /No page/i);
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -2097,11 +2110,11 @@ test('Compendium filter chips demote parsed tokens to literal name text', async 
     await search.fill('pull');
     assert.equal(await compendiumResultCount(page), 378);
     const chip = page.locator('[data-chip-dimension="force"][data-chip-value="pull"]');
-    assert.equal((await chip.innerText()).trim(), 'force: pull ×');
+    assert.equal((await chip.textContent()).trim(), 'force: pull ×');
     await chip.click();
     assert.equal(await search.inputValue(), '"pull"');
     assert.equal(await compendiumResultCount(page), 46);
-    assert.equal((await page.locator('[data-chip-dimension="text"]').innerText()).trim(), 'text: "pull" ×');
+    assert.equal((await page.locator('[data-chip-dimension="text"]').textContent()).trim(), 'text: "pull" ×');
     assert.deepEqual(failures, []);
   } finally {
     await context.close();
@@ -2157,7 +2170,7 @@ test('Compendium clearing and filtering preserve an open detail and correct ARIA
     await search.fill('a page maud never filed');
     assert.equal(await compendiumResultCount(page), 0);
     await page.locator('.compendium-list-empty').waitFor();
-    assert.match(await page.locator('.compendium-list-empty').innerText(), /No page/i);
+    assert.match(await page.locator('.compendium-list-empty').textContent(), /No page/i);
     assert.equal(await page.locator('.compendium-detail-name').textContent(), "Conan's Wheel");
 
     await page.getByRole('button', { name: 'Clear the search' }).click();
@@ -2301,7 +2314,7 @@ test('Settings renders v0.27 routine and open slots in the sequencer grid', asyn
     );
     await schedule.locator('[data-schedule-cell="monday-0"]').click();
     assert.match(
-      await page.locator('[data-schedule-current]').innerText(),
+      await page.locator('[data-schedule-current]').textContent(),
       /starting strength/i,
     );
     assert.deepEqual(failures, []);
@@ -2340,7 +2353,7 @@ test('Scheduled mode serves the written giver path and names an unwritten board'
     await openGiverBoard(page, 'strength');
     assert.equal(await page.locator('.counsel-path-card').count(), 0);
     assert.equal(
-      await page.locator('.giver-offer-board .win-title').innerText(),
+      await settledInnerText(page.locator('.giver-offer-board .win-title')),
       'NO PATH WRITTEN',
     );
     await page.waitForFunction(() => (
@@ -2494,7 +2507,7 @@ test('Settings pixelSelect rows name the setting once and keep value-only option
       const row = input.locator('xpath=ancestor::div[contains(@class, "formrow")]');
       const label = row.locator('.counsel-label');
       assert.equal(await label.isVisible(), true);
-      assert.equal((await label.innerText()).trim().toLowerCase(), setting.rowLabel);
+      assert.equal((await label.textContent()).trim().toLowerCase(), setting.rowLabel);
       assert.equal(
         await label.evaluate(element => getComputedStyle(element).color),
         'rgb(106, 160, 200)',
@@ -3143,7 +3156,7 @@ test('giver characterization preserves identity, active continuation, and refusa
     });
 
     await openGiverBoard(page, 'endurance');
-    assert.match(await page.locator('.npc-name').innerText(), /Old Fenn the Wayfarer/);
+    assert.match(await page.locator('.npc-name').textContent(), /Old Fenn the Wayfarer/);
     assert.equal(await page.locator('[data-portrait="fenn"]').count(), 1);
     assert.match(
       await page.locator('[data-portrait="fenn"]').getAttribute('src'),
@@ -3158,7 +3171,7 @@ test('giver characterization preserves identity, active continuation, and refusa
     assert.equal(acceptPayload.giver, 'endurance');
     assert.equal(Number.isInteger(acceptPayload.offer_id), true);
     assert.equal(await page.evaluate(() => S.params.react), 'accept');
-    assert.match(await page.locator('.npc-name').innerText(), /Old Fenn the Wayfarer/);
+    assert.match(await page.locator('.npc-name').textContent(), /Old Fenn the Wayfarer/);
     assert.equal(await page.locator('[data-portrait="fenn"]').count(), 1);
     assert.equal(await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).count(), 0);
     assert.equal(
@@ -3182,7 +3195,7 @@ test('giver characterization preserves identity, active continuation, and refusa
     });
     const refusal = page.locator('.toast.err');
     await refusal.waitFor();
-    assert.match(await refusal.innerText(), /already carry a quest/i);
+    assert.match(await refusal.textContent(), /already carry a quest/i);
     assert.equal(
       await page.evaluate(async () => {
         const state = await api('/state');
@@ -3320,7 +3333,7 @@ test('giver counsel boards render deterministic one-or-three paths across respon
           const board = page.locator('.giver-offer-board');
           assert.equal(await board.count(), 1);
           assert.equal(await board.getAttribute('data-counsel-mode'), mode);
-          assert.match(await page.locator('.npc-name').innerText(), new RegExp(giverCase.identity));
+          assert.match(await page.locator('.npc-name').textContent(), new RegExp(giverCase.identity));
           assert.equal(
             await page.locator(`[data-portrait="${giverCase.portrait}"]`).count(),
             1,
@@ -3453,11 +3466,11 @@ test('giver counsel boards render deterministic one-or-three paths across respon
     const hardWarningCard = page.locator('.counsel-path-card.has-wellness-warning');
     await hardWarningCard.scrollIntoViewIfNeeded();
     assert.equal(
-      (await hardWarningCard.locator('.counsel-tier-label').innerText()).toLowerCase(),
+      (await hardWarningCard.locator('.counsel-tier-label').textContent()).toLowerCase(),
       'quality',
     );
     assert.match(
-      await hardWarningCard.locator('.counsel-eligibility.warn').innerText(),
+      await hardWarningCard.locator('.counsel-eligibility.warn').textContent(),
       /remains yours to choose/i,
     );
     assert.equal(await hardWarningCard.getByRole('button', { name: 'ACCEPT QUEST' }).isEnabled(), true);
@@ -3647,8 +3660,8 @@ test('town keeps all four giver identities while Bram has no offer board', async
       }
 
       await openGiverBoard(page, 'bram');
-      assert.match(await page.locator('.npc-name').innerText(), /Ser Bram the Old Knight at Rest/);
-      assert.match(await page.locator('#dlg').innerText(), /set no tasks now/i);
+      assert.match(await page.locator('.npc-name').textContent(), /Ser Bram the Old Knight at Rest/);
+      assert.match(await page.locator('#dlg').textContent(), /set no tasks now/i);
       assert.equal(await page.locator('.giver-offer-board').count(), 0);
       assert.equal(await page.locator('.giver-offer-panel').count(), 0);
       assert.equal(await page.getByRole('button', { name: 'ACCEPT QUEST', exact: true }).count(), 0);
@@ -4080,7 +4093,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
     await page.getByText('Your Sworn Quest', { exact: true }).waitFor();
     const successToast = page.locator('.toast:not(.err)');
     await successToast.waitFor();
-    assert.match(await successToast.innerText(), /oath is inked/i);
+    assert.match(await successToast.textContent(), /oath is inked/i);
     assert.deepEqual(acceptStatuses, [200]);
     assert.equal(
       await page.evaluate(async () => {
@@ -4112,7 +4125,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
       }
     }, staleOfferId);
     await page.locator('.toast.err').waitFor();
-    assert.match(await page.locator('.toast.err').innerText(), /offer has faded/i);
+    assert.match(await page.locator('.toast.err').textContent(), /offer has faded/i);
     assert.equal(await page.locator('.toast:not(.err)').count(), 0);
     assert.equal(
       await page.evaluate(async () => {
@@ -4132,7 +4145,7 @@ test('giver accept confirms its commit while stale or malformed options cannot f
         // The error toast is the player-visible refusal.
       }
     });
-    assert.match(await page.locator('.toast.err').innerText(), /offer key is not recognized/i);
+    assert.match(await page.locator('.toast.err').textContent(), /offer key is not recognized/i);
     assert.equal(await page.locator('.toast:not(.err)').count(), 0);
     assert.deepEqual(acceptStatuses, [200, 400, 400]);
     assert.deepEqual(failures, []);
@@ -4330,7 +4343,7 @@ test("Grunhilda's iron selector is closed by default and hides implement choices
     const selector = page.locator('.iron-today-control .pixel-select');
     assert.equal(await selector.count(), 1);
     assert.equal(
-      await intro.evaluate(element => element.innerText.replace(/\s+/g, ' ').trim()),
+      (await settledInnerText(intro)).replace(/\s+/g, ' ').trim(),
       'One eligible path, chosen from this giver’s work for today. within reach today: any iron',
     );
     assert.equal(
