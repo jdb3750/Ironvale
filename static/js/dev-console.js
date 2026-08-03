@@ -15,6 +15,7 @@ const DEV_COMMANDS = {
     options: ['training'],
     actions: { training: 'wipe_dev' },
   },
+  catalog: { help: 'show imported exercise catalog status', options: [] },
   clear: { help: 'clear the console', options: [] },
 };
 
@@ -35,6 +36,15 @@ function devConsoleHelp(output) {
     devConsolePrint(output, `${usage.padEnd(20)}${spec.help}`);
     if (spec.options.length) devConsolePrint(output, `  options: ${spec.options.join(' | ')}`, 'muted');
   });
+}
+
+function devConsoleCatalogStatus(output) {
+  const status = S.state.imported_exercise_catalog || {};
+  const skippedByReason = status.skipped_by_reason || {};
+  devConsolePrint(output, `loaded_rows: ${status.loaded_rows ?? 'unavailable'}`);
+  devConsolePrint(output, `skipped_rows: ${status.skipped_rows ?? 'unavailable'}`);
+  devConsolePrint(output, `skipped_by_reason: ${JSON.stringify(skippedByReason)}`);
+  devConsolePrint(output, `source_error: ${status.source_error ?? 'null'}`);
 }
 
 function devConsoleSuggestions(input, suggestions) {
@@ -142,6 +152,10 @@ G.openDevConsole = () => {
     }
     if (command === 'help') {
       devConsoleHelp(output);
+      return;
+    }
+    if (command === 'catalog' && parts.length === 1) {
+      devConsoleCatalogStatus(output);
       return;
     }
     const spec = DEV_COMMANDS[command];

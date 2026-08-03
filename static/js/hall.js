@@ -458,6 +458,22 @@ function compendiumActiveChips(parsed) {
   ));
 }
 
+function compendiumCatalogStatusHTML(status) {
+  if (!status) return '';
+  const loadedRows = Number(status.loaded_rows) || 0;
+  const skippedRows = Number(status.skipped_rows) || 0;
+  if (status.source_error != null || loadedRows === 0) {
+    return `<div class="compendium-catalog-status error" data-compendium-catalog-status="error"
+      role="status" aria-live="polite">Maud could not read the imported ledger. Only the Vale's 26 sworn movements are listed.</div>`;
+  }
+  if (skippedRows > 0) {
+    const pages = skippedRows === 1 ? 'page' : 'pages';
+    return `<div class="compendium-catalog-status partial" data-compendium-catalog-status="partial"
+      role="status" aria-live="polite">Maud set aside ${skippedRows} imported ${pages} she could not safely read. Every other readable movement is still listed.</div>`;
+  }
+  return '';
+}
+
 function compendiumQueryFeedback(parsed, visibleCount, totalCount) {
   COMP.activeChips = compendiumActiveChips(parsed);
   const filterChips = COMP.activeChips.map((chip, index) => `
@@ -476,7 +492,8 @@ function compendiumQueryFeedback(parsed, visibleCount, totalCount) {
       <span class="muted" aria-live="polite" data-compendium-result-count
         data-count="${visibleCount}">Maud finds ${visibleCount} of ${totalCount} movements.</span>
       ${clear}
-    </div>`;
+    </div>
+    ${compendiumCatalogStatusHTML(S.state.imported_exercise_catalog)}`;
 }
 
 function compendiumVocabularyReference() {
@@ -593,7 +610,9 @@ function compendiumBody() {
   const parsed = parseCompendiumQuery(COMP.query);
   const visibleRecords = filteredCompendiumRecords(parsed);
   COMP.visibleRecords = visibleRecords;
-  const selected = records.find(record => record.id === COMP.selectedId) || null;
+  const selected = COMP.selectedId == null
+    ? null
+    : records.find(record => record.id === COMP.selectedId) || null;
   const fullRecord = selected ? (COMP.details.get(selected.id) || selected) : null;
   const list = `<section class="win compendium-list-pane">
     <span class="win-title">Movements</span>
