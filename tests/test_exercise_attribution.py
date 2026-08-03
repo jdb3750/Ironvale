@@ -187,4 +187,24 @@ finally:
     catalog.SOURCE_PATH = source_path
     catalog.clear_cache()
 
+
+
+# Given: a caller mutates the list groups_for handed back. When: attribution is
+# asked again. Then: the sworn catalog is untouched — _MANUAL_GROUPS holds the
+# very lists inside EXERCISES, so returning one directly would let any caller
+# corrupt a sworn entry for the life of the process.
+sworn_groups = exercises.groups_for("Back Squat")
+sworn_groups.append("corrupted")
+ok(
+    "a mutated result cannot corrupt the sworn catalog",
+    exercises.groups_for("Back Squat") == ["legs", "posterior"]
+    and "corrupted" not in exercises.EXERCISES["Back Squat"]["groups"],
+)
+imported_groups = exercises.groups_for("Barbell Hip Thrust")
+imported_groups.append("corrupted")
+ok(
+    "a mutated result cannot corrupt the imported fold",
+    "corrupted" not in exercises.groups_for("Barbell Hip Thrust"),
+)
+
 print("EXERCISE ATTRIBUTION PASSED")

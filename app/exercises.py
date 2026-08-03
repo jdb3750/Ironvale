@@ -203,8 +203,12 @@ _DISPLAY_EQUIPMENT = {
 
 
 def groups_for(exercise):
+    # Copy: _MANUAL_GROUPS holds the very lists inside EXERCISES, so returning one
+    # directly hands callers a live reference to the catalog. A single append by
+    # any caller would corrupt the sworn entry for the life of the process.
+    # imported_groups_for already builds a fresh list per call.
     manual_groups = _MANUAL_GROUPS.get(normalize_name(exercise))
-    return manual_groups if manual_groups is not None else imported_groups_for(exercise)
+    return list(manual_groups) if manual_groups is not None else imported_groups_for(exercise)
 
 
 def imported_category_for(exercise):
