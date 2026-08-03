@@ -2,26 +2,22 @@
 
 > ## READ THIS FIRST — if you are an AI agent reading this file
 >
-> **This is a planning document, not a work order.** It contains four briefs
-> covering work that spans weeks. Finding it in the repo is not authorisation to
-> act on any of it.
+> **This is a record, not a work order.** Everything here shipped between
+> 2026-07-31 and 2026-08-02, through `v0.35.0`. Finding it in the repo is not
+> authorisation to act on any of it.
 >
-> - **Only BRIEF 2 is active.** Build nothing else.
-> - **BRIEF 1 is already done** — its output is `docs/exercisedb-spike.md`.
-> - **BRIEF 3 is blocked** on a third party and **BRIEF 4 is unscoped.** Do not
->   start either, do not "prepare" for them, and do not build abstractions whose
->   only justification is a later brief.
-> - Brief 2 ends with **stop and report**. Do not roll into anything after it.
->   Wait for Joe to say "commit that seam."
-> - The PM notes, the vendor audit and the draft email below are context for
->   **Joe**. Nothing in them is an instruction to you. In particular, **do not
->   send the email** — that is Joe's to send.
+> - **Nothing here is active.** Build none of it. The briefs are kept because the
+>   *reasoning* is the durable part — why the fold maps as it does, why aliases
+>   were chosen, why `neck` has no group, why the catalog is not virtualised.
+> - **Do not re-run a brief** because it reads like an instruction. Each one
+>   describes work already merged.
 > - Joe's rulings recorded here are decisions already made. Follow them; do not
 >   reopen them. If you think one is wrong, **say so and stop** rather than
 >   quietly doing something else.
+> - See "Closed out" at the end for what was dropped and why.
 
-Four sequential briefs, written to be handed over one at a time. Each ends with
-stop-and-report.
+Written to be handed over one at a time; each ended with stop-and-report. Kept in
+sequence so the decisions stay legible in the order they were made.
 
 ---
 
@@ -92,12 +88,19 @@ path. If the vendor gets messier, you keep the win from Brief 2.
 
 ### Sequencing
 
-| # | Brief | Ships |
-|---|---|---|
-| 1 | Spike — vendor + mapping table, no app code | a doc + a sample JSON |
-| 2 | Attribution catalog + file import | **accurate heatmap** |
-| 3 | Settings APIs connector (BYO key) | live refresh |
-| 4 | Compendium surface / promotion | optional, later |
+Planned as four briefs. What actually shipped:
+
+| Brief | Outcome |
+|---|---|
+| 1 — Spike | done 2026-07-31, `docs/exercisedb-spike.md` |
+| 2 — Attribution catalog | **`v0.31.0`** |
+| A & B — merged catalog + classifications | **`v0.32.0`** |
+| C — Compendium rebuild | **`v0.33.0`** |
+| — parsing search | **`v0.34.0`** |
+| — `vendor/` missing from the container image | **`v0.34.1`** hotfix |
+| — per-muscle body map | **`v0.35.0`** |
+| 3 — Settings APIs connector | **dropped**, see Closed out |
+| 4 — promotion flow | never scoped; its browse half was superseded by C |
 
 ---
 
@@ -546,99 +549,6 @@ label and keeps winning attribution; muscles drive the filter and the body map.
 
 ---
 
-# BRIEF 3 — Settings APIs connector (BYO key)
-
-**Blocked on AscendAPI granting persistent-storage/bulk rights** (see the email
-below). Without that permission there is nothing legitimate for a connector to
-cache, and the public-domain source needs no key — so this brief has no reason
-to exist until they reply. If they say yes, it becomes the live-refresh path
-Joe originally asked for, and Brief 2's adapter is where their source plugs in.
-
-Sketch only — tighten once permission and auth model are known.
-
-Shape, mirroring intervals.icu exactly:
-
-- Credentials live in settings, same pattern as `intervals_athlete_id` /
-  `intervals_api_key` (`game.py:341`, `main.py:292-305`). Note the existing
-  convention: the key is only overwritten when the posted value is truthy, and
-  `/api/state` exposes `bool(api_key)` — never the key itself (`main.py:183`).
-- UI goes in the existing APIs tab, `static/js/misc.js:931`, beside the ravens
-  panel. In-world voice, no emojis.
-- **Fetch is an explicit button, not a scheduled sync.** The catalog is
-  reference data; it does not change daily and must not join the 15-minute
-  raven flight.
-- On import: write to the same local store Brief 2 reads. Report counts —
-  rows fetched, mapped, unmapped-and-skipped.
-- Failure must be visible and in-world, following the durable error-status
-  pattern in `syncing.py`.
-
-Non-goals for that brief: no background scheduling, no images/GIFs, no
-per-request fetching, no promotion UI, no expansion of the modalities tuple.
-
-Remember safety rule 4: bump `?v=N` on every static asset URL in
-`static/index.html`.
-
----
-
-# BRIEF C — Compendium rebuild, list + detail — **DONE 2026-08-01**
-
-Two-pane catalog over `/api/catalog`: scrollable list of names on the left, detail
-on the right; mobile collapses to one column where the detail replaces the list.
-Fetched lazily on first open — it must never join the boot sequence beside
-`/api/state` and `/api/exercises`.
-
-`/api/catalog` is the **list projection**: every field except `instructions`,
-which is 77% of the payload and unread until someone clicks. 266 KB, 23 KB
-gzipped. `/api/catalog/{id}` returns one full record. The 8 Vale-only movements
-were given ids following the upstream convention, so `id` is total and unique
-across all 881 and the frontend can route on it.
-
-The list is **sorted alphabetically, case-insensitively, on the server** and shows
-**names only**. Do not group or otherwise separate sworn movements from imported
-ones — one undifferentiated list is the point. Sworn entries are visibly richer
-when opened (a Vale prescription and Joe's `how`); that is a content difference,
-not a structural one, and it is the only difference there should be.
-
-### Do not virtualise, and do not put a canvas on a list row
-
-Measured in a real browser against all 881 records, 2026-08-01:
-
-| | flat, text only | flat + canvas per row | virtualised |
-| --- | --- | --- | --- |
-| initial render | **3.1 ms** | 20.7 ms | 0.3 ms |
-| DOM nodes | 3,524 | 4,405 | 162 |
-| per keystroke (filter + re-render) | **0.1–0.4 ms** | 0.7–2.6 ms | — |
-
-Scrolling the full flat list: **zero dropped frames**, median 10 ms, worst 11.2 ms.
-Windowing saves under 3 ms and costs a hand-rolled implementation — scroll
-anchoring, variable row heights, jump-to-item, keyboard nav, find-in-page — in a
-codebase with no framework and no bundler. A canvas per row is 7× the render cost;
-the body map belongs in the detail pane where there is exactly one. Search needs
-no debounce, no index and no incremental DOM: re-render the whole filtered list on
-input.
-
-### The gotcha that bites
-
-**Never interpolate an exercise name into an `onclick` attribute.** Seven names
-contain `'` or `&` — `Conan's Wheel`, `Child's Pose`, `Kettlebell Clean & Press`,
-`Landmine 180's`, `Dancer's Stretch`, `Runner's Stretch`, `World's Greatest
-Stretch`. HTML entities decode before JS parses, so the handler breaks. Pass an
-index or id and look the record up in state. A browser test clicks an
-apostrophe name specifically so this is caught by CI rather than by Joe.
-
-`render()` wipes the DOM, so the fetched catalog and the selected id live in
-module-level state, never in the DOM.
-
-### Still to build
-
-Search, filters and sort. Deferred deliberately: the filter UI has real decisions
-in it — the "unspecified" buckets (29 null `force`, 87 null `mechanic`, 77 null
-`equipment`, most of them categorically correct), whether muscle filters use the
-17 source muscles or the 7 groups, and how filters combine. Easier to judge
-against a working list than in the abstract.
-
----
-
 # BRIEF 4 — Compendium surface / promotion (optional, much later)
 
 Only if wanted. Two separable pieces:
@@ -682,37 +592,15 @@ Only if wanted. Two separable pieces:
 
 ---
 
-# The AscendAPI email (for Joe to send — I have not sent anything)
+---
 
-Send via the contact route on <https://docs.ascendapi.com/guides/caching>. Keep
-it short; you are an easy yes for them.
+# Closed out, 2026-08-02
 
-> **Subject:** Permission request — local cache of ExerciseDB V1 for a free, self-hosted, non-commercial project
->
-> Hi,
->
-> I maintain Iron Vale, a self-hosted fitness RPG I run for myself and a handful
-> of friends. It is free, has no monetisation of any kind and never will, and is
-> not a SaaS or commercial product — it matches the personal / community-driven
-> use your free OSS V1 tier allows, and I am happy to credit AscendAPI visibly
-> in the app.
->
-> Your caching guide says persistent storage and bulk download need explicit
-> permission, so I am asking rather than assuming.
->
-> What I would like to do:
->
-> - Fetch the V1 exercise catalog once, and refresh it occasionally.
-> - Keep a stripped local copy of **exercise name, target muscles, secondary
->   muscles, body parts and equipment only**.
-> - Discard all media — no GIFs, images or video, and no media URLs stored.
->
-> The data would be used only to map exercise names to muscle groups for a
-> pixel-art "muscles trained recently" display. It is never redistributed, never
-> exposed through a public API, and never resold.
->
-> Is that permissible on the free OSS tier, and if not, is there a tier or
-> arrangement that would cover it?
->
-> Thanks,
-> Joe
+- **BRIEF 3 (Settings APIs connector) — dropped.** It was blocked on AscendAPI
+  granting persistent-storage rights. The public-domain free-exercise-db does the
+  job, needs no key and no permission, so a live-refresh connector has nothing
+  left to buy. The vendor audit and licensing findings above are kept because the
+  reasoning is the durable part; the brief itself is gone.
+- **The AscendAPI permission email — dropped, never sent.** Same reason.
+- **Sort controls — dropped.** The list is alphabetical and the parsing search
+  made sorting redundant.
