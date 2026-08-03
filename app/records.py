@@ -13,7 +13,7 @@ from typing import List, Optional, TypedDict
 from . import db, exercises
 from .game import (
     CATEGORIES, RUN_TYPES, category, get_char, get_settings, muscle_recency,
-    now, run_history, today,
+    now, per_muscle_recency, run_history, today,
 )
 
 SUPPORTED_LIFT_UNITS = ("reps", "seconds", "steps")
@@ -662,6 +662,7 @@ def stats_payload(wellness_days=180):
         "character": c,
         "weeks": weeks,
         "muscles": muscle_recency(),
+        "per_muscle": per_muscle_recency(),
         "prs": [dict(r) for r in prs],
         "recent_activities": [dict(r) | {"category": category(r["type"])} for r in recent],
         "run_summary": {k: v for k, v in run_history().items() if k != "runs"},

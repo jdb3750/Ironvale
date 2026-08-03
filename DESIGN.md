@@ -376,6 +376,15 @@ be silently normalized during unrelated work.
   `--edge`, gold-interaction, Quanta 12 language. The vocabulary is a neutral
   raised surface with the standard hard shadow and readable-muted headings.
   Empty results retain the list frame and answer in Maud's voice.
+- **Detail muscle map:** the Compendium detail uses the 17 source muscles rather
+  than the seven game-attribution groups. Each muscle keeps its authored hue;
+  primary work is full-strength, secondary work uses one shared blend toward
+  the dark unlit tone, and structure remains neutral. The 68x64 source map is
+  rendered at 3x (204x192). The detail lead keeps map and facts side by side
+  while its pane is wider than 480px, then stacks the map above the two-column
+  fact grid so unbroken labels retain their full width. The Muscle Ledger uses
+  the same 17-muscle renderer for lift attribution; its table remains the
+  seven-group ledger. Giver maps retain their existing seven-group renderer.
 - **Accessibility and responsive:** list rows are ordinary buttons; only the
   open movement carries `aria-current="true"`, never `aria-pressed`. The search
   and controls keep 44px phone targets, chips and reference values wrap before

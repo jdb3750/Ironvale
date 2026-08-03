@@ -29,10 +29,18 @@ def ok(label: str, condition: bool) -> None:
     print(f"  ok  {label}")
 
 
-def stats():
+def stats_payload():
     response = client.get("/api/stats")
     ok("muscle ledger remains available", response.status_code == 200)
-    return response.json()["muscles"]
+    return response.json()
+
+
+def stats():
+    return stats_payload()["muscles"]
+
+
+def per_muscle_stats():
+    return stats_payload()["per_muscle"]
 
 
 def log_set(exercise: str) -> None:
@@ -57,8 +65,13 @@ ok("off-catalog strength work refreshes posterior", stats()["posterior"]["days_s
 # ledger. Then: the catalog retains its source data without awarding training
 # credit to the heatmap.
 ok("legs start untrained", stats()["legs"]["days_since"] == 999)
+quadriceps_before_stretch = per_muscle_stats()["quadriceps"]
 log_set("All Fours Quad Stretch")
 ok("stretching work does not refresh legs", stats()["legs"]["days_since"] == 999)
+ok(
+    "stretching work does not refresh a source muscle",
+    per_muscle_stats()["quadriceps"] == quadriceps_before_stretch,
+)
 
 catalog = imported_exercises
 stretch = catalog.find("All Fours Quad Stretch")
@@ -89,6 +102,46 @@ finally:
 # Given: an unknown movement. When: it is attributed. Then: the ledger remains
 # honest rather than guessing a muscle group.
 ok("unknown movement remains ungrouped", exercises.groups_for("Moon-Calf Press") == [])
+
+# Given: sworn, aliased, imported, and unknown names. When: source-muscle
+# attribution resolves them. Then: it follows the same merged-catalog
+# precedence and returns immutable empty values for unknown work.
+ok(
+    "Vale-only authored muscles resolve",
+    exercises.muscles_for("Kettlebell Floor Press")
+    == (("chest",), ("triceps", "shoulders")),
+)
+ok(
+    "sworn alias muscles inherit from the source row",
+    exercises.muscles_for("Pull-Up")
+    == (("lats",), ("biceps", "middle back")),
+)
+ok(
+    "imported muscles resolve directly",
+    exercises.muscles_for("  seated HEAD harness neck resistance ")
+    == (("neck",), ()),
+)
+ok("unknown movement remains muscle-free", exercises.muscles_for("Moon-Calf Press") == ((), ()))
+
+# Given: a neck-only lift whose seven-group fold is deliberately empty. When:
+# it is logged. Then: neck receives per-muscle credit while the established
+# seven-group recency output remains byte-for-byte equal.
+groups_before_neck = game.muscle_recency()
+ok("neck starts untrained", per_muscle_stats()["neck"]["days_since"] == 999)
+log_set("Seated Head Harness Neck Resistance")
+neck_stats = per_muscle_stats()["neck"]
+ok(
+    "neck-only work refreshes neck as primary",
+    neck_stats == {"days_since": 0, "sets_14d": 1, "role": "primary"},
+)
+ok("neck-only work leaves group recency unchanged", game.muscle_recency() == groups_before_neck)
+
+# Given: one lift with a primary muscle and secondary muscles. When: it is
+# logged. Then: the per-muscle recency distinguishes the two lit states.
+log_set("Kettlebell Floor Press")
+floor_press_stats = per_muscle_stats()
+ok("primary work is marked primary", floor_press_stats["chest"]["role"] == "primary")
+ok("secondary work is marked secondary", floor_press_stats["triceps"]["role"] == "secondary")
 
 # Given: a malformed persisted source file. When: the app state boots. Then:
 # the catalog degrades to no imported rows instead of failing the game boot.
