@@ -147,7 +147,7 @@ If you do not want to clone the project first, build directly from the remote
 `main` branch and keep saves in a named Docker volume:
 
 ```sh
-docker build -t ironvale 'https://codeberg.org/bonez/Ironvale.git#main'
+docker build -t ironvale 'https://github.com/jdb3750/Ironvale.git#main'
 docker run -d \
   --name ironvale \
   --restart unless-stopped \

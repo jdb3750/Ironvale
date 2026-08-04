@@ -18,7 +18,7 @@ git commit -m "<imperative subject>"  # body explains why + migrations
 ## Deployment (production = origin/main)
 
 The live game runs on Joe's server as a **Docker instance managed by
-Portainer** that tracks `origin/main` on Codeberg and **auto-pulls roughly
+Portainer** that tracks `origin/main` on GitHub and **auto-pulls roughly
 every 15 minutes**. There is no manual deploy step:
 
 - **Merging a PR into `main` IS the deployment.** The change is live for
@@ -118,13 +118,17 @@ happen against the Docker instance's data volume (via Portainer's console /
    subagent hitting the live read-only API, confirming the corrected value
    shows up in every surface (summary, history, calendar, raid state, etc.).
 
-## Opening pull requests (Codeberg)
+## Opening pull requests (GitHub)
 
-The repo's remote `origin` is `git@codeberg.org:bonez/Ironvale.git` (Codeberg,
-SSH). Push with plain `git push` / `git push -u origin <branch>`; SSH auth is
-already configured. To open the PR itself, see the global skill
-`codeberg-pr` (the `tea` CLI, its `tea pulls create` verb, and a curl
-fallback).
+The repo's remote `origin` is `https://github.com/jdb3750/Ironvale.git`
+(GitHub, HTTPS). Push with plain `git push` / `git push -u origin <branch>`;
+the `gh` credential helper is already configured. Open the PR with
+`gh pr create --base main --title ... --body ...`. See the global skill
+`github-pr` for the flag details and a `gh api` fallback.
+
+The project moved off Codeberg on 2026-08-04. Ignore any leftover `tea` /
+`codeberg-pr` instructions — that CLI targets Gitea and will not find this
+repo.
 
 ## Reciprocal review — by risk, not by default
 
