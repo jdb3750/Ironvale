@@ -124,11 +124,8 @@ The repo's remote `origin` is `https://github.com/jdb3750/Ironvale.git`
 (GitHub, HTTPS). Push with plain `git push` / `git push -u origin <branch>`;
 the `gh` credential helper is already configured. Open the PR with
 `gh pr create --base main --title ... --body ...`. See the global skill
-`github-pr` for the flag details and a `gh api` fallback.
-
-The project moved off Codeberg on 2026-08-04. Ignore any leftover `tea` /
-`codeberg-pr` instructions — that CLI targets Gitea and will not find this
-repo.
+`github-pr` for the flag details and a `gh api` fallback. Use `gh`, not `tea` —
+the latter speaks a different forge API and will not find this repo.
 
 ## Reciprocal review — by risk, not by default
 
