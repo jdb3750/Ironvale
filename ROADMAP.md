@@ -343,6 +343,53 @@ entries are open work with the removal path worked out.
   for `/api/almanac` is commented as tolerating a stale backend — so do not
   "fix" this by making every call strict. The failure is that a *write* rejection
   is discarded, not that reads are tolerant.
+- **Smoke counts an unconditional pass toward its 222.** Found 2026-08-04. When
+  the first dungeon move starts combat, `tests/smoke.py:275` deletes the dungeon
+  state with `db.kv_del("dungeon")` and calls `ok(..., True)` — a literal, so the
+  check cannot fail. The comment claims killing the state "still exercises the
+  exit paths"; it does not. Neither the retire request nor its exit behaviour
+  runs, yet the result is counted in `SMOKE PASSED — 222 checks green`. The
+  ordinary retire branch does run most of the time, which is exactly why this
+  survived. Either drive flee-then-retire for real or drop the check — a count
+  that includes an unconditional `True` makes the whole number less trustworthy.
+- **Three named tests pass on empty output.** Found 2026-08-04. Each asserts
+  `all(...)` over a generated candidate list without first proving the list is
+  non-empty, so an empty result is a pass:
+  `test_giver_archetypes.py:34` (giver ownership),
+  `test_counsel_engine.py:81` (endurance cold-start sizing),
+  `test_counsel_giver_loops.py:229` (giver-loop cold-start boundaries).
+  Demonstrated by runtime mutation, not by reading: with `for_giver()` stubbed to
+  return empty, `test_giver_archetypes.py` still printed `GIVER ARCHETYPES
+  PASSED`; with `build_endurance_candidates()` stubbed empty, the whole of
+  `test_counsel_engine.py` still printed `COUNSEL ENGINE PASSED`. Higher-level
+  tests overlap some of this, so the *suite* is not blind — but these tests do
+  not establish the claims their names make. Assert a count before asserting a
+  property over a collection.
+- **The Scheduled reservation fixture does not test Scheduled acceptance.** Found
+  2026-08-04. `test_counsel_schedule_reservation.py` calls
+  `counsel.validate_attribution` and `quests.create_quest_from_offer` directly.
+  It never sets `counsel_mode` to scheduled, never obtains a scheduled offer, and
+  never calls `/api/quests/accept` — yet its comment reads "When: Scheduled mode
+  accepts it." It would pass unchanged if Scheduled acceptance were deleted
+  outright. The real path is already covered at
+  `test_counsel_scheduled_mode.py:195`, including required and optional
+  attribution, so the honest move is to retire this fixture rather than repair
+  it.
+- **The 60-day qualification boundary has no test on either side.** Found
+  2026-08-04. `ACTIVITY_LOOKBACK_DAYS` (`counsel_context_model.py:9`, value 60)
+  feeds three consumers: activity qualification (`counsel_context.py:71`), lift
+  recency (`counsel_context_model.py:197`) and `counsel_specialists.py:85`. No
+  test places a row at 59, exactly 60, or 61 days; the nearest scenario
+  (`test_counsel_context.py:181`) uses 1- and 9-day rows and exercises source,
+  future timestamps and zero duration instead. So flipping any of those
+  comparisons to strict would stay green.
+
+  **Correction to the report that raised this:** it described the two sites as
+  disagreeing — activities excluding rows strictly older than the cutoff while
+  lifts include rows at it. They do not disagree. `local_time < cutoff → skip`
+  and `occurred_at >= cutoff → keep` are the same rule written as complements,
+  and both **include** the boundary. The coverage gap is real; the inconsistency
+  is not. Do not "fix" a divergence here — add the boundary tests.
 
 **Resolved stale declarations**
 
@@ -457,6 +504,16 @@ entries are open work with the removal path worked out.
   Note the standing warning still holds: `DEED_GIVER_BY_CATEGORY` crediting an
   unsworn climb to Bram is **correct and guarded by a test** — fix the prose, do
   not "clean up" the mapping.
+- **Some rule-state test names claim more than the tests prove.** Found
+  2026-08-04. `test_counsel_engine.py:159` asserts lower-body reason codes, and
+  its wellness cases assert `suppresses_hard` plus reason codes — all artifacts
+  of the rule having run, not outcomes a player would notice. Each would still
+  pass if an offer consumer ignored the rule state entirely. This is **not** a
+  suite-wide hole: the five/six-set offer outcome is covered at
+  `test_counsel_release_blockers.py:16`, and missing or adverse wellness has
+  observable offer assertions elsewhere. The defect is in what the names promise,
+  so the cheap fix is renaming them to say they check rule state — reserve the
+  outcome-shaped names for the tests that assert outcomes.
 - **Declarations that no longer match the code.** Found 2026-08-04.
   `records.py`'s module docstring (`records.py:1`) says everything in it reads,
   but `almanac_mark_seen()` (`records.py:589`) writes. `economy.py` still claims
