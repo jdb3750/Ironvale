@@ -26,11 +26,12 @@ seams.
 > that treats it as a medical or safety-critical product.
 >
 > Rough shape: `app/` is ~9,000 lines of Python across ~34 modules; `static/js/`
-> is ~7,700 lines of vanilla JS with no build step and no framework;
-> `static/style.css` is ~2,900 lines; `tests/` is ~13,000 lines across 27 Python
-> files plus Node DOM and headless-Chromium suites. Project conventions live in
-> `AGENTS.md`; design rationale in `DESIGN.md`; direction and known defects in
-> `ROADMAP.md`.
+> is ~8,700 lines of vanilla JS across 14 files, with no build step and no
+> framework; `static/style.css` is ~2,900 lines; `tests/` is ~13,000 lines across
+> 27 Python files plus Node DOM and headless-Chromium suites. Project conventions
+> live in `AGENTS.md`; design rationale in `DESIGN.md`; direction and known
+> defects in `ROADMAP.md`. **These figures are orientation, not ground truth — if
+> what you count disagrees, report the real number and trust your count.**
 >
 > **This is a read-only audit.** Do not edit, create, or delete any file. Do not
 > write patches, diffs, or "here's the fixed version" code blocks. Do not run
@@ -134,11 +135,17 @@ A command that did not run is not a passing command.
 
 *(paste the shared preamble, then this)*
 
-Read `static/js/` (11 files, ~7,700 lines; largest are `giver.js` 1,213,
+Read `static/js/` (14 files, ~8,700 lines; largest are `giver.js` 1,213,
 `misc.js` 1,167, `app.js` 1,143, `hall.js` 1,117, `pixel.js` 1,103) and
 `static/style.css` (~2,900 lines). There is no build step, no bundler and no
 framework — that is deliberate, not an oversight, and "adopt a framework" is
 not a finding.
+
+**Dead-asset claims need more than grep.** `SPRITES[key]` is looked up
+dynamically in several places (`ranch.js`, `hall.js`, `pixel.js`), so "no
+references" does not by itself prove a sprite key is dead. Say what the dynamic
+key sources are and why none of them can produce the key you are calling dead.
+CSS classes can be assembled by string concatenation for the same reason.
 
 Look for, in priority order:
 

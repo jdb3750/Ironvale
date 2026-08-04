@@ -204,6 +204,15 @@ entries are open work with the removal path worked out.
   render-wipe, navigation-completion or sprite-hydration race: at the observed
   one-in-twenty sighting rate, a clean twenty-run sample is plausible. No wait or
   assertion was changed without a demonstrated mechanism.
+
+  **Seen again 2026-08-04.** During Pass B verification the browser suite failed
+  on the first of five runs with `actual: 0, expected: 1` — the same 0-vs-1
+  shape as the original sighting — then passed 63/63 on the four following runs.
+  The failing test's *name* was not captured before the output scrolled, so this
+  is a signature match, not a confirmed identity; do not record it as proof the
+  Town test is the one that failed. What it does settle is that the race is
+  still live after the `innerText` fix and is not rare enough to need twenty
+  runs to see. Next sighting: capture `not ok <n> - <name>` before anything else.
 - **A mid-day imported database can migrate without its own pre-migration
   snapshot.** `vault.ensure_snapshot_before_migration()` is per-UTC-day, so a
   legacy database imported *after* that day's snapshot already exists reuses it
@@ -212,12 +221,11 @@ entries are open work with the removal path worked out.
   migrating, so this only bites an out-of-band import. Narrow, but the whole point
   of that snapshot is being the rollback path.
 
-- **The workout logger's empty state still names a retired giver.**
-  `static/js/giver.js:758` reads "No quest in hand. Accept one from Grunhilda or
-  Ser Bram first." Bram has offered nothing since v0.22.0, so the copy sends a
-  player to a giver who cannot help them. A one-line fix, but it needs a `?v=`
-  bump because it touches `static/`, so fold it into the next task that already
-  changes a static asset rather than spending a bump on it alone.
+- ~~**The workout logger's empty state still names a retired giver.**~~
+  **RESOLVED — confirmed fixed 2026-08-04.** `static/js/giver.js:804` now reads
+  "No strength quest in hand. Accept one from Grunhilda first." Third entry found
+  stale by the 2026-08-04 codebase review; the fix shipped without the record
+  being closed.
 - ~~**The browser suite silently tests against a foreign server on its port.**~~
   **FIXED in v0.24.3.** Root cause was not stray processes: `AGENTS.md` documented
   **8322 for both** the human scratch preview and the browser suite, so the two
@@ -233,13 +241,13 @@ entries are open work with the removal path worked out.
   The dialogue block now carries `data-giver`, and one identity check inside a
   finished render replaces all three branches.
 
-- **A weighted pull-up loses its load.** `counsel_specialists._iron_exercises`
-  suppresses the suggested weight for anything tagged `bodyweight`, because
-  `lift_sets.weight` is `NOT NULL` and an unloaded rep stores `0.0` (which would
-  render as "@ 0"). The rule cannot tell *unloaded* from *loaded*, so a Pull-Up
-  logged at 10 kg offers no weight — and weighted pull-ups and dips are the
-  natural progression once bodyweight reps get easy. Fix: suppress on a falsy
-  weight, not on the equipment tag. *(Verified by probe.)*
+- ~~**A weighted pull-up loses its load.**~~ **RESOLVED — confirmed fixed
+  2026-08-04.** The prescribed fix is in the tree and was not recorded here when
+  it landed. `counsel_specialists.py:68-70` now reads
+  `context.latest_weight(name) or None` under a comment naming zero as the
+  ledger's unloaded sentinel — suppression keys off a falsy weight, not the
+  equipment tag, so a Pull-Up logged at 10 kg keeps its load. Found stale by the
+  2026-08-04 codebase review; the entry, not the code, was the defect.
 - ~~**`save_routine` accepts off-catalog exercise names.**~~ **RESOLVED as
   intended behaviour, 2026-07-29.** Traced every direct `EXERCISES[...]` index in
   app code: five sit in `quests.py`'s lift builder where the names come *from* the
@@ -250,6 +258,91 @@ entries are open work with the removal path worked out.
   sandbag, a ring variation). Validating on write would remove that to fix a crash
   that no longer exists. **The contract is: the writer accepts any name; readers
   must tolerate unknown ones.** Documented here rather than enforced in code.
+
+- **One non-finite distance can hang `/api/road` and exhaust memory.** Found
+  2026-08-04. `POST /api/activities/manual` (`main.py:457`) hands a raw JSON body
+  straight to `intervals.add_manual_activity`, which stores
+  `float(payload.get("km", 0) or 0) * 1000` with no finite-number boundary —
+  `{"km": "inf"}` and `1e400` both land, and SQLite retains the value. `road.total_km()`
+  then returns infinity, and `_landmarks_through()` (`road.py:91`) loops on
+  `marks[-1]["km"] <= km + BEYOND_INTERVAL_KM * 2`, which is always true against
+  infinity. It is not just a hang: the loop **appends a landmark every
+  iteration**, so it grows without bound until the process dies. Reachable from
+  outside the app, so fix the boundary at ingestion, not only at the reader.
+- **Malformed persisted rows turn `/api/state` into a 500.** Found 2026-08-04.
+  `/api/state` is the boot endpoint and `main.py` registers a handler for
+  `ValueError` only (`main.py:149`), so any other exception escapes as a 500 and
+  the game does not load at all. Confirmed unguarded shapes: `game.get_char()`
+  (`game.py:184`) calls `.setdefault` on whatever decoded, so a string-valued
+  `character` raises `AttributeError`; `game.ambition_mult()` (`game.py:386`)
+  does `min(3, s["ambition"])`, which raises `TypeError` on a string;
+  `quests.writ_notices_pending()` (`quests.py:502`) iterates `lst` and indexes
+  `n["ts"]`, so an object where a list belongs raises; quest detail decoding
+  (`quests.py:527`) and `records._last_activity()` (`records.py:167`) likewise
+  trust stored shapes, and text in `moving_time` propagates into arithmetic.
+  This is the standing "persisted data is untrusted input" rule in `AGENTS.md`:
+  malformed rows must degrade to unknown, never raise.
+- **Unguided completions persist the wrong giver.** Found 2026-08-04.
+  `grant_unguided_run_bonus` assigns per-category givers via `deed_giver()`
+  (`quests.py:927`, defaulting to `wick`) and stores that on the candidate, but
+  `_record_unguided_completion` (`quests.py:1011`) hardcodes `"endurance"` in the
+  INSERT. Every unguided deed is therefore filed under Fenn regardless of what
+  the player actually did — a WeightTraining deed queues as `strength` and
+  persists as `endurance`. The mismatch is invisible in the queue, which is why
+  it survived: check what the *claimed* quest recorded, not what was offered.
+- **Reported by the 2026-08-04 review, NOT yet reproduced.** Recorded here so
+  they are not lost, but neither has been independently verified and neither
+  should be fixed before it is:
+  - *Wellness interpretation may give contradictory guidance.* `records.insights()`
+    (`records.py:86`) computes trends straight from raw rows, independently of
+    `counsel_wellness` (`counsel_wellness.py:49`) and `counsel_rules`
+    (`counsel_rules.py:31`). The report saw the Hall say a hard quest would land
+    well while the Council suppressed hard work on identical data.
+  - *The nudge may not consume only its captured Council context.*
+    `counsel_nudge.daily_nudge()` (`counsel_nudge.py:91`) takes a qualified
+    context and then re-reads settings for mode, charter and enablement, while
+    `/api/state` reads settings separately. A concurrent settings change could
+    produce a response whose settings and nudge describe different captures,
+    against the one-snapshot invariant.
+
+- **Routine forging can persist duplicates after a partial success.** Found
+  2026-08-04. `G.saveCounselRoutine` (`misc.js:767`) POSTs `/routines`, then
+  inside the same `try` refreshes `/programs` and writes the schedule slot. There
+  is a `finally` but **no `catch`**, so if either post-POST step throws, the
+  `finally` re-enables the save button while the exception skips
+  `G.closeOverlay` — overlay open, draft intact, button live. Retrying POSTs
+  again, and `programs.save_routine` (`programs.py:89`) always appends a fresh
+  UUID, so the player gets two routines. The "one player activation creates at
+  most one custom routine" comment above it guards simultaneous clicks only; it
+  does not survive a retry after a committed POST. **Second failure mode from the
+  same shape:** if `counselScheduleWriteSlot` is what throws, the routine exists
+  but was never written into the weekly plan, so the player sees the forge
+  "fail" while the routine silently exists.
+- **Routine state goes stale across Settings and Doctrines.**  Found 2026-08-04.
+  `counselSchedulePrograms` (`misc.js:240`) is module-level, loaded only when
+  `null` (`SCREENS.settings`), and cleared only by the profile-reset hook. The
+  doctrine screen creates, selects and deletes routines independently
+  (`giver.js:485`) and never invalidates it. So: visit Settings once, change
+  routines under Grunhilda, come back — Settings can hide routines that exist and
+  offer routines that were deleted. Same root as the entry above: routine/program
+  ownership is split across two editors with no shared owner for the state or its
+  invalidation. **Fix the ownership, not the two symptoms.**
+- **Two optimistic writes show state the server never accepted.** Found
+  2026-08-04, same shape in both places:
+  - `G.apStep` (`app.js:949`) mutates `S.state.character.appearance`, fires
+    `api('/appearance')` unawaited with `.catch(() => {})`, and redraws. A failed
+    write leaves the chosen look on screen across subsequent navigation while
+    SQLite still holds the old one. Rapid clicking also sends concurrent writes
+    whose completion order is never reconciled.
+  - The Almanac (`hall.js:237`) sets `S.state.almanac_unread = false` and fires
+    `/api/almanac/seen` with the same swallowed rejection. The Hall and Town
+    badges go out even when the server still reports unread, and a later state
+    refresh brings them back.
+
+  The swallowed rejection is deliberate in *one* nearby case — the bare `fetch`
+  for `/api/almanac` is commented as tolerating a stale backend — so do not
+  "fix" this by making every call strict. The failure is that a *write* rejection
+  is discarded, not that reads are tolerant.
 
 **Resolved stale declarations**
 
@@ -272,29 +365,63 @@ entries are open work with the removal path worked out.
 
 **Dead code**
 
-- **The legacy offer path — REMOVE IT.** `get_offers`, `accept_offer`,
-  `gen_lift_offers`, `gen_endurance_offers`, `gen_climb_offers` are reachable only
-  from tests (verified caller-by-caller). **`gen_mobility_offers` is LIVE** and must
-  never be deleted by association: mobility never got a `build_*_candidates`
-  function, so `counsel_specialists.mobility` calls the legacy generator directly.
+- ~~**The legacy offer path — REMOVE IT.**~~ **DONE — confirmed removed
+  2026-08-04.** `get_offers`, `accept_offer`, `gen_lift_offers`,
+  `gen_endurance_offers` and `gen_climb_offers` now return zero hits across
+  `app/`, `static/js/` and `tests/`. The removal was carried out in full and the
+  two warnings held: `gen_mobility_offers` survived and is still live
+  (`counsel_specialists.py:227`), and `test_counsel_attribution.py:181` now
+  proves the no-attribution invariant through unguided completion rather than
+  `accept_offer`, exactly as prescribed. Recorded stale by the 2026-08-04
+  codebase review — the work shipped without the entry being closed.
 
-  *(I briefly argued for parking this because two suites reach through it. Joe
-  overruled it — dead code is junk code, and steadiness beats convenience. He is
-  right, and the removal is cleaner than I claimed.)*
+  Still open from this entry: `create_quest_from_offer`'s `attribution`
+  parameter defaults to `None` only because `accept_offer` needed it. With that
+  caller gone, `counsel.py` is the sole caller and always passes one, so the
+  default can go.
 
-  The two dependent suites both have honest live replacements:
-  - `test_counsel_engine_baseline.py` characterizes the **legacy** generators'
-    offer shapes and reward values. Repoint it at the Council path, which is what
-    actually runs — better coverage than pinning dead output.
-  - `test_counsel_attribution.py` uses `accept_offer` to prove a quest can exist
-    with **no attribution row**. That invariant is NOT vacuous: it is live and
-    exercised by `_record_unguided_completion` (`app/quests.py:1219`), which inserts
-    an unguided-activity quest with no attribution every time a player trains
-    without one. Repoint the test there.
+- **Verified dead declarations.** Found 2026-08-04, each confirmed
+  declaration-only across `app/`, `static/js/` and `tests/`:
+  `counsel_wellness.qualified_recovery_days()` (`counsel_wellness.py:91`),
+  `economy.buy()` (`economy.py:8`), `items.shop_stock()` (`items.py:99` — the
+  other `shop_stock` hits are dungeon *dict keys*, not calls to it),
+  `exercises.KB_NAMES` (`exercises.py:130`), `items.RARITY_ORDER`
+  (`items.py:60`). The schema's `equipment` table (`db.py:94`) has neither a
+  reader nor a writer. Unused parameters also remain in
+  `colosseum._sim_fight(probs)`, `dungeon._rng(d)` and `intervals._get(athlete)`.
+  Work out what each was protecting before deleting — `economy.py`'s shop path
+  and `items.shop_stock()` are probably one story, not two.
 
-  Also worth tightening once the dead caller is gone: `create_quest_from_offer`'s
-  `attribution` parameter defaults to `None` only because `accept_offer` needed it.
-  Afterwards `counsel.py` is the sole caller and always passes one.
+- **Dead frontend declarations.** Found 2026-08-04. Zero matches across all
+  `static/js/*.js` and `static/*.html` for these CSS surfaces: `.char-strip`
+  (`style.css:352`), `.loc` (`:374`), `.ex-row` (`:445`), the old `.cal .day.q*`
+  grid (`:864`), `.inv-*`/`.equip-*` (`:885`), the `.topbar` phone rules
+  (`:1722`), `.logger-field-label`, and `.crank-action`. Also
+  `REACTIONS.accept.bram` (`giver.js:36`), unreachable because Bram offers
+  nothing and the server refuses new Bram acceptances.
+
+  **The sprite claims need one more check before anyone deletes them.** The
+  static `hero`, `bld_stall`, `bld_yard` and `bld_board` entries in `pixel.js`
+  (from `:199`) have no *literal* references — current heroes go through
+  `heroTag`/the customizable hero path, and Town buildings resolve through
+  `art.js`'s `bld_waystone`/`bld_forge`/… set. But `SPRITES[key]` is looked up
+  **dynamically** in `ranch.js:109`, `hall.js:994`, `pixel.js:716/1059/1077`, so
+  grep alone does not prove a sprite is dead. Those dynamic keys come from
+  monster icons, dungeon cell types, hat keys and Council modalities, none of
+  which can produce these four — which is why the claim survives. Re-derive that
+  before removing, and do not extend "no references" reasoning to any other
+  sprite without it.
+
+  **`G.dev` (`misc.js:1011`) is LIVE — do not delete it.** Confirmed with Joe
+  2026-08-04: he calls it from the browser console, heavily while building the
+  core game loop and testing pixel art, occasionally since. Being
+  declaration-only in the tree is the *point* — the caller is a human at a
+  console, so no static analysis will ever find one. The newer dev console
+  calling `applyDevAction` directly does not supersede it; they are a UI and a
+  manual entry point for the same actions. **Any future dead-code sweep will
+  rediscover this and propose deleting it**, so when something next touches
+  `misc.js` and spends a `?v=` bump anyway, add a comment at the declaration
+  saying it is a console affordance with no in-tree caller by design.
 
 **Legibility**
 
@@ -303,3 +430,37 @@ entries are open work with the removal path worked out.
 - **DONE v0.25.0 — `strength` no longer names Bram.** It remains a focus value
   and now maps to Grunhilda's matching giver key; Bram's permanent identity key
   is `bram`.
+- **Quest-attribution atomicity is an unwritten structural dependency.** Found
+  2026-08-04. `create_quest_from_offer` (`quests.py:543`) depends on
+  `counsel_attribution.insert_attribution` (`counsel_attribution.py:110`)
+  deliberately *not* committing, which is what lets a later failure roll back the
+  quest and its attribution together. Every other DB helper commits, so the next
+  person to make this one consistent with its neighbours dissolves the invariant
+  and gets orphaned attribution rows with no error. Per `AGENTS.md`, name the
+  invariant in a comment at the boundary it protects — this is the exact shape
+  that cost five truthfulness defects when the Council was refactored.
+- **Reachable Bram copy still calls him a lifter — the v0.30.1 sweep was
+  incomplete.** Found 2026-08-04. That entry claimed seven literals and closed;
+  these survived it, and they split into two different fixes:
+  - **Live and wrong.** Bram's greeting pool (`giver.js:14`) offers "measured by
+    what they can carry", "the barbell is a dragon", "heavy is the… deadlift",
+    and his completion pool (`giver.js:42`) offers "the load was borne" and "even
+    the barbell seems impressed". Legacy Bram climb quests remain deliberately
+    playable and the Chromium legacy-quest scenario proves the route is reachable,
+    so a player finishing an old wall oath is congratulated on barbells. These
+    should speak to an old wall oath or a completed climb.
+  - **Unsworn-climb attribution copy** (`town.js:27`) says "Iron moved is iron
+    moved, writ or no writ." Bram now receives unsworn *climb* credit — the one
+    reference §3 says stays on purpose — so the line should describe ground or
+    wall gained, not iron.
+
+  Note the standing warning still holds: `DEED_GIVER_BY_CATEGORY` crediting an
+  unsworn climb to Bram is **correct and guarded by a test** — fix the prose, do
+  not "clean up" the mapping.
+- **Declarations that no longer match the code.** Found 2026-08-04.
+  `records.py`'s module docstring (`records.py:1`) says everything in it reads,
+  but `almanac_mark_seen()` (`records.py:589`) writes. `economy.py` still claims
+  ownership of the town shop although its shop path is dead (see the dead-code
+  entry above — same story, fix them together). Both are one-line corrections,
+  but a docstring that lies about read-vs-write is how an accidental write gets
+  added to a "read-only" module.
