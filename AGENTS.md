@@ -18,7 +18,7 @@ skills under `.opencode/skills/`, loaded on demand:
 - `iron-vale-ops` — redeploy/restart procedure, full testing recipe,
   live-data correction playbook, opening PRs.
 
-Four tracked design documents sit alongside this one:
+Five tracked design documents sit alongside this one:
 
 - `DOCTRINE.md` — the science behind the Council's numbers. Every constant in the
   recommendation engine is either traced to a cited source or honestly labelled a
@@ -33,6 +33,14 @@ Four tracked design documents sit alongside this one:
 - `ROADMAP.md` — app-wide direction beyond the Council: the capability/plugin
   surface and its deliberate non-goals. Nothing in it is approved to build; read
   it before proposing an architecture that would overlap it.
+- `PLUGINS.md` — the plugin harness: the Phase 0 decisions that must be right
+  before any of it is built (disk layout, manifest/`api_version`, the type
+  vocabulary, registration, namespacing, restrictions, trust tiers) and a walked
+  audit of every existing coupling that would have to change. Nothing in it is
+  approved to build. It extends `ROADMAP.md` §1 and supersedes it on two points
+  only — the dependency order (§4) and the font-pack prerequisite (§3a, which
+  corrects a claim that is no longer true). **Read §2 before designing any
+  extension point**, and §3c before touching activity ingestion.
 - `DESIGN.md` — the visual system as built in `static/style.css`, plus the
   responsive/smartphone interaction contract. Sections describing existing
   implementation are an extraction; sections labelled **required contract** are
