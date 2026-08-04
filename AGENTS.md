@@ -74,13 +74,12 @@ This file holds only the always-true rules and quick-reference tables.
 ## Git workflow
 
 The repo lives at `~/Code/iron-vale` on branch `main`, remote `origin` at
-`https://github.com/jdb3750/Ironvale.git` (GitHub, HTTPS — **not Codeberg,
-not SSH**; the project moved off Codeberg on 2026-08-04 and the old remote is
-gone). `main` tracks `origin/main`. Push with plain `git push`/
+`https://github.com/jdb3750/Ironvale.git` (GitHub, HTTPS — **not SSH**).
+`main` tracks `origin/main`. Push with plain `git push`/
 `git push -u origin <branch>`; the `gh` CLI credential helper is already
-configured (GitHub account `jdb3750`), no credential prompt needed. Use `gh`,
-**not `tea`** — `tea` talks to Gitea/Codeberg and no longer applies here.
-`.gitignore` already
+configured (GitHub account `jdb3750`), no credential prompt needed. Reach for
+`gh` — **not `tea`**, which speaks a different forge API and will not find this
+repo. `.gitignore` already
 excludes `data/` (the live save + credentials), `.venv/`, `__pycache__/`,
 `*.pyc`, `.aider*`, `.DS_Store`. **Verify `git status` never lists anything
 under `data/` before committing — those files contain Joe's real intervals.icu
