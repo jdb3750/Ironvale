@@ -18,7 +18,7 @@ skills under `.opencode/skills/`, loaded on demand:
 - `iron-vale-ops` — redeploy/restart procedure, full testing recipe,
   live-data correction playbook, opening PRs.
 
-Five tracked design documents sit alongside this one:
+Six tracked design documents sit alongside this one:
 
 - `DOCTRINE.md` — the science behind the Council's numbers. Every constant in the
   recommendation engine is either traced to a cited source or honestly labelled a
@@ -41,6 +41,14 @@ Five tracked design documents sit alongside this one:
   only — the dependency order (§4) and the font-pack prerequisite (§3a, which
   corrects a claim that is no longer true). **Read §2 before designing any
   extension point**, and §3c before touching activity ingestion.
+- `BUILDER.md` — the routine builder (issue #17): the reframe from "Scratch for
+  workouts" to a mirror that shows what a routine works, the four feedback
+  lenses, the seam order, and the data-model notes for to-failure, supersets and
+  custom-routine progression. Nothing in it is approved to build. **Read §1
+  first** — the routine view only describes, and only the week view may say
+  something is missing; a per-routine imbalance warning fires on every correctly
+  built routine. §10 carries the Scheduled-mode inventory inherited from the old
+  "build weeks" issue.
 - `DESIGN.md` — the visual system as built in `static/style.css`, plus the
   responsive/smartphone interaction contract. Sections describing existing
   implementation are an extraction; sections labelled **required contract** are
