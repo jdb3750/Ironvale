@@ -17,8 +17,8 @@ routines. Enable what you want; **what is not enabled is not shown.**
 ### Why this is worth doing (the real problem it solves)
 
 The app currently assumes intervals.icu is connected. There is exactly **one**
-capability check in the whole frontend — `static/js/giver.js:397`, gating on
-whether an API key exists. Everything else renders regardless, so a player who
+capability check in the whole frontend — `static/js/giver.js:451`, gating on
+`S.state?.settings?.intervals_api_key`. Everything else renders regardless, so a player who
 never connected anything gets chart furniture with no data in it and a Council
 that reports `wellness_data_missing` forever.
 
@@ -142,20 +142,19 @@ sketches. Neither is scoped.
   what fits, what does not, and what each unresolved field would cost — before
   anyone estimates the import.
 
-- **Elevation for overlaid surfaces** — floating menus, overlays and toasts should
-  read as *closer to the viewer*: lighter, distinctly bordered, casting a shadow
-  on what they cover. Today the topmost surface is the darkest on screen, and a
-  menu is bordered exactly like an ordinary window. Full rationale and the
-  tension it resolves are in `DESIGN.md` §7 ("PROPOSED — elevation for overlaid
-  surfaces"). **Queued next after the dropdown width/wrap fix**, as a system-wide
-  pass rather than a menu-only tweak.
-- **Quanta-Strike font + type-scale pass** — a hand-drawn pixel font whose strikes
-  are each sharp at exactly one size, which would force collapsing the stylesheet's
-  17 text sizes onto about six. OFL-licensed, ships woff2, drops into the existing
-  self-hosted font pattern. Analysis, the size mismatch, and the trial-first
-  sequencing are in `DESIGN.md` §3 ("PROPOSED — Quanta-Strike"). **Try it on one
-  screen before committing**; pair the full pass with the elevation work above,
-  since both require re-walking every screen.
+- ~~**Elevation for overlaid surfaces**~~ and ~~**Quanta-Strike font +
+  type-scale pass**~~ — **BOTH SHIPPED, confirmed 2026-08-04.** `--surface-raised`
+  is declared in `:root` (`style.css:49`) and consumed at `:578` and `:1158`, and
+  the Quanta-Strike faces are loaded from `style.css:11` onward. `DESIGN.md` §1
+  now documents them as implemented and records that **scanlines were removed**
+  when the Quanta scale became the default, because they interfered with the
+  smaller hand-drawn glyphs — a consequence neither proposal predicted and worth
+  keeping in the record. These were queued here as PROPOSED with a "try it on one
+  screen first" caveat; they shipped without the entries being closed. Found by
+  the 2026-08-04 codebase review.
+
+  Where these claims conflict, **the stylesheet plus `DESIGN.md`'s implementation
+  sections are authoritative**; `ROADMAP.md` and `README.md` lag.
 
 ## 3. Sweep-up backlog
 
@@ -422,10 +421,12 @@ entries are open work with the removal path worked out.
   `accept_offer`, exactly as prescribed. Recorded stale by the 2026-08-04
   codebase review — the work shipped without the entry being closed.
 
-  Still open from this entry: `create_quest_from_offer`'s `attribution`
-  parameter defaults to `None` only because `accept_offer` needed it. With that
-  caller gone, `counsel.py` is the sole caller and always passes one, so the
-  default can go.
+  **Nothing remains open from this entry.** The `attribution` tightening also
+  shipped: `create_quest_from_offer` (`quests.py:543`) now requires
+  `attribution: "Attribution"` with no default. *I recorded that remainder as
+  still open on 2026-08-04 by carrying it forward from the old entry without
+  checking the signature — Pass D caught it. Verify the code, not the previous
+  bullet.*
 
 - **Verified dead declarations.** Found 2026-08-04, each confirmed
   declaration-only across `app/`, `static/js/` and `tests/`:
@@ -514,6 +515,51 @@ entries are open work with the removal path worked out.
   observable offer assertions elsewhere. The defect is in what the names promise,
   so the cheap fix is renaming them to say they check rule state — reserve the
   outcome-shaped names for the tests that assert outcomes.
+- **The player- and agent-facing docs describe a game two redesigns old.**
+  Found 2026-08-04 by Pass D. Each verified against the code:
+  - **`README.md:8`** still gives Grunhilda kettlebells and Bram barbell,
+    dumbbell, bodyweight and climbing, and **`:83`** has both honouring
+    doctrines. The live roster (`game.py:57`, correctly summarised in
+    `AGENTS.md:28`) is three offer-producing givers: Fenn takes endurance *and*
+    climbing, Grunhilda takes all strength equipment *and* doctrines, Bram is
+    retired.
+  - **`README.md:32`** promises offers that "target the neglected" muscle
+    groups. There is no neglected-muscle calculation: iron candidates pick recent
+    exercises compatible with current equipment and derive focus from those
+    movements (`counsel_specialists.py:45`).
+  - **The paid reroll and the daily offer cache are gone** — `grep -rn reroll`
+    over `app/` and `static/js/` returns **nothing**, and `/api/offers/{giver}`
+    (`main.py:321`) takes a giver and nothing else, with no cache access. Still
+    documented as live at `README.md:18` (gold sink), `README.md:36` (daily
+    rotation, 10 gold to reroll), `AGENTS.md:281` (offers cache) and
+    `AGENTS.md:301` (both the sink and the invalidate-on-sync rule). The
+    surviving `offers:%` deletion is migration cleanup, not a live cache.
+  - **`README.md:180`** still advertises "CRT scanline CSS." Zero `scanline`
+    matches in `style.css`; `DESIGN.md:16` records the removal.
+  - **`DOCTRINE.md:25`** lists a `readiness_1_5 <= 2` suppression threshold in a
+    table headed "Constant (current value)". Readiness is stored at sync but
+    `grep -rn readiness app/counsel*.py` returns **nothing** — no Council rule
+    reads it, so that threshold does not exist in behaviour. **`:121`** puts
+    `ACTIVITY_LOOKBACK_DAYS` in `counsel_context.py`; it is declared in
+    `counsel_context_model.py:9`. **`:138`** calls focus filtering and equipment
+    awareness open follow-ups; both shipped and have direct behavioural tests
+    (`test_counsel_focus_filter.py`, `test_counsel_iron_equipment.py`).
+  - **`DESIGN.md:235`** says `.btn` has no explicit `:focus-visible` rule and
+    **`:310`** says tabs rely on browser defaults, but `style.css:230` carries an
+    explicit gold `.btn:focus-visible` treatment. `DESIGN.md:567` requires
+    visible focus on every control, so the component inventory is the stale half.
+
+  **`DOCTRINE.md` is the urgent one.** `AGENTS.md` requires consulting it before
+  changing any Council constant, so its drift is the most likely to be *acted
+  on* — an agent reading a "current value" that no rule implements will go
+  looking for the rule, or worse, restore it.
+- **Pyright is configured but not provisioned.** Found 2026-08-04.
+  `pyrightconfig.json` configures the checker, but it is declared in neither
+  requirements file nor `package.json`, no local executable exists, and no doc
+  gives a command to install or run it. It works through an editor or an ad-hoc
+  `npx`, so a fresh checkout cannot reproduce a pinned type-check environment —
+  and a config nobody can run is how a checker silently stops being a gate.
+  Decide: pin it as dev tooling with a documented command, or delete the config.
 - **Declarations that no longer match the code.** Found 2026-08-04.
   `records.py`'s module docstring (`records.py:1`) says everything in it reads,
   but `almanac_mark_seen()` (`records.py:589`) writes. `economy.py` still claims
