@@ -15,6 +15,7 @@ Distance counted (from the activities table, meters -> km):
 The road never ends: past the last authored landmark, procedurally named
 cairns continue every 250 km forever.
 """
+import math
 import random
 
 from . import db, game
@@ -92,6 +93,8 @@ def _landmarks_through(km):
     """All authored landmarks, plus enough 'beyond' cairns to cover the
     traveled distance and show the next two unreached."""
     marks = list(LANDMARKS)
+    if not isinstance(km, (int, float)) or not math.isfinite(km) or km < 0:
+        return marks
     n = 1
     while marks[-1]["km"] <= km + BEYOND_INTERVAL_KM * 2:
         marks.append(_beyond_landmark(n))
@@ -110,11 +113,12 @@ def _reward_for(index):
 
 def state():
     km, cats = total_km()
+    distance_known = math.isfinite(km) and km >= 0
     claimed = set(db.kv_get("road_claimed", []))
     marks = _landmarks_through(km)
     out = []
     for i, m in enumerate(marks):
-        reached = km >= m["km"]
+        reached = distance_known and km >= m["km"]
         out.append({
             "km": m["km"], "key": m["key"], "name": m["name"] if reached else "???",
             "icon": m["icon"], "reached": reached,
@@ -124,12 +128,15 @@ def state():
         })
     nxt = next((m for m in out if not m["reached"]), None)
     return {
-        "total_km": round(km, 1),
-        "breakdown": {k: round(v, 1) for k, v in cats.items()},
+        "total_km": round(km, 1) if distance_known else "unknown",
+        "breakdown": {
+            key: round(value, 1) if math.isfinite(value) else "unknown"
+            for key, value in cats.items()
+        },
         "ride_factor": RIDE_FACTOR,
         "landmarks": out,
-        "next_km": nxt["km"] if nxt else None,
-        "km_to_next": round(nxt["km"] - km, 1) if nxt else None,
+        "next_km": nxt["km"] if distance_known and nxt else None,
+        "km_to_next": round(nxt["km"] - km, 1) if distance_known and nxt else None,
         "unclaimed": sum(1 for m in out if m["reached"] and not m["claimed"]),
     }
 
@@ -137,6 +144,8 @@ def state():
 def claim_next():
     """Claim the oldest reached-but-unclaimed landmark; returns its card."""
     km, _ = total_km()
+    if not math.isfinite(km) or km < 0:
+        raise ValueError("The Long Road cannot make out the distance in its ledger.")
     claimed = db.kv_get("road_claimed", [])
     marks = _landmarks_through(km)
     for i, m in enumerate(marks):

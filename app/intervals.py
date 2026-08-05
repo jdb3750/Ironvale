@@ -9,6 +9,7 @@ First sync pulls ~400 days of history (activities + wellness) so quest sizing
 and progress charts work from day one; later syncs pull a rolling 30 days.
 A background task in main.py re-syncs every 15 minutes.
 """
+import math
 import os
 import uuid
 from datetime import date, timedelta
@@ -236,8 +237,25 @@ def sync(days=None):
     return new
 
 
+def _manual_measure(value, scale, label):
+    try:
+        amount = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"Record the deed's {label} as a finite, non-negative number.",
+        ) from error
+    scaled = amount * scale
+    if isinstance(value, bool) or amount < 0 or not math.isfinite(scaled):
+        raise ValueError(
+            f"Record the deed's {label} as a finite, non-negative number.",
+        )
+    return scaled
+
+
 def add_manual_activity(payload):
     """Manual fallback so the game works with no integration at all."""
+    moving_time = int(_manual_measure(payload.get("minutes", 0), 60, "minutes"))
+    distance = _manual_measure(payload.get("km", 0), 1000, "distance")
     aid = "manual-" + uuid.uuid4().hex[:12]
     db.q(
         "INSERT INTO activities (id, source, start, type, name, moving_time, distance) VALUES (?,?,?,?,?,?,?)",
@@ -246,8 +264,8 @@ def add_manual_activity(payload):
             payload.get("start") or game.now_iso(),
             payload.get("type", "Run"),
             payload.get("name", "Manual entry"),
-            int(float(payload.get("minutes", 0)) * 60),
-            float(payload.get("km", 0) or 0) * 1000,
+            moving_time,
+            distance,
         ),
     )
     db.commit()
