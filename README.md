@@ -5,17 +5,21 @@ Your real workouts are the quests. Your sweat is the XP.*
 
 ## The loop
 
-1. **Visit a quest-giver** in town. Each one hands out a different kind of training:
-   - **Old Fenn the Wayfarer** — endurance quests for running, riding, and swimming
-   - **Grunhilda Iron-Bell** — kettlebell routines
-   - **Ser Bram the Loadbearer** — barbell, dumbbell, bodyweight, and climbing work
+1. **Visit a quest-giver** in town. Three set work; Bram is retired but never
+   deleted:
+   - **Old Fenn the Wayfarer** — endurance quests for running, riding, swimming,
+     and climbing
+   - **Grunhilda Iron-Bell** — barbell, dumbbell, kettlebell, and bodyweight work,
+     including doctrines
+   - **Ser Bram, the Old Knight at Rest** — remains in town and in history, but
+     sets no new quests
    - **Sage Elowen** — mobility, walking, recovery (grants bonus Vigor)
 2. **Do the workout.** Tracked activities are verified automatically against your
    intervals.icu feed; lifts are logged set-by-set in the mobile-friendly Training
    Log (big buttons, weight/rep steppers — designed for a phone on a gym bench).
 3. **Turn in the quest** for XP, gold, Vigor, stat gains (STR/END/CON/SPR), brass
    tokens, and item drops — with a proper fanfare.
-4. **Spend it**: rip monster packs, reroll the day's offers, or feed a token to
+4. **Spend it**: rip monster packs or feed a token to
    **the Crankwerk** (a quarter-crank gumball machine) for cosmetic curiosities.
    Pip trades only inside the Undercroft, using gold found during that run.
 5. **Descend into the Undercroft** — a roguelike dungeon crawler. Entry costs
@@ -29,13 +33,12 @@ Your real workouts are the quests. Your sweat is the XP.*
 - Endurance quest targets are derived from your recent training history, so the
   Vale scales requests to the work you actually do instead of prescribing a
   generic athlete's volume.
-- Strength quests track **which muscle groups you trained recently** and target
-  the neglected ones. Suggested weights come from your own logged history.
+- Strength quests start with recent movements compatible with your current
+  equipment. Suggested weights come from your own logged history.
 - The **Ambition** setting (Mend / Keep / Forge / Conquer) scales everything up
   or down — recover mode to aggressive-improvement mode.
-- Quest offers rotate daily, with variety built in (tempo vs intervals vs hills;
-  heavy/low vs volume vs circuit styles). Don't like today's offers? Pay 10 gold
-  for a reroll.
+- Quest offers adapt to current training history, with variety built in (tempo
+  vs intervals vs hills; heavy/low vs volume vs circuit styles).
 
 ## Data sources
 
@@ -80,12 +83,12 @@ even that stays down there, plus your depth resets to floor 1.
 
 ## Doctrines & routines
 
-Grunhilda and Ser Bram each honor sworn training programs: **Starting
-Strength**, **StrongLifts 5x5**, **Simple & Sinister**, and Dan John's **Armor
-Building Complex** are built in, or forge your own routine in the Doctrines
-screen. A sworn doctrine's next session leads that giver's daily offers, with
-linear-progression weight suggestions (+2.5 per completed session, +5 for
-deadlift). The Exercise Compendium in the Hall of Records shows front/back body
+Grunhilda honors sworn training programs: **Starting Strength**, **StrongLifts
+5x5**, **Simple & Sinister**, and Dan John's **Armor Building Complex** are built
+in, or forge your own routine in the Doctrines screen. A sworn doctrine's next
+session leads Grunhilda's board, with linear-progression weight suggestions
+(+2.5 per completed session, +5 for deadlift). The Exercise Compendium in the
+Hall of Records shows front/back body
 maps of the muscle groups every exercise targets — synced climbing credits
 back, arms and core in the muscle ledger too.
 
@@ -177,7 +180,7 @@ sync.
 - **Backend**: FastAPI + SQLite (stdlib `sqlite3`), split into focused domain
   modules for quests, programs, dungeons, sync, monsters, raids, and more.
 - **Frontend**: vanilla JS single-page app, hand-drawn pixel sprites rendered to
-  canvas, WebAudio chiptune SFX, CRT scanline CSS. No framework, no bundler.
+  canvas, WebAudio chiptune SFX, CRT vignette CSS. No framework, no bundler.
 
 ## Notes on honor
 

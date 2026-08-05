@@ -362,9 +362,9 @@ anything to do with intervals.icu. It has to move to a provider-neutral
 
 ### 3f. Test and infrastructure implications
 
-Thirty-three test files. `tests/smoke.py` (222 checks) is the regression bar for
-every refactor above; identical green is the acceptance criterion, per
-`AGENTS.md`.
+Thirty-one test files: twenty-six Python and five MJS. `tests/smoke.py` (222
+checks) is the regression bar for every refactor above; identical green is the
+acceptance criterion, per `AGENTS.md`.
 
 Three specific hazards:
 

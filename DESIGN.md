@@ -232,8 +232,8 @@ be silently normalized during unrelated work.
   text; active translates `2px` in both axes and shortens the shadow; disabled
   uses `0.4` opacity and a not-allowed cursor. Danger and green variants use
   their semantic hue for border, text, and hover fill.
-- **Focus:** no explicit `.btn:focus` or `.btn:focus-visible` rule exists, so
-  keyboard focus relies on the browser default. This is a known inconsistency.
+- **Focus:** `.btn:focus-visible` uses a bright-gold outline and layered shadow
+  that keeps the raised key's depth visible during keyboard focus.
 - **Loading / empty / error:** no generic loading or empty state exists. Error
   meaning is expressed by `.danger`; callers own loading and empty behavior.
 
@@ -307,8 +307,8 @@ be silently normalized during unrelated work.
 - **States:** default, hover, active, focus, and disabled inherit the button
   contract. `.active` fills gold and inverts text. `.tab-glow` adds a pulsing
   bright-gold border and `.tab-glow-dot` for unread attention.
-- **Focus:** remains the browser default because the stylesheet has no explicit
-  tab focus rule. Loading and empty tab states are not defined.
+- **Focus:** inherits the explicit `.btn:focus-visible` treatment; there is no
+  separate tab-specific focus rule. Loading and empty tab states are not defined.
 
 ### Overlay (`.overlay`)
 
