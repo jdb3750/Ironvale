@@ -504,9 +504,19 @@ def writ_notices_pending():
     applied at resolution, so sweeping stale notices (>3 days unseen) loses
     nothing but the moment."""
     lst = db.kv_get("writ_notices", [])
+    if not isinstance(lst, list):
+        return []
     cutoff = (now() - timedelta(days=3)).isoformat()
-    fresh = [n for n in lst if n["ts"] >= cutoff]
-    if len(fresh) != len(lst):
+    malformed = False
+    fresh = []
+    for notice in lst:
+        if not isinstance(notice, dict) or not isinstance(notice.get("ts"), str):
+            malformed = True
+            continue
+        if notice["ts"] >= cutoff:
+            fresh.append(notice)
+    # Never sweep a corrupt value: preserve it for snapshot-based recovery.
+    if not malformed and len(fresh) != len(lst):
         db.kv_set("writ_notices", fresh)
     return fresh
 
@@ -530,10 +540,15 @@ def active_quests():
 
 
 def _quest_row(r):
-    import json
+    try:
+        details = json.loads(r["details"])
+    except json.JSONDecodeError:
+        details = {}
+    if not isinstance(details, dict):
+        details = {}
     return {
         "id": r["id"], "giver": r["giver"], "kind": r["kind"], "title": r["title"],
-        "details": json.loads(r["details"]), "status": r["status"],
+        "details": details, "status": r["status"],
         "accepted_at": r["accepted_at"], "completed_at": r["completed_at"],
         "honor": bool(r["honor"]),
         "rewards": json.loads(r["rewards"]) if r["rewards"] else None,

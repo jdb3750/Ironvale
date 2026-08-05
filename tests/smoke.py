@@ -230,6 +230,173 @@ ok(
 db.q("DELETE FROM activities WHERE id='smoke-road-inf' OR name='finite road check'")
 db.commit()
 
+# ---- corrupt persisted boot data degrades without rewriting ---------------
+print("corrupt boot data:")
+boot_client = TestClient(app, raise_server_exceptions=False)
+boot_client.cookies.update(client.cookies)
+
+
+def kv_raw(key):
+    row = db.q("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def restore_kv(key, raw):
+    if raw is None:
+        db.q("DELETE FROM kv WHERE key=?", (key,))
+    else:
+        db.q(
+            "INSERT INTO kv (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, raw),
+        )
+    db.commit()
+
+
+original_character = kv_raw("character")
+db.kv_set("character", "corrupt")
+corrupt_character_raw = kv_raw("character")
+corrupt_character = boot_client.get("/api/state")
+character_unchanged = kv_raw("character") == corrupt_character_raw
+restore_kv("character", original_character)
+ok(
+    "state degrades a non-mapping character without overwriting it",
+    corrupt_character.status_code == 200
+    and corrupt_character.json()["character"]["name"] == "Adventurer"
+    and character_unchanged,
+    f"-> {corrupt_character.status_code}: {corrupt_character.text[:120]}",
+)
+
+original_settings = kv_raw("settings")
+db.kv_set("settings", {"ambition": "corrupt"})
+corrupt_ambition_raw = kv_raw("settings")
+corrupt_ambition = boot_client.get("/api/state")
+ambition_unchanged = kv_raw("settings") == corrupt_ambition_raw
+restore_kv("settings", original_settings)
+ok(
+    "state degrades a non-integer ambition without overwriting it",
+    corrupt_ambition.status_code == 200
+    and len(corrupt_ambition.json()["ambition_levels"]) == len(game.AMBITION)
+    and ambition_unchanged,
+    f"-> {corrupt_ambition.status_code}: {corrupt_ambition.text[:120]}",
+)
+
+db.kv_set("settings", {"units": "mi"})
+missing_ambition_raw = kv_raw("settings")
+missing_ambition = boot_client.get("/api/state")
+missing_ambition_unchanged = kv_raw("settings") == missing_ambition_raw
+restore_kv("settings", original_settings)
+ok(
+    "state supplies a missing ambition without overwriting settings",
+    missing_ambition.status_code == 200
+    and missing_ambition.json()["settings"]["ambition"] == 2
+    and missing_ambition_unchanged,
+    f"-> {missing_ambition.status_code}: {missing_ambition.text[:120]}",
+)
+
+original_writ_notices = kv_raw("writ_notices")
+db.kv_set("writ_notices", {"not": "a list"})
+corrupt_writ_raw = kv_raw("writ_notices")
+corrupt_writ = boot_client.get("/api/state")
+corrupt_writ_unchanged = kv_raw("writ_notices") == corrupt_writ_raw
+restore_kv("writ_notices", original_writ_notices)
+ok(
+    "state ignores a non-list writ notice value without overwriting it",
+    corrupt_writ.status_code == 200
+    and corrupt_writ.json()["writ_notices"] == []
+    and corrupt_writ_unchanged,
+    f"-> {corrupt_writ.status_code}: {corrupt_writ.text[:120]}",
+)
+
+db.kv_set("writ_notices", [{"type": "kept"}])
+missing_writ_ts_raw = kv_raw("writ_notices")
+missing_writ_ts = boot_client.get("/api/state")
+missing_writ_ts_unchanged = kv_raw("writ_notices") == missing_writ_ts_raw
+restore_kv("writ_notices", original_writ_notices)
+ok(
+    "state ignores a writ notice missing its timestamp without overwriting it",
+    missing_writ_ts.status_code == 200
+    and missing_writ_ts.json()["writ_notices"] == []
+    and missing_writ_ts_unchanged,
+    f"-> {missing_writ_ts.status_code}: {missing_writ_ts.text[:120]}",
+)
+
+list_details_quest = db.q(
+    "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+    "VALUES ('endurance', 'run', 'Corrupt List Details', '[]', 'active', ?)",
+    (game.now_iso(),),
+)
+db.commit()
+list_details = boot_client.get("/api/state")
+db.q("DELETE FROM quests WHERE id=?", (list_details_quest.lastrowid,))
+db.commit()
+ok(
+    "state degrades non-mapping quest details",
+    list_details.status_code == 200
+    and next(
+        q["details"] for q in list_details.json()["active_quests"]
+        if q["id"] == list_details_quest.lastrowid
+    ) == {},
+    f"-> {list_details.status_code}: {list_details.text[:120]}",
+)
+
+invalid_details_quest = db.q(
+    "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
+    "VALUES ('endurance', 'run', 'Corrupt JSON Details', '{', 'active', ?)",
+    (game.now_iso(),),
+)
+db.commit()
+invalid_details = boot_client.get("/api/state")
+db.q("DELETE FROM quests WHERE id=?", (invalid_details_quest.lastrowid,))
+db.commit()
+ok(
+    "state degrades malformed quest details JSON",
+    invalid_details.status_code == 200
+    and next(
+        q["details"] for q in invalid_details.json()["active_quests"]
+        if q["id"] == invalid_details_quest.lastrowid
+    ) == {},
+    f"-> {invalid_details.status_code}: {invalid_details.text[:120]}",
+)
+
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time) "
+    "VALUES ('smoke-text-duration', 'smoke', ?, 'Yoga', 'Unreadable Duration', 'not a number')",
+    (game.now_iso(),),
+)
+db.commit()
+text_duration = boot_client.get("/api/state")
+db.q("DELETE FROM activities WHERE id='smoke-text-duration'")
+db.commit()
+ok(
+    "state degrades a persisted text activity duration",
+    text_duration.status_code == 200
+    and isinstance(text_duration.json()["npc_notices"], dict),
+    f"-> {text_duration.status_code}: {text_duration.text[:120]}",
+)
+
+healthy_character = game.default_char()
+healthy_character["name"] = "Smoke Sentinel"
+healthy_character["level"] = 3
+db.kv_set("character", healthy_character)
+db.kv_set("settings", {"ambition": 1})
+db.kv_set("writ_notices", [{
+    "type": "kept", "ts": game.now_iso(), "title": "A Healthy Writ",
+}])
+healthy_state = boot_client.get("/api/state")
+restore_kv("character", original_character)
+restore_kv("settings", original_settings)
+restore_kv("writ_notices", original_writ_notices)
+ok(
+    "ordinary persisted boot data remains intact end to end",
+    healthy_state.status_code == 200
+    and healthy_state.json()["character"]["name"] == "Smoke Sentinel"
+    and healthy_state.json()["character"]["level"] == 3
+    and healthy_state.json()["settings"]["ambition"] == 1
+    and healthy_state.json()["writ_notices"][0]["title"] == "A Healthy Writ",
+    f"-> {healthy_state.status_code}: {healthy_state.text[:120]}",
+)
+
 # ---- quest lifecycle: accept -> matching deed -> completable -> complete --
 print("quest lifecycle:")
 offers = client.get("/api/offers/endurance").json()["offers"]
