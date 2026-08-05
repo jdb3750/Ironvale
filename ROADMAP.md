@@ -522,8 +522,15 @@ entries are open work with the removal path worked out.
   observable offer assertions elsewhere. The defect is in what the names promise,
   so the cheap fix is renaming them to say they check rule state — reserve the
   outcome-shaped names for the tests that assert outcomes.
-- **The player- and agent-facing docs describe a game two redesigns old.**
-  Found 2026-08-04 by Pass D. Each verified against the code:
+- ~~**The player- and agent-facing docs describe a game two redesigns old.**~~
+  **RESOLVED 2026-08-04** by review seam 2 — all fourteen claims below corrected
+  across `DOCTRINE.md`, `README.md`, `AGENTS.md`, `DESIGN.md` and `PLUGINS.md`,
+  each anchored to the code that disproved it. Two judgement calls worth keeping:
+  the readiness row was **not** deleted, because readiness genuinely is collected
+  and persisted at sync (`intervals.py:27`, `:206`, `:212`) and only the *rule*
+  is missing, so it now reads collected-and-unread; and "CRT scanline CSS" became
+  "CRT vignette" rather than being dropped, because `style.css:108` does keep an
+  edge vignette. Original finding, kept for the record:
   - **`README.md:8`** still gives Grunhilda kettlebells and Bram barbell,
     dumbbell, bodyweight and climbing, and **`:83`** has both honouring
     doctrines. The live roster (`game.py:57`, correctly summarised in

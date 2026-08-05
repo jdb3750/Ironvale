@@ -15,8 +15,9 @@ checked against the CrossRef registry and resolves to a real article.
 > pretend unsupported constants are science.
 
 Concretely: where evidence supports a *modality-level* suggestion, cite it; where
-a value is a game-design choice, say so. HRV/readiness is a **conservative context
-signal**, never clearance or diagnosis. The literature's main contribution was
+a value is a game-design choice, say so. HRV is a **conservative context signal**,
+never clearance or diagnosis; readiness is collected but currently unread by the
+Council. The literature's main contribution was
 *subtraction* — it ruled out false precision (see §2) more than it supplied
 formulae.
 
@@ -32,13 +33,13 @@ formulae.
 | HRV/RHR quantiles 0.25 / 0.75; 14–28 day window | "Low HRV / high resting HR" | Design choice, *adjacent to* the mean−1SD convention (0.16 pct). Label as such. |
 | `LOWER_BODY_SET_GATE = 6`; 48 h window | Block hard lower-body | **Design choice — no source.** |
 | Endurance duration multipliers 0.75 / 1.0 / 1.35 / 2.0 | Workout durations | **Design choice.** The literature declines to supply a defensible progression *rate* — do not fabricate one. |
-| `readiness_1_5 <= 2` threshold | Self-report suppresses hard | **Design choice — no source.** |
+| Readiness (collected; no cutoff) | No current Council decision | Stored during wellness sync but currently unread by the Council. |
 | Lift schemes (4×low / 3×high / 3×mid) | strength / volume / circuit | Weakly grounded — periodization schemes are ~equivalent (Harries 2015; Grgic 2017). |
 | Kettlebell specifics | KB quests | **Design choice — zero usable literature exists.** |
 
 Honest end state: cite what's citable; label the rest as deliberate design. Some
-rows (the progression *rate*, the readiness cutoff) probably *cannot* be cited
-because the evidence doesn't exist — that labelling is the point, not a gap.
+rows (the progression *rate*) probably *cannot* be cited because the evidence
+doesn't exist — that labelling is the point, not a gap.
 
 ## 2. Two design consequences worth remembering
 
@@ -125,7 +126,7 @@ Verified present in the merged code, so the table above stays checkable:
 | Constant | Module |
 | --- | --- |
 | `LOWER_BODY_SET_GATE = 6` | `app/counsel_context_model.py` |
-| `ACTIVITY_LOOKBACK_DAYS` | `app/counsel_context.py` |
+| `ACTIVITY_LOOKBACK_DAYS` | `app/counsel_context_model.py` (re-exported by `app/counsel_context.py`) |
 | `TREND_PRIOR_MINIMUM = 14` | `app/counsel_rules.py` |
 | `TREND_PRIOR_LIMIT = 28` | `app/counsel_wellness.py` |
 | HRV/RHR quantiles 0.25 / 0.75 | `app/counsel_rules.py` (`_nearest_rank`) |
@@ -135,16 +136,15 @@ If you change a value here, change this document in the same commit — an
 unsourced number that drifts from its rationale is how the science becomes a
 black box again.
 
-## 5. Open follow-ups
+## 5. Completed follow-ups
 
-1. **Focus does not filter what a giver offers.** The charter drives the daily
-   pointer but not the per-giver pick, so a player whose focus is run/iron/climb
-   is still offered swim if they swam once. See `COUNCIL_REDESIGN.md` §3.
-2. **Equipment awareness.** "Today I only have kettlebells" — a same-day override
-   is the sharper form of the need than a static gear list. `COUNCIL_REDESIGN.md` §8.
+1. **Focus filtering.** The charter narrows a giver's practiced paths without
+   gating an otherwise valid offer.
+2. **Equipment awareness.** A same-day Iron override narrows Grunhilda's work to
+   the available implement; incompatible doctrines wait without advancing.
 
-Both are the same want — *let the player constrain what a giver may offer* — and
-should ship together.
+Both shipped together: the player may constrain what a giver offers without
+inventing work outside qualified history.
 
 ---
 

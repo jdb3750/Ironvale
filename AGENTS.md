@@ -279,7 +279,7 @@ For deeper behavior of any specific module, load skill `iron-vale-architecture`.
 - **Server errors**: `raise ValueError("in-world message")` → 400 → frontend
   `api()` toasts it automatically. Endpoints are thin; logic lives in modules.
 - **kv store**: per-profile misc state (character, settings, dungeon run,
-  offers cache, buddy_id, resume_floor, pack_series). `db.kv_get/set/del`.
+  buddy_id, resume_floor, pack_series). `db.kv_get/set/del`.
 - **Two clocks**: personal time (`game.now()`/`today()`, calendars, quest
   days) follows the per-profile `settings.timezone`, auto-synced from the
   player's device at boot; Siege week math (`raid.siege_now()`/
@@ -300,12 +300,11 @@ quests_done, appearance {skin,hair,hair_color,shirt,pants}.
 
 - Vigor comes ONLY from completed quests; it gates the dungeon.
 - Nothing material leaves the dungeon (gold banks on retire; gear/items/
-  trinkets never do). Town gold sinks: Crankwerk (cosmetics), packs, rerolls.
+  trinkets never do). Town gold sinks: Crankwerk cosmetics and packs.
 - Auto-completion of quests happens only from SYNCED activities, never from
   logged-set counts (the player may still be mid-workout).
 - Honor completions create a typed synthetic activity (so history/calendar/
   Road stay truthful).
-- Quest offers cache per day but are invalidated when a sync brings new data.
 - Every quest giver reacts in-dialog (REACTIONS) and congratulates completions
   of OTHER givers' quests only (thanked map in localStorage iv_lastq).
 - **One qualified Council snapshot.** Every Council evaluation uses one
