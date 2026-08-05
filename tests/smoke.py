@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, dungeon, exercises, game, intervals, main as main_module, profiles, quests, raid, syncing  # noqa: E402
+from app import db, dungeon, exercises, game, intervals, main as main_module, profiles, quests, raid, road, syncing  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -147,6 +147,88 @@ for giver in ("endurance", "strength", "bram", "recovery"):
     get(f"/api/offers/{giver}", keys=["offers"])
 get("/api/colosseum/fight")
 get("/api/dungeon", keys=["state", "stats", "theme", "enter_cost"])
+
+print("manual activity bounds:")
+activity_count = db.q("SELECT COUNT(*) AS n FROM activities").fetchone()["n"]
+invalid_manual_payloads = (
+    ("infinite distance string", {"type": "Run", "minutes": 30, "km": "inf"}),
+    ("overflowing distance number", '{"type":"Run","minutes":30,"km":1e400}'),
+    ("infinite minutes string", {"type": "Run", "minutes": "inf", "km": 5}),
+    ("negative distance", {"type": "Run", "minutes": 30, "km": -1}),
+    ("negative minutes", {"type": "Run", "minutes": -1, "km": 5}),
+)
+for label, payload in invalid_manual_payloads:
+    response = (
+        client.post(
+            "/api/activities/manual",
+            content=payload,
+            headers={"content-type": "application/json"},
+        )
+        if isinstance(payload, str)
+        else client.post("/api/activities/manual", json=payload)
+    )
+    ok(
+        f"manual activity rejects {label} without writing",
+        response.status_code == 400
+        and db.q("SELECT COUNT(*) AS n FROM activities").fetchone()["n"] == activity_count,
+        f"-> {response.status_code}: {response.text[:120]}",
+    )
+
+finite_manual = client.post(
+    "/api/activities/manual",
+    json={"type": "Run", "name": "finite road check", "minutes": 90, "km": 25},
+)
+finite_row = db.q(
+    "SELECT moving_time, distance FROM activities WHERE name='finite road check'",
+).fetchone()
+ok(
+    "manual activity accepts an ordinary 25 km run",
+    finite_manual.status_code == 200
+    and finite_row is not None
+    and finite_row["moving_time"] == 5400
+    and finite_row["distance"] == 25000,
+    f"-> {finite_manual.status_code}: {finite_manual.text[:120]}",
+)
+
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES ('smoke-road-inf', 'smoke', ?, 'Run', 'corrupt road distance', 60, ?)",
+    (game.now_iso(), float("inf")),
+)
+db.commit()
+original_beyond_landmark = road._beyond_landmark
+beyond_calls = [0]
+
+
+def bounded_beyond_landmark(index):
+    beyond_calls[0] += 1
+    assert beyond_calls[0] <= 8, "SMOKE FAIL: corrupt Road distance exceeded landmark work cap"
+    return original_beyond_landmark(index)
+
+
+road._beyond_landmark = bounded_beyond_landmark
+try:
+    corrupt_road = client.get("/api/road")
+    corrupt_claim = client.post("/api/road/claim")
+finally:
+    road._beyond_landmark = original_beyond_landmark
+ok(
+    "corrupt persisted distance makes Road progress unknown",
+    corrupt_road.status_code == 200
+    and corrupt_road.json()["total_km"] == "unknown"
+    and corrupt_road.json()["km_to_next"] is None
+    and corrupt_road.json()["unclaimed"] == 0
+    and len(corrupt_road.json()["landmarks"]) == len(road.LANDMARKS)
+    and beyond_calls[0] <= 8,
+    f"-> {corrupt_road.status_code}: {corrupt_road.text[:120]}",
+)
+ok(
+    "corrupt persisted distance cannot claim Road rewards",
+    corrupt_claim.status_code == 400,
+    f"-> {corrupt_claim.status_code}: {corrupt_claim.text[:120]}",
+)
+db.q("DELETE FROM activities WHERE id='smoke-road-inf' OR name='finite road check'")
+db.commit()
 
 # ---- quest lifecycle: accept -> matching deed -> completable -> complete --
 print("quest lifecycle:")

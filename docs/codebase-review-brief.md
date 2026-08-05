@@ -486,3 +486,117 @@ Quote the final line of each.
   drift, **report it, do not fix it** — it becomes its own entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 3 — bound the road against non-finite distance
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes `app/` and `tests/`.** It does **not** touch `static/`, so
+> **no `?v=` bump is needed** — that rule applies only to static assets.
+
+### The defect
+
+`POST /api/activities/manual` (`app/main.py:457`) reads a raw JSON body and hands
+it straight to `intervals.add_manual_activity` (`app/intervals.py:239`), which
+writes:
+
+```
+int(float(payload.get("minutes", 0)) * 60),
+float(payload.get("km", 0) or 0) * 1000,
+```
+
+Neither value is bounded. `{"km": "inf"}` and `{"km": 1e400}` both produce
+infinity, SQLite retains it, and `road.total_km()` (`road.py:79`) then returns
+infinity. `_landmarks_through()` (`road.py:91`) loops on:
+
+```
+while marks[-1]["km"] <= km + BEYOND_INTERVAL_KM * 2:
+```
+
+which is always true against infinity — and it **appends a landmark every
+iteration**, so this is unbounded memory growth, not a hang you can wait out. Two
+readers reach it: `road.state()` (`:112`) and `road.claim_next()` (`:141`).
+
+`minutes` has the same exposure by a different route: `int(float("inf"))` raises
+`OverflowError`, which is an unhandled 500 rather than a 400.
+
+### What to fix
+
+**Both ends. This is deliberate, not belt-and-braces.**
+
+1. **At ingestion** — reject non-finite and otherwise nonsensical values rather
+   than storing them. Follow the house convention: `raise ValueError("in-world
+   message")` becomes a 400 that the frontend toasts automatically
+   (`AGENTS.md` §Core conventions). Cover `km` *and* `minutes`, and consider
+   negatives while you are there.
+2. **At the reader** — `_landmarks_through` must terminate for any input,
+   including values already sitting in the database. `AGENTS.md` states that
+   persisted data is untrusted input and must degrade to unknown rather than
+   raise. A guard at ingestion does nothing for a row written before this fix, or
+   by a future writer.
+
+**Decide the reader's degraded behaviour and say why.** A non-finite total could
+clamp to the last authored landmark, or the road could report unknown. Pick one,
+make it something a player could understand, and state your reasoning — do not
+silently pick whichever is fewer lines.
+
+### Tests
+
+**The regression test for an infinite loop must not itself hang.** A naive test
+that calls `road.state()` with a bad row will run until the process dies if the
+fix regresses, which turns one failure into an unusable suite. Bound it — assert
+against `_landmarks_through` directly with a value you know terminates, or put a
+hard cap on the work done. **Say in your report how you bounded it.**
+
+Cover at least:
+
+- `POST /api/activities/manual` with `{"km": "inf"}`, `{"km": 1e400}` and a
+  non-finite `minutes` — each rejected as a 400, nothing written to `activities`.
+- A row containing a non-finite distance **written directly to SQLite**, then
+  `/api/road` returning 200 with sane values. This is the case the ingestion
+  guard cannot reach, and it is the one that matters most.
+- Ordinary finite values still work end to end. A guard that rejects a real
+  25 km run is worse than the defect.
+
+### The acceptance bar
+
+`tests/smoke.py` is the bar per `AGENTS.md`, and it now means something —
+**identical green plus your new checks**, quoting the final line:
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+```
+
+Plus every standalone script:
+
+```
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+**And demonstrate the new tests can fail**, the same bar seam 1 was held to:
+revert your guard, capture the failure, restore, re-run green. Report both
+halves. A regression test you have not seen fail is not a regression test.
+
+### Out of scope for this seam
+
+- **Moving `add_manual_activity` to a provider-neutral `app/activities.py`.**
+  `PLUGINS.md` §3c calls for this — it is the generic activity writer wearing a
+  provider's name, with five callers unrelated to intervals.icu. That is real and
+  unscheduled; the guard travels with the function when it moves. **Do not start
+  it here.**
+- **The other `/api/state` 500 shapes** (`game.get_char`, `ambition_mult`,
+  `writ_notices_pending`, quest detail decoding, `records._last_activity`). Same
+  untrusted-input theme, its own seam, deliberately not batched.
+- **Any other §3 entry**, including the hardcoded `"endurance"` giver that lives
+  a few lines from code you will be reading.
+- **A validation framework.** No pydantic models for every endpoint, no shared
+  validation layer. Two bounded values and one loop guard.
+- **Cleaning up existing bad rows.** If you find any in a scratch DB, report it.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."

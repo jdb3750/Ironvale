@@ -258,6 +258,20 @@ entries are open work with the removal path worked out.
   that no longer exists. **The contract is: the writer accepts any name; readers
   must tolerate unknown ones.** Documented here rather than enforced in code.
 
+- ~~**One non-finite distance can hang `/api/road` and exhaust memory.**~~
+  **RESOLVED 2026-08-04** by review seam 3. Guarded at both ends: ingestion
+  rejects non-numeric, boolean, negative, non-finite and scale-overflowing
+  values with a 400, and the reader terminates independently because a writer
+  guard does nothing for rows already stored. Corrupt distance degrades to
+  `"unknown"` rather than clamping, since clamping would falsely grant progress
+  and rewards. **New invariant that is not yet written down in code:
+  `/api/road`'s `total_km` and `breakdown` values may now be the *string*
+  `"unknown"` where a number used to be.** `hall.js:154` renders it fine and
+  `:1022` survives only because JS coerces `"unknown"` to `NaN` and every
+  comparison goes false, leaving the pilgrim drawn at the gate — benign, but
+  accidental. Per `AGENTS.md`, name that at the boundary the next time
+  `hall.js` is touched and spends a `?v=` bump anyway. Original finding:
+
 - **One non-finite distance can hang `/api/road` and exhaust memory.** Found
   2026-08-04. `POST /api/activities/manual` (`main.py:457`) hands a raw JSON body
   straight to `intervals.add_manual_activity`, which stores
