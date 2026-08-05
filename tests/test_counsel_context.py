@@ -111,12 +111,20 @@ def activity(
     db.commit()
 
 
-def lift(exercise: str, count: int, weight: float = 24.0) -> None:
+def lift(
+    exercise: str,
+    count: int,
+    weight: float = 24.0,
+    *,
+    days_ago: int = 0,
+) -> None:
     for offset in range(count):
         db.q(
             "INSERT INTO lift_sets (ts, exercise, weight, reps) VALUES (?,?,?,?)",
             (
-                (NOW - timedelta(minutes=offset)).isoformat(timespec="seconds"),
+                (
+                    NOW - timedelta(days=days_ago, minutes=offset)
+                ).isoformat(timespec="seconds"),
                 exercise,
                 weight,
                 8,
@@ -214,6 +222,53 @@ def ineligible_activities_change_nothing() -> None:
     assert after_offer["source"]["activity_as_of"] == expected_activity_as_of
 
 
+def training_lookback_includes_the_exact_boundary() -> None:
+    # Given one row at each side of the 60-day seam. When the qualified snapshot
+    # is assembled, then 59 and exactly 60 days count while 61 days does not.
+    for age, expected_sessions in ((59, 1), (60, 1), (61, 0)):
+        activity_id = f"run-{age}"
+        new_profile(f"activity-lookback-{age}")
+        activity(activity_id, "Run", age, 30)
+        context = counsel_context.assemble(NOW)
+        assert context.history("run").session_count == expected_sessions, {
+            "age": age,
+            "sessions": context.history("run").session_count,
+        }
+        assert {row.activity_id for row in context.activities} == (
+            {activity_id} if expected_sessions else set()
+        )
+
+    # The lift summary and today's-equipment path each apply the same inclusive
+    # recency rule. Check both the snapshot count and the player-visible sizing.
+    for age, expected_sessions in ((59, 1), (60, 1), (61, 0)):
+        new_profile(f"lift-lookback-{age}")
+        declared = client.post(
+            "/api/settings",
+            json={
+                "counsel_iron_today": {
+                    "date": NOW.date().isoformat(),
+                    "equipment": "kettlebell",
+                },
+            },
+        )
+        assert declared.status_code == 200
+        lift("Kettlebell Row", 1, 28.0, days_ago=age)
+        context = counsel_context.assemble(NOW)
+        assert context.iron_session_count == expected_sessions, {
+            "age": age,
+            "sessions": context.iron_session_count,
+        }
+        sizing = offer("strength")["sizing"]
+        expected_sizing = (
+            "personalized" if expected_sessions else "generic_starter"
+        )
+        assert sizing == expected_sizing, {
+            "age": age,
+            "sizing": sizing,
+            "expected": expected_sizing,
+        }
+
+
 def logged_movements_own_iron_context() -> None:
     # Given one real upper-body lift plus an activity-level strength marker,
     # Iron history and targeting come from the lift ledger movement/groups.
@@ -294,6 +349,7 @@ for label, scenario in (
     ("unchanged valid-row behavior is characterized", unchanged_characterization),
     ("zero duration cannot change endurance recency", zero_duration_does_not_change_endurance_recency),
     ("ineligible activities cannot affect any consumer", ineligible_activities_change_nothing),
+    ("training lookback includes its exact boundary", training_lookback_includes_the_exact_boundary),
     ("logged lift movements own Iron context", logged_movements_own_iron_context),
     ("Council consumers contain no raw training reads", council_consumers_do_not_own_raw_training_reads),
     ("public requests do not fan out raw history reads", request_training_reads_are_consolidated),

@@ -236,6 +236,7 @@ def cold_start_boundaries() -> None:
             seed_activity("Run", days_ago, 40 + days_ago)
         current = offers("endurance")
         expected = "personalized" if sessions == 3 else "generic_starter"
+        assert len(current) == 3, {"sessions": sessions, "option_count": len(current)}
         assert all(option.sizing == expected for option in current)
         assert all(
             ("cold_start" in option.reason_codes) == (sessions < 3)
@@ -244,6 +245,7 @@ def cold_start_boundaries() -> None:
     new_profile("iron-zero", "self")
     write_fresh_sync()
     generic = offers("strength")
+    assert len(generic) == 3, {"iron_sessions": 0, "option_count": len(generic)}
     assert all(option.sizing == "generic_starter" for option in generic)
     assert all("no_iron_history" in option.reason_codes for option in generic)
     assert all(
@@ -259,6 +261,10 @@ def cold_start_boundaries() -> None:
     )
     db.commit()
     personalized = offers("strength")
+    assert len(personalized) == 3, {
+        "iron_sessions": 1,
+        "option_count": len(personalized),
+    }
     assert all(option.sizing == "personalized" for option in personalized)
     assert all(
         any(

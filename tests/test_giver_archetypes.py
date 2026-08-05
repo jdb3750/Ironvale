@@ -32,9 +32,11 @@ for giver, (name, title) in expected_titles.items():
     assert ownership["display"]["title"] == title
     assert game.GIVERS[giver] == ownership["display"]
 for giver in game.OFFERABLE_GIVERS:
+    options = counsel_candidates.for_giver(giver, context)
+    assert len(options) == 3, {"giver": giver, "option_count": len(options)}
     assert all(
         option.payload["giver"] == giver
-        for option in counsel_candidates.for_giver(giver, context)
+        for option in options
     )
 assert all(
     programs.PROGRAMS[key]["giver"] == "strength"

@@ -13,6 +13,7 @@ Run:  .venv/bin/python tests/smoke.py
 import json
 import math
 import os
+import random
 import shutil
 import sys
 import tempfile
@@ -24,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
-from app import db, exercises, game, intervals, main as main_module, profiles, quests, raid, syncing  # noqa: E402
+from app import db, dungeon, exercises, game, intervals, main as main_module, profiles, quests, raid, syncing  # noqa: E402
 
 client = TestClient(app)
 PASS = 0
@@ -256,23 +257,39 @@ for dr, (dx, dy) in {"n": (0, -1), "s": (0, 1), "e": (1, 0), "w": (-1, 0)}.items
         moved = r.status_code == 200
         break
 ok("dungeon move", moved)
-# retire needs entrance/stairs; fresh runs start at the entrance — walk back if we left it
+# Retire needs entrance/stairs; fresh runs start at the entrance. If the first
+# room starts combat, make the real flee action deterministic, then walk back.
 state_now = client.get("/api/dungeon").json()["state"]
-if state_now and not state_now.get("combat"):
-    here = state_now["cells"][f"{state_now['px']},{state_now['py']}"]
-    if here["type"] not in ("entrance", "stairs"):
-        # step back to the entrance cell we came from
-        if dr is None:
-            raise AssertionError("SMOKE FAIL: dungeon return direction")
-        back = {"n": "s", "s": "n", "e": "w", "w": "e"}[dr]
-        client.post("/api/dungeon/action", json={"action": "move", "dir": back})
-    r = client.post("/api/dungeon/action", json={"action": "retire"})
-    ok("dungeon retire", r.status_code == 200 and r.json().get("retired"))
-else:
-    # ambushed on the very first step — flee-then-retire is not worth a flaky
-    # net; killing the run state directly still exercises the exit paths
-    db.kv_del("dungeon")
-    ok("dungeon retire (skipped: combat on first step)", True)
+if state_now and state_now.get("combat"):
+    original_rng = dungeon._rng
+    dungeon._rng = lambda _: random.Random(1)
+    try:
+        fled = client.post("/api/dungeon/action", json={"action": "flee"})
+    finally:
+        dungeon._rng = original_rng
+    assert (
+        fled.status_code == 200
+        and fled.json().get("state")
+        and fled.json()["state"].get("combat") is None
+    ), f"SMOKE FAIL: dungeon flee -> {fled.status_code}: {fled.text[:120]}"
+    state_now = fled.json()["state"]
+if not state_now:
+    raise AssertionError("SMOKE FAIL: dungeon state vanished before retire")
+here = state_now["cells"][f"{state_now['px']},{state_now['py']}"]
+if here["type"] not in ("entrance", "stairs"):
+    if dr is None:
+        raise AssertionError("SMOKE FAIL: dungeon return direction")
+    back = {"n": "s", "s": "n", "e": "w", "w": "e"}[dr]
+    returned = client.post(
+        "/api/dungeon/action",
+        json={"action": "move", "dir": back},
+    )
+    assert returned.status_code == 200, (
+        f"SMOKE FAIL: dungeon return -> {returned.status_code}: "
+        f"{returned.text[:120]}"
+    )
+r = client.post("/api/dungeon/action", json={"action": "retire"})
+ok("dungeon retire", r.status_code == 200 and r.json().get("retired"))
 
 # ---- economy: gacha ---------------------------------------------------------
 print("economy:")

@@ -86,6 +86,7 @@ first_payloads = tuple(
     for candidate in first
 )
 ok("candidate order is repeatable", first == second)
+ok("two-session endurance has five candidates", len(first_payloads) == 5)
 ok("two-session endurance is a generic starter",
    all(payload.sizing == "generic_starter" for payload in first_payloads))
 ok("two-session endurance carries the cold-start reason",
@@ -100,6 +101,7 @@ established_payloads = tuple(
     EnduranceCandidatePayload.model_validate(candidate.payload)
     for candidate in established
 )
+ok("three-session endurance has six candidates", len(established_payloads) == 6)
 ok("three sessions enable personalized endurance sizing",
    all(payload.sizing == "personalized" for payload in established_payloads))
 
