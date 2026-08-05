@@ -295,6 +295,15 @@ entries are open work with the removal path worked out.
   trust stored shapes, and text in `moving_time` propagates into arithmetic.
   This is the standing "persisted data is untrusted input" rule in `AGENTS.md`:
   malformed rows must degrade to unknown, never raise.
+- **A BLOB `activities.start` produces a garbage date rather than an error.**
+  Found 2026-08-05 while scoping seam 4. `start` is `TEXT NOT NULL`
+  (`db.py:74`), so it can never be `NULL` — but SQLite's TEXT affinity stores a
+  BLOB unchanged, and `records._last_activity()` (`records.py:176`) then does
+  `row["start"][:10]`, which on `bytes` returns `bytes` without raising. The
+  result is a nonsense date flowing into the payload instead of a 500.
+  **Different class from the other untrusted-input defects** — silent bad data,
+  not a failed boot — so it was deliberately kept out of seam 4 rather than
+  widening it. Low severity: nothing in the app writes a BLOB there today.
 - **Unguided completions persist the wrong giver.** Found 2026-08-04.
   `grant_unguided_run_bonus` assigns per-category givers via `deed_giver()`
   (`quests.py:927`, defaulting to `wick`) and stores that on the candidate, but

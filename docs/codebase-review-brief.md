@@ -652,9 +652,17 @@ whatever came out of SQLite:
    subclasses `ValueError`, so genuinely malformed JSON already becomes a 400
    rather than a 500 — **still a game that does not load.** Do not treat 400 as
    success here.
-5. **`records._last_activity()` (`records.py:167`)** — `row["start"][:10]`
-   raises `TypeError` on `None`, and `(row["moving_time"] or 0) / 60` raises on
-   stored text.
+5. **`records._last_activity()` (`records.py:167`)** —
+   `(row["moving_time"] or 0) / 60` raises `TypeError` on stored text.
+   `moving_time` is declared `INTEGER` with no `NOT NULL`, and SQLite's INTEGER
+   affinity **keeps text it cannot convert**, so `'not a number'` really does
+   land in that column. (`None` is fine — `(None or 0) / 60` is 0.)
+
+   **`row["start"][:10]` is *not* a defect: `start` is `TEXT NOT NULL`
+   (`db.py:74`) and has been since the initial commit, so it can never be
+   `None`.** An earlier draft of this brief asked for a `start = NULL` fixture;
+   that fixture is impossible and the claim was wrong. Do not write a guard for
+   it.
 
 ### The rule, and the trap
 
@@ -692,7 +700,18 @@ minimum:
 - `settings.ambition` stored as a string, and missing entirely
 - `writ_notices` stored as an object rather than a list
 - a quest whose `details` is valid JSON but not a mapping
-- an activity with a `None` `start` and with text in `moving_time`
+- an activity with text in `moving_time`
+
+**All five are constructible, and four need no raw SQL.** `kv.value` is
+`TEXT NOT NULL` and `kv_get` does `json.loads` on it, so `db.kv_set("character",
+"corrupt")` is enough to store a string where a mapping belongs — same for
+`settings` and `writ_notices`. `quests.details` is `TEXT NOT NULL`, so `[]` goes
+in as ordinary valid JSON. Only the `moving_time` case wants a direct insert.
+
+**If a fixture turns out to be impossible, that is a finding, not an obstacle.**
+Report it and stop, exactly as the `start = NULL` case was reported — a guard
+against something the schema already prevents is dead code with a test
+protecting it.
 
 Plus: **ordinary data still works end to end.** A guard that flattens a healthy
 character into a default is worse than the defect.
