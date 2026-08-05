@@ -546,12 +546,19 @@ def _quest_row(r):
         details = {}
     if not isinstance(details, dict):
         details = {}
+    # Same contract as details: a malformed reward blob must not fail the boot.
+    try:
+        rewards = json.loads(r["rewards"]) if r["rewards"] else None
+    except json.JSONDecodeError:
+        rewards = None
+    if rewards is not None and not isinstance(rewards, dict):
+        rewards = None
     return {
         "id": r["id"], "giver": r["giver"], "kind": r["kind"], "title": r["title"],
         "details": details, "status": r["status"],
         "accepted_at": r["accepted_at"], "completed_at": r["completed_at"],
         "honor": bool(r["honor"]),
-        "rewards": json.loads(r["rewards"]) if r["rewards"] else None,
+        "rewards": rewards,
     }
 
 

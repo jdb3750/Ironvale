@@ -295,6 +295,20 @@ ok(
 )
 
 original_writ_notices = kv_raw("writ_notices")
+# A non-iterable value: the per-notice guard cannot reach this one, so without
+# the isinstance(lst, list) check `for notice in lst` raises TypeError.
+db.kv_set("writ_notices", 5)
+noniter_writ_raw = kv_raw("writ_notices")
+noniter_writ = boot_client.get("/api/state")
+noniter_writ_unchanged = kv_raw("writ_notices") == noniter_writ_raw
+ok(
+    "state ignores a non-iterable writ notice value without overwriting it",
+    noniter_writ.status_code == 200
+    and noniter_writ.json()["writ_notices"] == []
+    and noniter_writ_unchanged,
+    f"-> {noniter_writ.status_code}: {noniter_writ.text[:120]}",
+)
+
 db.kv_set("writ_notices", {"not": "a list"})
 corrupt_writ_raw = kv_raw("writ_notices")
 corrupt_writ = boot_client.get("/api/state")
@@ -338,6 +352,27 @@ ok(
         if q["id"] == list_details_quest.lastrowid
     ) == {},
     f"-> {list_details.status_code}: {list_details.text[:120]}",
+)
+
+# rewards sits one line from details in _quest_row and decodes the same way;
+# malformed JSON there is a ValueError, which is a 400 on the boot endpoint.
+bad_rewards_quest = db.q(
+    "INSERT INTO quests (giver, kind, title, details, status, accepted_at, rewards) "
+    "VALUES ('endurance', 'run', 'Corrupt Rewards', '{}', 'active', ?, '{not json')",
+    (game.now_iso(),),
+)
+db.commit()
+bad_rewards = boot_client.get("/api/state")
+db.q("DELETE FROM quests WHERE id=?", (bad_rewards_quest.lastrowid,))
+db.commit()
+ok(
+    "state degrades a malformed quest reward blob",
+    bad_rewards.status_code == 200
+    and next(
+        q["rewards"] for q in bad_rewards.json()["active_quests"]
+        if q["id"] == bad_rewards_quest.lastrowid
+    ) is None,
+    f"-> {bad_rewards.status_code}: {bad_rewards.text[:120]}",
 )
 
 invalid_details_quest = db.q(
