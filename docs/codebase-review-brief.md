@@ -26,11 +26,12 @@ seams.
 > that treats it as a medical or safety-critical product.
 >
 > Rough shape: `app/` is ~9,000 lines of Python across ~34 modules; `static/js/`
-> is ~7,700 lines of vanilla JS with no build step and no framework;
-> `static/style.css` is ~2,900 lines; `tests/` is ~13,000 lines across 27 Python
-> files plus Node DOM and headless-Chromium suites. Project conventions live in
-> `AGENTS.md`; design rationale in `DESIGN.md`; direction and known defects in
-> `ROADMAP.md`.
+> is ~8,700 lines of vanilla JS across 14 files, with no build step and no
+> framework; `static/style.css` is ~2,900 lines; `tests/` is ~13,000 lines across
+> 27 Python files plus Node DOM and headless-Chromium suites. Project conventions
+> live in `AGENTS.md`; design rationale in `DESIGN.md`; direction and known
+> defects in `ROADMAP.md`. **These figures are orientation, not ground truth — if
+> what you count disagrees, report the real number and trust your count.**
 >
 > **This is a read-only audit.** Do not edit, create, or delete any file. Do not
 > write patches, diffs, or "here's the fixed version" code blocks. Do not run
@@ -134,11 +135,17 @@ A command that did not run is not a passing command.
 
 *(paste the shared preamble, then this)*
 
-Read `static/js/` (11 files, ~7,700 lines; largest are `giver.js` 1,213,
+Read `static/js/` (14 files, ~8,700 lines; largest are `giver.js` 1,213,
 `misc.js` 1,167, `app.js` 1,143, `hall.js` 1,117, `pixel.js` 1,103) and
 `static/style.css` (~2,900 lines). There is no build step, no bundler and no
 framework — that is deliberate, not an oversight, and "adopt a framework" is
 not a finding.
+
+**Dead-asset claims need more than grep.** `SPRITES[key]` is looked up
+dynamically in several places (`ranch.js`, `hall.js`, `pixel.js`), so "no
+references" does not by itself prove a sprite key is dead. Say what the dynamic
+key sources are and why none of them can produce the key you are calling dead.
+CSS classes can be assembled by string concatenation for the same reason.
 
 Look for, in priority order:
 
@@ -234,3 +241,118 @@ want to change the brief. If none, say "none".>
 ```
 
 Then stop and wait.
+
+---
+
+# Fix seams
+
+The audit is complete (passes A–D, findings recorded in `ROADMAP.md` §3). What
+follows are the **fix** briefs. Unlike the passes above, these change files —
+each is scoped to one seam, and each ends with stop-and-report before anything
+is committed.
+
+**Order is deliberate.** Seam 1 comes first because `tests/smoke.py`'s 222
+checks are the acceptance bar `AGENTS.md` sets for every refactor, and Pass C
+proved that bar is partly unfalsifiable. Verifying any other fix against a
+broken instrument proves nothing.
+
+---
+
+## Seam 1 — make the test suite able to fail
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes test files only.** Do not touch anything under `app/` or
+> `static/`. If a fix appears to require an application change, that is a
+> surprise — stop and report it rather than making the change.
+
+Pass C found four ways this suite reports success without proving anything. Fix
+all four.
+
+**1. `tests/smoke.py:275` counts an unconditional pass.** When the first dungeon
+move starts combat, the fallback branch calls `db.kv_del("dungeon")` and then
+`ok(..., True)` — a literal, so the check cannot fail. Its comment claims
+deleting the state "still exercises the exit paths"; it does not. Neither the
+retire request nor its exit behaviour runs.
+
+Either drive flee-then-retire for real, or delete the check. Both are
+acceptable; a check that cannot fail is not. **If you delete it, the suite's
+count changes from 222** — report the new number explicitly, because
+`AGENTS.md` quotes `SMOKE PASSED — 222 checks green` as the acceptance line and
+that document will need updating.
+
+**2. Three tests pass on empty output.** Each asserts `all(...)` over a
+generated list without proving the list is non-empty:
+
+- `tests/test_giver_archetypes.py:34` — giver ownership
+- `tests/test_counsel_engine.py:81` — endurance cold-start sizing
+- `tests/test_counsel_giver_loops.py:229` — giver-loop cold-start boundaries
+
+Assert an expected count before asserting a property over the collection. Do not
+settle for `len(x) > 0` where you know the real number.
+
+**3. `tests/test_counsel_schedule_reservation.py` does not test what it says.**
+It calls `counsel.validate_attribution` and `quests.create_quest_from_offer`
+directly — it never sets `counsel_mode` to scheduled, never obtains a scheduled
+offer, and never calls `/api/quests/accept`, despite a comment reading "When:
+Scheduled mode accepts it." It would pass unchanged if Scheduled acceptance were
+deleted outright.
+
+The real path is already covered at `tests/test_counsel_scheduled_mode.py:195`,
+including required and optional attribution. **Retire the file** rather than
+repairing it — but first confirm that claim yourself, and report what you find.
+If `test_counsel_scheduled_mode.py` turns out not to cover it, say so and stop;
+do not delete coverage on my say-so.
+
+**4. The 60-day qualification boundary has no test.** `ACTIVITY_LOOKBACK_DAYS`
+(`app/counsel_context_model.py:9`, value 60) has three consumers:
+`app/counsel_context.py:71` (activity qualification),
+`app/counsel_context_model.py:197` (lift recency) and
+`app/counsel_specialists.py:85`. No test places a row at 59, exactly 60, or 61
+days.
+
+Add boundary coverage at all three ages for both the activity and lift paths.
+**Both sites currently include the boundary** — `local_time < cutoff → skip` and
+`occurred_at >= cutoff → keep` are the same rule written as complements. Pin the
+behaviour that exists; do not "correct" either comparison.
+
+### The acceptance bar for this seam
+
+"Identical green" is the wrong criterion here — changing tests so they *can*
+fail is the entire point, and a green run proves nothing about that.
+
+**For every test you touch, demonstrate that it fails when the behaviour it
+covers is broken.** Break the thing deliberately (stub the builder to return
+empty, flip the comparison, remove the retire handler), capture the failure,
+restore, and re-run green. Report both halves — the failure message and the
+restored pass. A fix you cannot make fail on demand is not fixed.
+
+Then run and quote the final line of each:
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+```
+
+Also run every standalone script, since three of them are being edited:
+
+```
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+### Out of scope for this seam
+
+- **Any change under `app/` or `static/`.** Tests only.
+- **Renaming the rule-state tests** whose names overstate what they assert
+  (`test_counsel_engine.py:159` and its wellness cases). Recorded in §3 under
+  Legibility; it is cosmetic and belongs with a later pass.
+- **The browser suite's intermittent Town navigation failure.** Still open and
+  still unexplained. If you see a browser run fail, **capture the
+  `not ok <n> - <name>` line before anything else** and report it — that is the
+  one piece of evidence the record is missing. Do not attempt a fix.
+- Any other §3 entry. This seam is the instrument, not the repairs.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."
