@@ -437,8 +437,15 @@ entries are open work with the removal path worked out.
   (`items.py:60`). The schema's `equipment` table (`db.py:94`) has neither a
   reader nor a writer. Unused parameters also remain in
   `colosseum._sim_fight(probs)`, `dungeon._rng(d)` and `intervals._get(athlete)`.
+
   Work out what each was protecting before deleting — `economy.py`'s shop path
   and `items.shop_stock()` are probably one story, not two.
+
+  **`dungeon._rng` is no longer free — a test now depends on its signature.**
+  Seam 1 made smoke's dungeon retire real, and the deterministic flee it needs
+  monkeypatches `dungeon._rng` with `lambda _: random.Random(1)`
+  (`tests/smoke.py`). Dropping the unused parameter breaks that patch and takes
+  the whole smoke run with it. Change both together, or leave `_rng` alone.
 
 - **Dead frontend declarations.** Found 2026-08-04. Zero matches across all
   `static/js/*.js` and `static/*.html` for these CSS surfaces: `.char-strip`
