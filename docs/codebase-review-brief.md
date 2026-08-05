@@ -356,3 +356,133 @@ for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $
 - Any other §3 entry. This seam is the instrument, not the repairs.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 2 — make the docs describe the game that exists
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes documentation only.** Do not touch anything under `app/`,
+> `static/` or `tests/`. Every fix here is a *sentence*, not a code change. If a
+> correction appears to require a code change, that is a surprise — stop and
+> report it rather than making the change.
+
+Pass D found stale claims in every tracked doc. The code is right and the prose
+is wrong in every case below. Correct the prose.
+
+**`DOCTRINE.md` first — it is the one most likely to be acted on.** `AGENTS.md`
+requires consulting it before changing any Council constant, so an agent reading
+a "current value" that no rule implements will go looking for the rule, or
+restore it.
+
+### The corrections
+
+**`DOCTRINE.md`**
+
+- **`:25`** lists a `readiness_1_5 <= 2` suppression threshold in a table headed
+  "Constant (current value)". No Council rule reads readiness —
+  `grep -rn readiness app/counsel*.py` returns nothing. **But readiness *is*
+  stored during sync**, so this is not simply a deletion: the honest fix says the
+  value is collected and currently unread. Decide which, do it, and say which you
+  chose and why.
+- **`:121`** puts `ACTIVITY_LOOKBACK_DAYS` in `counsel_context.py`. It is
+  declared in `counsel_context_model.py:9` and re-exported.
+- **`:138`** lists focus filtering and equipment awareness as open follow-ups.
+  Both shipped, with behavioural tests in `tests/test_counsel_focus_filter.py`
+  and `tests/test_counsel_iron_equipment.py`.
+
+**`README.md`**
+
+- **`:8`** and **`:83`** describe the old roster: kettlebells to Grunhilda,
+  barbell/dumbbell/bodyweight/climbing to Bram, both honouring doctrines. Live
+  roster is `game.py:57` — three offer-producing givers: Fenn takes endurance
+  *and* climbing, Grunhilda takes all strength equipment *and* doctrines, Bram is
+  retired. `AGENTS.md:28` already summarises this correctly; match it.
+- **`:32`** promises offers that "target the neglected" muscle groups. No such
+  calculation exists; iron candidates pick recent exercises compatible with
+  current equipment and derive focus from those movements
+  (`counsel_specialists.py:45`).
+- **`:18`** and **`:38`** describe the paid reroll. It is gone —
+  `grep -rn reroll app/ static/` returns nothing, and `/api/offers/{giver}`
+  (`main.py:321`) takes a giver and nothing else.
+- **`:180`** advertises "CRT scanline CSS". Zero `scanline` matches in
+  `style.css`; `DESIGN.md:16` records that they were removed because they
+  interfered with the smaller Quanta-Strike glyphs.
+
+**`AGENTS.md`**
+
+- **`:282`** lists "offers cache" among the kv store's contents.
+- **`:303`** lists rerolls among the town gold sinks.
+- **`:308`** states "Quest offers cache per day but are invalidated when a sync
+  brings new data." Both halves are now false. The surviving `offers:%` deletion
+  is migration cleanup, not a live cache.
+
+**`DESIGN.md`**
+
+- **`:235`** says `.btn` has no explicit `:focus-visible` rule and **`:310`** says
+  tabs rely on browser defaults. `style.css:230` carries an explicit gold
+  `.btn:focus-visible` treatment. `DESIGN.md:567` requires visible focus on every
+  control, so **the component inventory is the stale half** — do not "fix" this
+  by weakening `:567`.
+
+**`PLUGINS.md`**
+
+- **`:365`** says "Thirty-three test files." It is **31** as of this seam: 26
+  `.py` plus 5 `.mjs`. (It was 32 when that line was written and seam 1 deleted
+  one; the `.DS_Store` and `.pyc` in `tests/` are not test files.) Recount
+  yourself rather than trusting this number.
+
+### How to do it
+
+**Verify every claim above against the code before you write the correction.**
+Do not trust this brief — two of its earlier entries were wrong, and both were
+caught by checking the tree. If a correction here is itself mistaken, that is the
+most valuable thing you can report.
+
+**Correct sentences. Do not improve documents.** No reorganising, no rewriting
+for tone, no new sections, no "while I was in here" edits. Each doc has a
+deliberate voice; match the surrounding prose and change the smallest span that
+makes the statement true. A diff with unrelated reflowing in it will be sent
+back.
+
+**Two things that look like drift and are not — do not touch them:**
+
+- `DEED_GIVER_BY_CATEGORY` crediting an *unsworn climb* to Ser Bram is
+  **correct**, deliberate, commented and test-guarded. `ROADMAP.md` §3 says so
+  explicitly. Bram retired from setting tasks, not from noticing.
+- `README.md`'s bring-your-own-key framing for integrations is current, not
+  aspirational.
+
+### The acceptance bar for this seam
+
+There is no test suite for prose, so the bar is different: **every corrected
+sentence must cite the code that makes it true**, in your report, as
+`file:line`. A correction you cannot anchor is a guess.
+
+Then confirm you changed nothing else:
+
+```
+git diff --stat
+```
+
+Only `.md` files may appear. Run these anyway, to prove the tree is still sound:
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+```
+
+Quote the final line of each.
+
+### Out of scope for this seam
+
+- **Any change under `app/`, `static/` or `tests/`.** Docs only.
+- **`ROADMAP.md` itself.** Its §3 entry for this drift gets closed by Joe when
+  the seam lands — leave it alone so the record shows the fix and the closure as
+  separate acts.
+- Any other §3 entry, and any doc claim not listed above. If you notice further
+  drift, **report it, do not fix it** — it becomes its own entry.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."
