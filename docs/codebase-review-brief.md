@@ -256,6 +256,23 @@ checks are the acceptance bar `AGENTS.md` sets for every refactor, and Pass C
 proved that bar is partly unfalsifiable. Verifying any other fix against a
 broken instrument proves nothing.
 
+### Mutation testing: commit first, always
+
+Several seams below require proving a test can fail — break the behaviour,
+capture the failure, restore, re-run green. **Commit your work before you break
+anything.**
+
+`git checkout -- <file>` restores a file to `HEAD`, *not* to your work in
+progress. Run it while your fix is uncommitted and it deletes the fix instead of
+restoring it, silently, with `git status` afterwards looking exactly like a clean
+restore. **Then re-run the full suite after restoring** — that is the only step
+that can tell you which of the two happened.
+
+This is not hypothetical. It cost a merge of `main` in a broken state during
+seam 3: the fix commit contained only the test file, and the guards it was meant
+to add were gone. The suite had been repaired specifically so it could catch
+that, and it did — nobody ran it.
+
 ---
 
 ## Seam 1 — make the test suite able to fail
