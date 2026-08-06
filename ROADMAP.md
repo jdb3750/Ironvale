@@ -282,6 +282,20 @@ entries are open work with the removal path worked out.
   infinity. It is not just a hang: the loop **appends a landmark every
   iteration**, so it grows without bound until the process dies. Reachable from
   outside the app, so fix the boundary at ingestion, not only at the reader.
+- ~~**Malformed persisted rows turn `/api/state` into a 500.**~~ **RESOLVED
+  2026-08-05** by review seam 4. All five shapes now degrade **in memory**
+  without touching the stored row — corrupt state is evidence, and `vault.py`'s
+  snapshot is the rollback path. A malformed character serves the default,
+  a bad ambition falls back to Forge, malformed writ notices are skipped *and
+  the cleanup write is suppressed* so corruption is never swept, non-mapping
+  quest details become `{}`, and a non-numeric duration reports unknown minutes.
+  Two gaps found during verification and closed in the same seam: the
+  writ-notices `isinstance(lst, list)` guard had **no test** (its fixture was a
+  dict, which the per-notice guard already rejected, so deleting the outer guard
+  left the suite green), and `_quest_row` guarded `details` while leaving
+  `rewards` decoding one line below it unguarded. Smoke 230 → 241. Original
+  finding:
+
 - **Malformed persisted rows turn `/api/state` into a 500.** Found 2026-08-04.
   `/api/state` is the boot endpoint and `main.py` registers a handler for
   `ValueError` only (`main.py:149`), so any other exception escapes as a 500 and
@@ -295,6 +309,38 @@ entries are open work with the removal path worked out.
   trust stored shapes, and text in `moving_time` propagates into arithmetic.
   This is the standing "persisted data is untrusted input" rule in `AGENTS.md`:
   malformed rows must degrade to unknown, never raise.
+- **Degraded backend values reach a frontend that does not expect them.** Found
+  2026-08-05. Seams 3 and 4 both chose to degrade rather than fail, which is
+  right — but neither could touch `static/` under its own scope, so the frontend
+  has never been told. Two known cases, and they should ship as one seam:
+  - **`settings.ambition` — this one throws.** `misc.js:908` renders
+    `${esc(amb[s.ambition].desc)}`. With a corrupt ambition, `amb["corrupt"]` is
+    `undefined` and `.desc` raises a `TypeError` *while rendering Settings*. The
+    seam 4 report described this as "may show no selected ambition"; that
+    understates it — line 905's highlight silently fails, but 908 breaks the
+    screen. The backend is right to keep serving the stored value; the frontend
+    has to stop assuming it indexes.
+  - **`/api/road`'s `total_km`** may now be the string `"unknown"` (see the road
+    entry above). That one only survives by accident of JS coercion.
+
+  Together these are the standing question the degrade strategy raises: **what
+  contract does a degraded value have with its consumer?** Answer it once,
+  in one frontend seam, rather than per-field.
+- **A scheduled background flight raises `TypeError` when many corrupt rows are
+  present at once.** Found 2026-08-05 during seam 4 verification, with every
+  corrupt fixture seeded simultaneously. `/api/state` still returned 200 and the
+  durable sync error surfaced, so boot is not affected. **Not investigated** —
+  it was outside that seam and is recorded here rather than chased. Reproduce by
+  seeding all five corrupt shapes together and watching the background task log.
+- **A BLOB `activities.start` produces a garbage date rather than an error.**
+  Found 2026-08-05 while scoping seam 4. `start` is `TEXT NOT NULL`
+  (`db.py:74`), so it can never be `NULL` — but SQLite's TEXT affinity stores a
+  BLOB unchanged, and `records._last_activity()` (`records.py:176`) then does
+  `row["start"][:10]`, which on `bytes` returns `bytes` without raising. The
+  result is a nonsense date flowing into the payload instead of a 500.
+  **Different class from the other untrusted-input defects** — silent bad data,
+  not a failed boot — so it was deliberately kept out of seam 4 rather than
+  widening it. Low severity: nothing in the app writes a BLOB there today.
 - **Unguided completions persist the wrong giver.** Found 2026-08-04.
   `grant_unguided_run_bonus` assigns per-category givers via `deed_giver()`
   (`quests.py:927`, defaulting to `wick`) and stores that on the candidate, but

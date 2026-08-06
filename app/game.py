@@ -183,9 +183,12 @@ def default_char():
 
 def get_char():
     c = db.kv_get("character")
-    if not c:
+    if c is None:
         c = default_char()
         db.kv_set("character", c)
+    elif not isinstance(c, dict) or not c:
+        # Corrupt persisted state is evidence: degrade in memory, never erase it.
+        c = default_char()
     c.setdefault("appearance", {"skin": 0, "hair": 1, "hair_color": 0, "shirt": 2, "pants": 0})
     return c
 
@@ -385,7 +388,10 @@ def apply_xp(c, amount):
 
 def ambition_mult(settings=None):
     s = settings if settings is not None else get_settings()
-    return AMBITION[max(0, min(3, s["ambition"]))]["mult"]
+    ambition = s.get("ambition")
+    if type(ambition) is not int or not 0 <= ambition < len(AMBITION):
+        ambition = 2
+    return AMBITION[ambition]["mult"]
 
 
 # ---------------- training history ----------------

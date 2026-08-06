@@ -617,3 +617,132 @@ halves. A regression test you have not seen fail is not a regression test.
 - **Cleaning up existing bad rows.** If you find any in a scratch DB, report it.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 4 — stop malformed rows from taking down the boot endpoint
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes `app/` and `tests/`.** It does **not** touch `static/`, so
+> **no `?v=` bump is needed.** Re-read "Mutation testing: commit first, always"
+> above before you break anything.
+
+### The defect
+
+`/api/state` is the boot endpoint — if it fails, the game does not load at all.
+`app/main.py` registers a handler for `ValueError` only (`main.py:149`), so any
+other exception escapes as a 500. Five sites on that path trust the shape of
+whatever came out of SQLite:
+
+1. **`game.get_char()` (`game.py:184`)** — `if not c:` only replaces *falsy*
+   values, so a non-empty string passes, and `c.setdefault(...)` on line 189
+   raises `AttributeError`.
+2. **`game.ambition_mult()` (`game.py:386`)** — `min(3, s["ambition"])` raises
+   `TypeError` on a string. A missing key raises `KeyError`; a float index into
+   `AMBITION` raises `TypeError` too.
+3. **`quests.writ_notices_pending()` (`quests.py:502`)** — iterates `lst` and
+   indexes `n["ts"]`. An object where a list belongs iterates *keys*, so `n` is a
+   string and indexing raises `TypeError`. A notice missing `ts` raises
+   `KeyError`.
+4. **`quests._quest_row()` (`quests.py:532`)** — `json.loads(r["details"])`
+   succeeds for any valid JSON, so a stored `[]` decodes fine and then fails
+   *downstream* where a mapping is expected. Note that `json.JSONDecodeError`
+   subclasses `ValueError`, so genuinely malformed JSON already becomes a 400
+   rather than a 500 — **still a game that does not load.** Do not treat 400 as
+   success here.
+5. **`records._last_activity()` (`records.py:167`)** —
+   `(row["moving_time"] or 0) / 60` raises `TypeError` on stored text.
+   `moving_time` is declared `INTEGER` with no `NOT NULL`, and SQLite's INTEGER
+   affinity **keeps text it cannot convert**, so `'not a number'` really does
+   land in that column. (`None` is fine — `(None or 0) / 60` is 0.)
+
+   **`row["start"][:10]` is *not* a defect: `start` is `TEXT NOT NULL`
+   (`db.py:74`) and has been since the initial commit, so it can never be
+   `None`.** An earlier draft of this brief asked for a `start = NULL` fixture;
+   that fixture is impossible and the claim was wrong. Do not write a guard for
+   it.
+
+### The rule, and the trap
+
+`AGENTS.md`: **persisted data is untrusted input; malformed rows must degrade to
+unknown, never raise.**
+
+**Do not reach for `raise ValueError(...)` here.** Seam 3 established that as the
+house convention and it was right *there* — that seam guarded **player input
+arriving at a writer**, where rejecting is honest and the player can fix it. This
+seam is the opposite direction: **data already in the database, arriving at a
+reader.** Nobody can act on the rejection, and a `ValueError` on `/api/state` is
+a 400 instead of a 500 — the same broken boot with a different number. Degrade
+instead.
+
+### The judgement call, and one hard constraint
+
+Decide what "degraded" means at each site and say why. But:
+
+**Do not silently overwrite a row you have decided is corrupt.** Two of these
+sites already write back — `get_char()` calls `db.kv_set` and
+`writ_notices_pending()` rewrites its list when the length changes. Serving a
+safe default *in memory* is very different from persisting one over the player's
+data. `vault.py`'s pre-migration snapshot is the rollback path, and an
+overwrite destroys the evidence that anything was ever wrong. If you think a
+write is genuinely the right call somewhere, **stop and report instead of doing
+it.**
+
+### Tests
+
+Seed corrupt values **directly into SQLite / the kv store**, then assert
+`/api/state` returns **200** with sane content. One case per shape above, at
+minimum:
+
+- `character` stored as a non-empty string
+- `settings.ambition` stored as a string, and missing entirely
+- `writ_notices` stored as an object rather than a list
+- a quest whose `details` is valid JSON but not a mapping
+- an activity with text in `moving_time`
+
+**All five are constructible, and four need no raw SQL.** `kv.value` is
+`TEXT NOT NULL` and `kv_get` does `json.loads` on it, so `db.kv_set("character",
+"corrupt")` is enough to store a string where a mapping belongs — same for
+`settings` and `writ_notices`. `quests.details` is `TEXT NOT NULL`, so `[]` goes
+in as ordinary valid JSON. Only the `moving_time` case wants a direct insert.
+
+**If a fixture turns out to be impossible, that is a finding, not an obstacle.**
+Report it and stop, exactly as the `start = NULL` case was reported — a guard
+against something the schema already prevents is dead code with a test
+protecting it.
+
+Plus: **ordinary data still works end to end.** A guard that flattens a healthy
+character into a default is worse than the defect.
+
+### The acceptance bar
+
+Commit first, then mutation-test. For each guard you add, remove it, capture the
+failure, restore, re-run. Report both halves.
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+Quote the final line of each. Smoke is currently **230 checks** — if your count
+differs, say so explicitly, because `AGENTS.md` and `PLUGINS.md` both quote that
+number and will need updating.
+
+### Out of scope for this seam
+
+- **The hardcoded `"endurance"` giver** in `_record_unguided_completion`
+  (`quests.py:1011`). You will be reading nearby code. Leave it.
+- **A validation framework.** No pydantic models for every endpoint, no shared
+  schema layer, no decorator. Five sites, five guards.
+- **Migrating or repairing existing rows.** Report anything you find.
+- **`static/`.** If a degraded value would render badly, **report it** — the same
+  way seam 3 surfaced that `total_km` can now be the string `"unknown"`. That
+  note is in §3 awaiting a frontend seam; add to it rather than fixing it here.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."

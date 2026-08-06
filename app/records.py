@@ -5,6 +5,7 @@ or quests. Split out of game.py in the pre-1.0 refactor.
 
 Import direction: may import game (shared core) and db; never the reverse."""
 import json
+import math
 import random
 import sqlite3
 from datetime import datetime, timedelta
@@ -173,7 +174,13 @@ def _last_activity(cats):
                f"WHERE type IN ({ph}) ORDER BY start DESC LIMIT 1", types).fetchone()
     if not row:
         return None, 0, 0
-    return row["start"][:10], (row["distance"] or 0) / 1000, round((row["moving_time"] or 0) / 60)
+    moving_time = row["moving_time"]
+    minutes = (
+        round(moving_time / 60)
+        if isinstance(moving_time, (int, float)) and math.isfinite(moving_time)
+        else None
+    )
+    return row["start"][:10], (row["distance"] or 0) / 1000, minutes
 
 
 def _count_since(cats, days):
