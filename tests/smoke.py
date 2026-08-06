@@ -679,6 +679,32 @@ ok(
 )
 db.kv_set("unguided_bonus_candidates", [])
 
+# The recorder must leave its insert PENDING — the claim/sweep caller owns the
+# only commit. Without this the rollback above cannot undo the quest row, and
+# the invariant comment in _record_unguided_completion would be unfalsifiable.
+pending_activity_id = "smoke-pending-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'WeightTraining', 'pending deed', 1800, NULL)",
+    (pending_activity_id, game.now_iso()),
+)
+db.commit()
+quests._record_unguided_completion(
+    {"activity_id": pending_activity_id, "activity_type": "WeightTraining",
+     "category": "strength", "giver": "strength", "minutes": 30,
+     "title": "pending deed"},
+    {"xp": 1, "gold": 1},
+    game.now_iso(),
+)
+db.rollback()
+ok(
+    "the unguided recorder leaves its insert pending for the caller to commit",
+    db.q(
+        "SELECT COUNT(*) AS n FROM quests WHERE activity_id=?",
+        (pending_activity_id,),
+    ).fetchone()["n"] == 0,
+)
+
 # never pay twice: an activity linked to a completed quest must not also pay an
 # unguided bonus. Re-queue the just-claimed climb (now quest-linked) and confirm
 # both payout paths refuse it.
