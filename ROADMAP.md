@@ -412,6 +412,30 @@ entries are open work with the removal path worked out.
   **Different class from the other untrusted-input defects** — silent bad data,
   not a failed boot — so it was deliberately kept out of seam 4 rather than
   widening it. Low severity: nothing in the app writes a BLOB there today.
+- ~~**Unguided completions persist the wrong giver.**~~ **RESOLVED 2026-08-05**
+  by review seam 5. The row now persists `cand.get("giver", "endurance")`, and
+  the Chronicle event — which hardcoded Fenn three lines below the recorder —
+  names the computed giver through a safe lookup, since `deed_giver()` returns
+  `"wick"` and `GIVERS` has no such entry. The `"endurance"` default is truthful
+  rather than defensive: pre-attribution candidates really were all Fenn's, and
+  the queue self-drains daily, so no migration was needed. Two consequences,
+  both deliberate and both left alone:
+
+  - **Scheduled lane consumption changed.** `counsel_schedule._accepted_today`
+    counts quests by giver and date, so an unguided strength deed now advances
+    **Grunhilda's** lane and a mobility deed **Elowen's**, where both previously
+    advanced Fenn's. Bram and Wick deeds advance no offer-producing lane at all.
+    This is more correct than before, but it leaves a real open question the seam
+    deliberately did not settle: **should an unguided deed advance *any* authored
+    lane, given it was never accepted from a schedule?** Nobody has decided that.
+  - **Historical rows are still wrong.** In a representative scratch database
+    with one row per category, **4 of 8 were misattributed**, and all 8 were
+    reconstructible from `details.activity_type` and `details.category`. No
+    migration was performed — live player data is safety rule 3 and needs Joe's
+    explicit sign-off as its own piece of work.
+
+  Original finding:
+
 - **Unguided completions persist the wrong giver.** Found 2026-08-04.
   `grant_unguided_run_bonus` assigns per-category givers via `deed_giver()`
   (`quests.py:927`, defaulting to `wick`) and stores that on the candidate, but
