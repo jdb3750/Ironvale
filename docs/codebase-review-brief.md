@@ -773,6 +773,35 @@ giver is right and only the *claimed* record is wrong.
 The fix itself is one line: persist what the candidate carries. **The care is
 all in what that changes downstream.**
 
+### Compatibility decision — settled, do this
+
+A first attempt at this seam stopped here, correctly. `cand["giver"]` would
+raise `KeyError` on a legacy queued candidate: `unguided_pending()`
+(`quests.py:1113`) calls `c.setdefault("giver", "endurance")` on the list it
+just decoded, but `db.kv_get` runs `json.loads` on **every** call and returns a
+fresh object, so that default is written to a throwaway and never persisted.
+`claim_unguided_bonus()` re-reads the kv value and gets candidates with no
+`giver` key at all. The comment calling that setdefault "load-bearing" is
+wrong — **correct the comment while you are in there.** It is harmless today
+only because the hardcode you are removing masks it.
+
+**Use `cand.get("giver", "endurance")` at the recording boundary. Do not
+migrate.** The default is *truthful*: candidates queued before per-giver
+attribution really were all Fenn's. And the queue is transient —
+`_sweep_stale_unguided_candidates` pays out and drops anything not dated today,
+so a legacy candidate can only exist for under a day. Migrating a self-draining
+queue would be live-data risk for nothing.
+
+**The ordering underneath is a separate, pre-existing defect — do not fix it
+here.** `claim_unguided_bonus` pops the candidate and persists that removal
+(`:1128`) *before* `_apply_unguided_bonus` saves the character (`:1075`) and
+records the quest row (`:1084`). Any exception in between leaves the player paid
+with no quest row and no ledger event. Re-queuing is blocked by the same-day
+`unguided_bonus_seen` key and the `start >= today` filter, so it is a lost
+record rather than a double payout — but it is recorded in `ROADMAP.md` §3 as
+its own entry. Your `.get()` default is what keeps this seam from *triggering*
+it; it is not a fix for it.
+
 ### What this will change, and must be checked
 
 `deed_giver()` can return `"bram"` (unsworn climbs, deliberate and test-guarded)

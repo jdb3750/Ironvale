@@ -370,6 +370,27 @@ entries are open work with the removal path worked out.
   durable sync error surfaced, so boot is not affected. **Not investigated** —
   it was outside that seam and is recorded here rather than chased. Reproduce by
   seeding all five corrupt shapes together and watching the background task log.
+- **Claiming an unguided deed is not atomic, and the losing end is the record.**
+  Found 2026-08-05 while scoping seam 5. `claim_unguided_bonus`
+  (`quests.py:1119`) pops the candidate and **persists that removal**
+  (`:1128`) before `_apply_unguided_bonus` saves the character (`:1075`) and
+  writes the quest row and ledger event (`:1084`). Any exception in between
+  leaves the player **paid, with the bubble gone and no record of the deed**.
+  Not a double payout — the same-day `unguided_bonus_seen` key and the
+  `start >= today` filter both block re-queuing — so the harm is a lost record
+  and an activity that `_activity_already_rewarded` can no longer see. Same
+  shape as the routine-forging entry above: a committed write followed by
+  unguarded work. **Fix the ordering, not the symptom** — record first, or make
+  the removal the last step.
+- **`unguided_pending()`'s legacy-giver default is written to a throwaway.**
+  Found 2026-08-05. `quests.py:1113` calls `c.setdefault("giver", "endurance")`
+  under a comment describing it as "load-bearing JSON", but `db.kv_get` runs
+  `json.loads` on every call and returns a fresh object, so the default never
+  reaches storage and never reaches `claim_unguided_bonus`, which re-reads the
+  kv value independently. Harmless **only** because
+  `_record_unguided_completion` hardcodes the same value — the defect and its
+  mask are the same bug. Seam 5 removes the mask and defaults at the recording
+  boundary instead; the misleading comment goes with it.
 - **A BLOB `activities.start` produces a garbage date rather than an error.**
   Found 2026-08-05 while scoping seam 4. `start` is `TEXT NOT NULL`
   (`db.py:74`), so it can never be `NULL` — but SQLite's TEXT affinity stores a
