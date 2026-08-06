@@ -386,6 +386,18 @@ entries are open work with the removal path worked out.
   quarantined) rather than taking the game down. Note the candidate is *player-
   visible state*, so dropping it silently loses a payout: prefer skipping the
   bad candidate and leaving it in place over deleting it.
+
+  **A corrupt queue will still fail the sync, on purpose.**
+  `grant_unguided_run_bonus()` (`quests.py:965`) is a fourth consumer — it reads
+  the queue, appends and writes it back — and seam 7 deliberately leaves it
+  unguarded. Boot failing locks the player out with nothing to do; a failed sync
+  is caught at `syncing.py:79`, recorded durably by `_record_failure` and
+  surfaced as *"The ravens were lost before they finished their rounds"*, which
+  is the honest response to data the app itself can never write. Two options
+  were considered and rejected: coercing the corrupt value to `[]` and writing
+  over it **destroys the preserved evidence**, and quarantining it to a second kv
+  key adds a permanent representation for a state that has never occurred.
+  Recorded so this is not re-litigated as an oversight.
 - **`save_char` and `db.inv_add` are duplicated at a call site.** Introduced by
   seam 6, deliberately and with the cost recorded here rather than hidden. Both
   helpers commit internally, so the atomic claim path inlines their SQL instead

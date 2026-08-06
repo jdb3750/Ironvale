@@ -1049,6 +1049,34 @@ Seam 4's writ-notices guard is the precedent: it needed **both** an outer
 "is this even a list" check and a per-entry check, and the outer one initially
 shipped untested because the inner one masked it. Expect the same shape here.
 
+### The fourth consumer — settled, and deliberately left failing
+
+`grant_unguided_run_bonus()` (`quests.py:965`) also reads the queue, appends,
+and writes it back (`:1012`). A first attempt at this seam stopped here,
+correctly: guarding the readers leaves that **writer** able to fail on a corrupt
+queue, and the four ways out all conflict with something.
+
+**Seam 7 stays boot- and claim-safe. Leave the writer alone.** This is not
+deferral — it is the right end state, for a reason worth understanding:
+
+- **Boot failing locks the player out entirely.** There is nothing they can do
+  and nothing to see. That must never happen.
+- **Sync failing is already handled honestly.** `syncing.py:79` catches
+  `Exception`, records a durable failure through `_record_failure`, and
+  re-raises, so the player sees *"The ravens were lost before they finished
+  their rounds"* and the app keeps running. A loud, surfaced, recoverable
+  failure is the **correct** response to data the app cannot itself produce —
+  nothing in Iron Vale ever writes a non-list here.
+
+So the two rejected options, named so nobody re-opens them: treating the corrupt
+value as an empty list and writing over it **destroys the preserved value**,
+breaking this seam's own rule; quarantining to a second kv key adds a permanent
+representation for a state that has never occurred. Both are speculative
+generality bought with real complexity.
+
+**Do not touch `grant_unguided_run_bonus` in this seam.** If your reader guards
+change its behaviour incidentally, say so in your report.
+
 ### The judgement call — losing a payout is worse than leaking a row
 
 A candidate is **player-visible state representing an unpaid reward**. Deleting
