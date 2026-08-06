@@ -146,14 +146,24 @@ SCREENS.stats = async function () {
     // instantly, .py only on restart) must degrade to "no map", not an error
     let road = null;
     try { const rr = await fetch('/api/road'); if (rr.ok) road = await rr.json(); } catch (e) { /* backend predates the road */ }
+    if (road) {
+      road = {
+        ...road,
+        total_km: knownNumber(road.total_km),
+        breakdown: Object.fromEntries(
+          Object.entries(road.breakdown).map(([key, value]) => [key, knownNumber(value)]),
+        ),
+      };
+    }
+    const roadPart = (value, label) => value === null ? `${label} unknown` : `${value} ${label}`;
     S.roadState = road;   // kept for click hit-testing + claims
     body = `${road ? `<div class="win"><span class="win-title">The Long Road</span>
       <div class="muted" style="font-family: var(--font-body); font-size: var(--type-body);margin-bottom:6px">every kilometer you have ever covered, walked by a small and stubborn pilgrim</div>
       <div class="road-scroll" id="road-scroll"><canvas id="road-map" height="214"></canvas></div>
       <div class="road-caption">
-        <b style="color:var(--gold-bright)">${road.total_km} km</b> from the Vale Gate
+        <b style="color:var(--gold-bright)">${road.total_km === null ? 'distance unknown' : `${road.total_km} km`}</b> from the Vale Gate
         ${road.km_to_next != null ? ` &middot; ${road.km_to_next} km to the next landmark` : ''}
-        <br><span class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">${road.breakdown.run} run &middot; ${road.breakdown.walk} walked &middot; ${road.breakdown.swim} swum &middot; ${road.breakdown.ride} ridden (counts &frac14;) &middot; tap a landmark for its story</span>
+        <br><span class="muted" style="font-family: var(--font-fine); font-size: var(--type-fine)">${roadPart(road.breakdown.run, 'run')} &middot; ${roadPart(road.breakdown.walk, 'walk')} &middot; ${roadPart(road.breakdown.swim, 'swim')} &middot; ${roadPart(road.breakdown.ride, 'ride')} (counts &frac14;) &middot; tap a landmark for its story</span>
       </div>
       ${road.unclaimed > 0 ? `<div class="center" style="margin-top:8px">
         <button class="btn wide green" id="road-claim" ${roadClaimPending ? 'disabled aria-busy="true"' : ''} onclick="G.roadClaim()">PRESS ON — ${road.unclaimed} landmark${road.unclaimed > 1 ? 's' : ''} reached</button>
@@ -1020,13 +1030,15 @@ function drawRoadMap(road) {
   // the pilgrim: your own hero, mid-stride between the bracketing landmarks
   let px = roadLandmarkX(0);
   const km = road.total_km;
-  for (let i = 0; i < marks.length - 1; i++) {
-    if (km >= marks[i].km && km < marks[i + 1].km) {
-      const frac = (km - marks[i].km) / (marks[i + 1].km - marks[i].km);
-      px = roadLandmarkX(i) + frac * ROAD_SPACING;
-      break;
+  if (km !== null) {
+    for (let i = 0; i < marks.length - 1; i++) {
+      if (km >= marks[i].km && km < marks[i + 1].km) {
+        const frac = (km - marks[i].km) / (marks[i + 1].km - marks[i].km);
+        px = roadLandmarkX(i) + frac * ROAD_SPACING;
+        break;
+      }
+      if (km >= marks[marks.length - 1].km) px = roadLandmarkX(marks.length - 1);
     }
-    if (km >= marks[marks.length - 1].km) px = roadLandmarkX(marks.length - 1);
   }
   const pwob = Math.sin(px / 90) * 4;
   drawHero(cv.getContext('2d'), (S.state.character.appearance || {}), 2, px - 12, ROAD_BASE - 26 + pwob);

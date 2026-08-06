@@ -824,6 +824,8 @@ SCREENS.settings = async function () {
   const s = S.state.settings;
   const c = S.state.character;
   const amb = S.state.ambition_levels;
+  const ambition = knownNumber(s.ambition);
+  const ambitionLevel = ambition === null ? null : amb[ambition] || null;
   const charter = s.counsel_charter || { primary: '', secondary: [] };
   const secondary = charter.secondary || [];
   const selfDirected = s.counsel_mode === 'self';
@@ -902,10 +904,10 @@ SCREENS.settings = async function () {
       <hr class="rule">
       <span class="counsel-label">ambition</span>
       <div class="muted" style="margin-bottom:8px">how hard the quest-givers push you</div>
-      ${amb.map((a, i) => `<button class="btn" style="margin:3px;${s.ambition === i ? 'background:var(--gold);color:var(--bg)' : ''}"
+      ${amb.map((a, i) => `<button class="btn" style="margin:3px;${ambition === i ? 'background:var(--gold);color:var(--bg)' : ''}"
         onclick="G.setAmbition(${i})">
         ${esc(a.name)}</button>`).join('')}
-      <div class="muted" style="margin-top:6px">${esc(amb[s.ambition].desc)}</div>
+      <div class="muted" style="margin-top:6px">${esc(ambitionLevel?.desc || 'The quest-givers cannot read your ambition.')}</div>
       <hr class="rule">
       <div class="formrow">
         <span class="counsel-label">game loop style</span>
