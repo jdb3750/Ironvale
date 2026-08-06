@@ -73,6 +73,23 @@ fallback after that is promoting the button to the top of Grunhilda's board
 rather than nested below her offers. But the stated goal wins: one obvious
 tap from the town, not a path you have to know.
 
+### Accepted presentation for seams 1–2: the builder is a scene
+
+Joe approved the scene-based v2 mockup on 2026-08-06 ("this looks really
+solid… a great starting point"), in line with his standing no-button-piles
+direction: place things in the world, don't stack controls. The presentation
+contract this fixes:
+
+- The builder screen is a **scene** — "the Drill Yard" in the town-scene
+  idiom (sky, ground, standing sprites), not a form.
+- The muscle dummy **is** the navigation: tap a dark muscle and a rack opens
+  with the movements that meet it (seams 1–2). No group-key palette.
+- The routine is a **physical ledger board** of iron plates hanging in the
+  yard (seam 5's cards, staged as objects).
+
+Visual companion: `docs/mockups/routine-builder-scene.html` (screenshots
+beside it in the same directory).
+
 ## What the research says
 
 Nine apps surveyed (Hevy, Strong, Boostcamp, Fitbod, JuggernautAI, Alpha
@@ -188,6 +205,14 @@ the constraints are what make it survivable.**
   is the model, and the town already has the bubble machinery if her weekly
   observation should also appear at the forge (`static/js/town.js:523`
   `NUDGE_ANCHORS`, `:556` `showCounselNudgeIfDue`).
+- **Accepted placement (Joe, 2026-08-06): she is pull-based.** Grunhilda is
+  a small tappable portrait on the ledger board's upper-right corner; her
+  reading opens on tap and is otherwise absent — you can simply ignore her.
+  The Compendium's browse path is the matching small book glyph on the
+  board's upper-left (both in the weight class of the app's ✕ close glyphs).
+  The `BUILDER.md` §1 constraint applies inside her tapped reading too: the
+  session part only *describes* ("meets the chest, shoulders, triceps —
+  eleven sets"); any "missing" statement comes only from week-level data.
 
 So: no new mascot, no persistent chatter. Grunhilda, rarely, saying one true
 thing with a button attached.
@@ -271,9 +296,11 @@ old builder's survival.
 
 **Seam 6 — volume vs. own average, and Grunhilda speaks (medium).** The
 §2c self-comparison on the week rollup, plus the `.insight` block under the
-§4 contract. Requires the §7.1 decision (below); whichever way it goes, the
-`DOCTRINE.md` entry lands in the same commit. Model:
-`app/counsel_nudge.py`.
+§4 contract. Her surface is the accepted pull model above: the tapped
+portrait on the ledger board — reading on tap only, session part
+descriptive, "missing" clause week-level. Requires the §7.1 decision
+(below); whichever way it goes, the `DOCTRINE.md` entry lands in the same
+commit. Model: `app/counsel_nudge.py`.
 
 **Seam 7 — progression for custom routines (small-to-medium).** Today
 `programs._suggest` (`app/programs.py:158`) progresses built-ins via their

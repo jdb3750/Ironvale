@@ -191,13 +191,14 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 @keyframes glintBlink { 0% { opacity:1; } 50% { opacity:0.25; } }
 
 /* Grunhilda's bubble — the fenn-bubble idiom from town.js/style.css.
-   It floats in the sky above her, tail down, like the town's deed bubbles. */
-.iv .gbubble-wrap { position:absolute; top:8px; left:10px; z-index:50; width:236px; max-width:78vw; }
+   TAPPED STATE ONLY: it opens anchored to her portrait glyph on the board's
+   upper-right corner, tail pointing down at her. Untapped, there is no bubble. */
+.iv .gbubble-wrap { position:absolute; right:0; bottom:calc(100% - 8px); z-index:50; width:340px; max-width:92vw; }
 .iv .gbubble { position:relative; padding:9px 9px 10px; background:var(--surface-raised); border:2px solid;
   border-color:var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit); box-shadow:4px 4px 0 rgba(0,0,0,0.6); }
-.iv .gbubble::after, .iv .gbubble::before { content:''; position:absolute; top:100%; left:26%; border:10px solid transparent; }
-.iv .gbubble::after { border-top-color:var(--edge-lit); margin-left:-10px; }
-.iv .gbubble::before { border-top-color:var(--surface-raised); margin-left:-8px; border-width:8px; margin-top:-1px; z-index:1; }
+.iv .gbubble::after, .iv .gbubble::before { content:''; position:absolute; top:100%; border:10px solid transparent; }
+.iv .gbubble::after { border-top-color:var(--edge-lit); left:auto; right:16px; }
+.iv .gbubble::before { border-top-color:var(--surface-raised); left:auto; right:18px; border-width:8px; margin-top:-1px; z-index:1; }
 .iv .gbubble .fb-line { display:block; font-style:italic; color:var(--ink); font-family:var(--font-body); font-size:var(--type-body);
   line-height:1.35; text-align:center; margin-bottom:7px; }
 .iv .gbubble .btn { display:block; width:100%; }
@@ -235,8 +236,16 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .ledger-beam { height:8px; margin:0 4px; background:linear-gradient(180deg,#8a6a40,#5a4428); border:2px solid #34251a; }
 .iv .ledger-hang { display:flex; justify-content:space-between; padding:0 34px; height:14px; }
 .iv .ledger-hang i { width:5px; height:100%; background:repeating-linear-gradient(180deg,#8a8a9a 0 3px, rgba(0,0,0,0) 3px 6px); }
-.iv .board { border:3px solid #6a4e2c; background-color:#2b2013; box-shadow:6px 6px 0 rgba(0,0,0,0.5); padding:10px 10px 12px; }
-.iv .board-name { text-align:center; margin:0 auto 4px; }
+.iv .board { position:relative; border:3px solid #6a4e2c; background-color:#2b2013; box-shadow:6px 6px 0 rgba(0,0,0,0.5); padding:10px 10px 12px; }
+/* corner glyphs on the board — the same weight class as the app's ✕ close
+   glyphs (style.css .lens-box-close: absolute, top:4px, bare, fine padding) */
+.iv .board-glyph { position:absolute; top:4px; background:none; border:none; padding:2px 4px; cursor:pointer; line-height:0; text-align:center; z-index:2; }
+.iv .board-glyph.glyph-book { left:6px; }
+.iv .board-glyph.glyph-grun { right:6px; }
+.iv .board-glyph .g-cap { display:block; margin-top:2px; font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); letter-spacing:0.5px; line-height:1.2; }
+.iv .board-glyph:hover .g-cap { color:var(--gold-bright); }
+.iv .board-glyph.tapped canvas { outline:2px solid var(--gold-bright); outline-offset:1px; }
+.iv .board-name { text-align:center; margin:0 auto 4px; padding-inline:44px; }
 .iv .board-name .np { display:inline-block; border:2px solid var(--gold); background:#1a1208; color:var(--gold-bright);
   font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px; text-transform:uppercase; padding:3px 14px; }
 .iv .board-name .fine { display:block; margin-top:3px; color:var(--dim); }
@@ -272,15 +281,13 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .floor { margin-top:16px; position:relative; }
 .iv-phone .floor .rack { margin:24px 2px 0; }
 .iv-phone .floor .ledger { margin:18px 2px 0; }
-.iv-phone .lectern-shift { transform:translateY(6px); }
-.iv-desktop .stage-row { display:flex; justify-content:center; align-items:flex-end; gap:14px; margin-top:-52px; position:relative; z-index:2; }
+.iv-desktop .stage-row { display:flex; justify-content:center; align-items:flex-end; gap:18px; margin-top:-52px; position:relative; z-index:2; }
 .iv-desktop .stage-row .forge-spot { flex-shrink:0; }
 .iv-desktop .stage-row .stage { margin-top:0; }
-.iv-desktop .floor { display:grid; grid-template-columns:210px minmax(0,1fr); gap:0 18px; align-items:end; margin-top:20px; }
-.iv-desktop .floor .ledger { max-width:540px; justify-self:end; width:100%; }
-.iv-desktop .gbubble-wrap { top:265px; left:14px; }
+.iv-desktop .floor { display:grid; grid-template-columns:170px minmax(0,1fr); gap:0 18px; align-items:end; margin-top:142px; position:relative; z-index:3; }
+.iv-desktop .floor .ledger { max-width:610px; justify-self:end; width:100%; }
 .iv-desktop .corner-props { text-align:center; padding-bottom:4px; }
-.iv-desktop .corner-props .prop-row { display:flex; justify-content:center; align-items:flex-end; gap:10px; margin-bottom:14px; }
+.iv-desktop .corner-props .prop-row { display:flex; justify-content:center; align-items:flex-end; gap:10px; }
 </style>
 
 <header class="mock-head">
@@ -291,18 +298,18 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   <span><b>SEAM 1</b> — the dummy is the live muscle map, lit by set count</span>
   <span><b>SEAM 2</b> — tap a dark muscle, the rack swings open</span>
   <span><b>SEAM 5</b> — the routine is a ledger of iron plates; 48px steppers</span>
-  <span><b>SEAM 6</b> — Grunhilda speaks from her forge: week view only, silent by default</span>
+  <span><b>SEAM 6</b> — Grunhilda is a corner portrait on the board: reads on tap, ignorable; &ldquo;missing&rdquo; stays week-level</span>
 </div>
-<div class="vnote"><b>V2 vs V1 — the body is the navigation.</b> v1 arranged the feature as forms wearing pixel clothes: seven latched group keys, a card list, a stat panel. v2 stages the same seams as objects in a yard: the training dummy is the muscle map and the way in (tap a dark muscle, the rack answers), the routine hangs as forged plates, and the Compendium waits on a lectern for the lifter who already knows the movement's name. No palette buttons; everything is tap.</div>
+<div class="vnote"><b>V2 vs V1 — the body is the navigation.</b> v1 arranged the feature as forms wearing pixel clothes: seven latched group keys, a card list, a stat panel. v2 stages the same seams as objects in a yard: the training dummy is the muscle map and the way in (tap a dark muscle, the rack answers), the routine hangs as forged plates, and the Compendium is a small book glyph on the board's upper-left corner for the lifter who already knows the movement's name. Grunhilda rides the opposite corner and speaks only when tapped. No palette buttons; everything is tap.</div>
 
 <div class="frames">
 
   <section class="station phone-station">
     <div class="station-head">
       <div class="st-title">Phone — 390px, the primary frame</div>
-      <div class="st-sub">the scene stacks: forge at the horizon, dummies center-stage, the rack slides over from the tapped muscle, the ledger hangs below</div>
+      <div class="st-sub">the scene stacks: forge at the horizon, dummies center-stage, the rack slides over from the tapped muscle, the ledger hangs below &mdash; book and Grunhilda ride its corners, both UNTAPPED here</div>
       <div class="tag-chips">
-        <span>dummy = seam 1</span><span>tap-muscle rack = seam 2</span><span>plates + steppers = seam 5</span><span>bubble = seam 6, week only</span>
+        <span>dummy = seam 1</span><span>tap-muscle rack = seam 2</span><span>plates + steppers = seam 5</span><span>corner book + Grunhilda portrait = seam 6, untapped</span>
       </div>
     </div>
     <div class="phone-bezel">
@@ -315,9 +322,9 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   <section class="station desktop-station">
     <div class="station-head">
       <div class="st-title">Desktop — 900px viewport, scaled to fit</div>
-      <div class="st-sub">the full yard: forge left, dummies center, the rack swung open beside them, ledger hanging right, lectern in the corner</div>
+      <div class="st-sub">the full yard: forge left, dummies center, the rack swung open beside them, ledger hanging right &mdash; Grunhilda's portrait TAPPED here, her bubble open over the board</div>
       <div class="tag-chips">
-        <span>dummy = seam 1</span><span>rack = seam 2</span><span>ledger = seam 5</span><span>bubble = seam 6</span>
+        <span>dummy = seam 1</span><span>rack = seam 2</span><span>ledger = seam 5</span><span>tapped Grunhilda + open bubble = seam 6</span>
       </div>
     </div>
     <div class="gutter gutter-l" id="gutter-desktop"></div>
@@ -477,13 +484,8 @@ function muscleBox(side, character) {
 
 /* ===== sprites: grunhilda + hero + icons from pixel.js; the yard furniture hand-authored in the same char-map style ===== */
 const SPRITES = {
-  grunhilda: { p: { h: '#b84a20', H: '#d86a30', f: '#e0b088', K: '#1a1410', m: '#c04030', i: '#8a8a9a', d: '#6a3a18' }, r: [
-    '................', '....iiiiiiii....', '...hhhhhhhhhh...', '..hHHHHHHHHHHh..',
-    '.hHffffffffffHh.', '.hHfKffffffKfHh.', '.hHffffffffffHh.', '.hHffmmmmmmffHh.',
-    '.hHfhhhhhhhhfHh.', '.hHhhhhhhhhhhHh.', '.hHh.hhhhhh.hHh.', '.hHh.dddddd.hHh.',
-    '.hhh.dddddd.hhh.', '..h..dddddd..h..', '.....dddddd.....', '................',
-  ]},
-  /* hand-authored: Grunhilda's yard forge — stone hearth, coals, anvil */
+  /* hand-authored: Grunhilda's yard forge — stone hearth, coals, anvil.
+     Her standing sprite left the yard: she now lives as grun_bust on the board. */
   yard_forge: { p: { s: '#5a5a68', S: '#7a7a88', k: '#181820', o: '#e07030', y: '#f0d060', m: '#3a3a46', i: '#8a8a9a', I: '#a8a8b8', w: '#6a4e2c' }, r: [
     '...mm.....................', '...mm.....................', '..mmmm....................',
     '..SSSSSSSSSS..............', '..SssSSSSssS..............', '..SSSSSSSSSS..............',
@@ -491,11 +493,17 @@ const SPRITES = {
     '..SSkoyyokSS.....IIII.....', '..SSkkookkSS......ii......', '..SSkkkkkkSS......ii......',
     '..SSSSSSSSSS....wwwwww....', '..SSSSSSSSSS....wwwwww....',
   ]},
-  /* hand-authored: the lectern in the corner, the Compendium open on it */
-  lectern: { p: { w: '#6a4e2c', W: '#8a6a40', p: '#e8e0cc', q: '#d6ccb2', k: '#2a2a34' }, r: [
-    '................', '................', '..ppkppp.qqkqq..', '.ppppppppqqqqqq.',
-    '.WWWWWWWWWWWWWW.', '..WWWWWWWWWWWW..', '.....wWWw.......', '.....wWWw.......',
-    '.....wWWw.......', '....WWWWWW......', '...WWWWWWWW.....',
+  /* hand-authored: the Compendium as a small corner glyph — the lectern's open
+     book alone, sized to the ✕-close weight class, pinned to the board */
+  book_glyph: { p: { w: '#6a4e2c', p: '#e8e0cc', q: '#d6ccb2', k: '#2a2a34' }, r: [
+    '............', '.ppppkkqqqq.', 'pppppkkqqqqq', 'pppppkkqqqqq',
+    'wppppkkqqqqw', 'wwwwwkkwwwww', '.wwwwwwwwww.',
+  ]},
+  /* hand-authored: Grunhilda's bust for the board's other corner — tap her to hear a reading */
+  grun_bust: { p: { h: '#b84a20', H: '#d86a30', f: '#e0b088', K: '#1a1410', m: '#c04030', i: '#8a8a9a', d: '#6a3a18' }, r: [
+    '...iiiiii...', '..hhhhhhhh..', '.hHHHHHHHHh.', '.hHffffffHh.',
+    '.hHfKffKfHh.', '.hHffffffHh.', '.hHfmmmmfHh.', '.hhffffffhh.',
+    '..hhhhhhhh..', '.dddddddddd.', 'dddddddddddd', '............',
   ]},
   hero: { p: { h: '#6a4428', f: '#e0b088', t: '#4a6a9a', T: '#3a5a8a', l: '#5a4028', b: '#2a2a34' }, r: [
     '...hhhhhh...', '..hhhhhhhh..', '..hffffffh..', '..hfbffbfh..', '...ffffff...',
@@ -617,25 +625,29 @@ function dummyHtml(side, scale, tapped) {
 }
 
 function bubbleHtml() {
-  return `<div class="gbubble-wrap" data-seam="6" data-tag="SEAM 6|Grunhilda is IN the yard, by her forge; her bubble is the town's deed-bubble idiom, carries the WEEK-level reckoning only, counts and gaps, always with a verb, silent by default"><div class="gbubble">
-    <span class="fb-line">&ldquo;Three of your five movements this week meet the shoulders; nothing meets the legs.&rdquo;</span>
+  return `<div class="gbubble-wrap" data-seam="6" data-tag="SEAM 6|ON TAP ONLY — ignorable: her portrait was tapped, so the deed-bubble idiom opens anchored to it, tail on the portrait. The session line only describes; the 'missing' clause is the WEEK's reckoning (BUILDER.md §1) — counts and gaps, always with a verb"><div class="gbubble">
+    <span class="fb-line">&ldquo;This session meets the chest, the shoulders, the triceps &mdash; and now the hamstrings. Fourteen sets. Across your week, nothing has met the quads or the calves &mdash; forge a leg day?&rdquo;</span>
     <button class="btn small" style="display:block;width:100%">FORGE A LEG DAY</button>
-    <span class="fine week-note">the week&rsquo;s reckoning &mdash; most days she says nothing</span>
+    <span class="fine week-note">her reading, on tap only &mdash; &ldquo;missing&rdquo; comes from the week, never this session</span>
   </div></div>`;
 }
 
-function forgeSpot(forgePx, grunPx) {
+function forgeSpot(forgePx) {
   return `<div class="spot forge-spot">
-    <div class="forge-row">${spriteTag('grunhilda', grunPx)}${spriteTag('yard_forge', forgePx)}</div>
-    <span class="splate">Grunhilda<small>keeper of the yard</small></span>
+    <div class="forge-row">${spriteTag('yard_forge', forgePx)}</div>
+    <span class="splate">the forge<small>Grunhilda&rsquo;s hearth &mdash; she keeps to the board now</small></span>
   </div>`;
 }
 
-function lecternSpot(px, cls) {
-  return `<div class="spot tappable ${cls || ''}" data-tag="THE BOOK|the quiet second path: tap the lectern for the Compendium's classic search and browse of every movement — there for the lifter who already knows the name">
-    ${spriteTag('lectern', px)}
-    <span class="splate">the Compendium<small>the book of every movement</small></span>
-  </div>`;
+function boardGlyphs(grunTapped) {
+  const grunTag = grunTapped ? '' :
+    ` data-tag="SEAM 6|UNTAPPED state: Grunhilda is a small portrait on the board's upper-right — out of the way, ignorable; tap or click her for a reading or evaluation of the workout (the desktop frame shows the bubble open)"`;
+  return `<button class="board-glyph glyph-book" aria-label="the book — browse all movements" data-tag="THE BOOK|the Compendium shrunk to a corner glyph — the book — browse all movements. Upper-left of the board, same weight class as the app's ✕ close glyphs; the classic search for the lifter who already knows the name">
+    ${spriteTag('book_glyph', 24)}<span class="g-cap">the book</span>
+  </button>
+  <button class="board-glyph glyph-grun ${grunTapped ? 'tapped' : ''}" aria-label="Grunhilda — tap for a reading of this workout"${grunTag}>
+    ${spriteTag('grun_bust', 24)}<span class="g-cap">Grunhilda</span>
+  </button>`;
 }
 
 function stageHtml(scale) {
@@ -655,7 +667,7 @@ function rackHtml(tailClass, tailStyle) {
       <span class="qname">${r.name}</span>
       <span class="meets">${r.taken ? 'already on the ledger' : meetsLine(r.meets)}</span>
     </button>`).join('')}
-    <div class="rk-foot">the curated shelf first &mdash; the full armory waits in the book on the lectern</div>
+    <div class="rk-foot">the curated shelf first &mdash; the full armory waits behind the book glyph on the board</div>
   </div>`;
 }
 
@@ -677,11 +689,14 @@ function plateHtml(p, i, n) {
   </div>`;
 }
 
-function ledgerHtml() {
+function ledgerHtml(opts) {
+  opts = opts || {};
   return `<div class="ledger" data-seam="5" data-tag="SEAM 5|the routine is a physical ledger hanging beside the dummy: each movement an iron plate stamped with name, sets×reps and one muscle rune; ▲/▼ latches, no drag; the fresh Romanian Deadlift plate landed unlatched on the logger's 48px steppers; Cable Fly rides in pale wood — the honest off-catalog state">
+    ${opts.grunTapped ? bubbleHtml() : ''}
     <div class="ledger-beam"></div>
     <div class="ledger-hang"><i></i><i></i></div>
     <div class="board">
+      ${boardGlyphs(!!opts.grunTapped)}
       <div class="board-name"><span class="np">Vale Push Day</span><span class="fine">tap the nameplate to re-engrave it</span></div>
       ${LEDGER.map((p, i) => plateHtml(p, i, LEDGER.length)).join('')}
       <button class="btn wide green">FORGE ROUTINE</button>
@@ -757,11 +772,10 @@ function phoneScreen() {
     </div>
     <div class="yard" data-seam="A" data-tag="SEAM A|its own door off the town square — and past the door, the screen IS the yard: the town-scene idiom (sky, ground, standing sprites) instead of a settings page">
       <div class="sky"><div class="mtns" data-fill="mtns"></div></div>
-      ${bubbleHtml()}
       <div class="ground" data-fill="dirt">
         <div class="hrow">
-          ${forgeSpot(104, 48)}
-          ${lecternSpot(48, 'lectern-shift')}
+          ${forgeSpot(104)}
+          <div class="spot"><div class="forge-row">${spriteTag('stone_pile', 56)}${spriteTag('barrel', 40)}</div></div>
         </div>
         ${stageHtml(3)}
         <div class="floor">
@@ -782,21 +796,19 @@ function desktopScreen() {
       <span class="win-title">The Drill Yard</span>
       <div class="muted">Grunhilda&rsquo;s yard behind the forge. The dummy remembers every set you promise it.</div>
     </div>
-    <div class="yard" data-seam="A" data-tag="SEAM A|one tap from the town square; the whole screen is the yard — forge left, dummies center, rack swung open beside them, ledger hanging right, the book in the corner">
+    <div class="yard" data-seam="A" data-tag="SEAM A|one tap from the town square; the whole screen is the yard — forge left, dummies center, rack swung open beside them, ledger hanging right with the book and Grunhilda riding its corners">
       <div class="sky"><div class="mtns" data-fill="mtns"></div></div>
-      ${bubbleHtml()}
       <div class="ground" data-fill="dirt">
         <div class="stage-row">
-          ${forgeSpot(104, 56)}
+          ${forgeSpot(104)}
           <div style="max-width:400px">${stageHtml(4)}</div>
-          ${rackHtml('tail-left', '--taily:196px;width:272px;flex-shrink:0;align-self:flex-end')}
+          ${rackHtml('tail-left', '--taily:196px;width:288px;flex-shrink:0;align-self:flex-end')}
         </div>
         <div class="floor">
           <div class="corner-props">
-            <div class="prop-row">${spriteTag('barrel', 40)}${spriteTag('stone_pile', 56)}</div>
-            ${lecternSpot(64)}
+            <div class="prop-row">${spriteTag('barrel', 48)}${spriteTag('stone_pile', 70)}</div>
           </div>
-          ${ledgerHtml()}
+          ${ledgerHtml({ grunTapped: true })}
         </div>
       </div>
     </div>
