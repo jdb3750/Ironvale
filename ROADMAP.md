@@ -347,6 +347,36 @@ entries are open work with the removal path worked out.
   trust stored shapes, and text in `moving_time` propagates into arithmetic.
   This is the standing "persisted data is untrusted input" rule in `AGENTS.md`:
   malformed rows must degrade to unknown, never raise.
+- **A non-finite `activities.distance` returns 400 from `/api/stats`.** Found
+  2026-08-05 during seam 8 verification. Seam 3 stopped infinity at ingestion and
+  taught `/api/road` to degrade, but `/api/stats` was never covered: with an
+  `inf` distance written directly into SQLite, `/api/state` returns 200 and
+  `/api/road` correctly reports `"unknown"`, while `/api/stats?wellness_days=90`
+  returns `400 {"error":"Out of range float values are not JSON compliant"}` —
+  the JSON encoder rejects `inf`, which surfaces as a `ValueError` and so a 400.
+  Not boot-fatal, but the Hall's stats screen does not load. Same
+  untrusted-persisted-data rule as the seam 4 family; this is the endpoint that
+  was missed. Note the fix belongs on the **serialisation** side, since any
+  non-finite float anywhere in that payload has the same effect.
+- ~~**Degraded backend values reach a frontend that does not expect them.**~~
+  **RESOLVED 2026-08-05** by review seam 8. `knownNumber()` (`ui.js:11`) is the
+  single named boundary: any non-number or non-finite value becomes `null`, with
+  a comment stating the contract so screen code opts into numeric display or
+  arithmetic rather than letting JavaScript decide by coercion. Settings shows
+  "The quest-givers cannot read your ambition" with nothing highlighted; the
+  Road reads "distance unknown" with per-category unknown copy and leaves the
+  pilgrim at the Vale Gate. Healthy values are unchanged. All 17 asset URLs went
+  to `?v=126`.
+
+  **One honest caveat about the evidence.** Three of the four guards were
+  confirmed load-bearing by mutation. The fourth — `if (km !== null)` around the
+  pilgrim-positioning loop — is **not falsifiable by outcome**: the first
+  landmark is at km 0, so with `km` null the old loop coerces `null >= 0` true,
+  computes `frac` of 0, and puts the pilgrim at the gate anyway. Keep the guard:
+  without it the right thing happens only through the exact coercion
+  `knownNumber` exists to eliminate. But it documents intent rather than
+  changing behaviour, and no test can distinguish it. Original finding:
+
 - **Degraded backend values reach a frontend that does not expect them.** Found
   2026-08-05. Seams 3 and 4 both chose to degrade rather than fail, which is
   right — but neither could touch `static/` under its own scope, so the frontend

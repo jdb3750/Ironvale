@@ -4006,7 +4006,7 @@ test('counsel hard warning and HARD chip meet WCAG AA contrast at all target vie
       observations.every(item => item.raised.tones.helper.foreground === item.raised.dimReadable),
       JSON.stringify(observations, null, 2),
     );
-    assert.ok(observations.every(item => item.assetVersion === '125'), JSON.stringify(observations, null, 2));
+    assert.ok(observations.every(item => item.assetVersion === '126'), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => item.accept.rect.height >= 44), JSON.stringify(observations, null, 2));
     assert.ok(observations.every(item => !item.overflow), JSON.stringify(observations, null, 2));
     assert.deepEqual(failures, []);

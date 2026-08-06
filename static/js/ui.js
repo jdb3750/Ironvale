@@ -5,6 +5,13 @@ const SCREENS = {};
 
 function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+/* Persisted/API values may deliberately degrade to sentinel text such as
+   "unknown". Screen code opts into numeric display or arithmetic through this
+   boundary so JavaScript never decides their meaning by coercion. */
+function knownNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 /* The one way to put an overlay on screen. Returns the overlay element.
    backdropClose: false for forced-choice moments (death, safe return)
    where dismissing by tapping outside would skip the ceremony. */
