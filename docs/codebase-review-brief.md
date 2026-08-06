@@ -1,8 +1,122 @@
 # Codebase health review — briefs
 
+---
+
+# HANDOFF — read this first
+
+*Written 2026-08-05 for whoever picks this up next. Assume you know nothing
+about what happened here.*
+
+## What this document is
+
+A four-pass read-only audit of the Iron Vale codebase (passes A–D), followed by
+one brief per fix, each scoped to a single seam. **Passes A–D are finished.**
+**Seams 1–8 are finished, merged, and deployed.** Seams 9–14 are written and
+waiting.
+
+## How the loop works
+
+Joe is the relay. He pastes a brief into an implementing agent, that agent works
+or asks a question, Joe brings the question back, and the brief gets **patched**
+— not just answered in chat, or the next paste reintroduces the bug. Joe owns
+git, design authority, and the final call; the reviewing agent owns writing
+briefs, verifying what comes back, and maintaining `ROADMAP.md` §3.
+
+**The single most important habit: re-run the claims, do not read the report.**
+Every seam in this document was independently re-verified, and that caught, among
+other things, a green-looking merge that had silently lost its entire fix. When
+an implementing agent reports a result, reproduce it before believing it.
+
+## Non-negotiable project rules (from `AGENTS.md`)
+
+1. **`main` IS production.** Merging auto-deploys within ~15 minutes. Nothing
+   unverified reaches `main`.
+2. **Never touch `data/`** — it holds Joe's real save and real intervals.icu
+   credentials. Test against a scratch `DATA_DIR`, never the default.
+3. **Any change under `static/` requires bumping `?v=N` on *every* asset URL in
+   `static/index.html`.** Currently `?v=126`. A missed bump ships stale JS and
+   **no test catches it.**
+4. **Commit or push only when Joe asks.** Branch for anything non-trivial.
+5. **Persisted data is untrusted input** — malformed rows degrade to unknown,
+   never raise. `/api/state` is the boot endpoint; failing it means the game does
+   not load.
+6. Every defect found goes into `ROADMAP.md` §3 **the moment it is found**, even
+   if unfixed. A report in a chat window is not a record.
+7. **Dead code is a defect**, not a curiosity. Do not propose parking it.
+
+## Verification commands
+
+```
+.venv/bin/ruff check .                      # expect: All checks passed!
+.venv/bin/python tests/smoke.py             # expect: SMOKE PASSED — 257 checks green
+npm run test:frontend                       # Node DOM harness — expect 21 pass, 0 fail
+npm run test:browser                        # headless Chromium — expect 63 pass, 0 fail
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+`AGENTS.md` and `PLUGINS.md` both quote the smoke count. **If a seam changes it,
+update both in the same PR** — three seams nearly shipped that drift.
+
+## The acceptance bar for every fix seam
+
+**"Identical green" is not enough.** For each guard added:
+
+1. **Commit first.** Then break the behaviour, capture the failure, restore,
+   re-run. `git checkout -- <file>` restores to `HEAD`, so mutating *before*
+   committing silently deletes the fix — this cost a broken `main` once.
+2. **Mutate each guard separately.** Three seams shipped a guard whose test could
+   not fail because a neighbouring guard masked it. Per-guard mutation is now
+   standing policy.
+3. **A guard you have not seen fail is not verified.** If a guard cannot be made
+   to fail by outcome, say so plainly rather than listing it as confirmed.
+
+## State of play
+
+**Done (seams 1–8, all merged):** the test suite made falsifiable (it contained
+an unconditional `ok(..., True)`); every tracked doc corrected; `/api/road`
+bounded against non-finite distance; `/api/state` guarded against five malformed
+persisted shapes; unguided deeds crediting the right giver; the unguided claim
+made atomic; the bonus queue guarded on the boot path; and degraded values given
+a frontend contract.
+
+**Also closed:** eleven `ROADMAP.md` §3 entries that described work which had
+already shipped without anyone marking it. That pattern — fixes landing, records
+never closing — was the review's largest single finding.
+
+**Open, briefed below:** seams 9–14.
+
+**Open, not briefed — Joe's calls:**
+
+- Whether to backfill historically misattributed unguided quest rows (4 of 8 were
+  wrong in a representative sample; all reconstructible from stored details).
+  This is **live player data** — safety rule 3, needs explicit sign-off.
+- Whether an unguided deed should advance *any* authored Scheduled lane, given it
+  was never accepted from a schedule. Seam 5 changed which lane it advances but
+  deliberately did not answer this.
+
+**Open, unexplained:**
+
+- **The Town navigation race.** A browser test intermittently finds zero
+  `Visit Old Fenn` buttons instead of one. Seen once in five runs on 2026-08-04,
+  then not again in ~30 runs. Still live. **If a browser run ever fails, capture
+  the `not ok <n> - <name>` line before anything else** — that is the one piece
+  of evidence the record still lacks.
+- **A background flight raises `TypeError`** when many corrupt rows are present
+  at once. Boot is unaffected. Recorded with a reproduction, never investigated.
+
+## What tends to go wrong
+
+Every one of the last four seams **stopped on something the brief did not
+anticipate**, and every stop was correct: an impossible test fixture (the schema
+forbade it), a fourth consumer nobody had listed, a contradiction the fix itself
+would create, and a compatibility break in legacy data. **Treat a stop as the
+process working.** Patch the brief, then continue.
+
+---
+
 Authoritative source for the 2026-08 codebase review. Each pass below is a
-**self-contained paste**; ChatGPT starts cold every time, so paste the whole
-pass including the "Context" preamble, not just the task list.
+**self-contained paste**; the implementing agent starts cold every time, so paste
+the whole pass including the "Context" preamble, not just the task list.
 
 **Read-only audit.** No pass authorises editing a file, and no finding gets
 fixed as part of the review. Findings come back as a report, Joe and Claude
@@ -1257,3 +1371,382 @@ it ships stale JS to players — the one failure mode no test catches.
 - Any other §3 entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 9 — a non-finite float must not break a response
+
+*(paste the shared preamble, then this — the read-only rule does NOT apply.)*
+
+> **Changes `app/` and `tests/`.** No `static/`, so no `?v=` bump.
+
+### The defect
+
+Seam 3 stopped `inf` at ingestion and taught `/api/road` to degrade. It did not
+cover every reader. With a non-finite `activities.distance` written directly into
+SQLite (reproduced on a scratch DB):
+
+```
+/api/state                  -> 200
+/api/road                   -> 200   {"total_km": "unknown", ...}
+/api/stats?wellness_days=90 -> 400   {"error":"Out of range float values are not JSON compliant"}
+```
+
+Starlette's `JSONResponse` serialises with `allow_nan=False`, so any `inf` or
+`nan` anywhere in a payload raises `ValueError` — which the handler at
+`main.py:151` turns into a 400. Not boot-fatal, but the Hall's stats screen does
+not load.
+
+**This is the third instance of one root.** Seam 3 fixed the road, seam 4 fixed
+the boot endpoint, and this is a third reader. Fixing it per-endpoint a fourth
+time is the wrong shape.
+
+### What to decide
+
+**Fix it once, at serialisation.** The obvious approach is a response class that
+coerces non-finite floats to `null` before encoding, installed as the app's
+default. Weigh it honestly and say what you chose:
+
+- **A global sanitiser** covers every present and future endpoint, and cannot be
+  forgotten. It also **hides** the underlying bad data — a payload silently full
+  of `null` is harder to notice than a 400.
+- **Per-reader guards** keep the failure visible where it originates, but this is
+  the fourth reader and there is no reason to think it is the last.
+
+Whichever you pick, **name the decision in a comment at the boundary**, and
+enumerate in your report every endpoint that can carry a float derived from
+`activities.distance` — that list is the deliverable even if the fix is one line.
+
+### Tests
+
+- `/api/stats` returns 200 with a non-finite distance in the table, and reports
+  something a player can read rather than a nonsense number.
+- Every other read endpoint still returns 200 with that row present.
+- **Healthy payloads are byte-identical to before.** A sanitiser that rounds,
+  reorders, or stringifies ordinary numbers is a much worse bug than the one
+  being fixed — assert this explicitly.
+
+### Out of scope
+
+- **Cleaning up bad rows.** Report a count if you find any; do not migrate.
+- Re-litigating seam 3's ingestion guard, which is correct and covers the API
+  path. This is about data already stored.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for "commit that seam."
+
+---
+
+## Seam 10 — give routine state one owner
+
+*(paste the shared preamble, then this — the read-only rule does NOT apply.)*
+
+> **Changes `app/`, `static/` and `tests/`. Bump `?v=` on every asset URL** —
+> currently `126`.
+
+### The defect — two symptoms, one root
+
+**Symptom 1: forging a routine can persist duplicates.** `G.saveCounselRoutine`
+(`misc.js`) POSTs `/routines`, then *inside the same `try`* refreshes `/programs`
+and writes the schedule slot. There is a `finally` but **no `catch`**, so if
+either post-POST step throws, the `finally` re-enables the save button while the
+exception skips `G.closeOverlay` — overlay open, draft intact, button live.
+Retrying POSTs again, and `programs.save_routine` (`programs.py:89`) mints
+`"r" + uuid4().hex[:8]` every call, so the player gets two routines. The "one
+player activation creates at most one custom routine" comment guards simultaneous
+clicks only; it does not survive a retry after a committed POST.
+
+*Second failure mode from the same shape:* if `counselScheduleWriteSlot` is what
+throws, the routine exists but was never written into the weekly plan — the
+player sees the forge fail while the routine silently exists.
+
+**Symptom 2: routine state goes stale.** `counselSchedulePrograms` (`misc.js`) is
+module-level, loaded only when `null`, and cleared only by the profile-reset
+hook. The doctrine screen (`SCREENS.doctrines`, `giver.js:486`) independently
+fetches `/programs` and creates, selects and deletes routines, never invalidating
+it. Visit Settings once, change routines under Grunhilda, come back — Settings can
+hide routines that exist and offer routines that were deleted.
+
+**The root is that two editors own the same state with no shared owner for it or
+its invalidation.** Fix the ownership. Do not patch the two symptoms
+independently — that is explicitly the wrong answer.
+
+### The idempotency question
+
+Making a retry safe needs the server to recognise a repeat. `save_routine` has
+nothing to deduplicate on today. Options:
+
+- **A client-supplied idempotency key** on `POST /api/routines`, held for the
+  life of the draft, so a retry of the *same* forge collapses. Most correct;
+  changes the endpoint contract.
+- **Content-based dedup** (name + giver + exercises). No contract change, but it
+  silently forbids two deliberately identical routines.
+
+Pick one, say why. If you pick the key, note the server must still accept
+requests without one (nothing else sends it).
+
+### Tests
+
+- A forge whose `/programs` refresh fails, retried, produces **one** routine.
+- A forge whose slot write fails does not leave a routine the player cannot see.
+- Creating a routine under Grunhilda, then opening Settings, shows it.
+- Deleting a routine under Grunhilda, then opening Settings, does not offer it.
+- Ordinary forging still works end to end, and still writes the schedule slot.
+
+### Out of scope
+
+- The routine builder in `BUILDER.md`. Nothing there is approved to build.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for "commit that seam."
+
+---
+
+## Seam 11 — let callers compose transactions
+
+*(paste the shared preamble, then this — the read-only rule does NOT apply.)*
+
+> **Changes `app/` and `tests/`.** No `static/`, so no `?v=` bump.
+
+### The defect
+
+Seam 6 made the unguided claim atomic: every write stays pending until one
+`db.commit()`, with `db.rollback()` on failure. But `db.kv_set` (`db.py:318`),
+`db.kv_del` (`:327`), `db.inv_add` (`:332`) and `db.inv_remove` (`:341`) each
+commit internally, and `game.save_char` goes through `kv_set`. So that seam
+**inlined their SQL at the call site** — two copies of each statement that can
+drift, which is exactly the "duplicated logic that has drifted" shape the audit
+was hunting.
+
+This is recorded in §3 as a cost taken deliberately, not an accident. Retire it.
+
+### What to build
+
+Give callers a way to compose. Either:
+
+- **`commit=False` parameters** on the four helpers plus `save_char`. Minimal and
+  obvious; adds a flag to five signatures.
+- **A `db.transaction()` context manager** that suppresses inner commits and
+  commits or rolls back once at exit. Cleaner at call sites; more machinery, and
+  it must handle nesting or explicitly refuse it.
+
+Pick one and say why. Then **delete the inlined SQL in `quests.py` and route it
+back through the helpers.** The seam is not done until that duplication is gone —
+that is the entire point.
+
+### The constraint
+
+**Every existing caller must keep its current behaviour.** These helpers are used
+throughout the app and most rely on the implicit commit. Default to committing;
+make deferral opt-in. A change that makes writes silently non-durable somewhere
+unrelated would be far worse than the duplication.
+
+### Tests
+
+- The atomic claim still rolls back completely on failure — seam 6's tests must
+  still pass, and must still fail when the rollback is removed.
+- A composed transaction rolls back **all** its writes, including an `inv_add`
+  and a `kv_set` in the same block.
+- An ordinary un-composed call to each helper still commits immediately.
+
+### Out of scope
+
+- Converting other call sites to transactions. Retire the duplication seam 6
+  created; leave the rest alone. Report anything that looks like it wants the
+  same treatment.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for "commit that seam."
+
+---
+
+## Seam 12 — retire Ser Bram's lifting voice
+
+*(paste the shared preamble, then this — the read-only rule does NOT apply.)*
+
+> **Changes `static/` and `tests/`. Bump `?v=` on every asset URL** — currently
+> `126`. **This is voice work**: match the surrounding prose, do not restructure.
+
+### Context you need first
+
+Ser Bram is **retired from quest-giving but never deleted**. He keeps his
+identity, sprite, title ("the Old Knight at Rest"), and a permanent place in
+town. A v0.30.1 sweep corrected seven literals that still called him a lifter;
+these survived it.
+
+### What is wrong
+
+**Live and wrong** — legacy Bram climb quests remain deliberately playable, and
+the Chromium legacy-quest scenario proves the route is reachable:
+
+- His greeting pool (`giver.js:14`) offers "measured by what they can carry",
+  "the barbell is a dragon", "heavy is the… deadlift".
+- His completion pool (`giver.js:42`) offers "the load was borne" and "even the
+  barbell seems impressed".
+
+So a player finishing an old **wall oath** is congratulated on barbells. These
+should speak to a climb, or to an old oath being honoured.
+
+**Attribution copy** — `town.js:27` reads "Iron moved is iron moved, writ or no
+writ." Bram now receives unsworn *climb* credit, so this should describe ground
+or wall gained, not iron.
+
+### Do not touch
+
+**`DEED_GIVER_BY_CATEGORY` crediting an unsworn climb to Bram is correct.** It is
+deliberate, commented, and guarded by a test. §0c retired him from *setting*
+tasks, not from *noticing*. Fix the prose; leave the mapping alone.
+
+`REACTIONS.accept.bram` (`giver.js:36`) is genuinely unreachable — Bram offers
+nothing and the server refuses new Bram acceptances — but it is **dead code and
+belongs to seam 14**, not here.
+
+### Tests
+
+`tests/test_bram_stale_literals.py` already exists and guards this class of
+regression. Extend it: assert his live pools contain no lifting vocabulary, and
+that the unsworn-climb line does not say "iron". Keep the assertions about
+observable strings, not about internal structure.
+
+### Out of scope
+
+- Anything about Bram's *future* role. `ROADMAP.md` sketches a possible second
+  life for him; nothing there is approved.
+- Any other §3 entry, and any other giver's voice.
+
+Build → verify → **stop and report** → wait for "commit that seam."
+
+---
+
+## Seam 13 — refuse a claim for a deed that is not there
+
+*(paste the shared preamble, then this — the read-only rule does NOT apply.)*
+
+> **Changes `app/` and `tests/`, and possibly `static/`.** If you touch
+> `static/`, bump `?v=` on every asset URL — currently `126`.
+
+### The defect
+
+`claim_unguided_bonus(activity_id)` looks the id up and **falls back to a default
+index when it is not found**. So asking to claim a deed that is not in the queue
+— a stale bubble the player left open, a retry after the sweep already paid it —
+quietly settles a *different* deed instead of refusing.
+
+Seam 7 changed the fallback target from index 0 to the first *valid* index, which
+made it consistent. It did not make it correct.
+
+### What to decide
+
+The fix is to refuse an unmatched id with an in-world `ValueError` (a 400). But
+**this changes a live endpoint's contract**, so before writing it, find out what
+the frontend does with a stale bubble:
+
+- `town.js` posts `/unguided/claim` with an `activity_id` drawn from
+  `S.fennQueue`, a mirror of the server's queue.
+- **If that mirror can go stale** — the sweep pays overnight while a tab is open,
+  say — then a player tapping an old bubble currently gets a payout and would
+  instead get an error. That may be *more* honest, but it is a visible behaviour
+  change and Joe should see it stated before it ships.
+
+Report what you find. If a stale bubble is reachable, propose how the frontend
+should handle the refusal (refresh the queue and say nothing? a gentle in-world
+message?) and **stop for a decision** rather than choosing alone.
+
+### Tests
+
+- Claiming an `activity_id` not in the queue returns 400 and pays nothing.
+- Claiming a valid id still works, and still claims **that** deed.
+- The no-argument claim still takes the oldest pending deed.
+- Nothing in the queue is removed by a refused claim.
+
+### Out of scope
+
+- The malformed-candidate guards from seam 7 — they are correct.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for "commit that seam."
+
+---
+
+## Seam 14 — remove the dead code
+
+*(paste the shared preamble, then this — the read-only rule does NOT apply.)*
+
+> **Changes `app/`, `static/` and `tests/`. Bump `?v=` on every asset URL** —
+> currently `126`. **Do this seam last.** It is the largest and the least urgent,
+> and it is easier once everything above has settled.
+
+### The rule that governs this seam
+
+Dead code is a defect here, not a curiosity — but **"no references" is not proof
+of death**, and this codebase has already produced three false positives. Work
+out what each thing was protecting before deleting it, and repoint any test that
+was leaning on it rather than deleting the coverage.
+
+### Python — verified declaration-only
+
+- `counsel_wellness.qualified_recovery_days()` (`counsel_wellness.py:91`)
+- `economy.buy()` (`economy.py:8`)
+- `items.shop_stock()` (`items.py:99`) — the other `shop_stock` hits are dungeon
+  **dict keys**, not calls to this
+- `exercises.KB_NAMES` (`exercises.py:130`)
+- `items.RARITY_ORDER` (`items.py:60`)
+- The schema's `equipment` table (`db.py:94`) has neither reader nor writer
+
+`economy.py`'s shop path and `items.shop_stock()` are probably **one story, not
+two** — resolve them together. `economy.py`'s docstring also still claims town-
+shop ownership; correct it in the same pass.
+
+### Unused parameters — one is a trap
+
+`colosseum._sim_fight(probs)` and `intervals._get(athlete)` are free to clean up.
+
+**`dungeon._rng(d)` is not.** Seam 1 made smoke's dungeon retire real, and the
+deterministic flee it needs monkeypatches `dungeon._rng` with a one-argument
+lambda. Dropping the parameter breaks that patch and fails the entire smoke run.
+Change both together or leave it alone.
+
+### Frontend — dead CSS
+
+Zero matches across all `static/js/*.js` and `static/*.html`: `.char-strip`
+(`style.css:352`), `.loc` (`:374`), `.ex-row` (`:445`), the old `.cal .day.q*`
+grid (`:864`), `.inv-*`/`.equip-*` (`:885`), the `.topbar` phone rules (`:1722`),
+`.logger-field-label`, `.crank-action`.
+
+Also `REACTIONS.accept.bram` (`giver.js:36`) — unreachable because Bram offers
+nothing and the server refuses new Bram acceptances.
+
+### Frontend sprites — re-derive before deleting
+
+The static `hero`, `bld_stall`, `bld_yard` and `bld_board` entries in `pixel.js`
+(from `:199`) have no *literal* references. But **`SPRITES[key]` is looked up
+dynamically** in `ranch.js:109`, `hall.js:994` and `pixel.js:716/1059/1077`, so
+grep alone proves nothing. Those dynamic keys come from monster icons, dungeon
+cell types, hat keys and Council modalities, none of which can produce these four
+— which is why the claim survives. **Re-derive that yourself before removing
+them**, and do not extend "no references" reasoning to any other sprite without
+doing the same.
+
+### Do NOT delete
+
+- **`G.dev` (`misc.js:1011`).** Confirmed with Joe: he calls it from the browser
+  console, heavily while building the core loop and testing pixel art. Being
+  declaration-only **is the point** — the caller is a human at a console, so no
+  static analysis will ever find one. Add a comment saying so, so the next sweep
+  does not rediscover it.
+- **`gen_mobility_offers`.** Live — `counsel_specialists` calls it directly.
+- **`DEED_GIVER_BY_CATEGORY`'s Bram entry.** Correct and test-guarded.
+
+### Tests
+
+Removal should change no behaviour, so the bar is different: **every suite must
+be identical-green before and after**, and you must state what each removed
+symbol's tests (if any) were protecting and where that coverage now lives.
+
+### Out of scope
+
+- Splitting large files. `ROADMAP.md` §1 is explicit: do not modularize
+  everything. Length is not a defect.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for "commit that seam."
