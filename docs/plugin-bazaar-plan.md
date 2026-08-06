@@ -34,11 +34,11 @@ attracts all four, and this one must not.
 
 A player opens the town and finds a new corner of it: the Bazaar, a market
 screen in the same pixel register as everything else. Stalls line the square,
-one per kind of ware — a dyer's tent hung with cloth swatches (themes), a
-scrivener's table stacked with bound doctrines (program packs), a tinker's
-bench of oddities (behavior plugins), a stall of songbirds and bells (sound
-kits). Browsing costs nothing and executes nothing: every stall renders from
-manifest metadata alone. A ware's page shows what it is, who made it, what it
+one per kind of ware — the Dyer's Tent hung with cloth swatches (themes), the
+Scrivener's Stall stacked with bound doctrines (program packs), the Tinker's
+Bench of oddities (behavior plugins), the Bellmaker's Cart of chimes and bells
+(sound kits). Browsing costs nothing and executes nothing: every stall
+renders from manifest metadata alone. A ware's page shows what it is, who made it, what it
 asks of the player in plain language, and a single action. When a new version
 of an installed ware appears in the index, a raven brings word, the same way
 ravens already carry sync news.
@@ -92,12 +92,15 @@ for other players of the ware — is preserved, because snippets are personal
 tinkering on the player's own box, not wares. A snippet that breaks layout
 breaks it for the person who wrote it, who can toggle it off.
 
-**Titles and stall inventories join the content vocabulary.** §2c's type table
-is kept verbatim, including the rule that reserved-but-unbuilt types must load
-and report rather than crash. This plan reads the `content` type broadly —
-program doctrines, item cosmetics, title packs, market stall inventories,
-sound-kit parameter sets — rather than adding new top-level types for each,
-which keeps the reserved vocabulary stable.
+**"Content pack" names a trust tier, not a type.** §2c's type table is kept
+verbatim — `theme`, `font`, and `sfx` stay top-level reserved types, and
+reserved-but-unbuilt types still load and report rather than crash. What this
+plan adds is a grouping across that table: "content pack" (§5a) means any
+tier-0, data-only ware, whatever its declared type — a `theme` token map, a
+`font` pack, an `sfx` parameter set, or `content` proper (program doctrines,
+item cosmetics, title packs, market stall inventories). The divergence is
+that the Bazaar and this plan organize by that trust boundary, while the type
+vocabulary itself is untouched.
 
 ## 3. Prerequisites: two extractions before anything else
 
@@ -123,9 +126,10 @@ so "counts toward the game" is a property a source declares rather than a
 string three files happen to agree on.
 
 **The `game.grant()` chokepoint.** Fourteen sites mutate currency directly —
-`app/colosseum.py:157`, `app/dungeon.py:232` and `:610`, `app/road.py:146-147`,
-`app/raid.py:344`, five sites in `app/quests.py` (`:803`, `:806`, `:850`,
-`:1047`, `:1050`), and the dev grants at `app/main.py:598` and `:601`. Only
+`app/colosseum.py:154` and `:157`, `app/dungeon.py:232` and `:610`,
+`app/road.py:155-156`, `app/raid.py:344`, five sites in `app/quests.py`
+(`:825`, `:828`, `:872`, `:1070`, `:1073`), and the dev grants at
+`app/main.py:598` and `:601`. Only
 `apply_xp` (`app/game.py:379`) is a function. §2g restriction 1 — no minting —
 is currently unenforceable because there is nothing to enforce it at. A single
 `game.grant()` that every one of those sites routes through is where the
@@ -333,11 +337,12 @@ everything registered through the plugin handle is torn down when the ware is
 disabled, so disable-enable works without a restart and no ware needs to write
 teardown code to be a good citizen.
 
-Two operational requirements, both from `PLUGINS.md` §3f. First, the loader
-has a hard off-switch (an env var the test suites set), because once wares can
+Two operational requirements. First, from `PLUGINS.md` §3f: the loader has a
+hard off-switch (an env var the test suites set), because once wares can
 load, "default state" changes meaning for every existing test — the browser
 suite shares one server and one `DATA_DIR`, and ware fixtures must not leak
-across tests. Second, a ware directory must never stop the game loading:
+across tests. Second, from `PLUGINS.md` §2b: a ware directory must never stop
+the game loading —
 discovery failures, manifest failures, and load failures all degrade to a
 disabled ware with a named reason surfaced in `/api/plugins` and in the
 Bazaar's own stall.
@@ -424,7 +429,7 @@ The principle, made concrete as rungs, each zero-config to start and each a
 natural step to the next:
 
 1. **A CSS snippet** — one file in `data/snippets/`, toggled in settings.
-   Five minutes, no manifest, personal only (§2's second divergence).
+   One file, no manifest, personal only (§2's second divergence).
 2. **A theme or font pack** — the snippet author graduates: the same taste,
    expressed as a token map with a manifest, now shareable through the index.
 3. **A content pack** — JSON that adds things: a doctrine, a title pack, a
@@ -433,7 +438,7 @@ natural step to the next:
    `/api/plugins/<id>/`. The full harness.
 
 Obsidian's ecosystem demonstrates that the bottom rungs feed the top: theme
-authors become plugin authors because the first rung was five minutes. The
+authors become plugin authors because the first rung asks so little. The
 ladder is also the honest scope statement — most players who customize will
 never leave rungs 1-3, and the system should be excellent there even if rung 4
 stays sparsely populated for years.
@@ -537,8 +542,8 @@ download counts, accounts, auto-update, any server-side anything.
 **Phase 6 — community tooling.** The template repo, the `plugin new`
 scaffold, the ware author's smoke recipe and fixture helper, authoring docs
 written against `PLUGINS.md` §6's bar. Player observes: nothing in-game; a
-would-be author observes that the path from idea to installed ware is an
-afternoon. Excludes: everything until someone other than Joe wants it —
+would-be author observes that the path from idea to installed ware is a
+short sitting. Excludes: everything until someone other than Joe wants it —
 this phase exists to be ready, not to be busy.
 
 Deliberately unscheduled: the voice-catalog extraction (large, mechanical,
