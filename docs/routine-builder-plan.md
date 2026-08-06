@@ -88,8 +88,28 @@ contract this fixes:
   yard (seam 5's cards, staged as objects).
 - The muscle-tap rack and all secondary panels **float over the scene**
   rather than reflowing it; the **forge is the routines entry point** (tap:
-  strike a new routine / draw an old one from the coals), replacing any
+  strike a new board / draw one from the coals), replacing any
   +/new-routine button.
+- **On phone, one dummy on a spinning plinth** (Joe, 2026-08-06): tap the
+  plinth to turn it — instant, and it remembers its facing. Two guards are
+  part of the contract so the spin never gates information: (1) the stage
+  caption is generated from the same aggregation that lights the dummy and
+  always counts the **whole body**, regardless of which side faces out; and
+  (2) adding a movement that lights the hidden side **auto-turns the dummy**
+  to show the glow. Desktop keeps the front/back pair. Any tap on the figure
+  resolves to the nearest muscle, so the whole dummy is one honest target.
+
+#### Vocabulary (codified 2026-08-06)
+
+One metaphor per object; "forge" is never a save verb.
+
+| object    | is / owns                  | verb(s)                                             |
+| --------- | -------------------------- | --------------------------------------------------- |
+| the forge | births routines            | **strike** (create a new board), **draw** (pull an old one from the coals) |
+| the board | is the routine             | **hang** — hanging the board is saving it; the save button reads HANG THE BOARD |
+| plates    | are the movements          | none to speak — they **wear** with logged sessions, capped at battle-worn |
+| the dummy | mirrors the board          | none — it owns no verbs                             |
+| weeks     | not part of the yard's metaphor | never forged, hung, or struck — the week view is a separate later surface |
 
 Visual companion: `docs/mockups/routine-builder-scene.html` (screenshots
 beside it in the same directory).
@@ -341,6 +361,10 @@ should land before or with seam 5, not be quietly absorbed into it.
 
 ## Open decisions for Joe
 
+Still genuinely open (1–4 below). The presentation questions from the v3
+design critique were all decided by Joe on 2026-08-06 and are recorded as
+RESOLVED after them.
+
 1. **§7.1 — the no-history volume case: silence, or a labelled floor?**
    A player with no trailing average has nothing to be compared against.
    **Recommendation: the labelled floor.** The persona is exactly the
@@ -362,6 +386,35 @@ should land before or with seam 5, not be quietly absorbed into it.
    change before seam 3 is specced, expensive after.
 4. **The Drill Yard's name and art.** In-world naming is Joe's call; the
    sprite-vs-PNG choice only gates how the building looks, not the seam.
+
+### Resolved by Joe, 2026-08-06 (the v3 critique's questions)
+
+1. **Time of day — RESOLVED: the yard inherits the town's clock and sky
+   tilesets unchanged.** Same sky as the town, same 06:00/18:00/20:00 swaps
+   — it's one village.
+2. **First run — RESOLVED: austere.** Bare dark-wood dummy, empty board,
+   the forge coals visibly the brightest thing on screen, and **no
+   unprompted Grunhilda line** — she is a grunhilda-shaped button, a fully
+   optional lifeline, never forced.
+3. **Phone dummies — RESOLVED: one dummy on a spinning plinth** (tap the
+   plinth to turn; instant; remembers facing), with the two spin guards now
+   in the seam 1–2 presentation contract (whole-body caption; auto-turn on
+   lighting the hidden side). Desktop keeps the pair.
+4. **Grunhilda at rest — RESOLVED: tapped-only, with one honest tell.** A
+   small ember glint on her portrait may indicate she holds a week-level
+   reading; glints and other notification tells are **toggleable off in
+   Settings** (the Settings surface itself is not part of this feature's
+   mockups).
+5. **Patina — RESOLVED: plates only, with an end state.** Plates take
+   visible wear from logged sessions and the wear **caps at battle-worn**,
+   so the most-worn plates read as your top exercises. Subtle, charming,
+   never decrepit.
+6. **Vocabulary — RESOLVED: codified, one metaphor per object** (see the
+   Vocabulary table above). The forge births routines (strike/draw); the
+   board is the routine and hanging it saves it (the save button reads
+   HANG THE BOARD; "forge" never again appears as a save verb); plates wear;
+   the dummy only mirrors and owns no verbs; weeks are never
+   forged/hung/struck — the week view is a separate later surface.
 
 ## Out of scope
 
