@@ -802,6 +802,31 @@ record rather than a double payout — but it is recorded in `ROADMAP.md` §3 as
 its own entry. Your `.get()` default is what keeps this seam from *triggering*
 it; it is not a fix for it.
 
+### The ledger line is in scope — settled
+
+`_apply_unguided_bonus` writes the Chronicle event three lines below the
+recorder, and it hardcodes Fenn too (`quests.py:1087`):
+`f"Fenn rewarded an unguided activity ..."`. The candidate's ceremony note is
+already per-giver (`DEED_NOTES[giver]`, chosen at `:991`), so **after the
+persistence fix the quest row and the ceremony would credit Grunhilda while the
+Chronicle still credits Fenn** — a contradiction this seam would *create*.
+Fix it here. Scope discipline exists to keep unrelated work out, not to force
+shipping an inconsistency the change introduced. It is a Python f-string, not
+`static/`, so no `?v=` bump.
+
+**The obvious fix has a trap. `GIVERS` has no `wick` entry.** `deed_giver()`
+returns `"wick"` for the `other` category and `DEED_NOTES` does have a `wick`
+voice — but `GIVER_ARCHETYPES` (and therefore `GIVERS`) holds only `endurance`,
+`strength`, `bram` and `recovery`. So `GIVERS[cand["giver"]]["name"]` raises
+`KeyError` on an `other`-category deed — **inside the non-atomic claim path,
+after the payout**, producing exactly the lost-record failure recorded in §3.
+
+Look up the display name safely and give `wick` a name that suits the Ledger
+House. Do not "fix" this by adding a `wick` entry to `GIVER_ARCHETYPES`: that
+tuple is the equipment-ownership model, `OFFERABLE_GIVERS` and the doctrine
+surface read it, and a scrivener does not own modalities. **If you think the
+asymmetry should be resolved structurally, report it — do not do it here.**
+
 ### What this will change, and must be checked
 
 `deed_giver()` can return `"bram"` (unsworn climbs, deliberate and test-guarded)

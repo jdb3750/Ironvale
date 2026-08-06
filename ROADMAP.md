@@ -382,6 +382,18 @@ entries are open work with the removal path worked out.
   shape as the routine-forging entry above: a committed write followed by
   unguarded work. **Fix the ordering, not the symptom** — record first, or make
   the removal the last step.
+- **Wick has a voice but no registry entry.** Found 2026-08-05.
+  `DEED_GIVER_BY_CATEGORY` routes the `other` category to `wick`, `DEED_NOTES`
+  gives him three lines, `town.js:184` builds him a Ledger House and `giver.js`
+  greets the player as him — but `GIVER_ARCHETYPES` (and so `GIVERS`) holds only
+  `endurance`, `strength`, `bram` and `recovery`. Any code that resolves a
+  giver key to a display name will `KeyError` on his. Seam 5 works around it
+  with a safe lookup rather than registering him, because that tuple is the
+  **equipment-ownership model** — `OFFERABLE_GIVERS` and the doctrine surface
+  read it, and a scrivener owns no modalities. The honest resolution is probably
+  to separate *identity* from *ownership* so an NPC can exist without claiming
+  equipment, which is the same distinction the logging-shape idea in §2 would
+  force. Not urgent; nothing routes `other` deeds today in normal play.
 - **`unguided_pending()`'s legacy-giver default is written to a throwaway.**
   Found 2026-08-05. `quests.py:1113` calls `c.setdefault("giver", "endurance")`
   under a comment describing it as "load-bearing JSON", but `db.kv_get` runs
