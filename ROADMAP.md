@@ -156,6 +156,44 @@ sketches. Neither is scoped.
   Where these claims conflict, **the stylesheet plus `DESIGN.md`'s implementation
   sections are authoritative**; `ROADMAP.md` and `README.md` lag.
 
+### Split the givers by logging shape, not by modality (Joe, 2026-08-05)
+
+**Idea, not a decision — nothing here is approved.** Fenn owns **time-based**
+work, Grunhilda owns **set-based** work. The prompt was climbing: sometimes you
+want to log "an hour on the wall", but often you want the individual climbs and
+their grades, which is a set, not a duration.
+
+**Why this is more than a preference: the current taxonomy is already
+inconsistent.** `GIVER_ARCHETYPES[...]["modalities"]` means two different things
+depending on the giver — Fenn's are *activity categories* (`run`, `ride`,
+`swim`, `climb`), Grunhilda's are *equipment* (`barbell`, `dumbbell`,
+`kettlebell`, `bodyweight`). One says what you did, the other says what you did
+it with. A time-versus-sets split is a single consistent axis, and it explains
+the thing the current model handles worst.
+
+Climbing is exactly where the seam shows. It sits in Fenn's modalities today
+(`game.py:57`), it is a `COUNSEL_FOCUSES` value, and `README.md` bills Fenn as
+covering it — but a graded climb logs like a set.
+
+What would have to be thought through, none of it blocking:
+
+- **`lift_sets` is the set-based substrate**, and it carries weight/reps. Grades
+  are neither. Either grades become a third scheme unit or climbing gets its own
+  shape — this is the real design question, not the giver label.
+- **`DEED_GIVER_BY_CATEGORY` credits an unsworn climb to Bram** on purpose,
+  commented and test-guarded (see §3). That exception was written against the
+  modality model and would need re-deciding under this one — *re-deciding*, not
+  deleting.
+- **Equipment ownership rides on `modalities`.** `main.py` derives "within reach
+  today" from Grunhilda's tuple. Changing what the tuple means touches the
+  override UI, not just a label.
+- **`COUNSEL_FOCUSES` is modality-shaped** (`run`, `ride`, `swim`, `climb`,
+  `strength`), so focus and giver would stop being the same axis.
+
+Worth noting this is orthogonal to the unguided-giver fix (§3): that seam makes
+the persisted giver agree with `deed_giver()`, which leaves **one** place to
+change if this idea is ever adopted, instead of two that disagree.
+
 ## 3. Sweep-up backlog
 
 Known defects and cleanups, deliberately deferred to a single sweep **at the end
