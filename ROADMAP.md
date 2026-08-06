@@ -370,6 +370,29 @@ entries are open work with the removal path worked out.
   durable sync error surfaced, so boot is not affected. **Not investigated** —
   it was outside that seam and is recorded here rather than chased. Reproduce by
   seeding all five corrupt shapes together and watching the background task log.
+- **A claim for an unknown `activity_id` silently claims a different deed.**
+  Found 2026-08-05 during seam 7 verification, and **pre-existing** — the
+  `next((...), 0)` fallback in `claim_unguided_bonus` predates it. Ask for an
+  `activity_id` that is not in the queue (stale bubble, retry after the sweep
+  already paid it) and the claim quietly settles the *oldest* pending deed
+  instead of refusing. Seam 7 changed the fallback target from index 0 to the
+  first valid index, which makes it consistent, not correct. The honest fix is
+  to refuse an unmatched id — but it changes a live endpoint's contract, so it
+  wants its own seam and a look at what the frontend does with a stale bubble.
+- ~~**A malformed *stale* unguided candidate 500s the boot endpoint.**~~
+  **RESOLVED 2026-08-05** by review seam 7. One validity predicate behind one
+  reader: malformed entries stay in storage, are skipped by the sweep, filtered
+  out of `unguided_pending()` so no unclaimable bubble appears, and refused by a
+  claim with an in-world 400. A non-list queue degrades to empty without being
+  written over. All four guards plus the shadow fix below were each mutated
+  separately and each failed on its own, per the acceptance bar this seam
+  carried after two earlier seams shipped a guard that another guard masked.
+
+  **The seam introduced and fixed one defect of its own:** with an unreadable
+  row at index 0 and a claimable deed behind it, `unguided_pending()` showed the
+  healthy bubble while a no-argument claim refused it — the two paths disagreed
+  about what "pending" meant. Original finding:
+
 - **A malformed *stale* unguided candidate 500s the boot endpoint.** Found
   2026-08-05 during seam 6 verification, and **pre-existing** — seam 6 does not
   touch the line. `unguided_pending()` runs `_sweep_stale_unguided_candidates()`
