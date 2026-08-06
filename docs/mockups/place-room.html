@@ -1,0 +1,813 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — your own room, a scene</title>
+<!-- Design mockup for Settings (static/js/misc.js:817) recast as a place: the
+     room you keep at the inn. Nothing here is wired up; it is drawing paper.
+     Chrome, tokens, fonts, sprite engine and tiles all come from _harness.js. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+  IV.injectStyles();
+
+  /* ---------------------------------------------------------------------------
+     0. sprite helper — pad ragged rows so hand-authored art can't skew a canvas
+     ------------------------------------------------------------------------- */
+  function normalize(defs) {
+    var ragged = [];
+    Object.keys(defs).forEach(function (k) {
+      var rows = defs[k].r;
+      var w = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+      if (rows.some(function (r) { return r.length !== w; })) ragged.push(k);
+      defs[k].r = rows.map(function (r) { return r + new Array(w - r.length + 1).join('.'); });
+    });
+    if (ragged.length) console.warn('ragged sprite rows (padded):', ragged.join(', '));
+    return defs;
+  }
+
+  /* ---------------------------------------------------------------------------
+     1. THE FIXTURES, as pixels. Everything in this room is a thing you handle.
+     ------------------------------------------------------------------------- */
+  IV.addSprites(normalize({
+
+    /* the door — plank panels and an iron lock plate. the lock is the PIN. */
+    fx_door: { p: { F: '#7a5a32', f: '#4a3620', d: '#5a4028', D: '#3d2a16', i: '#8a8a9a', I: '#c8c8d8', k: '#12100c' }, r: [
+      'FFFFFFFFFFFFFFFFFFFF',
+      'FffffffffffffffffffF',
+      'FfDDDDDDDDDDDDDDDDfF',
+      'FfDddddddddddddddDfF',
+      'FfDdDDDDDDDDDDDDdDfF',
+      'FfDdDddddddddddDdDfF',
+      'FfDdDddddddddddDdDfF',
+      'FfDdDddddddddddDdDfF',
+      'FfDdDddddddddddDdDfF',
+      'FfDdDDDDDDDDDDDDdDfF',
+      'FfDddddddddddddddDfF',
+      'FfDDDDDDDDDDDDDDDDfF',
+      'FfDddddddddddddddDfF',
+      'FfDdDDDDDDDDDDDDdDfF',
+      'FfDdDddddddddddDdDfF',
+      'FfDdDddddddiiiiiiDfF',
+      'FfDdDddddddiIkkIiDfF',
+      'FfDdDddddddiIkkIiDfF',
+      'FfDdDddddddiIIIIiDfF',
+      'FfDdDddddddiiiiiiDfF',
+      'FfDdDDDDDDDDDDDDdDfF',
+      'FfDddddddddddddddDfF',
+      'FfDDDDDDDDDDDDDDDDfF',
+      'FffffffffffffffffffF',
+      'FFFFFFFFFFFFFFFFFFFF',
+      'ffffffffffffffffffff',
+    ]},
+
+    /* the measuring stick notched down the door frame. two sets of notches;
+       the gold ones are the set being read. */
+    fx_stick: { p: { W: '#d8bc86', w: '#b09060', n: '#3a2a14', g: '#c9a24b', k: '#4a3620' }, r: [
+      'kWwwwwwk',
+      'kWwwwwwk',
+      'kgggwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kggwwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kgggwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kggwwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kgggwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kggwwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kgggwwwk',
+      'kWwwwnnk',
+      'kWwwwwwk',
+      'kggwwwwk',
+      'kkkkkkkk',
+    ]},
+
+    /* the looking-glass — your name and your face live here */
+    fx_mirror: { p: { W: '#9a7440', w: '#6a4e2c', g: '#2f3f5c', G: '#4a648f', f: '#e0b088', h: '#6a4428', k: '#1a1410', t: '#4a6a9a' }, r: [
+      '...WWWWWWWW...',
+      '.WWwwwwwwwwWW.',
+      '.WwggggggggwW.',
+      '.WgGGGGGGGGgW.',
+      '.WgGGhhhhGGgW.',
+      '.WgGhhhhhhGgW.',
+      '.WgGhffffhGgW.',
+      '.WgGhfkkfhGgW.',
+      '.WgGhffffhGgW.',
+      '.WgGGffffGGgW.',
+      '.WgGGGffGGGgW.',
+      '.WgGGtttttGgW.',
+      '.WgGtttttttgW.',
+      '.WwggggggggwW.',
+      '.WWwwwwwwwwWW.',
+      '...WWWWWWWW...',
+    ]},
+
+    /* the window — dusk over the vale, with a sill for the cage */
+    fx_window: { p: { W: '#9a7440', w: '#6a4e2c', s: '#1b2340', S: '#39497a', m: '#e8e0c0', l: '#7a5a32', i: '#4a3620' }, r: [
+      'wwwwwwwwwwwwwwwwwwwwwwww',
+      'wWWWWWWWWWWWWWWWWWWWWWWw',
+      'wWssssssssWWssssssssssWw',
+      'wWssssmmssWWssssssssssWw',
+      'wWsssmmmmsWWssssssssssWw',
+      'wWssssmmssWWsssssSssssWw',
+      'wWssssssssWWssssssssssWw',
+      'wWsSssssssWWssssssssssWw',
+      'wWWWWWWWWWWWWWWWWWWWWWWw',
+      'wWssssssssWWssssssssssWw',
+      'wWssssssssWWsssssssSssWw',
+      'wWsssSssssWWssssssssssWw',
+      'wWssssssssWWssssssssssWw',
+      'wWssssssssWWssSsssssssWw',
+      'wWWWWWWWWWWWWWWWWWWWWWWw',
+      'wwwwwwwwwwwwwwwwwwwwwwww',
+      'llllllllllllllllllllllll',
+      'llllllllllllllllllllllll',
+      'iiiiiiiiiiiiiiiiiiiiiiii',
+    ]},
+
+    /* the raven cage on the sill. ravens are sync. */
+    fx_cage: { p: { i: '#8a8a9a', I: '#c8c8d8', d: '#1a1826', k: '#4a4a5e', K: '#6a6a80', e: '#f0d080', b: '#c9a24b', o: '#f0d080', w: '#6a4e2c' }, r: [
+      '.........ii.........',
+      '.......iiiiii.......',
+      '.....iiiiiiiiii.....',
+      '...iii..........iii.',
+      '..ii..............ii',
+      '..iiiiiiiiiiiiiiii..',
+      '..iddiddiddiddiddi..',
+      '..iddiddikkiddiddi..',
+      '..iddikkikkikkiddi..',
+      '..iddikeikkikbiddi..',
+      '..iddikkikkikbbddi..',
+      '..iddikKiKKikkiddi..',
+      '..iddiKKiKKiKKiddi..',
+      '..iddikKiKKiKkiddi..',
+      '..iddikkikkikkiddi..',
+      '..iddiddiooiddiddi..',
+      '..iddiddikkiddiddi..',
+      '..iiiiiiiiiiiiiiii..',
+      '..IIIIIIIIIIIIIIII..',
+      '...wwwwwwwwwwwwww...',
+    ]},
+
+    /* the raven itself, close up, for the panel — leg banded */
+    fx_raven: { p: { k: '#191924', K: '#33334a', e: '#f0d080', b: '#c9a24b', B: '#8a6a28', l: '#8a7a4a', o: '#f0d080', O: '#c9a24b' }, r: [
+      '.....kkkkkk...........',
+      '...kkkkkkkkkk.........',
+      '..kkkkkkkkkkkk........',
+      '..kkkekkkkkkkkbb......',
+      '..kkkkkkkkkkkkbbbbb...',
+      '..kkkkkkkkkkkkBBb.....',
+      '..kkkkkkkkkkkkk.......',
+      '...kkkkkkkkkkkkk......',
+      '..kkkkKKKKkkkkkkk.....',
+      '..kkkKKKKKKkkkkkkk....',
+      '..kkkKKKKKKKkkkkkkk...',
+      '..kkkkKKKKKkkkkkkkk...',
+      '...kkkkKKKkkkkkkkk....',
+      '....kkkkkkkkkkkkk.....',
+      '.....kkkkkkkkkkk......',
+      '......ll....ll........',
+      '....OOOOOO..ll........',
+      '....oooooo..ll........',
+      '....OOOOOO..ll........',
+      '......ll....ll........',
+      '....llll..llll........',
+    ]},
+
+    /* the band, off the leg and open on the desk — the writing on it */
+    fx_band: { p: { O: '#c9a24b', o: '#f0d080', k: '#5a4620' }, r: [
+      '..OOOOOOOOOOOOOO..',
+      '.OooooooooooooooO.',
+      '.Ook.k.kk..k.k.oO.',
+      '.OooooooooooooooO.',
+      '.Ook.kk.k.kkk..oO.',
+      '.OooooooooooooooO.',
+      '..OOOOOOOOOOOOOO..',
+    ]},
+
+    /* the peg board over the desk — seven pegs, work hung on them */
+    fx_pegboard: { p: { w: '#4a3620', W: '#8a6a40', p: '#d8b478', k: '#2a1e10', t: '#c9b48a', T: '#e0d0aa' }, r: [
+      'wwwwwwwwwwwwwwwwwwwwwwwwwwww',
+      'wWWWWWWWWWWWWWWWWWWWWWWWWWWw',
+      'wWkkkkkkkkkkkkkkkkkkkkkkkkWw',
+      'wWk......................kWw',
+      'wWk.pp..pp..pp..pp..pp.pp.Ww',
+      'wWk.pp..pp..pp..pp..pp.pp.Ww',
+      'wWk.TT...T..TT......TT....Ww',
+      'wWk.tt...t..tt......tt....Ww',
+      'wWk.tt......tt......tt....Ww',
+      'wWk......................kWw',
+      'wWkkkkkkkkkkkkkkkkkkkkkkkkWw',
+      'wWWWWWWWWWWWWWWWWWWWWWWWWWWw',
+      'wwwwwwwwwwwwwwwwwwwwwwwwwwww',
+    ]},
+
+    /* the bed */
+    fx_bed: { p: { W: '#9a7440', w: '#6a4e2c', b: '#4a2f3c', B: '#6a4356', p: '#d8d0c0', k: '#3a2a16' }, r: [
+      'WW........................WW',
+      'WW........................WW',
+      'WWppppp...................WW',
+      'WWppppp...................WW',
+      'WWpppppBBBBBBBBBBBBBBBBBBBWW',
+      'WWBBBBBBBBBBBBBBBBBBBBBBBBWW',
+      'WWbbbbbbbbbbbbbbbbbbbbbbbbWW',
+      'WWbbbbbbbbbbbbbbbbbbbbbbbbWW',
+      'WWbbbbbbbbbbbbbbbbbbbbbbbbWW',
+      'wwwwwwwwwwwwwwwwwwwwwwwwwwww',
+      'wk......................k..w',
+      '.k......................k...',
+      '.k......................k...',
+      '.k......................k...',
+    ]},
+
+    /* the pack at the foot of the bed — how far you mean to go */
+    fx_pack: { p: { w: '#6a4e2c', W: '#8a6a40', s: '#3f2c18', g: '#c9a24b' }, r: [
+      '....WWWW....',
+      '...WwwwwW...',
+      '..WwwwwwwW..',
+      '.WwwwwwwwwW.',
+      '.WwssssssWW.',
+      '.WwsggggsWW.',
+      '.WwssssssWW.',
+      '.WwwwwwwwwW.',
+      '.WwwWWWWwwW.',
+      '.WwwWwwWwwW.',
+      '.WwwWWWWwwW.',
+      '.WwwwwwwwwW.',
+      '..WWWWWWWW..',
+    ]},
+
+    /* the boots by the door — how you like to travel */
+    fx_boots: { p: { k: '#33240f', K: '#5a4028', s: '#8a6a40', h: '#1e1509' }, r: [
+      '.KKKK.....KKKK....',
+      '.KkkK.....KkkK....',
+      '.KkkK.....KkkK....',
+      '.KssK.....KssK....',
+      '.KkkK.....KkkK....',
+      '.KkkK.....KkkK....',
+      '.Kkkkk....Kkkkk...',
+      '.Kkkkkk...Kkkkkk..',
+      '.hhhhhh...hhhhhh..',
+    ]},
+
+    /* the desk */
+    fx_desk: { p: { w: '#6a4e2c', W: '#9a7440', d: '#4a3620', g: '#c9a24b' }, r: [
+      'WWWWWWWWWWWWWWWWWWWWWWWWWW',
+      'wwwwwwwwwwwwwwwwwwwwwwwwww',
+      'w........................w',
+      'w.dddddddd..dddddddddddd.w',
+      'w.d......d..d..........d.w',
+      'w.d..gg..d..d.....gg...d.w',
+      'w.dddddddd..dddddddddddd.w',
+      'w........................w',
+      'wwwwwwwwwwwwwwwwwwwwwwwwww',
+      'ww......................ww',
+      'ww......................ww',
+      'ww......................ww',
+      'ww......................ww',
+      'ww......................ww',
+    ]},
+
+    /* the Hearth Tree — established in a sibling thread; placed here, not
+       redesigned. What hangs on it works; what sleeps in the box only sleeps. */
+    fx_tree: { p: { g: '#2e5a34', G: '#3f7a46', o: '#c9a24b', r: '#c85050', b: '#6aa0c8', w: '#6a4e2c', W: '#9a7440', t: '#4a3620', y: '#f0d080' }, r: [
+      '...........y............',
+      '..........yyy...........',
+      '...........y............',
+      '..........GgG...........',
+      '.........GGgGG..........',
+      '........GGgGgGG.........',
+      '.......GGgGoGgGG........',
+      '........GGGgGGG.........',
+      '.......GGGgGgGGG........',
+      '......GGgGGGGgGGG.......',
+      '.....GGgGoGGGGgrGG......',
+      '......GGGGgGGGGGG.......',
+      '.....GGGgGGGGgGGGG......',
+      '....GGgGGGbGGGGgGGG.....',
+      '...GGgGGGGGGGGGGgGGG....',
+      '....GGGGgGGGGGGGGGG.....',
+      '...GGGgGGoGGGGGgGGGG....',
+      '..GGgGGGGGGGGGGGGgGGG...',
+      '.GGGGgGGGGGrGGGGGGGGGG..',
+      '..GGGGGGGGGGGGGGGGGGG...',
+      '..........ttt...........',
+      '..........ttt...........',
+      '.....wwwwwwwwwwwwww.....',
+      '.....WWWWWWWWWWWWWW.....',
+      '.....wwwwwwwwwwwwww.....',
+      '.....wwwwwwwwwwwwww.....',
+      '.....WWWWWWWWWWWWWW.....',
+      '......wwwwwwwwwwww......',
+    ]},
+
+    /* the ornament box, open on the floor beside the tree */
+    fx_ornbox: { p: { w: '#6a4e2c', W: '#9a7440', k: '#2a1e10', o: '#c9a24b', r: '#c85050', b: '#6aa0c8' }, r: [
+      'W.................',
+      'WW................',
+      'WWW...............',
+      'wWWW..............',
+      'wwwwwwwwwwwwwwwww.',
+      'wkkkkkkkkkkkkkkkw.',
+      'wk.oo..rr..bb..okw',
+      'wk.oo..rr..bb..okw',
+      'wwwwwwwwwwwwwwwwww',
+      '.WWWWWWWWWWWWWWWW.',
+    ]},
+
+    /* the loose floorboard. it does not announce itself. */
+    fx_loose: { p: { p: '#5a4630', P: '#6f573c', k: '#241a10', n: '#8a8a9a' }, r: [
+      'kk........................',
+      'PPkkkkkkkkkkkkkkkkkkkkkkkk',
+      'ppPPPPPPPPPPPPPPPPPPPPPPPP',
+      'ppppppppppnppppppppppppppp',
+      'pppppppppppppppppppppppppp',
+      'kkkkkkkkkkkkkkkkkkkkkkkkkk',
+    ]},
+
+    /* a lantern, for the warmth on the wall */
+    fx_lantern: { p: { i: '#8a8a9a', I: '#c8c8d8', y: '#f0d080', o: '#e07030', k: '#2a2a34' }, r: [
+      '....ii....',
+      '...i..i...',
+      '..IiiiiI..',
+      '..ikkkki..',
+      '..ikyyki..',
+      '..iyoyyi..',
+      '..iyooyi..',
+      '..ikyyki..',
+      '..IiiiiI..',
+      '...iiii...',
+    ]},
+
+    /* corner glyphs, the weight class of the app's close glyph */
+    glyph_quill: { p: { q: '#e8e0cc', k: '#4a4030', g: '#c9a24b' }, r: [
+      '..........qq',
+      '.........qq.',
+      '........qq..',
+      '.......qq...',
+      '......qq....',
+      '.....qq.....',
+      '....qq......',
+      '...qk.......',
+      '..kk........',
+      '............',
+      'gggggggggggg',
+      '............',
+    ]},
+    glyph_close: { p: { k: '#8a8494', g: '#c9a24b' }, r: [
+      '............',
+      '.gg......gg.',
+      '.kgg....gg..',
+      '..kgg..gg...',
+      '...kggggk...',
+      '....kggk....',
+      '...kggggk...',
+      '..kgg..ggk..',
+      '.kgg....ggk.',
+      '.gg......gg.',
+      '............',
+      '............',
+    ]},
+    glyph_key: { p: { g: '#c9a24b', y: '#f0d080', k: '#4a3620' }, r: [
+      '...yyyy.....',
+      '..yg..gy....',
+      '..yg..gy....',
+      '...yggy.....',
+      '....gg......',
+      '....gg......',
+      '....ggg.....',
+      '....gg......',
+      '....ggg.....',
+      '....gg......',
+      '....gg......',
+      '............',
+    ]},
+  }));
+
+  /* ---------------------------------------------------------------------------
+     2. SCENE CSS — the room. Injected after IV.injectStyles() so it wins.
+     ------------------------------------------------------------------------- */
+  (function () {
+    var css = `
+/* ---- the floating name-plates. The harness scopes .splate under .spot; every
+       fixture in this room wears one, so restate it unscoped. ---- */
+.iv .splate { display:inline-block; max-width:100%; padding:2px 6px 3px; margin-top:0;
+  background:rgba(8,8,14,0.86); border:1px solid #4a3d20; color:var(--gold-bright);
+  font-family:var(--font-body); font-size:var(--type-body); line-height:1.15; text-align:center; }
+.iv .splate small { display:block; margin-top:2px; color:var(--dim);
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.3; }
+
+/* ---- the room shell ---- */
+.iv .room { position:relative; border:2px solid #4a3d20; margin:14px 4px 0; image-rendering:pixelated; overflow:hidden; }
+.iv .room .wall { position:relative; background-color:#241c14; padding:10px 12px 0; min-height:268px;
+  display:flex; align-items:flex-end; }
+.iv .room .wall::before { content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse at 24% 16%, rgba(240,208,128,0.16), transparent 56%),
+             linear-gradient(180deg, rgba(0,0,0,0.42), rgba(0,0,0,0) 46%); }
+.iv .room .floorline { height:7px; background:linear-gradient(180deg,#a07c4a,#3a2a16); position:relative; z-index:3;
+  box-shadow:0 2px 0 rgba(0,0,0,0.45); }
+.iv .room .rmfloor { position:relative; background-color:#4a3826; padding:10px 26px 12px; }
+.iv .room .rmfloor::before { content:''; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg, rgba(0,0,0,0.34), rgba(0,0,0,0.05) 60%); }
+
+/* ---- a fixture: floating label, then the thing itself, standing on the floor ---- */
+.iv .bays { position:relative; z-index:2; width:100%; display:flex; align-items:flex-end; justify-content:space-between; gap:6px; }
+.iv .fx { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; position:relative; }
+.iv .fx-art { position:relative; display:flex; align-items:flex-end; justify-content:center; gap:4px; }
+.iv .fx.tappable { cursor:pointer; }
+.iv .fx.tapped .splate { border-color:var(--gold-bright); }
+.iv .fx.tapped .fx-art canvas.mark { outline:2px solid var(--gold-bright); outline-offset:2px; }
+.iv .fx.hushed .splate { opacity:0.34; }
+.iv .fx.hushed:hover .splate { opacity:1; }
+
+/* the charter — a pinned paper, handwritten, above the desk */
+.iv .charter { position:relative; width:118px; padding:6px 7px 7px; background:#e6ddc4; color:#3c3222;
+  border:1px solid #a89c7e; box-shadow:2px 2px 0 rgba(0,0,0,0.55); text-align:left;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.4; }
+.iv .charter::before { content:''; position:absolute; top:-3px; left:50%; margin-left:-3px; width:6px; height:6px; background:#c85050; box-shadow:0 0 0 1px #6a2828; }
+.iv .charter b { display:block; color:#5a4a22; font-weight:400; letter-spacing:1px; }
+.iv .charter i { font-style:italic; color:#6a5c40; }
+
+/* ---- the open fixture: a raised panel that swung out of the thing you tapped ---- */
+.iv .rack.opened { margin:26px 4px 4px; }
+.iv .rack .board-glyph { top:6px; width:92px; }
+.iv .rack .board-glyph.glyph-l { left:8px; }
+.iv .rack .board-glyph.glyph-r { right:8px; }
+.iv .rack .board-glyph .g-cap { max-width:92px; }
+.iv .rack .rk-head { text-align:center; padding-inline:108px; }
+.iv .rack .rk-head .rk-title { color:var(--gold-bright); }
+
+/* ---- the peg board, opened ---- */
+.iv .pegwall { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; margin-top:10px;
+  background:#2b2013; border:2px solid; border-color:#8a6a40 #3a2a18 #2e2214 #6a4e2c; padding:8px 8px 10px; }
+.iv .pegday { display:flex; flex-direction:column; align-items:center; min-width:0; }
+.iv .pd-day { font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:1px; color:var(--dim-readable); }
+.iv .pd-rail { width:100%; height:4px; margin:4px 0 0; background:linear-gradient(180deg,#8a6a40,#4a3620); }
+.iv .peg { width:12px; height:12px; margin-top:-4px; background:linear-gradient(180deg,#e6c48c,#8a6a40);
+  border:2px solid #3a2a16; box-shadow:2px 2px 0 rgba(0,0,0,0.5); position:relative; z-index:2; }
+.iv .pd-hang { width:100%; display:flex; flex-direction:column; align-items:center; }
+.iv .cord { width:2px; height:9px; background:repeating-linear-gradient(180deg,#8a8a9a 0 3px, rgba(0,0,0,0) 3px 5px); }
+.iv .hangtag { width:100%; padding:4px 4px 5px; text-align:center; color:var(--ink);
+  border:2px solid; border-color:#8a6a40 #3a2a18 #2e2214 #6a4e2c; background:linear-gradient(180deg,#5a4428,#48361f);
+  font-family:var(--font-body); font-size:var(--type-body); line-height:1.2; margin-bottom:6px; }
+.iv .hangtag b { display:block; color:var(--gold-bright); font-weight:400; }
+.iv .hangtag small { display:block; font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim-readable); margin-top:2px; }
+.iv .hangtag.loose { border-color:#6a6a78 #2c2c34 #22222a #55555e; background:linear-gradient(180deg,#3a3a46,#2b2b36); }
+.iv .hangtag.loose b { color:#b8ac90; }
+.iv .hangtag.inhand { border-color:#f0a850 #7a4a20 #5c3816 #c07838;
+  box-shadow:0 0 0 2px rgba(240,168,80,0.3), 3px 3px 0 rgba(0,0,0,0.5); transform:translateY(-7px); }
+.iv .pd-rest { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); margin-top:9px; text-align:center; }
+.iv .pd-note { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--gold-bright); margin-top:2px; }
+
+/* ---- the raven's band, opened ---- */
+.iv .bandrow { display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 4px; }
+.iv .bandstate { display:inline-block; border:1px solid var(--green); color:var(--green);
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:1px; text-transform:uppercase; padding:1px 6px; }
+.iv .writ { margin-top:8px; border-top:1px solid var(--edge); padding-top:8px; }
+.iv .writ label { display:block; color:var(--blue); font-family:var(--font-body); font-size:var(--type-body);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.iv .writ input { width:100%; background:#000; color:var(--ink); border:2px solid var(--gold);
+  font-family:var(--font-body); font-size:var(--type-body); padding:6px 8px; }
+.iv .writ .whisper { display:block; margin:3px 0 10px; color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .writ .whisper b { color:var(--ink); font-weight:400; }
+.iv .rack .rk-foot.flight { text-align:center; color:var(--dim-readable); margin-top:8px; }
+
+/* ---- the phone fold: the same room, stacked as cards ---- */
+.iv-phone .fold { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:12px 4px 0; }
+.iv-phone .fxcard { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px;
+  border:2px solid #4a3d20; background-color:#241c14; padding:7px 5px 6px; min-height:118px; position:relative; }
+.iv-phone .fxcard.wide { grid-column:1 / -1; }
+.iv-phone .fxcard .splate { max-width:100%; }
+.iv-phone .fxcard .fx-art { position:relative; display:flex; align-items:flex-end; justify-content:center; gap:4px; }
+.iv-phone .fxcard.tapped { border-color:var(--gold-bright); box-shadow:0 0 0 2px rgba(240,208,128,0.22); }
+.iv-phone .fxcard.hushed .splate { opacity:0.38; }
+.iv-phone .fold-floor { height:6px; margin:0 4px; background:linear-gradient(180deg,#8a6a40,#3a2a16); }
+.iv-phone .rack.opened { margin:24px 4px 4px; }
+/* on the fold there is no room beside the corner glyphs, so the head drops below them */
+.iv-phone .rack .board-glyph { width:86px; }
+.iv-phone .rack .board-glyph .g-cap { max-width:86px; }
+.iv-phone .rack .rk-head { padding-inline:0; padding-top:44px; }
+`;
+    var el = document.createElement('style');
+    el.id = 'room-styles';
+    el.textContent = css;
+    document.head.appendChild(el);
+  })();
+
+  /* ---------------------------------------------------------------------------
+     3. SCENE PIECES
+     ------------------------------------------------------------------------- */
+  var S = IV.spriteTag;
+
+  function glyphs(strikeLabel) {
+    return `<span class="board-glyph glyph-l">${S('glyph_quill', 22)}<span class="g-cap">${strikeLabel}</span></span>
+      <span class="board-glyph glyph-r">${S('glyph_close', 22)}<span class="g-cap">leave it be</span></span>`;
+  }
+
+  /* the week, hung on pegs — this whole panel stands in for the multi-step
+     schedule chooser at misc.js:561 */
+  var WEEK = [
+    { day: 'MON', tags: [{ n: 'the iron', s: 'upper — press day' }] },
+    { day: 'TUE', tags: [{ n: 'a long run', s: 'steady' }] },
+    { day: 'WED', tags: [] },
+    { day: 'THU', tags: [{ n: 'the iron', s: 'lower — pull day' }, { n: 'a swim', s: 'easy', loose: true }] },
+    { day: 'FRI', tags: [{ n: 'a ride', s: 'brisk' }] },
+    { day: 'SAT', tags: [{ n: 'a climb', s: 'hard', hand: true }] },
+    { day: 'SUN', tags: [] },
+  ];
+
+  function pegDay(d) {
+    var hung = d.tags.map(function (t) {
+      return `<span class="cord"></span>
+        <span class="hangtag ${t.loose ? 'loose' : ''} ${t.hand ? 'inhand' : ''}">
+          <b>${t.n}</b><small>${t.s}</small></span>`;
+    }).join('');
+    return `<div class="pegday">
+      <span class="pd-day">${d.day}</span>
+      <span class="pd-rail"></span>
+      <span class="peg"></span>
+      <div class="pd-hang">${hung || '<span class="pd-rest">bare peg —<br>the day rests</span>'}</div>
+      ${d.tags.some(function (t) { return t.loose; }) ? '<span class="pd-note">hung loose —<br>if the day allows</span>' : ''}
+      ${d.tags.some(function (t) { return t.hand; }) ? '<span class="pd-note">in hand —<br>let it go to hang it</span>' : ''}
+    </div>`;
+  }
+
+  function pegPanel(idAttr) {
+    return `<div class="rack tail-up opened" id="${idAttr}"
+        data-seam="PEG BOARD"
+        data-tag="THE PEG BOARD|The weekly counsel schedule, whole, on one board. Today every slot opens a four-step modal picker (misc.js:561). Here you move a peg &mdash; no steps, no picker, no stacked dialogs.">
+      ${glyphs('strike the week from the record')}
+      <div class="rk-head">
+        <div class="rk-title">the peg board</div>
+        <div class="rk-sub">seven pegs over the desk. hang work on a day; lift it off to unhang it. a bare peg is a day of rest.</div>
+      </div>
+      <div class="pegwall">${WEEK.map(pegDay).join('')}</div>
+      <div class="rk-foot">sworn paths kept this week: 3 of 5 &middot; the board is the plan; nothing is saved twice.</div>
+    </div>`;
+  }
+
+  function bandPanel(idAttr) {
+    return `<div class="rack tail-up opened" id="${idAttr}"
+        data-seam="RAVEN CAGE"
+        data-tag="THE BAND ON THE RAVEN'S LEG|The intervals.icu credentials. Ravens are sync, so the credentials are simply how your raven knows whose loft to fly to — bound or unbound is whether the band is on. Same two values, same endpoint, read off a bird instead of an API tab.">
+      ${glyphs('strike the band from the record')}
+      <div class="rk-head">
+        <div class="rk-title">the band on her leg</div>
+        <div class="rk-sub">she carries your runs, climbs, lifts and rest home from the loft at intervals.icu. the band is how she knows which loft is yours.</div>
+      </div>
+      <div class="bandrow">
+        ${S('fx_raven', 110, 'mark')}
+        <div style="text-align:center">
+          ${S('fx_band', 72)}
+          <div style="margin-top:5px"><span class="bandstate">the band is tied</span></div>
+        </div>
+      </div>
+      <div class="writ"
+        data-seam="HONEST FORM"
+        data-tag="A SECRET STILL HAS TO BE TYPED|The one place the fiction must not lie. An athlete id and an API key are text; no amount of world-building types them for you. So these stay real fields with real keyboards — the room changes where you are standing while you type them, not that you type them.">
+        <label for="band-loft">the loft she answers to</label>
+        <input type="text" id="band-loft" value="i48211">
+        <span class="whisper">your <b>athlete id</b> at intervals.icu &mdash; Settings &rarr; Developer</span>
+        <label for="band-mark">the mark that proves the loft yours</label>
+        <input type="password" id="band-mark" value="XXXXXXXXXXXXXXXX">
+        <span class="whisper">your <b>api key</b>, already worn &mdash; leave it blank to keep the one she carries</span>
+      </div>
+      <button class="btn wide" style="margin-top:2px">TIE THE BAND &amp; LET HER FLY</button>
+      <div class="rk-foot flight">ravens last flew a quarter-hour past; they fly every fifteen minutes.<br>
+        the first flight fetches four hundred days, and takes a while.</div>
+    </div>`;
+  }
+
+  /* ---------------------------------------------------------------------------
+     4. THE DESKTOP ROOM — the whole room in one view
+     ------------------------------------------------------------------------- */
+  function desktopRoom() {
+    return `<div class="room">
+      <div class="wall" data-fill="wood">
+        <div class="bays">
+
+          <div class="fx tappable" style="width:132px"
+            data-seam="DOOR"
+            data-tag="THE LOCK ON THE DOOR|The PIN. Setting one is turning the key; the plate reads locked or unlocked and there is nothing else to read.">
+            <span class="splate">the door<small>the lock keeps this save yours</small></span>
+            <div class="fx-art" style="gap:0">
+              <span data-seam="STICK"
+                data-tag="THE MEASURING STICK|Units. Notched both ways down the frame; tap to flip which notches are read. One stick answers km/miles and kg/lb.">${S('fx_stick', 32, 'mark')}</span>
+              ${S('fx_door', 100, 'mark')}
+            </div>
+          </div>
+
+          <div class="fx tappable" style="width:74px"
+            data-seam="MIRROR"
+            data-tag="THE MIRROR|Display name and appearance. One act, one object: you look at yourself and change what you see.">
+            <span class="splate">the looking-glass<small>your name, your face</small></span>
+            <div class="fx-art" style="flex-direction:column; align-items:center; gap:20px; padding-bottom:58px">
+              ${S('fx_lantern', 30)}
+              ${S('fx_mirror', 70, 'mark')}
+            </div>
+          </div>
+
+          <div class="fx tappable" style="width:152px"
+            data-seam="BED &amp; PACK"
+            data-tag="THE PACK BY THE BED|Ambition &mdash; Mend, Keep, Forge, Conquer. How much you mean to carry, so you heft a pack instead of picking a row of buttons.">
+            <span class="splate">the pack<small>how much you mean to carry</small></span>
+            <div class="fx-art">${S('fx_bed', 112)}${S('fx_pack', 36, 'mark')}</div>
+          </div>
+
+          <div class="fx tappable" style="width:144px"
+            data-seam="DESK"
+            data-tag="THE CHARTER, PINNED|The focus charter, primary and secondary. Handwritten paper above the desk &mdash; which is what a charter already is.">
+            <span class="splate">the desk<small>board above it, charter pinned</small></span>
+            <div class="fx-art" style="flex-direction:column; align-items:center; gap:5px">
+              <div class="charter"><b>THE CHARTER</b>the road, first.<br>then the iron, then<br>the water. <i>&mdash; sworn in spring</i></div>
+              <div id="dk-board">${S('fx_pegboard', 140, 'mark')}</div>
+              ${S('fx_desk', 130)}
+            </div>
+          </div>
+
+          <div class="fx tappable" style="width:162px"
+            data-seam="WINDOW"
+            data-tag="THE CAGE BY THE WINDOW|Ravens are sync, so the intervals.icu link lives in the cage: band on her leg means bound. Opened on the phone frame.">
+            <span class="splate">the raven cage<small>she flies every fifteen minutes</small></span>
+            <div class="fx-art" style="gap:6px">
+              <div style="padding-bottom:40px">${S('fx_window', 96)}</div>
+              ${S('fx_cage', 60, 'mark')}
+            </div>
+          </div>
+
+          <div class="fx tappable" style="width:130px"
+            data-seam="HEARTH TREE"
+            data-tag="THE HEARTH TREE|Placed, not redesigned. What hangs on the tree works; what sleeps in the box only sleeps. Build the room once and it serves both features &mdash; plugins take the corner, settings take the walls, neither needs its own screen.">
+            <span class="splate">the hearth tree<small>what hangs, works</small></span>
+            <div class="fx-art" style="gap:2px">
+              ${S('fx_tree', 72, 'mark')}
+              ${S('fx_ornbox', 54)}
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="floorline"></div>
+      <div class="rmfloor" data-fill="planks">
+        <div class="bays">
+
+          <div class="fx tappable" style="width:132px"
+            data-seam="BOOTS"
+            data-tag="THE BOOTS BY THE DOOR|Game-loop style &mdash; Considered, Choose-your-own, Scheduled. How you like to travel. The pack said how far; the boots say how.">
+            <span class="splate">the boots<small>how you like to travel</small></span>
+            <div class="fx-art">${S('fx_boots', 54, 'mark')}</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div class="fx hushed" style="width:180px"
+            data-seam="LOOSE BOARD"
+            data-tag="THE LOOSE FLOORBOARD|Dev mode. Drawn at the tone of the floor, its plate barely lit: you find it because you already know it is there.">
+            <span class="splate">a board that gives<small>(it does not announce itself)</small></span>
+            <div class="fx-art">${S('fx_loose', 156)}</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    ${pegPanel('dk-panel')}`;
+  }
+
+  /* ---------------------------------------------------------------------------
+     5. THE PHONE FOLD — the same room, stacked, with the cage open instead
+     ------------------------------------------------------------------------- */
+  function card(opts) {
+    return `<div class="fxcard ${opts.cls || ''}" data-fill="wood" ${opts.id ? `id="${opts.id}"` : ''} ${opts.attrs || ''}>
+      <div class="fx-art">${opts.art}</div>
+      <span class="splate">${opts.name}<small>${opts.sub}</small></span>
+    </div>`;
+  }
+
+  function phoneRoom() {
+    return `<div class="fold"
+        data-seam="THE FOLD"
+        data-tag="THE SAME ROOM, FOLDED|Nothing dropped, nothing renamed &mdash; the bays become cards in reading order and the floorline still runs under them. A player who learned the room on a desk knows it on a phone.">
+      ${card({ name: 'the door', sub: 'the lock keeps this save yours', art: S('fx_door', 40) })}
+      ${card({ name: 'the stick', sub: 'read in km &amp; kg', art: S('fx_stick', 24) })}
+      ${card({ name: 'the looking-glass', sub: 'your name, your face', art: S('fx_mirror', 42) })}
+      ${card({ name: 'the pack', sub: 'how much you mean to carry', art: S('fx_bed', 84) + S('fx_pack', 24) })}
+      ${card({ name: 'the boots', sub: 'how you like to travel', art: S('fx_boots', 54) })}
+      ${card({ name: 'the charter', sub: 'what you swore to work toward',
+        art: '<div class="charter" style="width:104px"><b>THE CHARTER</b>the road, first.<br>then the iron,<br>then the water.</div>' })}
+      ${card({ name: 'the peg board', sub: 'the week, hung', art: S('fx_pegboard', 84) })}
+      ${card({ name: 'the hearth tree', sub: 'what hangs, works', art: S('fx_tree', 48) + S('fx_ornbox', 36) })}
+      ${card({ cls: 'hushed', name: 'a board that gives', sub: '(it does not announce itself)', art: S('fx_loose', 104) })}
+      ${card({ name: 'the lantern', sub: 'the room is warm enough', art: S('fx_lantern', 30) })}
+      ${card({ cls: 'wide tapped', id: 'ph-cage', name: 'the raven cage, opened',
+        sub: 'tapped &mdash; the panel below swung out of it',
+        art: `<div style="padding-bottom:26px">${S('fx_window', 76)}</div>${S('fx_cage', 60, 'mark')}` })}
+    </div>
+    <div class="fold-floor"></div>
+    ${bandPanel('ph-panel')}`;
+  }
+
+  function scene(phone) {
+    return `<div class="app-pad">
+      ${IV.header({ phone: phone })}
+      ${phone ? phoneRoom() : desktopRoom()}
+      ${IV.footer({ ravens: '2026-08-06 17:40' })}
+    </div>
+    ${phone ? IV.dock() : ''}`;
+  }
+
+  /* ---------------------------------------------------------------------------
+     6. HANG IT ON THE WALL
+     ------------------------------------------------------------------------- */
+  IV.page({
+    title: 'Iron Vale — your own room, a scene',
+    subtitle: 'settings (misc.js:817) as the room you keep at the inn — visual mockup, nothing wired up',
+    legend: [
+      { label: 'DESKTOP', text: 'the whole room in one view, with the peg board open' },
+      { label: 'PHONE', text: 'the same room folded, with the raven cage open' },
+      { label: 'GLYPHS', text: 'utilities are corner glyphs in the ✕ weight class, never a button row' },
+      { label: 'VOICE', text: 'ravens are sync; strike from the record is delete; no emoji, pixels only' },
+    ],
+    note: `<b>The thesis.</b> Settings is the densest form in the app — three tabs, eleven controls and a
+      four-step modal picker hiding inside one of them — and it is the one screen with the most obvious
+      diegetic home: <b>the room you keep at the inn</b>. Every setting already is a physical thing.
+      The lock on the door is the PIN. The notches on the door frame are the units. The band on the raven's
+      leg is the intervals.icu link, because ravens are sync. The pegs over the desk are the week.
+      <b>Nothing about the settings changed</b> — same values, same endpoints, same two text fields for a
+      secret that genuinely has to be typed. What changed is where you are standing when you set them.`,
+    frames: {
+      phone: {
+        title: 'Phone — 414px bezel',
+        sub: 'the room folded into fixture cards; the raven cage is the fixture standing open',
+        chips: ['the fold', 'cage opened', 'the band', 'an honest form'],
+        html: scene(true),
+      },
+      desktop: {
+        title: 'Desktop — 900px viewport, scaled to fit',
+        sub: 'bed, desk, window and cage, mirror, door with its lock and stick, the hearth tree in the corner — and the peg board standing open',
+        chips: ['whole room', 'peg board opened', 'hearth tree placed', 'dev under the floor'],
+        url: 'ironvale.local:8322 — your own room',
+        html: scene(false),
+      },
+    },
+  });
+
+  /* aim each opened panel's tail back at the fixture it swung out of.
+     offsetLeft math, not rects — the desktop frame lives inside a scale(). */
+  function offLeft(el, stop) {
+    var x = 0;
+    while (el && el !== stop) { x += el.offsetLeft; el = el.offsetParent; }
+    return x;
+  }
+  function aimTail(panelId, targetId, frameId) {
+    var panel = document.getElementById(panelId);
+    var target = document.getElementById(targetId);
+    var frame = document.getElementById(frameId);
+    if (!panel || !target || !frame) return;
+    var x = offLeft(target, frame) + target.offsetWidth / 2 - offLeft(panel, frame);
+    panel.style.setProperty('--tailx', Math.round(x) + 'px');
+  }
+  function aimTails() {
+    aimTail('dk-panel', 'dk-board', 'frame-desktop');
+    aimTail('ph-panel', 'ph-cage', 'frame-phone');
+  }
+
+  /* floorboards: the harness's woodTile() is vertical planks, which reads as a
+     timber wall; the floor wants the same trick turned on its side. */
+  function plankTile() {
+    return IV.tileURL(144, 26, function (ctx, w, h) {
+      ctx.fillStyle = '#503c28'; ctx.fillRect(0, 0, w, 13);
+      ctx.fillStyle = '#4a3623'; ctx.fillRect(0, 13, w, 13);
+      ctx.fillStyle = '#33240f';
+      ctx.fillRect(0, 12, w, 1); ctx.fillRect(0, 25, w, 1);
+      /* one board end per course, far apart, so it never reads as brickwork */
+      ctx.fillRect(31, 0, 1, 12); ctx.fillRect(103, 13, 1, 12);
+      ctx.fillStyle = '#5e4832';
+      ctx.fillRect(6, 4, 22, 1); ctx.fillRect(64, 3, 30, 1);
+      ctx.fillRect(20, 18, 34, 1); ctx.fillRect(110, 17, 26, 1);
+      ctx.fillStyle = '#402e1c';
+      ctx.fillRect(40, 8, 26, 1); ctx.fillRect(72, 21, 24, 1);
+    });
+  }
+  function hydrateFloor() {
+    var url = plankTile();
+    document.querySelectorAll('[data-fill="planks"]').forEach(function (el) {
+      el.style.backgroundImage = url;
+      el.style.backgroundSize = '144px 26px';
+    });
+  }
+
+  var baseLayout = IV.layout;
+  IV.layout = function () { baseLayout(); aimTails(); };
+
+  IV.boot();
+  hydrateFloor();
+  IV.layout();
+</script>

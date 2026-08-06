@@ -1,0 +1,735 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — Grunhilda's forge, a room</title>
+<!-- Design mockup. Nothing here is wired up; it is drawing paper for the
+     giver-hut grammar, built on docs/mockups/_harness.js. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+  IV.injectStyles();
+
+  /* ==========================================================================
+     1. SCENE CSS — the giver-hut grammar. Everything here is new to this
+        mockup; the tokens, panel chrome, tails and corner glyphs it leans on
+        all come from the harness. Written as .hut/* so the other three huts
+        can take the same bones and change only their furniture.
+     ========================================================================== */
+  (function () {
+    var css = `
+/* ================= THE GIVER HUT — an interior you stand in ================= */
+.iv .hut { position:relative; border:2px solid #4a3d20; margin:12px 4px 4px;
+  image-rendering:pixelated; overflow:hidden; }
+
+/* back wall: the same vertical weight as the Drill Yard's sky band */
+.iv .hut .hut-wall { height:170px; position:relative; overflow:hidden;
+  background-color:#2b2013; background-repeat:repeat; }
+.iv .hut .hut-wall::after { content:''; position:absolute; inset:0; pointer-events:none; }
+.iv .hut .wall-beam { position:absolute; left:0; right:0; height:9px; z-index:1;
+  background:linear-gradient(180deg,#6a4e2c,#3c2c18); border-top:1px solid #8a6a40;
+  border-bottom:1px solid #241a0e; }
+.iv .hut .wall-beam.high { top:22px; }
+.iv .hut .wall-beam.low  { bottom:0; }
+
+/* floor: the yard's own dirt, gone sooty */
+.iv .hut .hut-floor { position:relative; padding:0 6px 12px;
+  background-color:#3d3122; border-top:4px solid #241a12; }
+.iv .hut .hut-floor::before { content:''; position:absolute; inset:0; z-index:0;
+  background:linear-gradient(180deg, rgba(0,0,0,0.50), rgba(0,0,0,0.05) 42%, rgba(0,0,0,0.38));
+  pointer-events:none; }
+
+/* --- time of day: the town square's own three states. Only the window and
+       the wall wash differ, so every hut and the square agree about the hour. --- */
+.iv .hut.tod-day .win-sky { background:linear-gradient(180deg,#7ea8d8 0,#a8c8e0 62%,#c8dcea 100%); }
+.iv .hut.tod-day .hut-wall::after { background:linear-gradient(180deg, rgba(180,210,240,0.10), rgba(0,0,0,0.30)); }
+.iv .hut.tod-day .lightfall { background:linear-gradient(180deg, rgba(200,225,245,0.20), rgba(200,225,245,0)); }
+
+.iv .hut.tod-sunset .win-sky { background:linear-gradient(180deg,#f0b062 0,#e07840 38%,#c04a44 70%,#6a2c48 100%); }
+.iv .hut.tod-sunset .hut-wall::after { background:linear-gradient(180deg, rgba(240,150,70,0.16), rgba(0,0,0,0.40)); }
+.iv .hut.tod-sunset .lightfall { background:linear-gradient(180deg, rgba(240,150,70,0.26), rgba(240,150,70,0)); }
+
+.iv .hut.tod-night .win-sky { background:linear-gradient(180deg,#0e1430 0,#161f42 60%,#1e2a52 100%); }
+.iv .hut.tod-night .hut-wall::after { background:linear-gradient(180deg, rgba(90,120,200,0.10), rgba(0,0,0,0.55)); }
+.iv .hut.tod-night .lightfall { background:linear-gradient(180deg, rgba(120,150,220,0.14), rgba(120,150,220,0)); }
+
+/* the window — a hole in the wall carrying the hour */
+.iv .hut .window { position:absolute; top:44px; width:152px; height:82px; z-index:2;
+  border:4px solid #4a3524; box-shadow:inset 0 0 0 2px #1a1208, 3px 3px 0 rgba(0,0,0,0.5);
+  overflow:hidden; }
+.iv .hut .win-sky { position:absolute; inset:0; }
+.iv .hut .win-sky .mtns { position:absolute; bottom:0; left:0; right:0; height:32px;
+  background-repeat:repeat-x; background-position:bottom left; background-size:170px 32px;
+  opacity:0.5; image-rendering:pixelated; }
+.iv .hut .win-bar { position:absolute; background:#3a2a18; }
+.iv .hut .win-bar.v { top:0; bottom:0; width:4px; left:50%; margin-left:-2px; }
+.iv .hut .win-bar.h { left:0; right:0; height:4px; top:50%; margin-top:-2px; }
+/* the light the window throws down the wall */
+.iv .hut .lightfall { position:absolute; top:124px; height:46px; width:190px; z-index:1;
+  transform:skewX(-16deg); pointer-events:none; }
+
+/* the tool rail — her hammers and tongs, hung on pegs */
+.iv .hut .wall-rail { position:absolute; top:46px; text-align:center; z-index:2; }
+.iv .hut .wall-rail .rail-bar { height:7px; background:linear-gradient(180deg,#8a6a40,#4c3820);
+  border:1px solid #241a0e; }
+.iv .hut .wall-rail .rail-hung { display:flex; justify-content:center; align-items:flex-start;
+  gap:14px; margin-top:-1px; }
+.iv .hut .wall-rail .rail-hung canvas { filter:brightness(0.8); }
+
+/* ---- the door in the back wall: the Drill Yard, one room over ---- */
+.iv .hut .doorway { position:absolute; bottom:0; z-index:2; text-align:center; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; }
+.iv .hut .doorway .splate { margin:0 0 5px; }
+.iv .hut .door-frame { position:relative; width:100%;
+  border:4px solid #6a4e2c; border-bottom:none; background:#120c08;
+  box-shadow:inset 0 0 0 2px #241a0e, -3px 0 0 rgba(0,0,0,0.5); }
+.iv .hut .door-plank { position:absolute; inset:6px 6px 0;
+  background:repeating-linear-gradient(90deg,#3c2c18 0 8px,#32240f 8px 9px);
+  border-top:2px solid #4c3820; }
+.iv .hut .door-plank .knob { position:absolute; right:8px; top:52%; width:6px; height:6px;
+  background:#8a8a9a; box-shadow:0 0 0 1px #2a2a34; }
+/* the yard is bright, and the gap under the door says so */
+.iv .hut .door-under { position:absolute; left:-2px; right:-2px; bottom:0; height:7px;
+  background:linear-gradient(180deg,#f0d080,#e0a050);
+  box-shadow:0 0 12px 5px rgba(240,190,110,0.5); }
+.iv .hut .door-floorglow { position:absolute; top:-6px; height:44px; z-index:0;
+  background:radial-gradient(ellipse at center top, rgba(240,190,110,0.40), rgba(240,190,110,0) 74%);
+  pointer-events:none; }
+
+/* ---- the floor arrangement: things stand at their own stations, and the
+        tall ones poke up over the seam into the wall, exactly as the yard's
+        .hrow does at its horizon ---- */
+.iv .hut .stations { display:flex; justify-content:flex-start; align-items:flex-end;
+  gap:16px; margin-top:-96px; position:relative; z-index:3; }
+.iv .hut .stations > .spot .splate { margin-top:4px; }
+.iv-phone .hut .stations { gap:14px; margin-top:-64px; }
+.iv-phone .hut .splate { font-family:var(--font-fine); font-size:var(--type-fine);
+  max-width:104px; line-height:1.25; }
+
+/* coal light spilling out of the hearth and across the floor */
+.iv .hut .coalglow { position:absolute; bottom:0; height:110px; width:300px; z-index:1;
+  background:radial-gradient(ellipse at center bottom, rgba(240,120,40,0.42), rgba(240,120,40,0.09) 54%, rgba(240,120,40,0) 78%);
+  pointer-events:none; animation:coalBreathe 2.6s ease-in-out infinite alternate; }
+@keyframes coalBreathe { from { opacity:0.7; } to { opacity:1; } }
+
+/* the smith herself, standing at the anvil — a scene sprite, not a portrait */
+.iv .hut .smith canvas { filter:drop-shadow(3px 3px 0 rgba(0,0,0,0.55)); }
+
+/* ================= THE COOLING RACK — the offers, as objects ================= */
+.iv .cr-frame { position:relative; padding:10px 12px 12px; display:flex; flex-direction:column-reverse;
+  gap:11px; border-left:5px solid #5a4428; border-right:5px solid #5a4428;
+  border-bottom:5px solid #5a4428; background:rgba(20,12,8,0.42);
+  box-shadow:inset 0 0 0 1px #241a0e, 4px 4px 0 rgba(0,0,0,0.45); }
+.iv .cr-frame::before { content:''; position:absolute; left:-5px; right:-5px; top:0; height:5px;
+  background:linear-gradient(180deg,#8a6a40,#5a4428); }
+.iv .billet { display:block; position:relative; width:100%; padding:0; cursor:pointer;
+  background:none; border:none; text-align:center; line-height:0; }
+.iv .billet .b-rail { display:block; height:4px; background:linear-gradient(180deg,#7a7a88,#3a3a46);
+  box-shadow:0 1px 0 #14141c; }
+.iv .billet canvas { position:relative; display:block; margin:0 auto -2px; }
+.iv .billet .b-heat { display:block; margin-top:5px; line-height:1.2;
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px;
+  text-transform:uppercase; color:var(--dim-readable); }
+.iv .billet.heat-white canvas { filter:drop-shadow(0 0 7px rgba(255,235,170,0.95)) drop-shadow(0 0 17px rgba(240,150,60,0.65)); }
+.iv .billet.heat-orange canvas { filter:drop-shadow(0 0 6px rgba(240,140,60,0.75)); }
+.iv .billet.heat-red canvas { filter:drop-shadow(0 0 5px rgba(190,60,30,0.6)); }
+.iv .billet.heat-white .b-heat { color:#f0d080; }
+/* the chosen billet has been lifted off its rail and into the light */
+.iv .billet.chosen canvas { transform:translate(5px,-12px); }
+.iv .billet.chosen .b-heat { color:var(--gold-bright); }
+.iv .billet .tap-box { left:6px; right:6px; top:-18px; height:27px; }
+.iv .billet.dim canvas { filter:drop-shadow(0 0 4px rgba(150,60,30,0.45)) brightness(0.84); }
+
+/* ================= THE ANVIL, holding a sworn oath ================= */
+.iv .anvil-hold { position:relative; line-height:0; }
+.iv .anvil-hold .on-anvil { position:absolute; left:50%; transform:translateX(-50%); }
+.iv .anvil-hold .on-anvil canvas { filter:drop-shadow(0 0 7px rgba(230,110,50,0.85)); }
+.iv .anvil-hold .lean { position:absolute; right:-12px; bottom:5px; }
+
+/* ================= THE TERMS PANEL — .rack from the harness, dressed ====== */
+.iv .terms { margin:30px 6px 0; padding:56px 12px 10px; }
+.iv .terms .rk-head { text-align:center; margin-bottom:6px; }
+.iv .terms .rk-head .rk-title { display:block; }
+.iv .terms .rk-head .rk-sub { margin-top:2px; }
+.iv .term-row { display:grid; grid-template-columns:114px minmax(0,1fr); gap:2px 12px;
+  padding:7px 0; border-top:1px solid var(--edge-shade); }
+.iv .term-row .t-key { font-family:var(--font-fine); font-size:var(--type-fine);
+  letter-spacing:1px; text-transform:uppercase; color:var(--dim); padding-top:2px; }
+.iv .term-row .t-val { color:var(--ink); }
+.iv .term-row .t-val b { color:var(--gold-bright); font-weight:400; }
+.iv .term-row .t-val .lline { display:block; color:var(--dim-readable); }
+.iv .term-row .t-val .lline b { color:var(--ink); }
+.iv .term-row .t-val .pay { display:inline-flex; align-items:center; gap:5px; margin-right:16px;
+  white-space:nowrap; }
+.iv-phone .term-row { grid-template-columns:minmax(0,1fr); gap:1px; }
+
+/* the swearing: her hammer, her anvil, one blow. Not an ACCEPT button. */
+.iv .strike-strip { display:flex; align-items:center; gap:16px; margin-top:12px; cursor:pointer;
+  padding:12px 14px 8px; background:linear-gradient(180deg,#3a3a46,#24242f);
+  border:2px solid; border-color:#6a6a78 #2c2c34 #22222a #55555e;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4); }
+.iv .strike-strip .ss-anvil { position:relative; flex-shrink:0; line-height:0; }
+.iv .strike-strip .ss-hammer { position:absolute; right:-16px; top:-20px; }
+.iv .strike-strip .ss-say { flex:1; min-width:0; }
+.iv .strike-strip .ss-say b { display:block; color:var(--gold-bright);
+  font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px;
+  text-transform:uppercase; }
+.iv .strike-strip .ss-say span { display:block; color:var(--dim-readable);
+  font-family:var(--font-fine); font-size:var(--type-fine); margin-top:4px; }
+.iv .strike-strip:hover { border-color:var(--gold-bright) #7a5f28 #52401c var(--gold); }
+
+/* extra corner-glyph slots, same weight class as the harness's book/grun pair */
+.iv .board-glyph.glyph-tongs { left:8px; }
+.iv .board-glyph.glyph-book2 { left:8px; }
+.iv .board-glyph.glyph-iron { left:96px; }
+.iv .terms .board-glyph, .iv .sworn .board-glyph { top:8px; }
+/* she speaks over the room, not over her own terms: the bubble is lifted
+   clear of the panel's top edge so nothing of the oath is covered */
+.iv .terms .gbubble-wrap { width:246px; bottom:calc(100% + 34px); }
+/* the bust glyph sets line-height:0 for its sprite; the bubble must put it back */
+.iv .terms .gbubble { display:block; line-height:1.35; box-shadow:5px 5px 0 rgba(0,0,0,0.75); }
+.iv .terms .gbubble .week-note { line-height:1.35; }
+
+/* the sworn plate — small, hung beside the anvil that holds the oath */
+.iv .sworn { max-width:326px; margin:34px auto 0; padding:56px 12px 10px; }
+.iv .sworn .rk-head { text-align:center; margin-bottom:6px; }
+.iv .sworn .rk-head .rk-title { display:block; }
+.iv .sworn .sw-line { display:block; color:var(--dim-readable);
+  font-family:var(--font-fine); font-size:var(--type-fine); margin-top:5px; line-height:1.4; }
+.iv .sworn .sw-line b { color:var(--ink); font-weight:400; }
+.iv .sworn .cooling { display:block; margin-top:8px; padding:5px 8px;
+  background:rgba(240,120,40,0.10); border:1px solid #6a4020; color:#e8a860;
+  font-family:var(--font-fine); font-size:var(--type-fine); text-align:center; line-height:1.4; }
+
+/* room caption, borrowed straight from the yard */
+.iv .hut .room-cap { position:relative; z-index:4; margin:14px 0 0; max-width:428px; }
+.iv .hut .room-cap .cap { display:inline-block; background:rgba(8,8,14,0.86);
+  border:1px solid #4a3d20; padding:4px 10px; color:var(--dim-readable); }
+.iv .hut .room-cap .cap b { color:var(--ink); font-weight:400; }
+.iv-phone .hut .room-cap { max-width:none; text-align:center; }
+`;
+    var el = document.createElement('style');
+    el.id = 'iv-forge-scene';
+    el.textContent = css;
+    document.head.appendChild(el);
+  })();
+
+  /* ==========================================================================
+     2. SCENE SPRITES — the forge's own furniture, in the harness char-map
+        shape. Nothing here belongs to any other hut.
+     ========================================================================== */
+  IV.addSprites({
+    /* the hearth: stone box, iron hood, a bed of coals at working heat */
+    hearth: { p: { s:'#4a4a56', S:'#6a6a78', l:'#82828e', k:'#140f18', m:'#3a3a46', M:'#52525e',
+                   o:'#e07030', y:'#f0b040', Y:'#f0d060', W:'#fff4c8', w:'#5a4428', r:'#a03818' }, r: [
+      '..........mm..........',
+      '..........mm..........',
+      '.........mmmm.........',
+      'mmmmmmmmmmmmmmmmmmmmmm',
+      'mMMMMMMMMMMMMMMMMMMMMm',
+      '.mmmmmmmmmmmmmmmmmmmm.',
+      'llllllllllllllllllllll',
+      'SsSSSsSSSSsSSSsSSSsSSS',
+      'SSSSkkkkkkkkkkkkkkSSSS',
+      'SSSkkkkkkkkkkkkkkkkSSS',
+      'SSkkkkkkkkkkkkkkkkkkSS',
+      'SSkkkrrooookoooorrkkkS',
+      'SSkkrooyyooooyyoorkkkS',
+      'SSkroyyYYyyYYYYyyorkkS',
+      'SSkroyYWWWWWWWWWYyorkS',
+      'SSkkroyyYYYYYYyyorkkkS',
+      'SSkkkroooyyyyoooorkkkS',
+      'SSSSSSSSSSSSSSSSSSSSSS',
+      'SsSSSsSSSSsSSSsSSSsSSS',
+      'wwwwwwwwwwwwwwwwwwwwww',
+    ]},
+    /* the anvil on its stump */
+    anvil: { p: { i:'#6a6a78', I:'#9a9aa8', d:'#3a3a46', w:'#5a4428', W:'#7a5f38', k:'#241a0e' }, r: [
+      '..................',
+      '....IIIIIIIIIII...',
+      '.IIIiiiiiiiiiiiI..',
+      '..IIiiiiiiiiiiid..',
+      '....dddiiiiiddd...',
+      '.......iiiii......',
+      '.......iiiii......',
+      '......iiiiiii.....',
+      '.....iiiiiiiii....',
+      '....ddiiiiiiidd...',
+      '...wwwwwwwwwwww...',
+      '...wWwwwwwwwwWw...',
+      '...wwwwwwwwwwww...',
+      '...kwwwwwwwwwwk...',
+    ]},
+    /* billets, three heats. Same bar; only the fire in it differs. */
+    billet_white: { p: { k:'#2a2028', y:'#f0b040', W:'#fff4c8' }, r: [
+      '......yyyyyyyyyy......',
+      '....yyWWWWWWWWWWyy....',
+      'kkkkyWWWWWWWWWWWWykkkk',
+      '....yyWWWWWWWWWWyy....',
+      '......yyyyyyyyyy......',
+    ]},
+    billet_orange: { p: { k:'#2a2028', y:'#c05820', W:'#f0a040' }, r: [
+      '......yyyyyyyyyy......',
+      '....yyWWWWWWWWWWyy....',
+      'kkkkyWWWWWWWWWWWWykkkk',
+      '....yyWWWWWWWWWWyy....',
+      '......yyyyyyyyyy......',
+    ]},
+    billet_red: { p: { k:'#2a2028', y:'#6a1c0c', W:'#b03a1c' }, r: [
+      '......yyyyyyyyyy......',
+      '....yyWWWWWWWWWWyy....',
+      'kkkkyWWWWWWWWWWWWykkkk',
+      '....yyWWWWWWWWWWyy....',
+      '......yyyyyyyyyy......',
+    ]},
+    /* the same billet, struck and going off the boil on the anvil face */
+    billet_struck: { p: { k:'#2a2028', y:'#8a3010', W:'#d8763a', d:'#4a4450' }, r: [
+      '......yyyyyyyyyy......',
+      '....yyWWWWddWWWWyy....',
+      'kkkkyWWWWddddWWWWykkkk',
+      '....yyWWWWddWWWWyy....',
+      '......yyyyyyyyyy......',
+    ]},
+    /* Grunhilda Iron-Bell at her station: circlet, red braids, leather apron */
+    grun_smith: { p: { h:'#b84a20', H:'#d86a30', f:'#e0b088', K:'#1a1410', m:'#c04030',
+                       i:'#8a8a9a', d:'#6a3a18', a:'#7a4a28', A:'#9a6238', t:'#3a3a46', b:'#241a10' }, r: [
+      '...hhhhhhhh...',
+      '..hHHHHHHHHh..',
+      '..iiiiiiiiii..',
+      '..hHffffffHh..',
+      '..hHfKffKfHh..',
+      '..hHffffffHh..',
+      '..hHfmmmmfHh..',
+      '..hdffffffdh..',
+      '..ddaaaaaadd..',
+      '.ffAaaaaaaAff.',
+      '.ffAaaaaaaAff.',
+      '.f.aaaaaaaa.f.',
+      '...aaaaaaaa...',
+      '...aaaaaaaa...',
+      '...AaaaaaaA...',
+      '....tt..tt....',
+      '....tt..tt....',
+      '....bb..bb....',
+    ]},
+    /* the quench trough — water that has met a great deal of hot iron */
+    trough: { p: { w:'#5a4428', W:'#7a5f38', a:'#2e5a80', b:'#7ab0d0', k:'#241a0e' }, r: [
+      '..................',
+      '.wwwwwwwwwwwwwwww.',
+      '.WaaaaaaaaaaaaaaW.',
+      '.Wabbaaaabbaaaaaw.',
+      '.Waaaaaaaaaabbaaw.',
+      '.wwwwwwwwwwwwwwww.',
+      '.wWwwwwwwwwwwwwWw.',
+      '.wwwwwwwwwwwwwwww.',
+      '..kwwwwwwwwwwwwk..',
+      '..................',
+    ]},
+    /* her hammer — hung on the rail, raised over the strike strip, leaned on
+       the stump once the oath is struck */
+    hammer: { p: { k:'#20202a', i:'#6a6a78', I:'#a2a2b0', w:'#6a4e2c', W:'#8a6a40' }, r: [
+      '..............',
+      '..kkkkkkkkk...',
+      '.kiIIIIIIIik..',
+      '.kiIiiiiiIik..',
+      '.kiIIIIIIIik..',
+      '..kkkkkkkkk...',
+      '.....ww.......',
+      '.....ww.......',
+      '.....ww.......',
+      '.....ww.......',
+      '.....ww.......',
+      '.....Ww.......',
+      '.....WW.......',
+      '..............',
+    ]},
+    /* tongs — the corner glyph that puts a billet back into the fire */
+    tongs: { p: { i:'#8a8a9a', I:'#b4b4c0', k:'#2a2a34' }, r: [
+      '............',
+      '..II....II..',
+      '..ii....ii..',
+      '...ii..ii...',
+      '....iIIi....',
+      '.....kk.....',
+      '....iiii....',
+      '...ii..ii...',
+      '..ii....ii..',
+      '..ii....ii..',
+      '..ii....ii..',
+      '............',
+    ]},
+    /* cold bar stock, hung on the wall and used as the iron-at-hand glyph */
+    barstock: { p: { i:'#6a6a78', I:'#9a9aa8', k:'#2a2a34' }, r: [
+      '............',
+      '....kIIk....',
+      '....kiik....',
+      '....kiik....',
+      '....kiik....',
+      '....kiik....',
+      '....kiik....',
+      '....kiik....',
+      '....kiik....',
+      '...kiiiik...',
+      '...kIIIIk...',
+      '............',
+    ]},
+  });
+
+  /* ==========================================================================
+     3. THE MARGIN NOTES
+     ========================================================================== */
+
+  var TAG_ROOM = 'A ROOM, NOT A VOID|'
+    + 'Replaces two gold panels on the flat void. Wall, floor, one window carrying the hour — '
+    + 'the bones all four huts share.';
+
+  var TAG_RACK = 'THE BILLETS ARE THE OFFERS|'
+    + 'Replaces the offer-card list. Three heats; hotter is heavier. Nothing states its terms '
+    + 'until you touch it.';
+
+  var TAG_TAIL = 'THE WORLD POINTS BACK|'
+    + 'The panel opened from the billet you touched, and its tail is nailed to it. Touch another '
+    + 'and the tail slides across.';
+
+  var TAG_GLYPH = 'UTILITY IS A CORNER GLYPH|'
+    + 'The DOCTRINES button and the &ldquo;within reach today&rdquo; dropdown, redrawn as 24px '
+    + 'sprites in the weight of the app’s ✕ glyph.';
+
+  var TAG_BUST = 'SHE SPEAKS WHEN ASKED|'
+    + 'She stands at her anvil. Her bust is a small tappable portrait on the far corner, silent '
+    + 'until tapped. Shown mid-speech.';
+
+  var TAG_DOOR = 'THE DRILL YARD IS A DOOR|'
+    + 'The routine builder is not a route. It is the next room, with the yard’s light under the '
+    + 'door. Every hut gets one.';
+
+  var TAG_STRIKE = 'SWEARING IS ONE BLOW|'
+    + 'Replaces ACCEPT QUEST under every card. You lay the billet on her anvil and she strikes '
+    + 'it once.';
+
+  var TAG_SWORN = 'THE OATH IS ON THE ANVIL|'
+    + 'The same room with the iron moved — struck, cooling, her hammer leaned on the stump. '
+    + 'Nothing else changed.';
+
+  var TAG_PLATE = 'A PLATE, NOT A PANEL|'
+    + 'A sworn oath’s terms hang on a small plate, tail on the iron it describes. Smaller than the '
+    + 'choosing panel, on purpose.';
+
+  var TAG_ABANDON = 'BACK INTO THE FIRE|'
+    + 'Replaces the red abandon button. Her tongs put the billet back in the coals. A glyph and a '
+    + 'caption, never a red button.';
+
+  /* ==========================================================================
+     4. THE ROOM
+     ========================================================================== */
+
+  function windowEl(w, left, top) {
+    return `<div class="window" style="left:${left};width:${w}px;top:${top}px">
+        <div class="win-sky"><div class="mtns" data-fill="mtns"></div></div>
+        <div class="win-bar v"></div><div class="win-bar h"></div>
+      </div>`;
+  }
+
+  function doorEl(side, width, height, tagged, right) {
+    return `<div class="spot doorway" style="${right ? 'right' : 'left'}:${side};width:${width}px"
+        ${tagged ? `data-seam="DOOR" data-tag="${TAG_DOOR}"` : ''}>
+        <span class="splate">THE DRILL YARD<small>the routine, built next door</small></span>
+        <div class="door-frame" style="height:${height}px">
+          <div class="door-plank"><span class="knob"></span></div>
+          <div class="door-under"></div>
+        </div>
+      </div>`;
+  }
+
+  function toolRail(left, width) {
+    return `<div class="wall-rail" style="left:${left};width:${width}px">
+        <div class="rail-bar"></div>
+        <div class="rail-hung">
+          ${IV.spriteTag('hammer', 42)}
+          ${IV.spriteTag('tongs', 36)}
+          ${IV.spriteTag('barstock', 36)}
+        </div>
+      </div>`;
+  }
+
+  function billet(key, heat, cls, px, chosen) {
+    return `<button class="billet ${cls}">
+        <span class="b-rail"></span>
+        ${IV.spriteTag(key, px)}
+        <span class="b-heat">${heat}</span>
+        ${chosen ? '<span class="tap-box"></span>' : ''}
+      </button>`;
+  }
+
+  /* --- the desktop room: choosing ---------------------------------------- */
+
+  function roomChoosing() {
+    return `<div class="hut tod-sunset">
+      <div class="hut-wall" data-fill="wood">
+        <div class="wall-beam high"></div>
+        ${windowEl(152, '2%', 40)}
+        <div class="lightfall" style="left:1%"></div>
+        ${toolRail('50%', 176)}
+        ${doorEl('2%', 118, 116, true, true)}
+        <div class="wall-beam low"></div>
+      </div>
+      <div class="hut-floor" data-fill="dirt">
+        <div class="door-floorglow" style="right:8px;width:200px"></div>
+        <div class="coalglow" style="left:16%"></div>
+        <div class="stations">
+
+          <div class="spot">
+            ${IV.spriteTag('trough', 108)}
+          </div>
+
+          <div class="spot">
+            ${IV.spriteTag('hearth', 132)}
+          </div>
+
+          <div class="spot coolrack" data-seam="RACK" data-tag="${TAG_RACK}">
+            <div class="cr-frame">
+              ${billet('billet_red', 'dull red', 'heat-red', 88)}
+              ${billet('billet_orange', 'orange', 'heat-orange', 88)}
+              ${billet('billet_white', 'white-hot', 'heat-white chosen', 88, true)}
+            </div>
+            <span class="splate">the cooling rack<small>three heats</small></span>
+          </div>
+
+          <div class="spot smith">
+            ${IV.spriteTag('grun_smith', 84)}
+            <span class="splate">Grunhilda</span>
+          </div>
+
+          <div class="spot">
+            <div class="anvil-hold">${IV.spriteTag('anvil', 108)}</div>
+          </div>
+
+          <div class="spot">
+            <div style="display:flex;align-items:flex-end;gap:10px">
+              ${IV.spriteTag('barrel', 40)}
+              ${IV.spriteTag('stone_pile', 56)}
+            </div>
+          </div>
+
+        </div>
+        <div class="room-cap"><span class="cap">The coals are up. <b>Three billets</b> lie cooling &mdash; the hotter the iron, the heavier the oath she holds you to.</span></div>
+      </div>
+    </div>`;
+  }
+
+  /* --- the phone room: sworn --------------------------------------------- */
+
+  function roomSworn() {
+    return `<div class="hut tod-sunset" data-seam="ROOM" data-tag="${TAG_ROOM}">
+      <div class="hut-wall" data-fill="wood">
+        <div class="wall-beam high"></div>
+        ${windowEl(84, '8%', 34)}
+        <div class="lightfall" style="left:7%;width:106px;top:98px;height:44px"></div>
+        <div class="wall-rail" style="left:38%;width:104px;top:40px">
+          <div class="rail-bar"></div>
+          <div class="rail-hung">
+            ${IV.spriteTag('hammer', 28)}
+            ${IV.spriteTag('tongs', 24)}
+          </div>
+        </div>
+        ${doorEl('2%', 92, 96, false, true)}
+        <div class="wall-beam low"></div>
+      </div>
+      <div class="hut-floor" data-fill="dirt">
+        <div class="door-floorglow" style="right:6px;width:140px"></div>
+        <div class="coalglow" style="left:-4%;width:170px;height:80px"></div>
+        <div class="stations">
+
+          <div class="spot">
+            ${IV.spriteTag('hearth', 66)}
+          </div>
+
+          <div class="spot smith">
+            ${IV.spriteTag('grun_smith', 42)}
+          </div>
+
+          <div class="spot" data-seam="SWORN" data-tag="${TAG_SWORN}">
+            <div class="anvil-hold">
+              ${IV.spriteTag('anvil', 90)}
+              <div class="on-anvil" style="top:2px">${IV.spriteTag('billet_struck', 66)}</div>
+              <div class="lean">${IV.spriteTag('hammer', 42)}</div>
+              <span class="glint" style="left:8px;top:-4px"></span>
+              <span class="glint" style="right:14px;top:8px"></span>
+            </div>
+            <span class="splate">struck at dusk<small>and cooling since</small></span>
+          </div>
+
+          <div class="spot">
+            ${IV.spriteTag('barrel', 32)}
+          </div>
+
+        </div>
+        <div class="room-cap"><span class="cap">She struck it once and set it down. Two billets still cool on the rack behind her.<br><b>Nothing has met your hamstrings in nineteen days.</b></span></div>
+      </div>
+    </div>`;
+  }
+
+  /* --- the terms panel, opened from the white-hot billet ------------------ */
+
+  function termsPanel() {
+    return `<div class="rack tail-up terms" style="--tailx:325px"
+        data-seam="TERMS" data-tag="${TAG_TAIL}">
+
+      <button class="board-glyph glyph-book2" data-seam="GLYPHS" data-tag="${TAG_GLYPH}">
+        ${IV.spriteTag('book_glyph', 24)}
+        <span class="g-cap">DOCTRINES</span>
+      </button>
+      <button class="board-glyph glyph-iron">
+        ${IV.spriteTag('barstock', 24)}
+        <span class="g-cap">IRON AT HAND</span>
+      </button>
+      <button class="board-glyph glyph-grun tapped" data-seam="BUST" data-tag="${TAG_BUST}">
+        ${IV.spriteTag('grun_bust', 24)}
+        <span class="g-cap">ASK HER</span>
+        <span class="gbubble-wrap">
+          <span class="gbubble">
+            <span class="fb-line">&ldquo;The bell does not care how you feel. Lift it anyway.&rdquo;</span>
+            <span class="week-note fine">white-hot is the heaviest thing on that rack. It is also the shortest.</span>
+          </span>
+        </span>
+      </button>
+
+      <div class="rk-head">
+        <span class="rk-title">The Iron Communion</span>
+        <span class="rk-sub">white-hot &mdash; the heaviest of the three, and the briefest</span>
+      </div>
+
+      <div class="term-row">
+        <span class="t-key">what it asks</span>
+        <span class="t-val">
+          <b>Heavy and low.</b> Rest well between sets.
+          <span class="lline">&#9656; Back Squat &mdash; <b>four sets of five</b>, at seventy kilos</span>
+          <span class="lline">&#9656; Overhead Press &mdash; <b>four sets of five</b>, at forty kilos</span>
+          <span class="lline">&#9656; Barbell Row &mdash; <b>four sets of five</b>, at fifty-five kilos</span>
+          <span class="lline">Twelve sets in all. It leans on your legs and your back.</span>
+        </span>
+      </div>
+
+      <div class="term-row">
+        <span class="t-key">what it pays</span>
+        <span class="t-val">
+          <span class="pay">${IV.spriteTag('icon_coin', 15)} forty gold, and better if you outwork it</span>
+          <span class="pay">${IV.spriteTag('icon_token', 15)} ninety marks toward the next level</span>
+          <span class="lline">Two vigor returned when it is done &mdash; three if you finish it clean.</span>
+        </span>
+      </div>
+
+      <div class="term-row">
+        <span class="t-key">how long it runs</span>
+        <span class="t-val">
+          Until the sun is down &mdash; <b>one day</b>.
+          <span class="lline">After that the heat is out of it, whether you struck it or not.</span>
+        </span>
+      </div>
+
+      <div class="strike-strip" data-seam="STRIKE" data-tag="${TAG_STRIKE}">
+        <span class="ss-anvil">
+          ${IV.spriteTag('anvil', 72)}
+          <span class="ss-hammer">${IV.spriteTag('hammer', 42)}</span>
+        </span>
+        <span class="ss-say">
+          <b>Lay it on her anvil</b>
+          <span>she strikes it once, and it is sworn. The other two go back in the coals.</span>
+        </span>
+      </div>
+
+      <div class="rk-foot">Ravens carried nothing new since half past five. The rack is as she left it.</div>
+    </div>`;
+  }
+
+  /* --- the sworn plate, hung beside the anvil ----------------------------- */
+
+  function swornPlate() {
+    return `<div class="rack tail-up sworn" style="--tailx:173px"
+        data-seam="PLATE" data-tag="${TAG_PLATE}">
+
+      <button class="board-glyph glyph-tongs" data-seam="ABANDON" data-tag="${TAG_ABANDON}">
+        ${IV.spriteTag('tongs', 24)}
+        <span class="g-cap">BACK TO THE FIRE</span>
+      </button>
+      <button class="board-glyph glyph-grun">
+        ${IV.spriteTag('grun_bust', 24)}
+        <span class="g-cap">ASK HER</span>
+      </button>
+
+      <div class="rk-head">
+        <span class="rk-title">The Iron Communion</span>
+        <span class="rk-sub">sworn on the white-hot billet</span>
+      </div>
+
+      <span class="sw-line"><b>Twelve sets</b> asked. None struck yet.</span>
+      <span class="sw-line">Back Squat, Overhead Press, Barbell Row &mdash; <b>four sets of five</b> apiece.</span>
+      <span class="sw-line">Pays forty gold, ninety marks, and two vigor at the end of it.</span>
+      <span class="cooling">it cools at sundown &mdash; about six hours of heat left in it</span>
+      <div class="rk-foot">The tally is kept through the yard door.</div>
+    </div>`;
+  }
+
+  /* --- the two frames ----------------------------------------------------- */
+
+  function sceneDesktop() {
+    return `<div class="app-pad">
+      ${IV.header({ phone: false })}
+      ${roomChoosing()}
+      ${termsPanel()}
+      ${IV.footer()}
+    </div>`;
+  }
+
+  function scenePhone() {
+    return `<div class="app-pad">
+      ${IV.header({ phone: true })}
+      ${roomSworn()}
+      ${swornPlate()}
+      ${IV.footer()}
+    </div>
+    ${IV.dock()}`;
+  }
+
+  /* ==========================================================================
+     5. THE WALL
+     ========================================================================== */
+
+  IV.page({
+    title: 'Iron Vale — Grunhilda’s forge, a room',
+    subtitle: 'visual mockup, nothing wired up · the shared giver-hut grammar, dressed as the smithy · static/js/giver.js SCREENS.giver, giver=strength',
+    note: '<b>The thesis.</b> Today the strength giver is two gold panels floating on the flat void: a portrait card with a '
+      + 'typewriter box, and an offer panel holding quest cards, each with its own chips, reward line and ACCEPT '
+      + 'button. You are supposed to be visiting a smith and instead you are reading a form. This replaces the form with the room. '
+      + 'The hut is drawn the way the town square is drawn &mdash; back wall, floor, one window carrying the hour &mdash; and '
+      + 'Grunhilda stands in it at her anvil rather than sitting in a bordered portrait. The offers become '
+      + '<b>billets glowing on the cooling rack</b> at three heats, hotter meaning heavier; you take one by touching '
+      + 'it, and it lifts into the light with its terms on a panel whose tail is nailed to the billet that opened it. '
+      + 'Swearing is her hammer coming down once, not a button under a card. Abandoning is her tongs putting the iron back '
+      + 'in the coals. And the routine builder stops being a route: it is <b>the door in the back wall</b>, with the '
+      + 'Drill Yard’s light coming under it.',
+    legend: [
+      { label: 'THE HUT', text: 'wall, floor, window, door — the bones every giver hut will share' },
+      { label: 'THE RACK', text: 'offers as objects at three heats, in place of a card list' },
+      { label: 'THE TAIL', text: 'the panel points back at the billet you touched' },
+      { label: 'THE GLYPHS', text: 'utilities and her bust as 24px corner sprites, ✕-weight' },
+      { label: 'THE DOOR', text: 'the Drill Yard as the next room, not a navigation target' },
+    ],
+    frames: {
+      phone: {
+        title: 'Phone — 414px bezel — THE SWORN STATE',
+        sub: 'the oath already struck: the billet on the anvil, cooling, her hammer leaned on the stump, terms on a small plate below, tongs in the corner to put it back in the fire',
+        chips: ['sworn on the anvil', 'small plate, tail on the iron', 'tongs = abandon', 'the yard door'],
+        html: scenePhone(),
+      },
+      desktop: {
+        title: 'Desktop — 900px viewport, scaled to fit — THE CHOOSING STATE',
+        sub: 'three billets on the rack, the white-hot one lifted into the light, its terms open below with the tail nailed to it, her bust speaking because it was tapped',
+        chips: ['a room, not a void', 'billets = offers', 'tail points back', 'corner glyphs', 'the yard door'],
+        url: 'ironvale.local:8322/#giver?giver=strength — the forge',
+        html: sceneDesktop(),
+      },
+    },
+  });
+
+  IV.boot();
+</script>

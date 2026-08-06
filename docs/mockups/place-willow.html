@@ -1,0 +1,638 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — Sage Elowen's willow, a scene</title>
+<!-- Design mockup. Nothing here is app code: static/ is the app, this is drawing
+     paper. Everything visual comes from docs/mockups/_harness.js (tokens, fonts,
+     sprite engine, tiles, gallery chrome); this file adds only the glade's own
+     scenery and the two states of the screen. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+IV.injectStyles();
+
+/* ===========================================================================
+   1. THE GLADE'S OWN STYLES — appended AFTER the harness sheet so these win.
+   =========================================================================== */
+var SCENE_CSS = `
+/* ---------------- the glade: sky, bank, water ---------------- */
+.iv .glade { position:relative; border:2px solid #4a3d20; margin:12px 4px 0; overflow:hidden;
+  image-rendering:pixelated; }
+.iv .glade .sky { position:relative; overflow:hidden;
+  background:linear-gradient(180deg,#06060e 0,#0b1024 30%,#121a34 62%,#1b2748 100%); }
+.iv .glade .mtns { position:absolute; left:0; right:0; bottom:0; height:72px;
+  background-repeat:repeat-x; background-position:bottom left; background-size:360px 72px; opacity:0.85; }
+.iv .glade .stars i { position:absolute; width:2px; height:2px; background:#cfd6f0; }
+.iv .glade .stars i.dim { background:#7d86ad; }
+.iv .glade .moon { position:absolute; z-index:1; line-height:0; }
+.iv .glade .moon canvas { box-shadow:0 0 18px 6px rgba(190,205,255,0.16); }
+.iv .glade .bank { position:relative; background-color:#1e2a24; border-top:4px solid #2c3d2d; }
+.iv .glade .pond { position:absolute; left:0; bottom:0; background-color:#14202e;
+  border-top:2px solid #2b4460; box-shadow:inset 0 3px 0 rgba(120,160,210,0.10); }
+.iv .glade .pond .refl { position:absolute; top:4px; width:14px; height:56px;
+  background:repeating-linear-gradient(180deg, rgba(224,232,255,0.30) 0 2px, rgba(0,0,0,0) 2px 7px); }
+.iv .glade .prop { position:absolute; line-height:0; }
+.iv .glade .fly { position:absolute; z-index:3; width:3px; height:3px; background:#fff2b0;
+  box-shadow:0 0 9px 3px rgba(240,224,140,0.60); animation:flyBlink 2.4s steps(2) infinite; }
+@keyframes flyBlink { 0% { opacity:1; } 50% { opacity:0.15; } }
+
+/* ---------------- the willow itself ---------------- */
+.iv .glade .willow { position:absolute; inset:0; pointer-events:none; z-index:2; }
+.iv .glade .willow > * { pointer-events:auto; }
+.iv .glade .crown i { position:absolute; display:block;
+  background-image:repeating-linear-gradient(90deg,#2f4a35 0 4px,#263c2c 4px 8px);
+  box-shadow:inset 0 2px 0 rgba(126,180,132,0.16), inset 0 -3px 0 rgba(0,0,0,0.28); }
+.iv .glade .crown i.top { box-shadow:inset 0 3px 0 rgba(150,205,150,0.30), inset 0 -3px 0 rgba(0,0,0,0.22); }
+/* clumps break the leaf mass up so the crown reads as a canopy, not a hedge */
+.iv .glade .crown u { position:absolute; display:block; }
+.iv .glade .crown u.dark { background-image:repeating-linear-gradient(90deg,#28402e 0 4px,#223626 4px 8px);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,0.22); }
+.iv .glade .crown u.pale { background-image:repeating-linear-gradient(90deg,#375540 0 4px,#2d4636 4px 8px);
+  box-shadow:inset 0 3px 0 rgba(150,200,150,0.16); }
+/* the weeping curtain: it is the strands, not the crown, that make a willow a
+   willow — a hundred-odd of them, dense enough to be foliage, with a rounded
+   envelope that thins over the trunk and at the edges */
+.iv .glade .bough { position:absolute; width:2px;
+  background-image:repeating-linear-gradient(180deg,#2c4432 0 6px,#22352a 6px 11px); }
+.iv .glade .bough.lit { background-image:repeating-linear-gradient(180deg,#46694f 0 5px,#314b38 5px 11px); }
+.iv .glade .bough.deep { background-image:repeating-linear-gradient(180deg,#1f3126 0 7px,#182619 7px 12px); }
+.iv .glade .bough::after { content:''; position:absolute; left:0; bottom:-3px; width:2px; height:3px; background:#3a5842; }
+/* no z-index: the trunk is written first so the curtain hangs in front of it,
+   and only the root flare below the foliage is ever seen — as with a real one */
+.iv .glade .trunk { position:absolute; line-height:0; }
+.iv .glade .gplate { position:absolute; z-index:5; font-family:var(--font-fine); font-size:var(--type-fine);
+  color:var(--ink); background:rgba(8,8,14,0.86); border:1px solid #4a3d20; padding:1px 6px;
+  letter-spacing:0.5px; white-space:nowrap; line-height:1.4; }
+.iv .glade .gplate b { color:var(--gold-bright); font-weight:400; }
+.iv .glade .sage-station .gplate { position:static; display:block; margin:0 auto 5px; }
+
+/* ---------------- the writs: ribbons of folded paper on the boughs ---------------- */
+.iv .glade .ribbon { position:absolute; z-index:4; width:124px; background:none; border:none; padding:0;
+  cursor:pointer; text-align:center; line-height:0; font:inherit; color:inherit;
+  animation:swayA 4.6s steps(3) infinite; }
+@keyframes swayA { 0%,100% { transform:translateX(0); } 50% { transform:translateX(3px); } }
+.iv .glade .ribbon canvas { display:block; margin:0 auto; }
+/* the paper itself — every writ on the tree is the same stock, folded narrow
+   while it hangs and wide once it has been unfurled */
+.iv .glade .ribbon .rb-strip { display:block; width:24px; margin:-3px auto 0;
+  background-image:
+    repeating-linear-gradient(180deg, rgba(74,58,32,0.26) 0 1px, rgba(0,0,0,0) 1px 8px),
+    linear-gradient(90deg,#f4ecd8 0 44%,#e8dec2 44% 52%,#d9ccab 52% 100%);
+  border:1px solid #8d8267; border-bottom:5px solid #b0a382;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.45); }
+.iv .glade .ribbon .rb-name { display:block; width:fit-content; margin:5px auto 0; white-space:nowrap;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.4; letter-spacing:0.5px;
+  color:#efe7d0; background:rgba(8,8,14,0.82); border:1px solid #4a3d20; padding:0 5px; }
+.iv .glade .ribbon .rb-cut { display:block; width:12px; height:18px; margin:0 auto;
+  background:repeating-linear-gradient(180deg,#e2d8ba 0 2px, rgba(0,0,0,0) 2px 6px); }
+.iv .glade .ribbon:hover .rb-name { color:var(--gold-bright); border-color:var(--gold); }
+
+/* the chosen ribbon has come loose and unfurled: a long strip of paper with the
+   writ's name written down it, ending just above the panel it opened */
+.iv .glade .ribbon.unfurled { animation:none; z-index:6; }
+.iv .glade .ribbon.unfurled canvas { outline:2px solid var(--gold-bright); outline-offset:2px; }
+/* the unfurled paper: a wide strip ruled with the willow's small hand, running
+   down to just above the panel it opened */
+.iv .glade .ribbon.unfurled .rb-strip { width:40px; margin-top:-4px;
+  border:2px solid; border-color:#fffaea #9d8f6c #9d8f6c #fffaea;
+  box-shadow:5px 5px 0 rgba(0,0,0,0.50); }
+.iv .glade .ribbon.unfurled .rb-name { color:#fff3cf; border-color:var(--gold); }
+
+/* ---------------- the sage at her station ---------------- */
+.iv .glade .sage-station { position:absolute; z-index:3; line-height:0; text-align:center; }
+.iv .glade .sage-station .figs { display:flex; align-items:flex-end; justify-content:center; gap:8px; }
+
+/* ---------------- the reading / the sworn writ: a .rack panel with a tail ---------------- */
+/* z-index above the glade's own plates so Elowen's bubble, which lives in the
+   panel and opens over the scene, is never printed under scenery text */
+.iv .reading, .iv .sworn { margin:30px 4px 8px; padding:52px 14px 12px; z-index:20; }
+.iv .reading .rk-title, .iv .sworn .rk-title { line-height:1.2; }
+.iv .reading .asks, .iv .sworn .asks { margin:8px 0 0; color:var(--ink); }
+.iv .pays { display:flex; flex-wrap:wrap; gap:4px 16px; margin:9px 0 0;
+  padding:7px 9px; background:rgba(8,8,14,0.42); border:1px solid var(--edge); }
+.iv .pays .pay { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.iv .pays .pay canvas { vertical-align:middle; }
+.iv .keeps { margin-top:6px; color:var(--green); font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .omens { margin-top:10px; padding:8px 10px; border:1px solid #4a3d20; background:rgba(20,14,32,0.55); }
+.iv .omens .omens-title { font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:1.5px;
+  color:var(--gold-bright); text-transform:uppercase; margin-bottom:4px; }
+.iv .omens .omen-line { color:var(--dim-readable); margin:2px 0; }
+.iv .seal-row { display:flex; align-items:center; gap:10px; margin-top:12px;
+  padding-top:9px; border-top:1px solid var(--edge); }
+.iv .seal-row .seal { background:none; border:none; padding:0; cursor:pointer; line-height:0; }
+.iv .seal-row .seal canvas { filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.55)); }
+.iv .seal-row .seal-cap { color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.4; }
+.iv .seal-row .seal-cap b { display:block; color:var(--ink); font-weight:400; }
+
+/* the lanterns of the night watch, read as time remaining */
+.iv .watch { display:flex; align-items:flex-end; gap:10px; margin-top:10px;
+  padding:8px 10px; border:1px solid #4a3d20; background:rgba(8,8,14,0.42); }
+.iv .watch .watch-cap { color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.45; }
+.iv .watch .watch-cap b { display:block; color:var(--ink); font-weight:400; }
+.iv .watch canvas { display:block; }
+.iv .watch .out { opacity:0.55; }
+
+/* corner glyphs — the ✕-close weight class: a 24px sprite and a fine caption */
+.iv .glyph-raven  { left:6px; }
+.iv .glyph-almanac{ left:74px; }
+.iv .glyph-untie  { left:6px; }
+.iv .glyph-sage   { right:6px; }
+.iv .board-glyph .g-cap { white-space:nowrap; }
+
+/* Elowen speaks only when her bust is tapped — the harness's .gbubble idiom,
+   anchored to the panel's upper-right corner with its tail down at her */
+.iv .reading .gbubble-wrap { width:320px; right:2px; }
+.iv .gbubble .fb-line { margin-bottom:4px; }
+
+/* phone dressing */
+.iv-phone .reading, .iv-phone .sworn { margin:26px 2px 6px; padding:48px 10px 10px; }
+.iv-phone .pays { gap:3px 10px; }
+`;
+(function () {
+  var el = document.createElement('style');
+  el.id = 'iv-willow-styles';
+  el.textContent = SCENE_CSS;
+  document.head.appendChild(el);
+})();
+
+/* ===========================================================================
+   2. SCENE SPRITES — char maps in the harness's own shape.
+      Elowen's palette is lifted from static/art/npcs/sage_elowen: cream hair,
+      warm brown skin, plum robe, teal sash, olive leaf collar.
+   =========================================================================== */
+IV.addSprites({
+  /* Sage Elowen, standing at her own station with her staff */
+  elowen: { p: { h: '#f5edba', H: '#e4943a', f: '#9a6348', k: '#1f0e1c', r: '#70377f',
+                 R: '#3e2137', t: '#17434b', g: '#647d34', w: '#6a4e2c' }, r: [
+    '.....hhhh.....', '....hhhhhh....', '...hhHffHhh...', '...hffffffh...',
+    '...hfkffkfh...', '...hffffffh...', '...hhffffhh...', '....ffff..w...',
+    '..gRRRRRRgw...', '..RrrrrrrRw...', '.fRrrtrrrRfw..', '.fRrrtrrrRfw..',
+    '..RrrtrrrRw...', '..RrrrrrrRw...', '..RrrrrrrRw...', '.RRrrrrrrrRw..',
+    '.RrrrrrrrrRw..', '.RrrrrrrrrRw..', 'RRrrrrrrrrrRw.', 'RrrrrrrrrrrRw.',
+    'RRRRRRRRRRRRw.', '..............',
+  ]},
+  /* her bust for a panel corner — tap her and she speaks, nothing before that */
+  elowen_bust: { p: { h: '#f5edba', H: '#e4943a', f: '#9a6348', K: '#1f0e1c',
+                      r: '#70377f', R: '#3e2137', g: '#647d34' }, r: [
+    '...hhhhhh...', '..hhhhhhhh..', '.hHhhhhhhHh.', '.hhffffffhh.',
+    '.hhfKffKfhh.', '.hhffffffhh.', '.hhfffffhhh.', '..hfffffhh..',
+    '..gRRRRRRg..', '.RrrrrrrrrR.', 'RrrrrrrrrrrR', '............',
+  ]},
+  /* the raven — ravens are sync; the omens are only as fresh as the last flight */
+  raven_glyph: { p: { k: '#1b1b22', K: '#2e2e3a', y: '#c9a24b', i: '#8a8a9a' }, r: [
+    '............', '....kkkk....', '...kkkkkk...', '..kkiKkkkky.',
+    '..kkkkkkkkyy', '.kkkkkkkkkk.', '.kkKkkKkkk..', '..kkkkkk....',
+    '...k...k....',
+  ]},
+  /* the knot, loosened — untying is how a sworn writ is set aside */
+  knot_glyph: { p: { p: '#e8e0cc', q: '#cfc4a4', w: '#6a4e2c' }, r: [
+    'wwwwwwwwwwww', '....pqqp....', '...pppppp...', '..pqp..pqp..',
+    '..ppp..ppp..', '...pp..pp...', '..pq....qp..', '..pp....pp..',
+    '.pq......qp.', '.pp......pp.', '.p........p.',
+  ]},
+  /* the wax seal on the unfurled writ: press your thumb here and it is sworn */
+  wax_seal: { p: { R: '#9d303b', r: '#c04a52', d: '#6a1f28', g: '#647d34' }, r: [
+    '....RRRR....', '..RRrrrrRR..', '.RrrrrrrrrR.', 'Rrrrrggrrrrd',
+    'Rrrrgggggrrd', 'Rrrgggggggrd', 'Rrrrgggggrrd', 'Rrrrrggrrrrd',
+    '.Rrrrrrrrrd.', '.dRrrrrrrdd.', '..ddRRRRdd..', '....dddd....',
+  ]},
+  /* the writ ribbon's knot, tied over a bough */
+  ribbon_knot: { p: { p: '#f2ead6', q: '#b5a986' }, r: [
+    '.ppp......ppp.', 'pqqqp....pqqqp', 'pqqqpp..ppqqqp', 'pqqqqpppppqqqp',
+    '.pppqqqqqqppp.', '...pqqqqqqp...', '....pqqqqp....', '....pp..pp....',
+    '...pq....qp...',
+  ]},
+  /* the night watch: three lanterns hung at dusk, guttering one by one */
+  lantern_lit: { p: { w: '#6a4e2c', k: '#2a2a34', y: '#f0d080', o: '#e0a040', i: '#8a8a9a' }, r: [
+    '...ii...', '...i....', '..wwww..', '.kkkkkk.', '.kyyyyk.', 'kyyyyyyk',
+    'kyyoyyyk', 'kyyoooyk', 'kyyoyyyk', 'kyyyyyyk', '.kyyyyk.', '.kkkkkk.',
+    '..wwww..', '...ww...',
+  ]},
+  lantern_dark: { p: { w: '#4a3520', k: '#22222a', y: '#2f2f3a', o: '#3a3a46', i: '#5a5a66' }, r: [
+    '...ii...', '...i....', '..wwww..', '.kkkkkk.', '.kyyyyk.', 'kyyyyyyk',
+    'kyyoyyyk', 'kyyoooyk', 'kyyoyyyk', 'kyyyyyyk', '.kyyyyk.', '.kkkkkk.',
+    '..wwww..', '...ww...',
+  ]},
+  /* the moon over the ridge — the same night the town square is wearing */
+  moon: { p: { m: '#f2eddc', M: '#d8d2bd', s: '#c2bca6' }, r: [
+    '.....mmmm.....', '...mmmmmmmm...', '..mmmmmmmmmm..', '.mmmmMmmmmmmm.',
+    '.mmmMMmmmmsmm.', 'mmmmMMmmmmssmm', 'mmmmmmmmmmsmmm', 'mmmmmmmmmmmmmm',
+    'mmsmmmmmmmmmmm', 'mmssmmmmmMmmmm', '.msmmmmmMMmmm.', '.mmmmmmmMmmmm.',
+    '..mmmmmmmmmm..', '...mmmmmmmm...',
+  ]},
+  /* the willow's trunk — gnarled, mossy at the root */
+  willow_trunk: { p: { w: '#4a3318', W: '#70532e', L: '#a07c52', k: '#1e1406', g: '#3f5a34' }, r: [
+    '.......WWWWWW.......', '......WWLLLLWW......', '.....WWLLwwLLWW.....',
+    '....WWLLwwwwLLWW....', '....WLLwwkkwwLLW....', '....WLLwwkkwwLLW....',
+    '....WLLwwkkwwLLW....', '...WWLLwwkkwwLLWW...', '...WLLLwwkkwwLLLW...',
+    '...WLLwwwkkwwwLLW...', '...WLLwwwkkwwwLLW...', '..WWLLwwwkkwwwLLWW..',
+    '..WLLLwwwkkwwwLLLW..', '..WLLwwwwkkwwwwLLW..', '..WLLwwwwkkwwwwLLW..',
+    '..WLLwwwwkkwwwwLLW..', '..WLLwwwwkkwwwwLLW..', '.WWLLwwwwkkwwwwLLWW.',
+    '.WLLLwwwwkkwwwwLLLW.', '.WLLwwwwwkkwwwwwLLW.', '.WLLwwwwwkkwwwwwLLW.',
+    '.WLLwwwwwkkwwwwwLLW.', '.WLLwwwwwkkwwwwwLLW.', 'WWLLwwwwwkkwwwwwLLWW',
+    'WLLLwwwwwkkwwwwwLLLW', 'WLLwwwwwwkkwwwwwwLLW', 'WLLwwwwwwkkwwwwwwLLW',
+    'WLLwwwwwwkkwwwwwwLLW', 'WLLwwwwwwkkwwwwwwLLW', 'WLLwwwwwwkkwwwwwwLLW',
+    'WLLwwwwwwkkwwwwwwLLW', 'WLwwwwwwwkkwwwwwwwLW', 'Wwwwwwwwwkkwwwwwwwww',
+    'WWwwwwwwwwwwwwwwwwWW', 'gWWwwwwwwwwwwwwwwWWg', 'ggWWWWwwwwwwwwWWWWgg',
+  ]},
+  /* reeds at the water's edge */
+  reeds: { p: { g: '#3f5a34', G: '#587a44', d: '#2a3c22' }, r: [
+    '..g........g..', '..g...g....g..', '.Gg...g...gG..', '.Gg..Gg...gG..',
+    '.Gg..Gg..gGG..', 'GGg..Gg..gGG.g', 'GGg.GGg..gGG.g', 'dGg.GGg.gGGGdg',
+    'dGgGGGgGgGGGdg', 'ddgGGGgGgGGddd', 'dddddddddddddd', 'dddddddddddddd',
+  ]},
+  /* a stone lantern at Elowen's station */
+  stone_lantern: { p: { s: '#62626e', S: '#84848f', k: '#2a2a34', y: '#f0d080', d: '#3f3f4a' }, r: [
+    '...SSSSSS...', '.SSSSSSSSSS.', '.SssssssssS.', '..SSSSSSSS..',
+    '...kSSSSk...', '..SkyyyykS..', '..SkyyyykS..', '..SkyyyykS..',
+    '..SkyyyykS..', '...SSSSSS...', '..SSSSSSSS..', '....ssss....',
+    '....ssss....', '....SssS....', '....ssss....', '....SssS....',
+    '....ssss....', '...SssssS...', '..SSssssSS..', '.SSssssssSS.',
+    'SSssssssssSS', 'dddddddddddd',
+  ]},
+  /* you, with the sworn writ knotted at your wrist */
+  hero_ribbon: { p: { h: '#6a4428', f: '#e0b088', t: '#4a6a9a', T: '#3a5a8a',
+                      l: '#5a4028', b: '#2a2a34', p: '#e8e0cc', q: '#cfc4a4' }, r: [
+    '....hhhhhh....', '...hhhhhhhh...', '...hffffffh...', '...hfbffbfh...',
+    '....ffffff....', '.....ffff.....', '...tttttttt...', '..tttttttttt..',
+    '..t.tTTTTt.t..', '..t.tTTTTt.t..', '..f.tTTTTt.f..', '.pp.tTTTTt.f..',
+    '.pq.tTTTTt....', '.pp.tTTTTt....', '..p.llllll....', '....llllll....',
+    '....ll..ll....', '....ll..ll....', '...bbb..bbb...', '..............',
+  ]},
+  /* a sprout — what the willow pays in learning */
+  icon_leaf: { p: { g: '#3f5a34', G: '#7ab55c', d: '#2a3c22' }, r: [
+    '...gG...', '..gGGG..', '.gGGGGG.', 'gGGdGGGg', 'gGGdGGGg', '.gGdGGg.',
+    '..gdGg..', '...d....',
+  ]},
+});
+
+/* a ragged char map renders as half a sprite and is easy to miss — shout instead */
+Object.keys(IV.SPRITES).forEach(function (k) {
+  var rows = IV.SPRITES[k].r, w = rows[0].length;
+  rows.forEach(function (r, i) {
+    if (r.length !== w) console.error('SPRITE ' + k + ' row ' + i + ' is ' + r.length + ', expected ' + w);
+  });
+});
+
+/* ===========================================================================
+   3. SCENE BUILDERS
+   =========================================================================== */
+
+function stars(w, h, n) {
+  var out = '';
+  for (var i = 0; i < n; i++) {
+    var x = ((i * 7919) % 997) / 997 * w;
+    var y = ((i * 5081) % 613) / 613 * h;
+    out += `<i class="${i % 3 === 0 ? 'dim' : ''}" style="left:${Math.round(x)}px;top:${Math.round(y)}px"></i>`;
+  }
+  return `<div class="stars">${out}</div>`;
+}
+
+/* the crown, as a stepped pixel dome of leaf-textured bars. The bars taper away
+   again at the bottom, so the hanging boughs emerge from under a rounded mass
+   instead of a hedge. `off` gives each row a little sideways wobble. */
+var CROWN_W = [0.12, 0.24, 0.38, 0.52, 0.64, 0.74, 0.83, 0.90, 0.95, 0.99, 1.00, 0.98, 0.93, 0.84, 0.70];
+var CROWN_OFF = [10, -6, 9, -7, 4, -9, 6, -3, 2, -6, 0, 7, -4, 9, -3];
+
+/* x, y, w, h as fractions of the crown box — kept inside the dome's silhouette */
+var CLUMPS = [
+  [0.20, 0.26, 0.18, 0.28, 'dark'], [0.42, 0.12, 0.22, 0.26, 'pale'],
+  [0.60, 0.30, 0.20, 0.30, 'dark'], [0.28, 0.50, 0.24, 0.26, 'pale'],
+  [0.66, 0.56, 0.16, 0.24, 'dark'], [0.16, 0.44, 0.14, 0.22, 'pale'],
+  [0.46, 0.62, 0.20, 0.22, 'dark'],
+];
+
+function crown(left, top, w, unit) {
+  var out = '', y = top, h = CROWN_W.length * unit;
+  for (var i = 0; i < CROWN_W.length; i++) {
+    var bw = Math.round(w * CROWN_W[i]);
+    var dx = Math.round(CROWN_OFF[i] * (w / 560));
+    out += `<i class="${i < 4 ? 'top' : ''}" style="left:${Math.round(left + (w - bw) / 2 + dx)}px;top:${y}px;width:${bw}px;height:${unit}px"></i>`;
+    y += unit;
+  }
+  CLUMPS.forEach(function (c) {
+    out += `<u class="${c[4]}" style="left:${Math.round(left + c[0] * w)}px;top:${Math.round(top + c[1] * h)}px;`
+      + `width:${Math.round(c[2] * w)}px;height:${Math.round(c[3] * h)}px"></u>`;
+  });
+  return { html: `<div class="crown">${out}</div>`, bottom: y };
+}
+
+/* how far down the crown still covers a point `dx` px out from its centre —
+   the arched hairline the boughs hang from */
+function crownBottomAt(top, unit, w, dx) {
+  var last = 1;
+  for (var i = 0; i < CROWN_W.length; i++) if (CROWN_W[i] * w / 2 >= dx) last = i + 1;
+  return top + last * unit;
+}
+
+/* FULLNESS: the count of hanging strands IS the earned-rest reading. `n` is the
+   only knob — at three nights kept the curtain is thin enough to see the ridge
+   straight through it; at eleven it closes over the water.
+   The length envelope is deliberately double-humped: longest either side of the
+   trunk, shorter directly over it and at the edges, which is what makes the
+   silhouette read as a willow rather than a hedge. */
+function curtain(n, left, w, crownTop, unit, base, amp) {
+  var out = '', cx = left + w / 2;
+  for (var i = 0; i < n; i++) {
+    var t = (i + 0.5) / n;
+    var x = Math.round(left + t * w);
+    var s1 = Math.sin(Math.PI * t);
+    var s2 = Math.sin(2 * Math.PI * t); s2 = s2 * s2;
+    var jitter = (((i * 37) % 17) / 17 - 0.5) * 0.24;
+    var len = Math.max(10, Math.round((base + amp * (0.14 + 0.86 * s2) * s1) * (1 + jitter)));
+    var top = Math.round(crownBottomAt(crownTop, unit, w, Math.abs(x - cx)) - 8);
+    var cls = ((i * 7) % 5 === 0) ? ' lit' : (((i * 11) % 4 === 0) ? ' deep' : '');
+    out += `<div class="bough${cls}" style="left:${x}px;top:${top}px;height:${len}px"></div>`;
+  }
+  return out;
+}
+
+function flies(spots) {
+  return spots.map(function (s) {
+    return `<i class="fly" style="left:${s[0]}px;top:${s[1]}px;animation-delay:${s[2]}s"></i>`;
+  }).join('');
+}
+
+function glyph(cls, sprite, cap, attrs) {
+  return `<button type="button" class="board-glyph ${cls}" ${attrs || ''}>${IV.spriteTag(sprite, 24)}<span class="g-cap">${cap}</span></button>`;
+}
+
+/* ===========================================================================
+   4. DESKTOP — THE CHOOSING STATE
+      three writ-ribbons on the boughs; the middle one has been touched and has
+      unfurled; the reading it opened sits below with its tail pointing back up
+      at exactly that ribbon.
+   =========================================================================== */
+
+function desktopScene() {
+  var W = 848, SKY = 240, BANK = 196, RIBW = 124;
+  var cL = 84, cT = 2, cW = 470, cU = 10;
+  var cr = crown(cL, cT, cW, cU);                  // bottom ~152
+  var trunkW = 80, trunkH = 144;
+  var trunkL = Math.round(cL + cW / 2 - trunkW / 2);
+  var trunkT = 194;                                 // rises up behind the curtain
+
+  var knotW = 36;                                   // ribbon_knot at 36px -> 28x18
+  var RIB = [
+    { cx: 152, top: 214, len: 40, name: 'the short walk' },
+    { cx: 404, top: 232, len: 0,  name: 'a day of stillness', open: true },
+    { cx: 500, top: 186, len: 34, name: 'a full night' },
+  ];
+  var open = RIB[1];
+  var tailPct = ((open.cx / W) * 100).toFixed(1) + '%';
+
+  var ribbons = RIB.map(function (r) {
+    var left = r.cx - RIBW / 2;
+    if (r.open) {
+      /* unfurled: a long strip of paper running down to just above the panel */
+      return `<button type="button" class="ribbon unfurled" style="left:${left}px;top:${r.top}px"
+          data-seam="WRIT-RIBBON" data-tag="WRITS ARE RIBBONS|Not cards with a SWEAR button under them — folded papers tied to the boughs, turning. Touched, this one came loose and unfurled.">
+        ${IV.spriteTag('ribbon_knot', 56)}
+        <span class="rb-strip" style="height:${SKY + BANK - r.top - 100}px"></span>
+        <span class="rb-name">a day of stillness</span>
+      </button>`;
+    }
+    return `<button type="button" class="ribbon" style="left:${left}px;top:${r.top}px;animation-duration:${4.2 + r.cx % 3}s">
+      ${IV.spriteTag('ribbon_knot', knotW)}
+      <span class="rb-strip" style="height:${r.len}px"></span>
+      <span class="rb-name">${r.name}</span>
+    </button>`;
+  }).join('');
+
+  var scene = `
+  <div class="glade tod-night" data-seam="THE GLADE"
+       data-tag="A PLACE, NOT A VOID|Ground, water and sky in the town square's own tod-night tint. The screen about rest is drawn after dark.">
+    <div class="sky" style="height:${SKY}px">
+      ${stars(W, SKY - 40, 46)}
+      <div class="moon" style="right:70px;top:22px">${IV.spriteTag('moon', 56)}</div>
+      <div class="mtns" data-fill="mtns"></div>
+    </div>
+    <div class="bank" style="height:${BANK}px" data-fill="grass">
+      <div class="pond" data-fill="water" style="width:60%;height:100px">
+        <div class="refl" style="right:14%;"></div>
+      </div>
+      <span class="gplate" style="left:14px;bottom:10px"
+            data-seam="TREE FULLNESS"
+            data-tag="THE TREE REMEMBERS|Bough count is the earned-rest reading: thin enough to see the ridge through at three nights kept, closed over the water at eleven.">
+        <b>eleven nights kept</b> &middot; the boughs came back thick</span>
+      <div class="prop" style="left:436px;bottom:96px">${IV.spriteTag('reeds', 56)}</div>
+      <div class="prop" style="left:566px;bottom:20px">${IV.spriteTag('stone_pile', 56)}</div>
+      <div class="prop" style="left:88px;bottom:74px">${IV.spriteTag('stone_pile', 42)}</div>
+      <div class="sage-station" style="right:26px;bottom:44px"
+           data-seam="SAGE AT HER STATION"
+           data-tag="SHE STANDS IN THE PLACE|A scene sprite by her stone lantern, not a portrait in a bordered card. Silent until her bust is tapped.">
+        <span class="gplate">Sage Elowen &middot; <b>Quests of Stillness</b></span>
+        <span class="figs">
+          <span>${IV.spriteTag('stone_lantern', 48)}</span>
+          <span>${IV.spriteTag('elowen', 56)}</span>
+        </span>
+      </div>
+      ${flies([[300, 24, 0], [352, 68, 0.7], [214, 104, 1.4], [498, 36, 0.4], [634, 84, 1.1], [96, 44, 1.9], [420, 118, 0.2], [690, 30, 1.5]])}
+    </div>
+    <div class="willow">
+      <div class="trunk" style="left:${trunkL}px;top:${trunkT}px">${IV.spriteTag('willow_trunk', trunkW)}</div>
+      ${cr.html}
+      ${curtain(126, cL + 4, cW - 8, cT, cU, 76, 205)}
+      ${ribbons}
+    </div>
+  </div>
+
+  <div class="rack tail-up reading" style="--tailx:${tailPct}"
+       data-seam="THE READING"
+       data-tag="THE TAIL POINTS BACK|Pinned to that ribbon's own x, so the eye walks back up the paper to the bough it came off.">
+    ${glyph('glyph-raven', 'raven_glyph', 'send ravens',
+      'data-seam="CORNER GLYPHS" data-tag="GLYPHS, NOT BUTTONS|Utilities in the &#10005;-close weight class: a 24px sprite and a fine caption. Ravens are sync, so this is how the omens are refreshed."')}
+    ${glyph('glyph-almanac', 'book_glyph', 'nights kept')}
+    ${glyph('glyph-sage', 'elowen_bust', 'ask Elowen')}
+    <div class="gbubble-wrap"
+         data-seam="ELOWEN SPEAKS"
+         data-tag="PULL, NOT PUSH|Her bust sits on the far corner. Untapped there is no bubble at all; this one is drawn open because it was tapped.">
+      <div class="gbubble">
+        <span class="fb-line">&ldquo;The willow bends and does not break. Be the willow.&rdquo;</span>
+        <span class="week-note fine">she has read four nights of your sleep and two of your pulse</span>
+      </div>
+    </div>
+    <div class="rk-title">A Day of Stillness</div>
+    <div class="rk-sub">unfurled from the middle bough &middot; written in the willow's own hand</div>
+    <p class="asks">From the moment it is sworn until dawn: no hard work. A walk if the day wants one, a stretch if the hips ask, and a full night's sleep &mdash; that is the whole of the quest.</p>
+    <div class="pays">
+      <span class="pay">${IV.spriteTag('icon_leaf', 15)} five-and-forty in learning</span>
+      <span class="pay">${IV.spriteTag('icon_coin', 15)} a purse of twenty</span>
+      <span class="pay"><span class="stat vigor">&#9679;&#9679;&#9679;</span> two draughts of vigor, and a third for the asking</span>
+    </div>
+    <div class="keeps">and the streak keeps itself tonight &mdash; rest counts</div>
+    <div class="omens">
+      <div class="omens-title">the omens she reads behind it</div>
+      <div class="omen-line">&#9656; your heart's rhythm sits nine parts in a hundred beneath its usual song</div>
+      <div class="omen-line">&#9656; your resting pulse runs four beats hot</div>
+      <div class="omen-line">&#9656; sleep has run thin this week &mdash; five hours and a half a night</div>
+    </div>
+    <div class="seal-row"
+         data-seam="TAKING IT"
+         data-tag="TAKING IS TOUCHING|No SWEAR THE WRIT button. The oath is the wax at the foot of the paper.">
+      <button type="button" class="seal">${IV.spriteTag('wax_seal', 36)}</button>
+      <span class="seal-cap"><b>press your thumb to the wax</b>the willow keeps its own copy</span>
+    </div>
+  </div>`;
+
+  return `<div class="app-pad">${IV.header({ phone: false })}${scene}${IV.footer()}</div>`;
+}
+
+/* ===========================================================================
+   5. PHONE — THE SWORN STATE
+      the ribbon is off the bough and knotted at your wrist; the night watch
+      counts down in lanterns; renouncing it is a corner glyph, not a red button.
+   =========================================================================== */
+
+function phoneScene() {
+  var W = 358, SKY = 176, BANK = 158, RIBW = 124;
+  var cL = 30, cT = 2, cW = 268, cU = 7;
+  var cr = crown(cL, cT, cW, cU);                 // bottom ~107
+  var trunkW = 60, trunkH = 108;
+  var trunkL = Math.round(cL + cW / 2 - trunkW / 2);
+  var trunkT = 122;
+
+  var heroL = 206, heroW = 56;
+  var tailPct = (((heroL + 10) / W) * 100).toFixed(1) + '%';
+
+  var lanterns = [
+    { x: 206, lit: true }, { x: 230, lit: true }, { x: 254, lit: false },
+  ].map(function (l) {
+    return `<span class="prop" style="position:absolute;left:${l.x}px;top:142px">${IV.spriteTag(l.lit ? 'lantern_lit' : 'lantern_dark', 16)}</span>`;
+  }).join('');
+
+  var scene = `
+  <div class="glade tod-night" data-seam="THE GLADE, SWORN"
+       data-tag="SAME BONES, DIFFERENT HOUR|The identical glade. Only what is hanging in it changed.">
+    <div class="sky" style="height:${SKY}px">
+      ${stars(W, SKY - 30, 26)}
+      <div class="moon" style="right:26px;top:14px">${IV.spriteTag('moon', 42)}</div>
+      <div class="mtns" data-fill="mtns"></div>
+    </div>
+    <div class="bank" style="height:${BANK}px" data-fill="grass">
+      <div class="pond" data-fill="water" style="width:56%;height:62px">
+        <div class="refl" style="right:16%;height:38px"></div>
+      </div>
+      <div class="prop" style="left:150px;bottom:46px">${IV.spriteTag('reeds', 42)}</div>
+      <div class="prop" style="left:92px;bottom:6px">${IV.spriteTag('stone_pile', 42)}</div>
+      <div class="prop" style="left:${heroL}px;bottom:16px"
+           data-seam="THE WRIT IS WORN"
+           data-tag="TIED AT YOUR WRIST|The ribbon left the bough when the wax was pressed. Sworn is something you can see on your own arm.">
+        ${IV.spriteTag('hero_ribbon', heroW)}
+      </div>
+      <div class="sage-station" style="right:6px;bottom:14px">
+        <span class="gplate">Sage <b>Elowen</b></span>
+        <span class="figs"><span>${IV.spriteTag('elowen', 56)}</span></span>
+      </div>
+      ${flies([[120, 24, 0], [206, 60, 0.9], [60, 44, 1.6], [278, 30, 0.5]])}
+    </div>
+    <div class="willow">
+      <div class="trunk" style="left:${trunkL}px;top:${trunkT}px">${IV.spriteTag('willow_trunk', trunkW)}</div>
+      ${cr.html}
+      ${curtain(76, cL + 4, cW - 8, cT, cU, 40, 112)}
+      <span class="prop" style="position:absolute;left:200px;top:140px;width:66px;height:3px;background:#2c4432"></span>
+      ${lanterns}
+      <span class="gplate" style="left:190px;top:178px"
+            data-seam="TIME AS LANTERNS"
+            data-tag="THE NIGHT WATCH|Time left is lanterns, not a countdown. When the last gutters out it is dawn and the writ is kept.">
+        <b>two still burn</b></span>
+      <button type="button" class="ribbon" style="left:${74 - RIBW / 2}px;top:130px;animation-duration:5.1s">
+        ${IV.spriteTag('ribbon_knot', 28)}
+        <span class="rb-cut"></span>
+        <span class="rb-name">cut loose</span>
+      </button>
+      <span class="gplate" style="left:8px;top:246px"><b>eleven nights kept</b></span>
+    </div>
+  </div>
+
+  <div class="rack tail-up sworn" style="--tailx:${tailPct}"
+       data-seam="THE SWORN WRIT"
+       data-tag="TAIL ON THE WRIST|Same grammar as the choosing state: the tail is pinned to the ribbon you are wearing.">
+    ${glyph('glyph-untie', 'knot_glyph', 'untie it')}
+    ${glyph('glyph-sage', 'elowen_bust', 'ask Elowen')}
+    <div class="rk-title">The Writ Is Sworn</div>
+    <div class="rk-sub">tied at your wrist since dusk</div>
+    <p class="asks">No hard work until dawn. Walk if you like &mdash; walks and stretches never break it. Sleep is the greater part of it.</p>
+    <div class="watch">
+      ${IV.spriteTag('lantern_lit', 16)}${IV.spriteTag('lantern_lit', 16)}<span class="out">${IV.spriteTag('lantern_dark', 16)}</span>
+      <span class="watch-cap"><b>two of three still burn.</b>the last goes dark at dawn, and the writ is kept</span>
+    </div>
+    <div class="pays">
+      <span class="pay">${IV.spriteTag('icon_leaf', 15)} five-and-forty in learning</span>
+      <span class="pay">${IV.spriteTag('icon_coin', 15)} a purse of twenty</span>
+    </div>
+    <div class="keeps">the streak keeps itself tonight &mdash; rest counts</div>
+    <div class="rk-foot"
+         data-seam="RENOUNCE"
+         data-tag="UNTYING, NOT ABANDONING|Renouncing is the loosened-knot glyph in the corner — no red DANGER button, and no scolding when it is used.">
+      the willow does not scold. untie it whenever the body disagrees.
+    </div>
+  </div>`;
+
+  return `<div class="app-pad">${IV.header({ phone: true })}${scene}${IV.footer()}</div>${IV.dock()}`;
+}
+
+/* ===========================================================================
+   6. THE WALL
+   =========================================================================== */
+
+IV.page({
+  title: "Iron Vale — Sage Elowen's willow, a scene",
+  subtitle: 'visual mockup, nothing wired up &middot; replaces the two stacked gold panels on the void at giver.js:185 (giver=recovery)',
+  legend: [
+    { label: 'THE PLACE', text: 'ground, water, boughs and sky under the town square’s own tod-night tint' },
+    { label: 'THE OFFERS', text: 'writ ribbons tied to the boughs — touched, not clicked' },
+    { label: 'THE PANEL', text: 'a .rack whose tail points back at the thing that opened it' },
+    { label: 'THE GLYPHS', text: 'utilities and Elowen’s bust in the ✕-close weight class, opposite corners' },
+    { label: 'THE TREE', text: 'bough count is the earned-rest reading' },
+  ],
+  note: '<b>Thesis.</b> Elowen’s screen is currently two gold panels floating on nothing: a portrait with a typewriter box, then a list of REST WRIT cards each ending in a SWEAR THE WRIT button. Everything the player is asked to decide is decided by reading text and pressing a labelled control. Here the same offers hang in a place you walked to — a weeping willow over dark water at night, with folded writs tied to its boughs, turning. You take one by touching it: the ribbon comes loose, unfurls its name down a strip of paper, and the reading it opens is anchored to that exact ribbon by its tail. The oath is a wax seal at the foot of the paper, not a button beneath a card; renouncing it is a loosened knot in a panel corner, not a red DANGER control; and Elowen stands at her own station saying nothing at all until her bust is tapped. The tree itself carries the only number that mattered: the more rest the player has earned, the fuller the willow.',
+  frames: {
+    phone: {
+      title: 'Phone — 414px bezel — THE SWORN STATE',
+      sub: 'the writ has left the bough and is knotted at your wrist; the night watch burns down in lanterns; untying it is a corner glyph',
+      chips: ['ribbon at the wrist', 'lanterns = time left', 'untie glyph', 'bust, untapped'],
+      html: phoneScene(),
+    },
+    desktop: {
+      title: 'Desktop — 900px viewport, scaled to fit — THE CHOOSING STATE',
+      sub: 'three writs on the boughs, the middle one unfurled, its reading anchored below by a tail pointing back up at it',
+      chips: ['three ribbons', 'unfurled writ', 'tail-up at the bough', 'seal, not a button', 'Elowen tapped'],
+      url: "ironvale.local:8322 — Sage Elowen's willow",
+      html: desktopScene(),
+    },
+  },
+});
+
+IV.boot();
+
+/* ===========================================================================
+   7. THE GLADE'S OWN TILES — night grass and still water, painted with the
+      harness's tileURL() so they stay data-URIs and the page runs offline.
+   =========================================================================== */
+(function paintGlade() {
+  var GRASS = IV.tileURL(24, 24, function (ctx, w, h) {
+    ctx.fillStyle = '#1e2a24'; ctx.fillRect(0, 0, w, h);
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+      var k = (x * 7 + y * 13 + ((x * x + y) % 5)) % 23;
+      if (k === 0) { ctx.fillStyle = '#17211c'; ctx.fillRect(x, y, 2, 1); }
+      else if (k === 7) { ctx.fillStyle = '#26342b'; ctx.fillRect(x, y, 1, 1); }
+      else if (k === 14 && (y % 9 === 4)) { ctx.fillStyle = '#334839'; ctx.fillRect(x, y, 2, 2); }
+    }
+  });
+  var WATER = IV.tileURL(32, 16, function (ctx, w, h) {
+    ctx.fillStyle = '#14202e'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#1a2b3d';
+    for (var y = 0; y < h; y += 4) ctx.fillRect((y * 7) % w, y, 15, 1);
+    ctx.fillStyle = '#24405a';
+    ctx.fillRect(4, 2, 9, 1); ctx.fillRect(20, 9, 10, 1); ctx.fillRect(12, 13, 6, 1);
+  });
+  document.querySelectorAll('[data-fill="grass"]').forEach(function (el) {
+    el.style.backgroundImage = GRASS; el.style.backgroundSize = '72px 72px';
+  });
+  document.querySelectorAll('[data-fill="water"]').forEach(function (el) {
+    el.style.backgroundImage = WATER; el.style.backgroundSize = '96px 48px';
+  });
+  IV.layout();
+})();
+</script>

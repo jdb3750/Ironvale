@@ -1,0 +1,828 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — the Hall of Records, a scene</title>
+<!-- Design mockup for the Hall of Records (static/js/hall.js). Nothing is wired
+     up: no fetches, no state, no app code. The eight-tab bar and its 29 stacked
+     .win panels are re-staged as a corridor of fixtures you walk. All chrome,
+     fonts, tokens and sprite plumbing come from _harness.js. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+IV.injectStyles();
+
+/* =============================================================================
+   0. SPRITE CONSTRUCTION HELPERS
+   Every fixture is authored 32 pixels wide. Rows are built by centring a core
+   string inside that width so no row can drift out of alignment by a character.
+   ========================================================================== */
+var W = 32;
+function R(n, ch) { return (ch || '.').repeat(Math.max(0, n)); }
+function C(w, core, fill) {
+  fill = fill || '.';
+  if (core.length >= w) return core.slice(0, w);
+  var pad = w - core.length, l = Math.floor(pad / 2);
+  return fill.repeat(l) + core + fill.repeat(pad - l);
+}
+
+/* ---- 1. THE CASE (body) — a standing figure under glass on a stone plinth --- */
+function glassRow(core) { return C(W, 'b' + C(18, core, 'G') + 'b'); }
+var fx_case = {
+  p: { b: '#8a6a40', B: '#c9a24b', G: '#1e2634', H: '#37485e', h: '#6a4428', f: '#e0b088',
+       k: '#141018', t: '#4a6a9a', T: '#38547e', l: '#5a4028', s: '#5a5a68', S: '#7a7a88', d: '#2c2c36' },
+  r: [
+    C(W, ''),
+    C(W, 'b' + R(18, 'B') + 'b'),
+    glassRow(''), glassRow(''),
+    glassRow('hhhh'),
+    glassRow('hffffh'),
+    glassRow('hkffkh'),
+    glassRow('ffff'),
+    glassRow('tttttttt'),
+    glassRow('tTTTTTTTTt'),
+    glassRow('tTTTTTTTTt'),
+    glassRow('tTTTTTTTTt'),
+    glassRow('TTTTTTTT'),
+    glassRow('TTTTTT'),
+    glassRow('llllll'),
+    glassRow('ll' + R(2, 'G') + 'll'),
+    glassRow('ll' + R(2, 'G') + 'll'),
+    glassRow('kk' + R(2, 'G') + 'kk'),
+    glassRow(''),
+    C(W, 'b' + R(18, 'B') + 'b'),
+    C(W, R(24, 'S')), C(W, R(24, 's')), C(W, R(24, 's')),
+    C(W, R(26, 'S')), C(W, R(26, 's')), C(W, R(26, 'd')),
+  ],
+};
+
+/* ---- 2. THE CHART WALL (vitals) — six framed plates hung on two rails ------ */
+function chartPlate(vals, ch) {
+  var rows = [];
+  for (var y = 0; y < 8; y++) {
+    var s = '';
+    for (var x = 0; x < 8; x++) s += (vals[x] === y ? ch : 'p');
+    rows.push('b' + s + 'b');
+  }
+  return rows;
+}
+var pA = chartPlate([5, 4, 5, 3, 4, 2, 3, 2], 'g');
+var pB = chartPlate([2, 3, 2, 4, 3, 5, 4, 5], 'r');
+var pC = chartPlate([4, 4, 3, 3, 2, 3, 2, 1], 'u');
+var pD = chartPlate([6, 5, 5, 4, 3, 3, 2, 2], 'y');
+var pE = chartPlate([3, 3, 4, 4, 4, 5, 5, 5], 'v');
+var pF = chartPlate([3, 5, 2, 4, 3, 4, 2, 3], 'u');
+var fx_chartwall = (function () {
+  var p = { b: '#8a6a40', p: '#e8e0cc', g: '#7ab55c', r: '#c85050', u: '#6aa0c8',
+            y: '#f0d080', v: '#a06ac8', w: '#5a4428' };
+  var r = [C(W, R(30, 'w')), C(W, R(30, 'b'))];
+  for (var y = 0; y < 8; y++) r.push(C(W, pA[y] + pB[y] + pC[y]));
+  r.push(C(W, R(30, 'b')));
+  r.push(C(W, ''));
+  r.push(C(W, R(30, 'w')));
+  r.push(C(W, R(30, 'b')));
+  for (var y2 = 0; y2 < 8; y2++) r.push(C(W, pD[y2] + pE[y2] + pF[y2]));
+  r.push(C(W, R(30, 'b')));
+  return { p: p, r: r };
+})();
+
+/* ---- 3. THE MAP TABLE (deeds) — the Long Road unrolled on a trestle -------- */
+var fx_maptable = (function () {
+  var p = { W: '#8a6a40', w: '#6a4e2c', d: '#4a3419', p: '#d8cca4', q: '#c4b48c',
+            r: '#8a6034', n: '#5c3f1c', y: '#f0d080', k: '#2a1a10' };
+  var r = [C(W, ''), C(W, R(28, 'W'))];
+  for (var y = 0; y < 10; y++) {
+    var s = '';
+    for (var x = 0; x < 26; x++) {
+      var ry = Math.round(4.5 + 3.2 * Math.sin((x + 1) / 3.4));
+      var ch = ((x + y) % 7 === 3) ? 'q' : 'p';
+      if (y === ry + 1) ch = 'n';
+      if (y === ry) ch = (x % 6 === 2) ? 'y' : 'r';
+      s += ch;
+    }
+    r.push(C(W, 'W' + s + 'W'));
+  }
+  r.push(C(W, R(28, 'w')));
+  r.push(C(W, R(28, 'd')));
+  for (var i = 0; i < 6; i++) r.push(C(W, 'ww' + R(24) + 'ww'));
+  r.push(C(W, R(28, 'd')));
+  return { p: p, r: r };
+})();
+
+/* ---- 4. THE IRON RACK (iron) — plates on pegs, the ledger on the top shelf -- */
+var fx_ironrack = (function () {
+  var p = { i: '#8a8a9a', I: '#b0b0c0', m: '#3a3a46', k: '#1a1a24', W: '#8a6a40',
+            w: '#6a4e2c', p: '#e8e0cc', q: '#cfc4a6', R: '#8a3020' };
+  var disc10 = ['..IIIIII..', '.IIiiiiII.', 'IIiimmiiII', 'IIiimmiiII', '.IIiiiiII.', '..IIIIII..'];
+  var disc8 = ['..IIII..', '.IiiiiI.', 'IiimmiiI', 'IiimmiiI', '.IiiiiI.', '..IIII..'];
+  var book = ['..RRRRRRRRR.', '.RppppppppR.', '.RqqqqqqqqR.', '.RppppppppR.', '.RRRRRRRRRR.'];
+  var rack = function (core) { return C(W, 'w' + C(26, core, '.') + 'w'); };
+  var plank = C(W, 'w' + R(26, 'W') + 'w');
+  var r = [C(W, '')];
+  book.forEach(function (b) { r.push(C(W, b)); });
+  r.push(plank); r.push(C(W, 'w' + R(26, 'w') + 'w'));
+  for (var y = 0; y < 6; y++) r.push(rack(disc10[y] + '..' + disc10[y]));
+  r.push(plank); r.push(C(W, 'w' + R(26, 'w') + 'w'));
+  for (var y2 = 0; y2 < 6; y2++) r.push(rack(disc8[y2] + '.' + disc8[y2] + '.' + disc8[y2]));
+  r.push(plank);
+  r.push(C(W, R(28, 'k')));
+  return { p: p, r: r };
+})();
+
+/* ---- 5. THE LOOM (calendar) — warp threads above a year of woven stitches --- */
+var fx_loom = (function () {
+  var p = { W: '#8a6a40', w: '#6a4e2c', d: '#4a3419', n: '#55506a', e: '#191928',
+            g: '#7ab55c', u: '#6aa0c8', c: '#e07030', s: '#c85050',
+            m: '#a06ac8', a: '#5cb5a5', z: '#4a90d0', o: '#9a9aa8' };
+  var CATS = 'guscmazo';
+  var r = [C(W, R(28, 'W')), C(W, R(28, 'd'))];
+  var warp = '';
+  for (var t = 0; t < 12; t++) warp += 'n.';
+  for (var y = 0; y < 7; y++) r.push(C(W, 'W' + warp + 'W'));
+  for (var cy = 0; cy < 9; cy++) {
+    var s = '';
+    for (var x = 0; x < 24; x++) {
+      var k = (x * 5 + cy * 3 + ((x * x + cy) % 4)) % 11;
+      s += (k < 7) ? CATS[(x + cy * 3) % 8] : 'e';
+    }
+    r.push(C(W, 'W' + s + 'W'));
+  }
+  r.push(C(W, R(28, 'W')));
+  r.push(C(W, R(28, 'd')));
+  for (var l = 0; l < 5; l++) r.push(C(W, 'ww' + R(24) + 'ww'));
+  r.push(C(W, R(28, 'd')));
+  return { p: p, r: r };
+})();
+
+/* ---- 6. THE SHELF (compendium) — three shelves of bound volumes ------------ */
+var fx_shelf = (function () {
+  var p = { w: '#6a4e2c', W: '#8a6a40', d: '#4a3419',
+            r: '#8a3020', g: '#3e6234', u: '#3a5a8a', v: '#6a3a8a',
+            y: '#a8802c', t: '#2a5a5a', o: '#a04828' };
+  var SP = 'rguvyto';
+  function shelfRows(seed, hgt) {
+    var cols = [], i = seed, x = 0;
+    while (x < 28) {
+      var c = SP[(i * 3 + seed) % SP.length];
+      var wid = 2 + ((i * 5) % 2);
+      var top = (i * 5) % 3;
+      for (var j = 0; j < wid && x < 28; j++, x++) cols.push({ c: c, top: top });
+      if ((i % 4) === 2 && x < 28) { cols.push({ c: null, top: 0 }); x++; }
+      i++;
+    }
+    var rows = [];
+    for (var y = 0; y < hgt; y++) {
+      var s = '';
+      for (var x2 = 0; x2 < 28; x2++) {
+        var cc = cols[x2];
+        s += (!cc || !cc.c || y < cc.top) ? '.' : cc.c;
+      }
+      rows.push('w' + s + 'w');
+    }
+    return rows;
+  }
+  var plank = C(W, R(30, 'W'));
+  var r = [plank, C(W, R(30, 'd'))];
+  [1, 5, 9].forEach(function (seed) {
+    shelfRows(seed, 7).forEach(function (row) { r.push(C(W, row)); });
+    r.push(plank);
+  });
+  r.push(C(W, R(30, 'd')));
+  return { p: p, r: r };
+})();
+
+/* ---- 7. THE LECTERN (almanac) — this moon's edition, open ------------------ */
+var fx_lectern = {
+  p: { p: '#e8e0cc', q: '#d0c6a8', k: '#2a2018', W: '#8a6a40', w: '#6a4e2c', d: '#4a3419' },
+  r: [
+    C(W, ''),
+    C(W, R(6, 'p') + 'kk' + R(6, 'p')),
+    C(W, R(8, 'p') + 'kk' + R(8, 'p')),
+    C(W, 'p' + R(3, 'k') + 'pp' + R(3, 'k') + 'p' + 'kk' + 'p' + R(3, 'k') + 'pp' + R(3, 'k') + 'p'),
+    C(W, R(11, 'p') + 'kk' + R(11, 'p')),
+    C(W, 'pp' + R(4, 'k') + 'pp' + R(3, 'k') + 'p' + 'kk' + 'p' + R(3, 'k') + 'pp' + R(4, 'k') + 'pp'),
+    C(W, R(13, 'W') + 'kk' + R(13, 'W')),
+    C(W, R(28, 'w')),
+    C(W, R(28, 'd')),
+    C(W, 'wWWWWw'), C(W, 'wWWWWw'), C(W, 'wWWWWw'), C(W, 'wWWWWw'),
+    C(W, 'wWWWWw'), C(W, 'wWWWWw'), C(W, 'wWWWWw'), C(W, 'wWWWWw'),
+    C(W, R(12, 'W')),
+    C(W, R(18, 'w')),
+    C(W, R(22, 'W')),
+    C(W, R(22, 'd')),
+  ],
+};
+
+/* ---- 8. THE SCROLL (chronicle) — spooling from the wall into a basket ------ */
+var fx_scroll = (function () {
+  var p = { S: '#7a7a88', s: '#5a5a68', k: '#14141c', p: '#e8e0cc', q: '#cfc4a6',
+            W: '#8a6a40', w: '#6a4e2c', d: '#4a3419' };
+  var r = [
+    C(W, R(22, 'S')),
+    C(W, 'S' + R(20, 's') + 'S'),
+    C(W, 'S' + R(4, 's') + R(12, 'k') + R(4, 's') + 'S'),
+    C(W, R(22, 's')),
+  ];
+  for (var y = 0; y < 16; y++) {
+    var off = Math.round(2.2 * Math.sin(y / 3.0));
+    var s = '';
+    for (var x = 0; x < 26; x++) {
+      var rel = x - (7 + off);
+      if (rel >= 0 && rel < 12) s += (y % 3 === 1 && rel > 1 && rel < 11) ? 'q' : 'p';
+      else s += '.';
+    }
+    r.push(C(W, s));
+  }
+  r.push(C(W, R(20, 'q')));
+  r.push(C(W, R(22, 'd')));
+  for (var b = 0; b < 5; b++) {
+    var bs = '';
+    for (var bx = 0; bx < 22; bx++) bs += ((bx + b) % 2 === 0) ? 'W' : 'w';
+    r.push(C(W, bs));
+  }
+  r.push(C(W, R(22, 'd')));
+  return { p: p, r: r };
+})();
+
+/* ---- corner-glyph + prop sprites ------------------------------------------ */
+var glyph_arch = {
+  p: { S: '#a8a8bc', s: '#6a6a80', d: '#2e2a44', f: '#8a6a3a', y: '#f0d080' },
+  r: [
+    '............', '....SSSS....', '..SSssssSS..', '.SSssddssSS.',
+    '.SsddddddsS.', '.SsddddddsS.', '.SsddyyddsS.', '.SsddyyddsS.',
+    '.SsddddddsS.', '.SsffffffsS.', '.SsffffffsS.', '.SSSSSSSSSS.',
+  ],
+};
+var hall_lamp = {
+  p: { m: '#3a3a46', i: '#8a8a9a', o: '#e07030', y: '#f0d060', w: '#fff0c0' },
+  r: [
+    '........', '..oyyo..', '.oywwyo.', '.oywwyo.', '..oyyo..',
+    '..iiii..', '..iiii..', '...ii...', '..mmmm..', '...mm...',
+  ],
+};
+/* Maud, the Curator — an owl in spectacles, lifted verbatim from static/js/pixel.js */
+var maud = {
+  p: { b: '#6a4e2c', B: '#8a6a40', w: '#e8e0d0', k: '#1a1410', y: '#e0a030', g: '#c9a24b', f: '#c8a878' },
+  r: [
+    '................', '..bb........bb..', '..bbb......bbb..', '...bbbbbbbbbb...',
+    '..bBBBBBBBBBBb..', '..bBgggBBgggBb..', '..bgwwwgBgwwwgb.', '..bgwkwgggwkwgb.',
+    '..bgwwwgBgwwwgb.', '..bBgggByBgggBb.', '..bBBBByyyBBBb..', '..bBfBBByBBfBb..',
+    '...bffBBBBBff...', '...bBBBBBBBBb...', '....bb.bb.bb....', '................',
+  ],
+};
+
+var SCENE_SPRITES = {
+  fx_case: fx_case, fx_chartwall: fx_chartwall, fx_maptable: fx_maptable,
+  fx_ironrack: fx_ironrack, fx_loom: fx_loom, fx_shelf: fx_shelf,
+  fx_lectern: fx_lectern, fx_scroll: fx_scroll,
+  glyph_arch: glyph_arch, hall_lamp: hall_lamp, maud: maud,
+};
+/* self-check: a ragged row would silently shift pixels, so shout about it */
+Object.keys(SCENE_SPRITES).forEach(function (k) {
+  var rows = SCENE_SPRITES[k].r, w = rows[0].length;
+  rows.forEach(function (row, i) {
+    if (row.length !== w) console.error('SPRITE ROW MISMATCH', k, 'row', i, row.length, 'expected', w);
+  });
+});
+IV.addSprites(SCENE_SPRITES);
+
+/* =============================================================================
+   1. SCENE CSS — appended AFTER the harness sheet so it can extend it.
+   ========================================================================== */
+var SCENE_CSS = `
+/* ---------- the corridor ---------- */
+.iv .corridor { position:relative; margin:14px 4px 4px; border:2px solid #4a3d20;
+  box-shadow:0 0 0 2px #0a0a12, 6px 6px 0 rgba(0,0,0,0.5); background:#0b0b12; }
+.iv .corr-scroll { overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; }
+.iv .corr-scroll::-webkit-scrollbar { height:8px; }
+.iv .corr-scroll::-webkit-scrollbar-track { background:#0c0c14; }
+.iv .corr-scroll::-webkit-scrollbar-thumb { background:#4a3d20; }
+.iv .corr-run { position:relative; width:1080px; height:368px; image-rendering:pixelated; }
+.iv .c-vault { position:absolute; left:0; right:0; top:0; height:74px; background-repeat:repeat-x; }
+.iv .c-wall  { position:absolute; left:0; right:0; top:74px; height:144px; background-repeat:repeat; }
+.iv .c-floor { position:absolute; left:0; right:0; top:218px; height:150px; background-repeat:repeat-x; }
+.iv .c-floor::before { content:''; position:absolute; left:0; right:0; top:0; height:3px; background:#100c06; }
+.iv .c-floor::after { content:''; position:absolute; left:0; right:0; top:3px; height:26px; pointer-events:none;
+  background:linear-gradient(180deg, rgba(6,6,10,0.55), rgba(6,6,10,0)); }
+.iv .c-sky { position:absolute; left:0; right:0; top:0; height:170px; pointer-events:none;
+  background:linear-gradient(180deg, rgba(200,180,240,0.05), rgba(0,0,0,0)); }
+
+.iv .shaft { position:absolute; top:34px; width:52px; height:196px; pointer-events:none;
+  transform:skewX(-7deg); transform-origin:top center;
+  background:linear-gradient(180deg, rgba(240,208,128,0.18), rgba(240,208,128,0.02) 78%, rgba(240,208,128,0)); }
+.iv .pool { position:absolute; top:198px; width:158px; height:78px; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 38%, rgba(240,208,128,0.24), rgba(240,208,128,0) 68%); }
+.iv .lamp { position:absolute; top:104px; }
+.iv .lamp .lampglow { position:absolute; left:-24px; top:-20px; width:72px; height:72px; pointer-events:none;
+  background:radial-gradient(circle, rgba(240,168,80,0.32), rgba(240,168,80,0) 65%); }
+
+.iv .fx-row { position:absolute; inset:0; }
+.iv .fixture { position:absolute; bottom:150px; left:var(--x); width:104px; text-align:center; }
+.iv .fx-niche { position:relative; width:104px; height:124px; margin:0 auto;
+  background-repeat:no-repeat; background-position:bottom center; display:flex;
+  align-items:flex-end; justify-content:center; }
+.iv .fx-niche canvas { position:relative; z-index:2; }
+.iv .fixture .splate { position:absolute; left:50%; transform:translateX(-50%);
+  top:100%; margin-top:var(--sp,8px); width:106px; max-width:none; z-index:6;
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; line-height:1.25;
+  padding:2px 3px 3px; }
+.iv .fixture .splate small { letter-spacing:0; line-height:1.2; }
+.iv .fixture.near .splate { border-color:var(--gold-bright); color:var(--gold-bright); z-index:9;
+  box-shadow:0 0 0 1px rgba(240,208,128,0.35); }
+.iv .fixture.near .fx-niche { filter:brightness(1.16); }
+.iv .fixture .tap-box { inset:6px 2px 0; z-index:4; }
+.iv .fixture .glint { z-index:5; }
+
+.iv .walker { position:absolute; bottom:14px; left:var(--x); z-index:10; text-align:center; }
+.iv .walker .shadow { width:56px; height:7px; margin:-2px auto 0;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,0.65), rgba(0,0,0,0) 70%); }
+.iv .corr-end { position:absolute; bottom:150px; left:960px; width:96px; text-align:center; z-index:3; }
+.iv .corr-end .archway { width:70px; height:118px; margin:0 auto;
+  background:linear-gradient(180deg,#1a1a26,#0b0b12); border:3px solid #2c2c3e; border-bottom:none; }
+.iv .corr-fade { position:absolute; top:0; bottom:0; right:0; width:44px; pointer-events:none; z-index:8;
+  background:linear-gradient(90deg, rgba(10,10,18,0), rgba(10,10,18,0.78)); }
+.iv .corr-hint { padding:5px 8px 6px; border-top:2px solid #4a3d20; background:#0b0b12;
+  color:var(--dim); font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px;
+  display:flex; justify-content:space-between; gap:10px; }
+.iv .corr-hint b { color:var(--gold-bright); font-weight:400; }
+.iv .corridor .board-glyph { top:6px; z-index:12; padding:3px 5px 2px;
+  background:rgba(8,8,14,0.88); border:1px solid #4a3d20; }
+.iv .corridor .board-glyph.glyph-maud { right:8px; }
+
+/* ---------- the phone: a fixture opened ---------- */
+.iv .standing { position:relative; margin:10px 4px 0; border:2px solid #4a3d20;
+  height:228px; overflow:hidden; background:#0b0b12; image-rendering:pixelated; }
+.iv .standing .st-vault { position:absolute; left:0; right:0; top:-30px; height:74px; background-repeat:repeat-x; }
+.iv .standing .st-wall { position:absolute; left:0; right:0; top:44px; height:96px; background-repeat:repeat; }
+.iv .standing .st-floor { position:absolute; left:0; right:0; top:140px; height:88px; background-repeat:repeat-x; }
+.iv .standing .st-floor::before { content:''; position:absolute; left:0; right:0; top:0; height:3px; background:#100c06; }
+.iv .standing .st-pool { position:absolute; left:50%; margin-left:-100px; top:104px; width:200px; height:92px;
+  background:radial-gradient(ellipse at 50% 40%, rgba(240,208,128,0.26), rgba(240,208,128,0) 66%); }
+.iv .standing .st-niche { position:absolute; left:50%; margin-left:-52px; top:16px; width:104px; height:124px;
+  background-repeat:no-repeat; background-position:bottom center;
+  display:flex; align-items:flex-end; justify-content:center; }
+.iv .standing .st-plate { position:absolute; left:8px; top:60px; width:126px; z-index:4;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.25; letter-spacing:0.5px;
+  color:var(--gold-bright); background:rgba(8,8,14,0.88); border:1px solid var(--gold); padding:2px 5px 3px; }
+.iv .standing .st-plate small { display:block; color:var(--dim-readable); letter-spacing:0; line-height:1.2; }
+.iv .standing::after { content:''; position:absolute; inset:0; z-index:6; pointer-events:none;
+  background:linear-gradient(180deg, rgba(10,10,18,0.06) 0%, rgba(10,10,18,0.06) 60%, rgba(10,10,18,0.72) 100%); }
+
+.iv .win.fixture-win { padding-top:56px; margin-top:-2px; }
+.iv .win.fixture-win > .win-title { left:66px; }
+.iv .win .board-glyph { z-index:12; }
+.iv .win .board-glyph.glyph-back { left:6px; }
+.iv .win .board-glyph.glyph-maud { right:6px; }
+.iv .win .gbubble-wrap { position:absolute; left:2px; right:2px; width:auto;
+  bottom:calc(100% + 22px); z-index:50; }
+.iv .gbubble .fb-line { margin-bottom:0; }
+.iv .gbubble .hush { display:block; text-align:center; margin-top:6px; color:var(--dim);
+  font-family:var(--font-fine); font-size:var(--type-fine); }
+
+/* ---------- the reading surfaces, carried over from static/style.css -------- */
+.iv table.rpg { width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:var(--type-body); }
+.iv table.rpg th { color:var(--gold); text-align:left; text-transform:uppercase; font-weight:normal;
+  font-family:var(--font-body); font-size:var(--type-body); letter-spacing:1px;
+  border-bottom:1px solid #4a3d20; padding:4px; }
+.iv table.rpg td { padding:4px; border-bottom:1px solid #22203a; }
+.iv .fresh-0 { color:var(--green); } .iv .fresh-1 { color:var(--gold); } .iv .fresh-2 { color:var(--red); }
+.iv hr.rule { border:none; border-top:1px solid #4a3d20; margin:8px 0; }
+.iv .tapestry-scroll { overflow-x:auto; overflow-y:hidden; border:2px solid var(--edge); background:#0c0c14; scrollbar-width:thin; }
+.iv .tapestry-scroll::-webkit-scrollbar { height:8px; }
+.iv .tapestry-scroll::-webkit-scrollbar-track { background:#0c0c14; }
+.iv .tapestry-scroll::-webkit-scrollbar-thumb { background:#4a3d20; }
+.iv .tapestry-scroll canvas { display:block; image-rendering:pixelated; }
+.iv .tap-legend { display:flex; gap:8px 12px; flex-wrap:wrap; justify-content:center;
+  font-family:var(--font-body); font-size:var(--type-body); color:var(--dim); margin-top:8px; }
+.iv .tap-legend .cdot { margin-right:4px; }
+.iv .road-caption { text-align:center; font-family:var(--font-body); font-size:var(--type-body); margin-top:8px; }
+.iv .calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.iv .calgrid .dow { text-align:center; color:var(--dim); font-family:var(--font-fine);
+  font-size:var(--type-fine); text-transform:uppercase; }
+.iv .calday { min-height:46px; background:#10101c; border:1px solid #22203a; padding:2px 3px; position:relative; }
+.iv .calday.other { opacity:0.25; }
+.iv .calday.today { border-color:var(--gold-bright); box-shadow:inset 0 0 0 1px var(--gold-bright); }
+.iv .calday .dn { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); }
+.iv .calday .qmark { position:absolute; top:1px; right:3px; color:var(--gold-bright);
+  font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .caldots { display:flex; flex-wrap:wrap; gap:2px; margin-top:2px; }
+.iv .cdot { width:9px; height:9px; display:inline-block; }
+.iv .cat-run { background:#7ab55c; } .iv .cat-ride { background:#6aa0c8; }
+.iv .cat-climb { background:#e07030; } .iv .cat-strength { background:#c85050; }
+.iv .cat-mobility { background:#a06ac8; } .iv .cat-walk { background:#5cb5a5; }
+.iv .cat-swim { background:#4a90d0; } .iv .cat-other { background:#9a9aa8; }
+.iv .legend { display:flex; flex-wrap:wrap; gap:4px 12px; font-family:var(--font-body);
+  font-size:var(--type-body); color:var(--dim); margin-top:8px; max-width:none;
+  padding:0; border:none; }
+.iv .legend .cdot { margin-right:4px; }
+.iv .stage-caption.wide { max-width:720px; }
+`;
+(function () {
+  var el = document.createElement('style');
+  el.id = 'iv-hall-scene';
+  el.textContent = SCENE_CSS;
+  document.head.appendChild(el);
+})();
+
+/* =============================================================================
+   2. PROCEDURAL BACKDROPS — the corridor's vault, wall and receding floor.
+   ========================================================================== */
+var BAY = 112;   /* one bay of the hall: also the fixture pitch */
+
+function vaultTile() {
+  return IV.tileURL(BAY, 74, function (ctx, w, h) {
+    ctx.fillStyle = '#0c0c16'; ctx.fillRect(0, 0, w, h);
+    for (var x = 0; x < w; x++) {
+      var t = x / w;
+      var arc = Math.round(60 - 42 * Math.sin(Math.PI * t));
+      ctx.fillStyle = '#15151f'; ctx.fillRect(x, arc, 1, h - arc);
+      ctx.fillStyle = '#2e2e46'; ctx.fillRect(x, arc, 1, 2);
+    }
+    /* the clerestory lancet at the crown of each bay */
+    var wx = Math.round(w / 2) - 8, wy = 22;
+    ctx.fillStyle = '#2a2a3e'; ctx.fillRect(wx - 2, wy - 2, 20, 30);
+    ctx.fillStyle = '#4a6088'; ctx.fillRect(wx, wy, 16, 26);
+    ctx.fillStyle = '#7a94bc'; ctx.fillRect(wx + 1, wy + 1, 6, 11);
+    ctx.fillStyle = '#9fb6d8'; ctx.fillRect(wx + 9, wy + 14, 5, 9);
+    ctx.fillStyle = '#232336'; ctx.fillRect(wx + 7, wy, 2, 26); ctx.fillRect(wx, wy + 12, 16, 2);
+    /* the piers the vault springs from, at both bay edges */
+    ctx.fillStyle = '#26263a'; ctx.fillRect(0, 0, 3, h); ctx.fillRect(w - 3, 0, 3, h);
+    ctx.fillStyle = '#3a3a54'; ctx.fillRect(1, 0, 1, h); ctx.fillRect(w - 2, 0, 1, h);
+  });
+}
+
+function wallTile() {
+  return IV.tileURL(64, 32, function (ctx, w, h) {
+    ctx.fillStyle = '#171722'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#0f0f18';
+    ctx.fillRect(0, 14, w, 2); ctx.fillRect(0, 30, w, 2);
+    ctx.fillRect(30, 0, 2, 15); ctx.fillRect(0, 16, 2, 15); ctx.fillRect(62, 16, 2, 15);
+    ctx.fillStyle = '#202030';
+    ctx.fillRect(2, 1, 27, 12); ctx.fillRect(33, 1, 28, 12);
+    ctx.fillRect(3, 17, 26, 12); ctx.fillRect(31, 17, 30, 12);
+    ctx.fillStyle = '#282840';
+    ctx.fillRect(2, 1, 27, 1); ctx.fillRect(33, 1, 28, 1);
+    ctx.fillRect(3, 17, 26, 1); ctx.fillRect(31, 17, 30, 1);
+  });
+}
+
+/* boards running along the hall, seen from a step up: the bands compress as the
+   floor recedes, which is the whole depth cue */
+function floorStrip(H) {
+  return IV.tileURL(BAY, H, function (ctx, w, h) {
+    var bands = [], y = 0, gap = 2.2;
+    while (y < h) { bands.push(Math.round(y)); y += gap; gap *= 1.235; }
+    bands.push(h);
+    for (var i = 0; i < bands.length - 1; i++) {
+      var y0 = bands[i], y1 = bands[i + 1];
+      var t = 0.10 + 0.82 * (i / (bands.length - 2));
+      ctx.fillStyle = IV.blendHex('#5c4123', '#221810', t);
+      ctx.fillRect(0, y0, w, y1 - y0);
+      /* the seam between two boards, and a faint highlight on the near face */
+      ctx.fillStyle = '#150e07';
+      ctx.fillRect(0, y1 - 1, w, 1);
+      if (y1 - y0 > 5) {
+        ctx.fillStyle = IV.blendHex('#6d5030', '#2a1e12', t);
+        ctx.fillRect(0, y0, w, 1);
+      }
+      /* boards are long: at most one end-joint per bay, and only now and then */
+      if (i % 3 === 1) {
+        ctx.fillStyle = '#1d1409';
+        ctx.fillRect(Math.round(((i % 2) ? 0.62 : 0.23) * w), y0, 1, Math.max(1, y1 - y0 - 1));
+      }
+    }
+  });
+}
+
+/* a shallow arched niche cut into the wall — one room per fixture */
+function nicheURL() {
+  return IV.tileURL(104, 124, function (ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    var r = w / 2;
+    for (var y = 0; y < h; y++) {
+      var x0 = 0, x1 = w;
+      if (y < r) {
+        var dx = Math.sqrt(Math.max(0, r * r - (r - y) * (r - y)));
+        x0 = Math.round(r - dx); x1 = Math.round(r + dx);
+      }
+      if (x1 - x0 < 4) continue;
+      var shade = IV.blendHex('#1c1c2c', '#101018', y / h);
+      ctx.fillStyle = shade; ctx.fillRect(x0, y, x1 - x0, 1);
+      ctx.fillStyle = '#33334c'; ctx.fillRect(x0, y, 2, 1); ctx.fillRect(x1 - 2, y, 2, 1);
+    }
+    ctx.fillStyle = '#0d0d14'; ctx.fillRect(0, h - 3, w, 3);
+  });
+}
+
+/* =============================================================================
+   3. THE CORRIDOR — eight fixtures, one per old tab, standing along one hall.
+   ========================================================================== */
+var FIXTURES = [
+  { key: 'fx_case',      name: 'THE CASE',       sub: 'the shape of you, under glass',      tab: 'body' },
+  { key: 'fx_chartwall', name: 'THE CHART WALL', sub: 'what the heart reports',             tab: 'vitals' },
+  { key: 'fx_maptable',  name: 'THE MAP TABLE',  sub: 'the Long Road, walked',              tab: 'deeds' },
+  { key: 'fx_ironrack',  name: 'THE IRON RACK',  sub: 'plates, and the book of them',       tab: 'iron' },
+  { key: 'fx_loom',      name: 'THE LOOM',       sub: 'a year of stitches',                 tab: 'calendar', near: true },
+  { key: 'fx_shelf',     name: 'THE SHELF',      sub: 'bound volumes of honest labor',      tab: 'compendium' },
+  { key: 'fx_lectern',   name: 'THE LECTERN',    sub: "this moon's edition, open",          tab: 'almanac' },
+  { key: 'fx_scroll',    name: 'THE SCROLL',     sub: 'everything, in the order it fell',   tab: 'chronicle' },
+];
+var FX_X0 = 8;
+
+var TAG_CORRIDOR = 'THE CORRIDOR|Where the eight-tab bar stood. body / vitals / deeds / iron / calendar / compendium / chronicle / almanac were four button clusters over 29 stacked panels; here they are eight fixtures along one hall you walk.';
+var TAG_LOOM = 'A FIXTURE, APPROACHED|The gold tap-box is the drill yard&rsquo;s own idiom &mdash; the thing you are about to handle lights up. Its floating plate names the room and says what is kept in it.';
+var TAG_DEPTH = 'THE HALL IS A BUILDING|Boards recede, each bay carries a lit clerestory, and lamplight pools on the floor between fixtures. Depth is what makes it a place rather than a strip of icons.';
+var TAG_MAUD_QUIET = 'MAUD, HUNG AT THE DOOR|A 32px bust on the frame&rsquo;s corner, not a standing owl with an always-on bubble. Untapped she is silent.';
+var TAG_FOLD = 'THE FOLD|Under 760px the corridor stops scrolling sideways and stands up: the same eight fixtures, in the same order, in the two-column grid the app already uses at phone widths &mdash; a vertical hall you walk downward.';
+
+function corridorHtml() {
+  var shafts = '', pools = '', lamps = '', fx = '';
+  for (var i = 0; i < 8; i++) {
+    var cx = FX_X0 + i * BAY;
+    shafts += '<div class="shaft" style="left:' + (cx + 26) + 'px"></div>';
+    pools += '<div class="pool" style="left:' + (cx - 23) + 'px"></div>';
+    lamps += '<div class="lamp" style="left:' + (cx - 18) + 'px"><div class="lampglow"></div>'
+      + IV.spriteTag('hall_lamp', 24) + '</div>';
+    var f = FIXTURES[i];
+    var tag = f.near ? ' data-seam="LOOM" data-tag="' + TAG_LOOM + '"' : '';
+    fx += '<div class="fixture spot tappable' + (f.near ? ' near' : '') + '"'
+      + ' style="--x:' + cx + 'px;--sp:' + ((i % 2) ? '34px' : '8px') + '"' + tag + '>'
+      + '<div class="fx-niche" data-fill="niche">'
+      + IV.spriteTag(f.key, 96)
+      + (f.near
+        ? '<div class="tap-box"></div>'
+          + '<i class="glint" style="left:6px;top:14px"></i>'
+          + '<i class="glint" style="right:6px;top:14px"></i>'
+        : '')
+      + '</div>'
+      + '<span class="splate">' + f.name + '<small>' + f.sub + '</small></span>'
+      + '</div>';
+  }
+  var walkerX = FX_X0 + 4 * BAY + 22;
+  return '<div class="corridor" data-seam="CORRIDOR" data-tag="' + TAG_CORRIDOR + '">'
+    + '<button class="board-glyph glyph-maud" title="ask Maud"'
+    + ' data-seam="MAUD" data-tag="' + TAG_MAUD_QUIET + '">'
+    + IV.spriteTag('maud', 32) + '<span class="g-cap">MAUD</span></button>'
+    + '<div class="corr-scroll"><div class="corr-run">'
+    + '<div class="c-vault" data-fill="vault"></div>'
+    + '<div class="c-wall" data-fill="wall"></div>'
+    + '<div class="c-floor" data-fill="floor" data-seam="DEPTH" data-tag="' + TAG_DEPTH + '"></div>'
+    + '<div class="c-sky"></div>'
+    + shafts + pools + lamps
+    + '<div class="fx-row">' + fx
+    + '<div class="walker" style="--x:' + walkerX + 'px">' + IV.spriteTag('hero', 60)
+    + '<div class="shadow"></div></div>'
+    + '<div class="corr-end"><div class="archway"></div></div>'
+    + '</div>'
+    + '<div class="corr-fade"></div>'
+    + '</div></div>'
+    + '<div class="corr-hint" data-seam="FOLD" data-tag="' + TAG_FOLD + '">'
+    + '<span>the hall runs on past the basket &mdash; <b>walk right</b></span>'
+    + '<span>eight rooms, one floor</span>'
+    + '</div>'
+    + '</div>';
+}
+
+function desktopScene() {
+  return '<div class="app-pad">'
+    + IV.header({ phone: false })
+    + corridorHtml()
+    + '<div class="stage-caption wide"><span class="cap">'
+    + 'You are standing before <b>the loom</b>. Step in and the year of stitches unrolls; '
+    + 'step back out and the hall is still here, with the lamp still lit over it.'
+    + '</span></div>'
+    + IV.footer()
+    + '</div>';
+}
+
+/* =============================================================================
+   4. THE PHONE — the loom opened. The reading surface is the real thing.
+   ========================================================================== */
+var TAG_STANDING = 'WHERE YOU STAND|The fixture stays on screen above the panel, cropped and dimmed by the lamplight falling off. You never lose the room: this is the loom, seen from in front of it.';
+var TAG_SURFACE = 'THE READING SURFACE|A plain .win panel &mdash; the Tapestry canvas, its legend and its counts, exactly as hall.js draws them today. The fixture is the door, not the record.';
+var TAG_BACK = 'STEP BACK OUT|A 24px archway in the &times;-close weight class with a fine caption under it. Not a BACK button: a doorway, in the corner of the panel you are reading.';
+var TAG_MAUD = 'PULL, NOT PUSH|She speaks only when tapped, and only about the room you are in. The bubble is the town&rsquo;s double-triangle idiom, tail down at her bust. Untapped, there is no bubble at all.';
+var TAG_TABLES = 'TABLES STAY TABLES|A record you cannot read is not a better record. The grid, the rows and the numbers keep the same density and the same useful dullness they have now. Only the way in changed.';
+
+var CAT_LABELS = { run: 'run', ride: 'ride', climb: 'climb', strength: 'lift',
+  mobility: 'mobility', walk: 'walk/hike', swim: 'swim', other: 'other' };
+
+function tapLegendHtml() {
+  return Object.keys(CAT_LABELS).map(function (k) {
+    return '<span><span class="cdot cat-' + k + '"></span>' + CAT_LABELS[k] + '</span>';
+  }).join('');
+}
+
+/* August 2026: the 1st falls on a Saturday, so five blanks lead the Monday grid */
+var AUG_DAYS = {
+  1: ['walk'], 2: ['ride'], 3: ['strength'], 4: ['run', 'mobility'],
+  5: ['strength'], 6: ['run', 'strength', 'mobility'], 7: [], 8: ['climb'],
+  9: ['ride'], 10: ['strength'], 11: ['run'], 12: [], 13: ['strength', 'mobility'],
+  14: ['run'], 15: ['walk', 'swim'], 16: ['ride'], 17: ['strength'], 18: ['run'],
+  19: ['mobility'], 20: ['strength'], 21: [], 22: ['climb', 'walk'], 23: ['ride'],
+  24: ['strength'], 25: ['run'], 26: [], 27: ['strength'], 28: ['run', 'mobility'],
+  29: ['walk'], 30: ['ride'], 31: ['strength'],
+};
+var AUG_QUESTS = { 4: 1, 6: 2, 13: 1, 18: 1, 22: 1, 28: 1 };
+
+function calendarHtml() {
+  var cells = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+    .map(function (d) { return '<div class="dow">' + d + '</div>'; }).join('');
+  for (var i = 0; i < 5; i++) cells += '<div class="calday other"></div>';
+  for (var day = 1; day <= 31; day++) {
+    var acts = AUG_DAYS[day] || [];
+    var dots = acts.map(function (a) { return '<span class="cdot cat-' + a + '"></span>'; }).join('');
+    var q = AUG_QUESTS[day];
+    cells += '<div class="calday' + (day === 6 ? ' today' : '') + '">'
+      + '<span class="dn">' + day + '</span>'
+      + (q ? '<span class="qmark">&#9733;' + (q > 1 ? q : '') + '</span>' : '')
+      + '<span class="caldots">' + dots + '</span></div>';
+  }
+  return '<div class="win" data-seam="TABLES" data-tag="' + TAG_TABLES + '">'
+    + '<span class="win-title">Calendar of Deeds</span>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    + '<span class="muted fine">&#9668; Jul</span>'
+    + '<span style="font-family:var(--font-title);font-size:var(--type-title);color:var(--gold-bright)">August 2026</span>'
+    + '<span class="muted fine">Sep &#9658;</span></div>'
+    + '<div class="calgrid">' + cells + '</div>'
+    + '<div class="legend">' + tapLegendHtml()
+    + '<span><span style="color:var(--gold-bright)">&#9733;</span> quest done</span></div>'
+    + '<div class="muted" style="margin-top:6px">tap a day to inspect, fix, or strike entries</div>'
+    + '</div>';
+}
+
+function tapestryWinHtml() {
+  return '<div class="win fixture-win" data-seam="SURFACE" data-tag="' + TAG_SURFACE + '">'
+    + '<span class="win-title">The Tapestry</span>'
+    + '<button class="board-glyph glyph-back" title="back to the hall" data-seam="BACK" data-tag="' + TAG_BACK + '">'
+    + IV.spriteTag('glyph_arch', 24) + '<span class="g-cap">CORRIDOR</span></button>'
+    + '<button class="board-glyph glyph-maud tapped" title="ask Maud" data-seam="MAUD" data-tag="' + TAG_MAUD + '">'
+    + IV.spriteTag('maud', 32) + '<span class="g-cap">MAUD</span></button>'
+    + '<div class="gbubble-wrap"><div class="gbubble">'
+    + '<span class="fb-line">A year of days, pressed flat between two covers. '
+    + 'Tap one; they like being remembered.</span>'
+    + '<span class="hush">tap her again to let her get back to her filing</span>'
+    + '</div></div>'
+    + '<div class="muted" style="margin-bottom:6px">a year of days, one stitch each, '
+    + 'colored by the day&rsquo;s longest labor</div>'
+    + '<div class="tapestry-scroll" id="tapestry-scroll"><canvas id="tapestry-cv"></canvas></div>'
+    + '<div class="tap-legend">' + tapLegendHtml() + '</div>'
+    + '<div class="road-caption">'
+    + '<b style="color:var(--gold-bright)">243</b> days woven this past year '
+    + '&middot; longest unbroken thread: <b style="color:var(--gold-bright)">19</b> days'
+    + '<br><span class="muted fine">tap a stitch to inspect that day</span>'
+    + '</div></div>';
+}
+
+function dayWinHtml() {
+  return '<div class="win">'
+    + '<span class="win-title">The sixth of August</span>'
+    + '<table class="rpg">'
+    + '<tr><th></th><th>deed</th><th>time</th><th>dist</th></tr>'
+    + '<tr><td><span class="cdot cat-run"></span></td><td>Morning loop, Vale Gate</td><td>38m</td><td>7.4km</td></tr>'
+    + '<tr><td><span class="cdot cat-strength"></span></td><td>Back squat &middot; 5&times;5</td><td>26m</td><td>&mdash;</td></tr>'
+    + '<tr><td><span class="cdot cat-strength"></span></td><td>Barbell row &middot; 3&times;8</td><td>14m</td><td>&mdash;</td></tr>'
+    + '<tr><td><span class="cdot cat-mobility"></span></td><td>Hips, before bed</td><td>11m</td><td>&mdash;</td></tr>'
+    + '</table>'
+    + '<hr class="rule">'
+    + '<table class="rpg">'
+    + '<tr><th>group</th><th>last trained</th><th>sets 14d</th><th>state</th></tr>'
+    + '<tr><td>quads</td><td class="fresh-0">today</td><td>18</td><td class="fresh-0">fresh</td></tr>'
+    + '<tr><td>back</td><td class="fresh-0">today</td><td>14</td><td class="fresh-0">fresh</td></tr>'
+    + '<tr><td>chest</td><td class="fresh-1">5d ago</td><td>9</td><td class="fresh-1">due</td></tr>'
+    + '<tr><td>calves</td><td class="fresh-2">21d ago</td><td>2</td><td class="fresh-2">NEGLECTED</td></tr>'
+    + '</table>'
+    + '<div class="muted fine" style="margin-top:6px">two quests fulfilled &middot; 1,240 kg moved</div>'
+    + '</div>';
+}
+
+function phoneScene() {
+  return '<div class="app-pad">'
+    + IV.header({ phone: true })
+    + '<div class="standing" data-seam="STANDING" data-tag="' + TAG_STANDING + '">'
+    + '<div class="st-vault" data-fill="vault"></div>'
+    + '<div class="st-wall" data-fill="wall"></div>'
+    + '<div class="st-floor" data-fill="floor"></div>'
+    + '<div class="st-pool"></div>'
+    + '<div class="st-niche" data-fill="niche">' + IV.spriteTag('fx_loom', 96) + '</div>'
+    + '<span class="st-plate">THE LOOM<small>a year of stitches &mdash; you are standing here</small></span>'
+    + '</div>'
+    + tapestryWinHtml()
+    + calendarHtml()
+    + dayWinHtml()
+    + IV.footer()
+    + '</div>'
+    + IV.dock();
+}
+
+/* =============================================================================
+   5. THE WALL
+   ========================================================================== */
+IV.page({
+  title: 'Iron Vale &mdash; the Hall of Records, a scene',
+  subtitle: 'visual mockup, nothing wired up &mdash; the eight-tab bar re-staged as a corridor you walk',
+  legend: [
+    { label: 'TODAY', text: 'hall.js:40 &mdash; eight tab buttons in four clusters, over 29 stacked .win panels' },
+    { label: 'HERE', text: 'eight fixtures along one hall; you approach one and it opens' },
+    { label: 'UNCHANGED', text: 'every table, chart and canvas inside a fixture' },
+    { label: 'MAUD', text: 'a corner bust that speaks on tap, never a standing sprite with a live bubble' },
+  ],
+  note: '<b>THE THESIS.</b> The Hall of Records is already <i>a place</i> in the player&rsquo;s head &mdash; '
+    + 'Maud keeps it, it has rooms, and every room holds a different kind of record. On screen it is a strip of '
+    + 'eight buttons in four clusters with 29 panels stacked behind them; nothing about that says building. '
+    + 'So: delete the tab bar, and let the eight destinations be eight <b>fixtures</b> standing along a corridor '
+    + '&mdash; a case, a chart wall, a map table, an iron rack, a loom, a shelf, a lectern, a scroll. You walk the '
+    + 'hall and approach one; it opens where it stands. <b>The records themselves do not change.</b> A record you '
+    + 'cannot read is not a better record &mdash; the tables stay tables, dense and legible and boring in the right way. '
+    + 'What changed is how you get to them and what you can see around you while you read.',
+  frames: {
+    phone: {
+      title: 'Phone &mdash; 414px bezel',
+      sub: 'the loom, opened: the fixture still overhead, the Tapestry and the calendar of deeds below it, '
+        + 'Maud tapped in the corner, an archway back out to the hall',
+      chips: ['WHERE YOU STAND', 'THE READING SURFACE', 'STEP BACK OUT', 'PULL, NOT PUSH', 'TABLES STAY TABLES'],
+      html: phoneScene(),
+    },
+    desktop: {
+      title: 'Desktop &mdash; 900px viewport, scaled to fit',
+      sub: 'the corridor itself: all eight fixtures along one floor, the loom lit because you are walking up to it, '
+        + 'the hall running on past the right edge',
+      chips: ['THE CORRIDOR', 'A FIXTURE, APPROACHED', 'THE HALL IS A BUILDING', 'MAUD, HUNG AT THE DOOR', 'THE FOLD'],
+      url: 'ironvale.local:8322 &mdash; the Hall of Records',
+      html: desktopScene(),
+    },
+  },
+});
+
+/* ---- hydrate: harness first, then the scene's own backdrops and canvases --- */
+IV.boot();
+
+(function paintBackdrops() {
+  var VAULT = vaultTile(), WALL = wallTile(), NICHE = nicheURL();
+  var apply = function (sel, url, size) {
+    document.querySelectorAll(sel).forEach(function (el) {
+      el.style.backgroundImage = url;
+      if (size) el.style.backgroundSize = size;
+    });
+  };
+  apply('[data-fill="vault"]', VAULT, BAY + 'px 74px');
+  apply('[data-fill="wall"]', WALL, '64px 32px');
+  apply('[data-fill="niche"]', NICHE, '104px 124px');
+  /* the floor is generated at the exact height of the band it fills, so its
+     perspective series lands on the near edge instead of tiling or stretching */
+  document.querySelectorAll('[data-fill="floor"]').forEach(function (el) {
+    var fh = el.offsetHeight || 150;   /* offsetHeight ignores the desktop fit-scale */
+    el.style.backgroundImage = floorStrip(fh);
+    el.style.backgroundSize = BAY + 'px ' + fh + 'px';
+  });
+})();
+
+/* ---- the Tapestry, drawn the way static/js/hall.js draws it ---------------- */
+(function drawTapestry() {
+  var cv = document.getElementById('tapestry-cv');
+  if (!cv) return;
+  var CELL = 12, GAP = 2, TOP = 18, LEFT = 26, step = CELL + GAP;
+  var COLORS = { run: '#7ab55c', ride: '#6aa0c8', climb: '#e07030', strength: '#c85050',
+    mobility: '#a06ac8', walk: '#5cb5a5', swim: '#4a90d0', other: '#9a9aa8' };
+  var CATS = Object.keys(COLORS);
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var n = 371, days = [];
+  for (var i = 0; i < n; i++) {
+    var k = (i * 7 + ((i * i) % 13) + Math.floor(i / 9)) % 17;
+    days.push(k < 11 ? CATS[(i * 5 + Math.floor(i / 7)) % 8] : null);
+  }
+  var weeks = Math.ceil(n / 7);
+  cv.width = LEFT + weeks * step + 6;
+  cv.height = TOP + 7 * step + 6;
+  cv.style.width = cv.width + 'px';
+  cv.style.height = cv.height + 'px';
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#0c0c14'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.font = '10px quanta-strike-10, monospace';
+  ctx.fillStyle = '#55506a';
+  [['M', 0], ['W', 2], ['F', 4]].forEach(function (p) {
+    ctx.fillText(p[0], 8, TOP + p[1] * step + CELL - 2);
+  });
+  /* the run ends on 6 Aug 2026, so month labels count backwards from there */
+  var end = new Date(Date.UTC(2026, 7, 6));
+  days.forEach(function (cat, i) {
+    var col = Math.floor(i / 7), row = i % 7;
+    var x = LEFT + col * step, y = TOP + row * step;
+    var d = new Date(end.getTime() - (n - 1 - i) * 86400000);
+    if (d.getUTCDate() === 1) {
+      ctx.fillStyle = '#776f8e';
+      ctx.fillText(MONTHS[d.getUTCMonth()], x, TOP - 6);
+    }
+    ctx.fillStyle = cat ? COLORS[cat] : '#191928';
+    ctx.fillRect(x, y, CELL, CELL);
+    if (i === n - 1) {
+      ctx.strokeStyle = '#f0d080';
+      ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+    }
+  });
+  var wrap = document.getElementById('tapestry-scroll');
+  if (wrap) wrap.scrollLeft = cv.width;   /* newest stitches in view first */
+})();
+
+IV.layout();
+setTimeout(IV.layout, 250);
+</script>

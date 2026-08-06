@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — harness smoke test</title>
+<!-- Smoke test for _harness.js. Not a design mockup: it exists only to prove
+     the extracted harness still boots — fonts, tokens, gallery chrome, sprite
+     hydration, procedural tiles, .win panel, margin tags, desktop fit-scaling. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+  IV.injectStyles();
+
+  function scene(phone) {
+    return `<div class="app-pad">
+      ${IV.header({ phone: phone })}
+      <div class="win tight" style="margin-top:20px">
+        <span class="win-title">Harness OK</span>
+        <div class="muted">tokens, fonts, panel chrome and the vignette all came across.</div>
+      </div>
+      <div class="yard" data-seam="SMOKE" data-tag="SMOKE|the strip below is the harness's own scenery: a gradient sky with the procedural mtnTile() ridge repeating along the horizon, dirtTile() ground beneath, and one hydrated sprite standing on it">
+        <div class="sky"><div class="mtns" data-fill="mtns"></div></div>
+        <div class="ground" data-fill="dirt">
+          <div class="hrow">
+            <div class="spot">
+              <div class="forge-row">${IV.spriteTag('yard_forge', 104)}</div>
+              <span class="splate">the forge<small>one sprite, drawn from the char-map</small></span>
+            </div>
+            <div class="spot"><div class="forge-row">${IV.spriteTag('stone_pile', 56)}${IV.spriteTag('barrel', 40)}</div></div>
+          </div>
+          <div class="stage-caption" style="margin-top:34px"><span class="cap">If this reads as <b>a place</b>, the harness works.</span></div>
+        </div>
+      </div>
+      ${IV.footer()}
+    </div>
+    ${phone ? IV.dock() : ''}`;
+  }
+
+  IV.page({
+    title: 'Iron Vale — harness smoke test',
+    subtitle: 'not a design — a one-scene check that _harness.js still boots: fonts, tokens, tiles, sprites, .win chrome, margin tags, fit-scaling',
+    legend: [
+      { label: 'FONTS', text: 'five inlined woff2 faces — headings should be pixel type, not the browser default' },
+      { label: 'TILES', text: 'mtnTile() ridge on the horizon, dirtTile() under the ground' },
+      { label: 'SPRITES', text: 'canvas[data-sprite] hydrated by IV.hydrateSprites()' },
+      { label: 'PANEL', text: 'the .win gold border with its notched title' },
+    ],
+    frames: {
+      phone: {
+        title: 'Phone — 414px bezel',
+        sub: 'the same scene under .iv-phone: stacked header, dock at the bottom, no streak pill',
+        chips: ['sky + mtns', 'dirt ground', 'one sprite', '.win panel'],
+        html: scene(true),
+      },
+      desktop: {
+        title: 'Desktop — 900px viewport, scaled to fit',
+        sub: 'the same scene under .iv-desktop: brand sub-line, streak pill, xp bar, footer buttons',
+        chips: ['sky + mtns', 'dirt ground', 'one sprite', '.win panel'],
+        url: 'ironvale.local:8322 — harness smoke',
+        html: scene(false),
+      },
+    },
+  });
+
+  IV.boot();
+</script>

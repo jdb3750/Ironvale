@@ -1,0 +1,567 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — the Ledger House, Wick's desk</title>
+<!-- Design mockup for the Scrivener screen (static/js/giver.js:1143 — SCREENS.scrivener).
+     Nothing here is wired up and nothing here ships: static/ is the app, this is
+     drawing paper. Chrome, tokens, fonts and sprite engine come from _harness.js. -->
+<script src="_harness.js"></script>
+<style id="scene-css">
+/* ===================== THE LEDGER HOUSE — Wick's desk =====================
+   The confession form, drawn as the desk it always was. Every rule below is
+   scene-local; the tokens it leans on are the harness's (= static/style.css). */
+
+/* --- the desk itself: planks seen from above, one candle's worth of light --- */
+.iv .deskwrap { margin:12px 4px 6px; }
+.iv .desk { position:relative; padding:10px 10px 12px; background-color:#2b2013;
+  border:3px solid #6a4e2c; box-shadow:inset 0 0 0 2px #1a1208, 6px 6px 0 rgba(0,0,0,0.55);
+  image-rendering:pixelated; }
+.iv .desk::before { content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:radial-gradient(ellipse 58% 60% at 82% 26%, rgba(240,208,128,0.20), rgba(0,0,0,0) 68%); }
+.iv .desk > * { position:relative; z-index:1; }
+
+/* --- the desk's near edge: a nameplate, and Wick's bust in the corner --- */
+.iv .desk-band { display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  margin-bottom:9px; }
+.iv .desk-plate { border:2px solid var(--gold); background:#1a1208; color:var(--gold-bright);
+  font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px;
+  text-transform:uppercase; padding:3px 12px; }
+.iv .desk-plate small { display:block; margin-top:2px; color:var(--dim); text-transform:none;
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
+/* the ✕-close weight class: a 24-36px sprite and a fine caption, never a button */
+.iv .desk-glyph { background:none; border:none; padding:2px 4px; cursor:pointer; line-height:0;
+  text-align:center; flex-shrink:0; }
+.iv .desk-glyph .g-cap { display:block; margin-top:2px; color:var(--dim); letter-spacing:0.5px;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.2; }
+.iv .desk-glyph.tapped canvas { outline:2px solid var(--gold-bright); outline-offset:1px; }
+.iv .desk-glyph.tapped .g-cap { color:var(--gold-bright); }
+/* he speaks only when tapped; the bubble opens beside him, tail pointing at him */
+.iv .wick-bubble { position:relative; max-width:334px; margin-top:1px; padding:7px 9px 8px;
+  background:var(--surface-raised); border:2px solid;
+  border-color:var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit);
+  box-shadow:4px 4px 0 rgba(0,0,0,0.6); }
+.iv .wick-bubble::after, .iv .wick-bubble::before { content:''; position:absolute; left:100%;
+  border:10px solid transparent; }
+.iv .wick-bubble::after { top:11px; border-left-color:var(--edge-lit); }
+.iv .wick-bubble::before { top:13px; border-left-color:var(--surface-raised); border-width:8px;
+  margin-left:-3px; z-index:1; }
+.iv .wick-bubble .fb-line { display:block; font-style:italic; color:var(--ink); line-height:1.35; }
+.iv .wick-bubble .fb-who { display:block; margin-top:4px; color:var(--dim);
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
+
+/* --- the floor plan of the desk --- */
+.iv-desktop .desk-floor { display:grid; grid-template-columns:152px minmax(0,1fr) 174px;
+  gap:0 14px; align-items:stretch; }
+/* the straightedge settles at the bottom of the desk, wherever the page ends */
+.iv-desktop .desk-col-mid { display:flex; flex-direction:column; }
+.iv-desktop .desk-col-mid .edge-rest { margin-top:auto; }
+.iv-phone .desk-floor { display:block; }
+.iv .prop { text-align:center; margin-bottom:10px; }
+.iv .prop .pcap { display:block; margin-top:2px; color:var(--dim-readable);
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.25; letter-spacing:0.5px; }
+.iv .prop .pcap b { color:var(--gold-bright); font-weight:400; }
+
+/* --- the open ledger --- */
+.iv .ledger-book { display:grid; grid-template-columns:88px 10px minmax(0,1fr);
+  border:2px solid #7a6244; box-shadow:6px 6px 0 rgba(0,0,0,0.55); }
+.iv-phone .ledger-book { grid-template-columns:minmax(0,1fr); }
+.iv .lp { position:relative; background:#e8e0cc; padding:8px 9px 10px; }
+.iv .lp-left { background:#d9d0b3; padding:8px 6px; box-shadow:inset -9px 0 12px rgba(74,58,32,0.34);
+  display:flex; flex-direction:column; }
+.iv .lp-spine { background:linear-gradient(90deg,#6a4e2c,#2f2213 45%,#2f2213 55%,#6a4e2c);
+  box-shadow:inset 0 0 0 1px #1a1208; }
+.iv-phone .lp-left, .iv-phone .lp-spine { display:none; }
+/* yesterday's tail, in a hand too cramped to read from here */
+.iv .scrawl { display:block; height:3px; margin:0 0 6px; background:#8d8265; opacity:0.7; }
+.iv .scrawl.s2 { width:78%; } .iv .scrawl.s3 { width:60%; } .iv .scrawl.s4 { width:88%; }
+.iv .lp-left .lp-foot { margin-top:auto; padding-top:8px; color:#7a6244;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.25; }
+
+.iv .lp-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+  padding-bottom:3px; margin-bottom:2px; border-bottom:2px solid #8a7a58; }
+.iv .lp-head .lp-date { color:#3c2a12; font-family:var(--font-title); font-size:var(--type-title);
+  letter-spacing:1px; text-transform:uppercase; }
+.iv .lp-head .lp-hand { color:#7a6244; font-family:var(--font-fine); font-size:var(--type-fine); }
+
+.iv .lines { position:relative; padding-left:30px; }
+.iv .lines::before { content:''; position:absolute; left:21px; top:0; bottom:0; width:2px;
+  background:#b06050; opacity:0.8; }
+.iv .entry { position:relative; min-height:32px; padding:6px 2px 6px 0;
+  border-bottom:1px solid #b9af92; }
+.iv .entry .emark { position:absolute; left:-30px; top:7px; line-height:0; }
+.iv .entry .etext { display:block; color:#3c2a12; font-family:var(--font-body);
+  font-size:var(--type-body); line-height:1.3; }
+.iv .entry .etext b { color:#1f1406; font-weight:400; }
+.iv .entry .efine { display:block; margin-top:2px; color:#7a6244; font-family:var(--font-fine);
+  font-size:var(--type-fine); line-height:1.3; }
+.iv .entry .efine i { font-style:normal; color:#9a7040; }
+
+/* the fresh line: kind, minutes and note gathering before the stamp comes down */
+.iv .entry-fresh { background:rgba(240,168,80,0.10); }
+.iv .ghost-blot { position:absolute; left:-32px; top:5px; width:26px; height:26px;
+  border:1px dashed #a8724a; display:flex; align-items:center; justify-content:center; opacity:0.55; }
+.iv .notewrite { display:flex; align-items:flex-end; gap:0; margin-top:2px; }
+.iv .notewrite .ntext { color:#2a1c08; font-family:var(--font-fine); font-size:var(--type-fine);
+  line-height:1.3; }
+.iv .notewrite .nib { width:2px; height:11px; margin:0 0 1px 1px; background:#2a1c08;
+  animation:nibBlink 1s steps(2) infinite; }
+@keyframes nibBlink { 0% { opacity:1; } 50% { opacity:0.15; } }
+/* the quill rests on the line: pulled partly out of flow so it leans over the
+   entry rather than reserving a tall empty band of page beneath it */
+.iv .quill-rest { margin:0 0 -6px 5px; flex-shrink:0; position:relative; z-index:2; }
+.iv .lp-foot-note { margin-top:6px; color:#7a6244; font-family:var(--font-fine);
+  font-size:var(--type-fine); line-height:1.3; }
+.iv .lp-foot-note b { color:#3c2a12; font-weight:400; }
+
+/* --- the straightedge, and the line it rules --- */
+.iv .straightedge { position:relative; height:14px; border:2px solid;
+  border-color:#e0cba2 #7a6244 #66513a #a8895e; background:linear-gradient(180deg,#c4a97e,#ab9066);
+  box-shadow:0 3px 0 rgba(0,0,0,0.42); }
+.iv .straightedge::before { content:''; position:absolute; top:1px; bottom:5px; left:10px; right:10px;
+  background:repeating-linear-gradient(90deg, rgba(60,42,18,0.6) 0 1px, rgba(0,0,0,0) 1px 8px); }
+.iv .straightedge i { position:absolute; top:-2px; bottom:-2px; width:8px; border:2px solid #6b5426;
+  background:linear-gradient(180deg,#e0c070,#9a7a30); }
+.iv .straightedge i.l { left:-2px; } .iv .straightedge i.r { right:-2px; }
+.iv .edge-rest { margin:12px 6px 0; }
+.iv .edge-rest .pcap { display:block; margin-top:6px; text-align:center; color:var(--dim-readable);
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
+/* mid-rule: the edge lies above the line and the ink has crossed part of it */
+.iv .entry.striking { background:rgba(122,30,30,0.07); padding-top:25px; padding-bottom:7px; }
+.iv .entry.striking .emark { top:26px; opacity:0.55; }
+.iv .entry.striking .etext, .iv .entry.striking .efine { color:#6f6047; }
+.iv .rule-lay { position:absolute; left:-30px; right:-4px; top:3px; z-index:3; }
+.iv .rule-ink { position:absolute; left:-30px; top:32px; height:3px; background:#7a1e1e;
+  box-shadow:0 1px 0 rgba(0,0,0,0.28); z-index:2; }
+.iv .rule-ink::after { content:''; position:absolute; right:-3px; top:-2px; width:4px; height:7px;
+  background:#7a1e1e; }
+.iv .strike-say { display:block; margin-top:4px; text-align:right; color:#7a1e1e;
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
+
+/* --- the stamp rack --- */
+.iv .rack-frame { padding:8px 7px 7px; background:linear-gradient(180deg,#5a4428,#3b2c19);
+  border:2px solid; border-color:#8a6a40 #2e2214 #241a0e #6a4e2c; box-shadow:4px 4px 0 rgba(0,0,0,0.5); }
+.iv .rack-frame .rk-cap { margin-bottom:5px; text-align:center; color:var(--dim-readable);
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; line-height:1.2; }
+.iv .stamps { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; }
+.iv .stamp { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
+  min-height:44px; padding:4px 2px 3px; cursor:pointer; background:#2e2214;
+  border:2px solid; border-color:#6a4e2c #1e160c #1a1208 #4a3620; }
+.iv .stamp .sname { color:var(--dim-readable); font-family:var(--font-fine);
+  font-size:var(--type-fine); letter-spacing:0.5px; text-transform:uppercase; line-height:1; }
+.iv .stamp.lifted { transform:translateY(-7px); background:#3d2c16;
+  border-color:#f0a850 #7a4a20 #5c3816 #c07838;
+  box-shadow:0 0 0 2px rgba(240,168,80,0.32), 0 7px 0 rgba(0,0,0,0.5); }
+.iv .stamp.lifted .sname { color:var(--gold-bright); }
+.iv .stamp .wet { position:absolute; left:50%; bottom:-9px; width:3px; height:6px; margin-left:-1px;
+  background:#e07030; animation:dripFall 1.6s steps(2) infinite; }
+@keyframes dripFall { 0% { opacity:0.2; transform:translateY(-3px); } 50% { opacity:1; transform:translateY(0); } }
+.iv .rack-frame .rk-foot { margin-top:6px; color:var(--dim); font-family:var(--font-fine);
+  font-size:var(--type-fine); line-height:1.25; text-align:center; }
+
+/* --- the hourglass, dragged for the count --- */
+.iv .glass-block { display:flex; align-items:flex-start; justify-content:center; gap:7px; }
+.iv .drag-track { position:relative; width:12px; height:66px; margin-top:6px; background:#1a1208;
+  border:2px solid #6a4e2c; }
+.iv .drag-track .fill { position:absolute; left:0; right:0; bottom:0; top:38%;
+  background:rgba(232,200,120,0.4); }
+.iv .drag-track .grip { position:absolute; left:-5px; right:-5px; top:33%; height:12px;
+  background:linear-gradient(180deg,#f0d080,#a8813a); border:2px solid #6b5426;
+  box-shadow:0 2px 0 rgba(0,0,0,0.55); }
+.iv .reading { margin-top:5px; text-align:center; }
+.iv .reading .rd { display:inline-block; padding:2px 8px; background:#1a1208; border:2px solid var(--gold);
+  color:var(--gold-bright); font-family:var(--font-body); font-size:var(--type-body); line-height:1.2; }
+.iv .reading .rdf { display:block; margin-top:3px; color:var(--dim); font-family:var(--font-fine);
+  font-size:var(--type-fine); line-height:1.25; }
+
+/* --- the slips the ravens already brought --- */
+.iv .slips { margin-top:2px; }
+.iv .slip { position:relative; margin-bottom:4px; padding:4px 6px 5px 21px; background:#ddd4b8;
+  border:1px solid #a89870; box-shadow:2px 2px 0 rgba(0,0,0,0.45); color:#4a3a1e;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.28; }
+.iv .slip b { display:block; color:#2a1c08; font-weight:400; }
+.iv .slip .seal { position:absolute; left:5px; top:6px; width:11px; height:11px; background:#8a2020;
+  border:1px solid #521212; }
+
+/* --- phone: the desk folds to its near edge --- */
+.iv-phone .desk { padding:8px 7px 9px; }
+.iv-phone .desk-plate { font-size:var(--type-body); padding:2px 8px; }
+.iv-phone .desk-edge { display:flex; align-items:flex-start; gap:8px; margin:10px -7px -9px;
+  padding:8px 7px 9px; border-top:3px solid #6a4e2c;
+  background:linear-gradient(180deg,#432f1a,#2b2013); }
+.iv-phone .desk-edge .prop { width:80px; flex-shrink:0; margin-bottom:0; }
+.iv-phone .desk-edge .glass-block { flex-direction:column; align-items:center; gap:3px; }
+.iv-phone .desk-edge .drag-track { width:62px; height:11px; margin:0; }
+.iv-phone .desk-edge .drag-track .fill { top:0; bottom:0; left:0; right:38%; }
+.iv-phone .desk-edge .drag-track .grip { left:auto; right:34%; top:-5px; bottom:-5px; width:12px;
+  height:auto; }
+.iv-phone .desk-edge .reading { margin-top:4px; }
+.iv-phone .desk-edge .reading .rd { padding:2px 4px; font-family:var(--font-fine);
+  font-size:var(--type-fine); line-height:1.25; }
+.iv-phone .desk-edge .reading .rdf { margin-top:2px; }
+.iv-phone .thumb-rack { flex:1; min-width:0; }
+.iv-phone .thumb-rack .stamps { grid-template-columns:repeat(8,minmax(0,1fr)); gap:2px; }
+.iv-phone .thumb-rack .stamp { padding:3px 0 2px; gap:0; }
+.iv-phone .thumb-rack .rk-cap { margin-bottom:4px; text-align:left; }
+.iv-phone .thumb-rack .rk-foot { margin-top:5px; text-align:left; }
+</style>
+<body>
+<script>
+  IV.injectStyles();
+  /* the harness stylesheet is appended to <head> on injectStyles(); put the
+     scene sheet after it so scene rules win on equal specificity */
+  document.head.appendChild(document.getElementById('scene-css'));
+
+  /* =========================================================================
+     1. THE STAMPS — one per kind of deed. Emblem is an 8x8 ink pattern; the
+        head takes that kind's --activity-* colour from static/style.css:67.
+     ========================================================================= */
+
+  var KINDS = [
+    { k:'run',      name:'RUN',   col:'#7ab55c', word:'a run',
+      em:['........','.kk.....','.kk.....','.kk.....','.kk.....','.kkkk...','.kkkkkk.','kkkkkkk.'] },
+    { k:'ride',     name:'RIDE',  col:'#6aa0c8', word:'a ride',
+      em:['..kkkk..','.k.kk.k.','k..kk..k','kkkkkkkk','kkkkkkkk','k..kk..k','.k.kk.k.','..kkkk..'] },
+    { k:'climb',    name:'CLIMB', col:'#e07030', word:'a climb',
+      em:['...kk...','...kk...','...kk...','...kk...','.k.kk.k.','.k.kk.k.','.kkkkkk.','..kkkk..'] },
+    { k:'strength', name:'IRON',  col:'#c85050', word:'the iron',
+      em:['........','kk....kk','kk....kk','kkkkkkkk','kkkkkkkk','kk....kk','kk....kk','........'] },
+    { k:'mobility', name:'LIMBER',col:'#a06ac8', word:'limbering',
+      em:['.kkkkk..','k.....k.','.kkkkkk.','k.....k.','.kkkkkk.','k.....k.','.kkkkk..','........'] },
+    { k:'walk',     name:'WALK',  col:'#5cb5a5', word:'a walk',
+      em:['....kkk.','...kk...','...kk...','..kk....','..kk....','..kk....','.kk.....','.kk.....'] },
+    { k:'swim',     name:'SWIM',  col:'#4a90d0', word:'a swim',
+      em:['........','kk..kk..','..kk..kk','........','kk..kk..','..kk..kk','........','........'] },
+    { k:'other',    name:'OTHER', col:'#9a9aa8', word:'something else',
+      em:['...k....','k..k..k.','.k.k.k..','..kkk...','kkkkkkk.','..kkk...','.k.k.k..','k..k..k.'] },
+  ];
+
+  var stampSprites = {};
+  KINDS.forEach(function (t) {
+    /* the stamp: broad turned handle, brass collar, square inked face
+       carrying that kind's emblem */
+    var rows = [
+      '...wwwwww...', '..wWWWWWWw..', '..wWWWWWWw..', '...wwwwww...',
+      '.....ww.....', '.....ww.....', '.mmmmmmmmmm.', 'mmmmmmmmmmmm',
+      'CCCCCCCCCCCC',
+    ];
+    t.em.forEach(function (r) { rows.push('CC' + r.replace(/\./g, 'C') + 'CC'); });
+    rows.push('dddddddddddd');
+    stampSprites['stamp_' + t.k] = {
+      p: { w:'#5a4428', W:'#8a6a40', m:'#c9a24b', C:t.col, d:IV.blendHex(t.col,'#000000',0.55), k:'#1a1208' },
+      r: rows,
+    };
+    /* the blot the same stamp leaves on the page, ink and all */
+    var blot = ['...cc.....'];
+    t.em.forEach(function (r) { blot.push('.' + r.replace(/k/g, 'c') + '.'); });
+    blot.push('....c.c...');
+    stampSprites['blot_' + t.k] = { p: { c:t.col }, r: blot };
+  });
+
+  /* =========================================================================
+     2. THE REST OF THE DESK — hand-authored char-map sprites.
+     ========================================================================= */
+
+  IV.addSprites(Object.assign(stampSprites, {
+    /* Wick, as a corner bust: white tufts, spectacle-worn eyes, scrivener's robe */
+    wick_bust: { p: { W:'#ddd8c8', f:'#e0c0a0', F:'#c09878', K:'#1a1410', p:'#4a3a66', P:'#6a5a86' }, r: [
+      '....ffff....', '...ffffff...', '..WffffffW..', '..WffffffW..',
+      '..WfKffKfW..', '..WffffffW..', '..WfFFFFfW..', '..WWffffWW..',
+      '...WffffW...', '..pppppppp..', '.pPppppppPp.', 'pppppppppppp',
+    ]},
+    /* the quill: goose feather, cut nib pointing down-left onto the page */
+    quill: { p: { f:'#e8e4d6', F:'#b8b2a2', s:'#8a8478', n:'#2a2a34', i:'#4a4a5a' }, r: [
+      '........fF', '.......ffF', '......ffF.', '......ffF.', '.....ffF..', '.....ffF..',
+      '....ffF...', '....ffF...', '...ffF....', '...fsF....', '..fsF.....', '..sF......',
+      '.ss.......', '.s........', 'in........', 'n.........',
+    ]},
+    /* the inkpot: pewter rim, oak-gall ink to the brim */
+    inkpot: { p: { m:'#8a8a9a', g:'#3f5680', G:'#2a3a5a', k:'#0e1424', K:'#1a2438' }, r: [
+      '............', '...mmmmmm...', '..mggggggm..', '..gkkkkkkg..', '..gkkkkkkg..', '..GkkkkkkG..',
+      '..GkkkkkkG..', '..GKKKKKKG..', '...GGGGGG...', '..mmmmmmmm..', '..mmmmmmmm..', '............',
+    ]},
+    /* the hourglass, mid-drag: the upper bulb part drained, sand still falling */
+    hourglass: { p: { W:'#a8865a', w:'#8a6a40', i:'#4a4a5a', g:'#20202e', s:'#e8c878' }, r: [
+      '.WWWWWWWWWWWW.', '.wwwwwwwwwwww.', '..iggggggggi..', '..iggggggggi..',
+      '...issssssi...', '....issssi....', '.....issi.....', '.....issi.....',
+      '....i.ss.i....', '...i..ss..i...', '..i...ss...i..', '..i..ssss..i..',
+      '..i.ssssss.i..', '..issssssssi..', '..issssssssi..', '..issssssssi..',
+      '.wwwwwwwwwwww.', '.WWWWWWWWWWWW.',
+    ]},
+    /* one tallow candle, which is all the light this room gets */
+    candle: { p: { y:'#f0d060', o:'#e07030', r:'#c04020', k:'#2a2a34', W:'#e8e0cc', w:'#c8c0a8', m:'#8a8a9a' }, r: [
+      '...y....', '...yo...', '..oyyo..', '..oyyo..', '...ro...', '...k....',
+      '..WWWw..', '..WWWw..', '..WWWw..', '..WWWw..', '..WWWw..', '.WWWWWw.',
+      '.WWWWWw.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..',
+    ]},
+    /* a raven, done for the day, perched on the slips it brought */
+    raven: { p: { k:'#1a1a24', K:'#32323f', y:'#c9a24b' }, r: [
+      '.....kkk....', '....kkkkk...', '...kkykkkk..', 'yykkkkkkkk..', '...kkkkkkk..', '...kKKKKkk..',
+      '...kKKKKkk..', '...kkkkkkkk.', '....kkkkkkk.', '.....kkkk...', '.....k.k....', '....kk.kk...',
+    ]},
+  }));
+
+  /* =========================================================================
+     3. THE SCENE
+     ========================================================================= */
+
+  var byKind = {};
+  KINDS.forEach(function (t) { byKind[t.k] = t; });
+
+  /* Wick's corner: the bust alone, or the bust with what he says once tapped */
+  function wickCorner(tapped) {
+    var bubble = tapped ? `<div class="wick-bubble">
+          <span class="fb-line">&ldquo;Press the stamp, tip the glass, and I&rsquo;ll write it down.
+            No witness means seven coins in ten &mdash; I don&rsquo;t make the rule, I keep it.&rdquo;</span>
+          <span class="fb-who">Wick the Scrivener &middot; tap the bust again and he goes back to his work</span>
+        </div>` : '';
+    return `<div class="desk-band">
+      <div class="desk-plate">The Ledger House<small>Wick&rsquo;s desk &mdash; where a deed the ravens missed gets sworn</small></div>
+      ${bubble}
+      <div class="desk-glyph ${tapped ? 'tapped' : ''}"
+           data-seam="WICK"
+           data-tag="WICK, ON TAP|A bust in the &times;-glyph weight class. Silent until tapped &mdash; no standing sprite, no bubble left hanging open.">
+        ${IV.spriteTag('wick_bust', tapped ? 36 : 24)}
+        <span class="g-cap">${tapped ? 'Wick, asked' : 'ask Wick'}</span>
+      </div>
+    </div>`;
+  }
+
+  /* one already-inked line of today's page */
+  function entry(kind, when, what, fine) {
+    return `<div class="entry">
+      <span class="emark">${IV.spriteTag('blot_' + kind, 20)}</span>
+      <span class="etext">${when} &mdash; <b>${what}</b></span>
+      <span class="efine">${fine}</span>
+    </div>`;
+  }
+
+  /* the fresh line: the stamp not yet down, the glass already read, the quill working */
+  function freshEntry(phone) {
+    return `<div class="entry entry-fresh"
+         data-seam="BLOT"
+         data-tag="THE BLOT IS THE SUBMIT|Bring the inked stamp down on the dashed square and it is sworn. Nothing here says SUBMIT.">
+      <span class="ghost-blot">${IV.spriteTag('blot_climb', 20)}</span>
+      <span class="etext">this evening &mdash; <b>a little under an hour</b></span>
+      <span class="notewrite"
+            data-seam="QUILL"
+            data-tag="THE QUILL IS THE NOTE FIELD|Write on the line with it. The note goes where a note goes: on the page, in its own entry.">
+        <span class="ntext">at the crag, and no tracker on my wrist</span><span class="nib"></span>
+        ${IV.spriteTag('quill', 30, 'quill-rest')}
+      </span>
+    </div>`;
+  }
+
+  /* the rack: eight stamps, the climbing hook lifted and wet with ink */
+  function stampRack(phone) {
+    var cells = KINDS.map(function (t) {
+      var lifted = t.k === 'climb';
+      return `<div class="stamp ${lifted ? 'lifted' : ''}" title="${t.word}">
+        ${IV.spriteTag('stamp_' + t.k, phone ? 26 : 40)}
+        ${phone ? '' : `<span class="sname">${t.name}</span>`}
+        ${lifted ? '<span class="wet"></span>' : ''}
+      </div>`;
+    }).join('');
+    return `<div class="rack-frame ${phone ? 'thumb-rack' : ''}"
+         data-seam="STAMPS"
+         data-tag="${phone
+           ? 'THE RACK, UNDER A THUMB|The same eight, laid flat under a thumb. Same order; no labels &mdash; emblem and colour are the name.'
+           : 'STAMPS FOR THE KIND SELECT|One stamp per kind of deed, cut with its emblem and inked in that kind&rsquo;s own colour. Press the one you did.'}">
+      <div class="rk-cap">${phone ? 'the rack, laid flat' : 'the stamp rack'}</div>
+      <div class="stamps">${cells}</div>
+      <div class="rk-foot">the hook is up and wet &mdash; climbing, then</div>
+    </div>`;
+  }
+
+  /* the hourglass: drag the sand, and it says what it now holds */
+  function hourglass(phone) {
+    return `<div class="prop"
+         data-seam="GLASS"
+         data-tag="THE GLASS IS THE MINUTES FIELD|Drag the sand; the glass reads back what it holds, rather than asking you for a number.">
+      <div class="glass-block">
+        ${IV.spriteTag('hourglass', 42)}
+        <div class="drag-track"><div class="fill"></div><div class="grip"></div></div>
+      </div>
+      <div class="reading">
+        <span class="rd">a little under an hour</span>
+        <span class="rdf">${phone ? 'drag &larr; shorter' : 'drag the sand &mdash; down, shorter'}</span>
+      </div>
+    </div>`;
+  }
+
+  function straightedge() {
+    return `<div class="straightedge"><i class="l"></i><i class="r"></i></div>`;
+  }
+
+  /* ---------------------------------------------------------------- desktop */
+  function desktopScene() {
+    return `<div class="app-pad">
+      ${IV.header({ phone: false })}
+      <div class="deskwrap">
+        <div class="desk" data-fill="wood">
+          ${wickCorner(true)}
+          <div class="desk-floor">
+
+            <div class="desk-col-left">
+              ${stampRack(false)}
+              <div class="prop" style="margin-top:12px">
+                ${IV.spriteTag('inkpot', 48)}
+                <span class="pcap">the ink &mdash; <b>the hook was just dipped</b></span>
+              </div>
+            </div>
+
+            <div class="desk-col-mid">
+              <div class="ledger-book"
+                   data-seam="LEDGER"
+                   data-tag="THE OPEN LEDGER|Ruled, and already part-written. The list of today&rsquo;s deeds and the place you add one are one object.">
+                <div class="lp lp-left">
+                  <span class="scrawl"></span><span class="scrawl s2"></span>
+                  <span class="scrawl s3"></span><span class="scrawl"></span>
+                  <span class="scrawl s4"></span><span class="scrawl s2"></span>
+                  <span class="scrawl s3"></span><span class="scrawl"></span>
+                  <span class="scrawl s4"></span><span class="scrawl s2"></span>
+                  <span class="scrawl"></span><span class="scrawl s3"></span>
+                  <span class="scrawl s4"></span><span class="scrawl s2"></span>
+                  <span class="scrawl s3"></span><span class="scrawl"></span>
+                  <span class="scrawl s4"></span><span class="scrawl s3"></span>
+                  <div class="lp-foot">yesterday, in a hand you can no longer read from here</div>
+                </div>
+                <div class="lp-spine"></div>
+                <div class="lp">
+                  <div class="lp-head">
+                    <span class="lp-date">Today</span>
+                    <span class="lp-hand">the sixth of the eighth month</span>
+                  </div>
+                  <div class="lines">
+                    ${entry('ride', 'at first light', 'a ride out to the low bridge',
+                      'three quarters of an hour &middot; <i>a raven brought it</i>')}
+                    ${entry('strength', 'midday', 'back squat, five sets of five',
+                      'sworn set by set at the rack')}
+                    ${entry('walk', 'afternoon', 'the walk to the mill and back',
+                      'half an hour &middot; <i>a raven brought it</i>')}
+                    ${freshEntry(false)}
+                  </div>
+                  <div class="lp-foot-note"><b>Bring the inked hook down on the dashed square and it is sworn.</b>
+                    No witness rode with you, so Wick pays seven coins in ten &mdash; older pages:
+                    the Hall of Records, then the calendar, then the day.</div>
+                </div>
+              </div>
+
+              <div class="edge-rest">
+                ${straightedge()}
+                <span class="pcap">the straightedge, lying where Wick left it &mdash;
+                  lay it over a line and rule through to <b>strike it from the record</b></span>
+              </div>
+            </div>
+
+            <div class="desk-col-right">
+              ${hourglass(false)}
+              <div class="prop">
+                ${IV.spriteTag('candle', 40)}
+                <span class="pcap">one tallow candle, and it is getting late</span>
+              </div>
+              <div class="prop"
+                   data-seam="SLIPS"
+                   data-tag="WHAT THE RAVENS ALREADY BROUGHT|One slip per deed that arrived on its own &mdash; so you can see what is left to confess.">
+                ${IV.spriteTag('raven', 48)}
+                <span class="pcap">two slips came in on their own</span>
+                <div class="slips">
+                  <div class="slip"><span class="seal"></span><b>a ride</b>the low bridge &middot; three quarters of an hour</div>
+                  <div class="slip"><span class="seal"></span><b>a walk</b>to the mill &middot; half an hour</div>
+                </div>
+                <span class="pcap">these need no swearing &mdash; they came with a witness</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      ${IV.footer()}
+    </div>`;
+  }
+
+  /* ------------------------------------------------------------------ phone */
+  function phoneScene() {
+    return `<div class="app-pad">
+      ${IV.header({ phone: true })}
+      <div class="deskwrap"
+           data-seam="FOLD"
+           data-tag="THE FOLD|Nothing redesigned: the left page, ink, candle and slips fold away; today&rsquo;s page takes the width; the rack lies flat on the near edge, glass beside it.">
+        <div class="desk" data-fill="wood">
+          ${wickCorner(false)}
+          <div class="desk-floor">
+            <div class="ledger-book">
+              <div class="lp">
+                <div class="lp-head">
+                  <span class="lp-date">Today</span>
+                  <span class="lp-hand">the sixth</span>
+                </div>
+                <div class="lines">
+                  ${entry('ride', 'first light', 'a ride to the low bridge',
+                    'three quarters of an hour &middot; <i>by raven</i>')}
+                  ${entry('strength', 'midday', 'back squat, five of five',
+                    'sworn set by set at the rack')}
+
+                  <div class="entry striking"
+                       data-seam="STRIKE"
+                       data-tag="THE STRAIGHTEDGE IS THE DELETE|Wick lays the edge across the line and rules through it. Half-ruled here; the ink is still travelling.">
+                    <span class="emark">${IV.spriteTag('blot_walk', 20)}</span>
+                    <span class="etext">afternoon &mdash; <b>the walk to the mill and back</b></span>
+                    <span class="efine">half an hour &middot; <i>the same walk, brought twice</i></span>
+                    <span class="rule-lay">${straightedge()}</span>
+                    <span class="rule-ink" style="width:62%"></span>
+                    <span class="strike-say">strike from the record</span>
+                  </div>
+
+                  ${freshEntry(true)}
+                </div>
+                <div class="lp-foot-note"><b>Bring the hook down on the dashed square and it is sworn.</b>
+                  No witness, so seven coins in ten.</div>
+              </div>
+            </div>
+          </div>
+          <div class="desk-edge">
+            ${hourglass(true)}
+            ${stampRack(true)}
+          </div>
+        </div>
+      </div>
+      ${IV.footer()}
+    </div>
+    ${IV.dock()}`;
+  }
+
+  IV.page({
+    title: 'Iron Vale — the Ledger House, Wick&rsquo;s desk',
+    subtitle: 'visual mockup of SCREENS.scrivener (static/js/giver.js:1143) — nothing wired up, nothing shipped',
+    legend: [
+      { label: 'KIND', text: 'the select becomes a rack of stamps, one per kind of deed' },
+      { label: 'MINUTES', text: 'the number field becomes an hourglass you drag' },
+      { label: 'NOTE', text: 'the text field becomes a quill writing on the line' },
+      { label: 'SUBMIT', text: 'the button becomes the blot the stamp leaves' },
+      { label: 'DELETE', text: 'the straightedge rules a line — strike from the record' },
+      { label: 'WICK', text: 'a bust at the desk corner, silent until tapped' },
+    ],
+    note: '<b>The thesis.</b> Today this screen is three form rows &mdash; a kind select, a minutes number field, a note text field &mdash; ' +
+      'one submit button, and a list of rows with a <i>strike</i> button on each. Here they are five objects on Wick&rsquo;s desk: ' +
+      '<b>a rack of stamps</b>, <b>an hourglass</b>, <b>a quill</b>, <b>the blot the stamp leaves</b>, and <b>the straightedge</b>. ' +
+      'Nothing about the record changed &mdash; same kinds, same minutes, same note, same struck line, same seven coins in ten. ' +
+      'What changed is that you handle the thing instead of filling in the thing.',
+    frames: {
+      phone: {
+        title: 'Phone — 414px bezel',
+        sub: 'the desk folded to its near edge; one entry mid-strike; Wick untapped, so he says nothing',
+        chips: ['the fold', 'straightedge mid-rule', 'rack under the thumb', 'glass beside it'],
+        html: phoneScene(),
+      },
+      desktop: {
+        title: 'Desktop — 900px viewport, scaled to fit',
+        sub: 'the whole desk from above: ledger, stamp rack with the hook lifted and inked, hourglass mid-drag, ink, quill, straightedge, candle, and the slips the ravens brought',
+        chips: ['stamp rack', 'open ledger', 'the blot', 'the quill', 'the hourglass', 'ravens&rsquo; slips', 'Wick, tapped'],
+        url: 'ironvale.local:8322 — the Ledger House',
+        html: desktopScene(),
+      },
+    },
+  });
+
+  IV.boot();
+</script>
