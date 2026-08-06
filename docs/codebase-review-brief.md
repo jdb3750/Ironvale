@@ -1140,3 +1140,120 @@ change, because `AGENTS.md` and `PLUGINS.md` quote it.
 - Any other §3 entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 8 — teach the frontend what a degraded value looks like
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes `static/`, and is the first one that does.** That means
+> **you must bump `?v=N` on every static asset URL in `static/index.html`** —
+> safety rule 4 in `AGENTS.md`. It is currently `?v=125`; take it to `?v=126`,
+> and change **all** of them, not just the files you touched. Also changes
+> `tests/`. Re-read "Mutation testing: commit first, always" before you break
+> anything.
+
+### Why this seam exists
+
+Seams 3 and 4 both chose to **degrade rather than fail** when persisted data is
+malformed — the right call, and it is why `/api/road` and `/api/state` no longer
+die on a bad row. But neither seam could touch `static/` under its own scope, so
+**the frontend was never told**. Two degraded values now reach it, and one of
+them crashes a screen.
+
+This seam answers the question those two left open, once: **what contract does a
+degraded value have with its consumer?**
+
+### The two cases
+
+**1. `settings.ambition` — this one throws.** `misc.js:908` renders
+`${esc(amb[s.ambition].desc)}`. The backend now (correctly) keeps serving the
+stored value while using Forge's multiplier internally, so `s.ambition` can be a
+string. `amb["corrupt"]` is `undefined`, and `.desc` raises a `TypeError`
+**while rendering Settings** — the screen breaks. `:905`'s selected-state
+highlight (`s.ambition === i`) fails silently, which is fine; `:908` is the
+crash.
+
+**2. `/api/road`'s `total_km` may be the string `"unknown"`.** `hall.js:154`
+renders `${road.total_km} km`, which reads as "unknown km" — correct by luck,
+but correct. `hall.js:1022` then does arithmetic: `km >= marks[i].km` and
+friends. That survives **only** because JS coerces `"unknown"` to `NaN` and every
+comparison goes false, leaving the pilgrim drawn at the gate. It does not crash,
+and the result is even reasonable — but nothing anywhere says the value can be a
+string, so the next person to touch that loop has no warning. `breakdown` values
+can be `"unknown"` too.
+
+### What to decide, and say why
+
+**Pick one contract and apply it to both.** Roughly:
+
+- The frontend treats any non-number as unknown at the point of use, through a
+  named helper both call sites go through.
+- The API sends a separate flag (`total_km_known: false`) and the frontend
+  branches on that instead of sniffing types.
+- Something else you can argue for.
+
+**Do not just add two local `typeof` patches.** The point of the seam is that
+there is *one* answer written down, so the third degraded value — and there will
+be one — has somewhere to land. Whatever you choose, **say it in a comment at the
+boundary**, per `AGENTS.md`.
+
+If your answer requires an API change, **stop and report** rather than altering a
+response shape unilaterally: `total_km` has two consumers and this brief does not
+authorise a contract change.
+
+### Tests
+
+Frontend tests are Node, not Python. `tests/frontend_harness.mjs` builds a fake
+DOM and the `*.test.mjs` files run modules inside it;
+`tests/frontend_browser.test.mjs` drives headless Chromium. Put each test at the
+lowest level that can actually fail:
+
+- **Settings renders with a corrupt `ambition` and does not throw.** This is the
+  one that matters — assert the screen renders, not that a helper returned
+  something.
+- **The Hall's road view renders with `total_km: "unknown"`** and shows no
+  nonsense distance.
+- **Healthy values are completely unaffected** — a real ambition still
+  highlights its selected button and shows its description; a real `total_km`
+  still positions the pilgrim between the right landmarks. A guard that makes
+  every ambition render as unknown is worse than the crash.
+
+### The acceptance bar
+
+Commit first, then mutation-test **each guard separately** — two earlier seams
+shipped a guard that another guard masked, and seam 7's per-guard bar is now
+standing policy. Report each removal and its failure.
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+Quote the final line of each. Smoke is currently **257 checks**; `AGENTS.md` and
+`PLUGINS.md` quote that number, so report any change.
+
+**Confirm the `?v=` bump landed on every asset URL.** A `static/` change without
+it ships stale JS to players — the one failure mode no test catches.
+
+### Out of scope for this seam
+
+- **The Bram copy.** His greeting and completion pools still talk about barbells
+  and deadlifts while only legacy climb quests reach them, and `town.js:27`
+  credits an unsworn *climb* with "Iron moved is iron moved". Real, recorded in
+  §3, and it is **voice work** — a different kind of judgement from this. Its own
+  seam.
+- **The dead CSS surfaces** and `REACTIONS.accept.bram`. They belong with the
+  dead-code seam, which also has to work around `dungeon._rng`'s test dependency.
+- **`G.dev`.** Confirmed live — Joe calls it from the browser console. §3 says
+  do not delete it.
+- **Routine ownership**, the `db.py` non-committing variants, and refusing an
+  unmatched `activity_id`. All open, none of them this.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."
