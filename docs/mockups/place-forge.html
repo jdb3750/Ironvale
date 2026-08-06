@@ -31,8 +31,10 @@
 .iv .hut .wall-beam.high { top:22px; }
 .iv .hut .wall-beam.low  { bottom:0; }
 
-/* floor: the yard's own dirt, gone sooty */
-.iv .hut .hut-floor { position:relative; padding:0 6px 12px;
+/* floor: the yard's own dirt, gone sooty. The bottom padding is deliberate —
+   there must be visible ground below the narration, or it reads as a bar
+   pasted over the picture rather than a caption standing in the room. */
+.iv .hut .hut-floor { position:relative; padding:0 6px 30px;
   background-color:#3d3122; border-top:4px solid #241a12; }
 .iv .hut .hut-floor::before { content:''; position:absolute; inset:0; z-index:0;
   background:linear-gradient(180deg, rgba(0,0,0,0.50), rgba(0,0,0,0.05) 42%, rgba(0,0,0,0.38));
@@ -73,15 +75,29 @@
   border:1px solid #241a0e; }
 .iv .hut .wall-rail .rail-hung { display:flex; justify-content:center; align-items:flex-start;
   gap:14px; margin-top:-1px; }
-.iv .hut .wall-rail .rail-hung canvas { filter:brightness(0.8); }
+.iv .hut .wall-rail .rail-hung canvas { filter:brightness(0.86); }
+/* the peg her hammer came off — an empty hook says where the tool went */
+.iv .hut .wall-rail .peg { width:7px; height:15px; margin-top:1px;
+  background:linear-gradient(180deg,#8a6a40,#4c3820); box-shadow:0 0 0 1px #241a0e; }
 
-/* ---- the door in the back wall: the Drill Yard, one room over ---- */
+/* ---- the door in the back wall: the Drill Yard, one room over.
+       Its name is not a floating plate; it is burnt into the lintel board
+       nailed over the doorway, the way a shop names its own back door. ---- */
 .iv .hut .doorway { position:absolute; bottom:0; z-index:2; text-align:center; cursor:pointer;
   display:flex; flex-direction:column; align-items:center; }
-.iv .hut .doorway .splate { margin:0 0 5px; }
 .iv .hut .door-frame { position:relative; width:100%;
   border:4px solid #6a4e2c; border-bottom:none; background:#120c08;
   box-shadow:inset 0 0 0 2px #241a0e, -3px 0 0 rgba(0,0,0,0.5); }
+.iv .hut .door-lintel { position:absolute; left:-11px; right:-11px; bottom:100%; margin-bottom:3px;
+  padding:2px 13px 3px; text-align:center; white-space:nowrap;
+  background:linear-gradient(180deg,#7d5f36,#4a3620);
+  border:2px solid #2a1d10; box-shadow:2px 3px 0 rgba(0,0,0,0.55), inset 0 1px 0 #a3814e;
+  font-family:var(--font-body); font-size:var(--type-body); letter-spacing:1px;
+  text-transform:uppercase; color:#ffeab4; text-shadow:1px 1px 0 #1c1208; }
+.iv .hut .door-lintel i { position:absolute; top:3px; width:3px; height:3px; background:#c8c2b0;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.6); }
+.iv .hut .door-lintel i.n1 { left:4px; } .iv .hut .door-lintel i.n2 { right:4px; }
+.iv-phone .hut .door-lintel { left:-9px; right:-9px; font-size:var(--type-fine); letter-spacing:0.5px; }
 .iv .hut .door-plank { position:absolute; inset:6px 6px 0;
   background:repeating-linear-gradient(90deg,#3c2c18 0 8px,#32240f 8px 9px);
   border-top:2px solid #4c3820; }
@@ -101,9 +117,15 @@
 .iv .hut .stations { display:flex; justify-content:flex-start; align-items:flex-end;
   gap:16px; margin-top:-96px; position:relative; z-index:3; }
 .iv .hut .stations > .spot .splate { margin-top:4px; }
-.iv-phone .hut .stations { gap:14px; margin-top:-64px; }
+.iv .hut .splate small { color:#b3a9c8; }
+.iv-phone .hut .stations { gap:10px; margin-top:-58px; }
 .iv-phone .hut .splate { font-family:var(--font-fine); font-size:var(--type-fine);
   max-width:104px; line-height:1.25; }
+/* she stands AT the anvil — not on an empty patch of floor beside it */
+.iv .smith-anvil { display:flex; align-items:flex-end; }
+.iv .smith-anvil .smith-fig { position:relative; z-index:2; line-height:0; }
+.iv .smith-anvil .anvil-hold { margin-left:-16px; }
+.iv-phone .smith-anvil .anvil-hold { margin-left:-8px; }
 
 /* coal light spilling out of the hearth and across the floor */
 .iv .hut .coalglow { position:absolute; bottom:0; height:110px; width:300px; z-index:1;
@@ -114,36 +136,63 @@
 /* the smith herself, standing at the anvil — a scene sprite, not a portrait */
 .iv .hut .smith canvas { filter:drop-shadow(3px 3px 0 rgba(0,0,0,0.55)); }
 
-/* ================= THE COOLING RACK — the offers, as objects ================= */
-.iv .cr-frame { position:relative; padding:10px 12px 12px; display:flex; flex-direction:column-reverse;
-  gap:11px; border-left:5px solid #5a4428; border-right:5px solid #5a4428;
-  border-bottom:5px solid #5a4428; background:rgba(20,12,8,0.42);
-  box-shadow:inset 0 0 0 1px #241a0e, 4px 4px 0 rgba(0,0,0,0.45); }
-.iv .cr-frame::before { content:''; position:absolute; left:-5px; right:-5px; top:0; height:5px;
-  background:linear-gradient(180deg,#8a6a40,#5a4428); }
-.iv .billet { display:block; position:relative; width:100%; padding:0; cursor:pointer;
-  background:none; border:none; text-align:center; line-height:0; }
-.iv .billet .b-rail { display:block; height:4px; background:linear-gradient(180deg,#7a7a88,#3a3a46);
-  box-shadow:0 1px 0 #14141c; }
-.iv .billet canvas { position:relative; display:block; margin:0 auto -2px; }
-.iv .billet .b-heat { display:block; margin-top:5px; line-height:1.2;
+/* ================= THE COOLING RACK — a stand, not a widget =================
+   Two forked iron posts and three rails between them. The billets lie ACROSS
+   the rails at whatever angle she dropped them at, at whatever depth she
+   reached. There is no frame around it, no header over it and no row of even
+   slots inside it — the moment it gets those it stops being a rack and starts
+   being a list with a wood skin. Each heat is scratched into its own rail, at
+   the end where the cold iron lies, so the name is a mark on the object.
+   ========================================================================== */
+.iv .cr-stand { position:relative; width:220px; height:164px; margin:0 auto; }
+.iv .cr-post { position:absolute; top:20px; line-height:0; z-index:1;
+  filter:drop-shadow(2px 3px 0 rgba(0,0,0,0.5)); }
+.iv .cr-post.l { left:2px; }
+.iv .cr-post.r { right:2px; transform:scaleX(-1); }
+
+.iv .billet { position:absolute; left:0; right:0; height:34px; z-index:2;
+  background:none; border:none; padding:0; margin:0; cursor:pointer; text-align:left; }
+.iv .billet .b-rail { position:absolute; left:10px; right:10px; bottom:0; height:12px;
+  background:linear-gradient(180deg,#b0b0be 0 2px,#74747f 2px 5px,#43434e 5px 9px,#1e1e26 9px 12px);
+  box-shadow:0 2px 0 rgba(0,0,0,0.55); }
+.iv .billet .b-scratch { position:absolute; bottom:0; height:12px; line-height:13px;
   font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px;
-  text-transform:uppercase; color:var(--dim-readable); }
-.iv .billet.heat-white canvas { filter:drop-shadow(0 0 7px rgba(255,235,170,0.95)) drop-shadow(0 0 17px rgba(240,150,60,0.65)); }
-.iv .billet.heat-orange canvas { filter:drop-shadow(0 0 6px rgba(240,140,60,0.75)); }
-.iv .billet.heat-red canvas { filter:drop-shadow(0 0 5px rgba(190,60,30,0.6)); }
-.iv .billet.heat-white .b-heat { color:#f0d080; }
+  white-space:nowrap; color:#f2f2f8; text-shadow:1px 1px 0 rgba(0,0,0,0.95);
+  transform:rotate(-1.5deg); }
+.iv .billet .b-bar { position:absolute; bottom:8px; line-height:0; }
+.iv .billet .b-bar canvas { display:block; transform:rotate(var(--rot,0deg)); }
+.iv .billet.heat-white .b-bar canvas { filter:drop-shadow(0 0 7px rgba(255,235,170,0.95)) drop-shadow(0 0 18px rgba(240,150,60,0.6)); }
+.iv .billet.heat-orange .b-bar canvas { filter:drop-shadow(0 0 6px rgba(240,140,60,0.7)); }
+.iv .billet.heat-red .b-bar canvas { filter:drop-shadow(0 0 5px rgba(190,60,30,0.55)); }
+.iv .billet.heat-white .b-scratch { color:#ffe9a8; text-shadow:1px 1px 0 rgba(0,0,0,0.95); }
 /* the chosen billet has been lifted off its rail and into the light */
-.iv .billet.chosen canvas { transform:translate(5px,-12px); }
-.iv .billet.chosen .b-heat { color:var(--gold-bright); }
-.iv .billet .tap-box { left:6px; right:6px; top:-18px; height:27px; }
-.iv .billet.dim canvas { filter:drop-shadow(0 0 4px rgba(150,60,30,0.45)) brightness(0.84); }
+/* The touched billet needs no bracket drawn round it: it is off its rail, it
+   is the brightest thing in the room, and the panel's tail is nailed to it.
+   A gold box round a lifted billet only ever read as a picture frame. */
+.iv .billet.chosen .b-bar { transform:translate(6px,-10px); }
+.iv .billet.chosen .b-bar canvas { filter:drop-shadow(0 0 8px rgba(255,242,190,1))
+  drop-shadow(0 0 22px rgba(250,170,70,0.8)) drop-shadow(3px 6px 0 rgba(0,0,0,0.45)); }
+.iv .billet.dim .b-bar canvas { filter:drop-shadow(0 0 4px rgba(150,60,30,0.4)) brightness(0.86); }
+
+/* the phone rack: the same stand, two rails still loaded, the top one bare
+   because the white-hot billet is on the anvil */
+.iv-phone .cr-stand { width:96px; height:108px; }
+.iv-phone .cr-post { top:12px; }
+.iv-phone .billet { height:24px; }
+.iv-phone .billet .b-rail { left:6px; right:6px; height:8px;
+  background:linear-gradient(180deg,#b0b0be 0 1px,#74747f 1px 3px,#43434e 3px 6px,#1e1e26 6px 8px); }
+.iv-phone .billet .b-bar { bottom:5px; }
+.iv-phone .anvil-hold .lean { margin-left:-24px; }
 
 /* ================= THE ANVIL, holding a sworn oath ================= */
 .iv .anvil-hold { position:relative; line-height:0; }
-.iv .anvil-hold .on-anvil { position:absolute; left:50%; transform:translateX(-50%); }
+.iv .anvil-hold .on-anvil { position:absolute; left:50%; margin-left:-26px; }
 .iv .anvil-hold .on-anvil canvas { filter:drop-shadow(0 0 7px rgba(230,110,50,0.85)); }
-.iv .anvil-hold .lean { position:absolute; right:-12px; bottom:5px; }
+/* her hammer, down off the rail and stood against the stump — butt on the
+   floor, head tipped in against the wood, so it is leaning on something */
+.iv .anvil-hold .lean { position:absolute; left:100%; margin-left:-4px; bottom:0; line-height:0;
+  transform:rotate(-17deg); transform-origin:bottom left;
+  filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); }
 
 /* ================= THE TERMS PANEL — .rack from the harness, dressed ====== */
 .iv .terms { margin:30px 6px 0; padding:56px 12px 10px; }
@@ -168,7 +217,9 @@
   border:2px solid; border-color:#6a6a78 #2c2c34 #22222a #55555e;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4); }
 .iv .strike-strip .ss-anvil { position:relative; flex-shrink:0; line-height:0; }
-.iv .strike-strip .ss-hammer { position:absolute; right:-16px; top:-20px; }
+.iv .strike-strip .ss-hammer { position:absolute; left:8px; top:-26px; line-height:0;
+  transform:rotate(-34deg); transform-origin:bottom center;
+  filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.6)); }
 .iv .strike-strip .ss-say { flex:1; min-width:0; }
 .iv .strike-strip .ss-say b { display:block; color:var(--gold-bright);
   font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px;
@@ -182,9 +233,10 @@
 .iv .board-glyph.glyph-book2 { left:8px; }
 .iv .board-glyph.glyph-iron { left:96px; }
 .iv .terms .board-glyph, .iv .sworn .board-glyph { top:8px; }
-/* she speaks over the room, not over her own terms: the bubble is lifted
-   clear of the panel's top edge so nothing of the oath is covered */
-.iv .terms .gbubble-wrap { width:246px; bottom:calc(100% + 34px); }
+/* she speaks over the room, not over her own terms — and low in it, in front
+   of the empty corner of the floor, so the anvil she is standing at, her name
+   and the coal at her feet all stay visible behind the bubble */
+.iv .terms .gbubble-wrap { width:246px; bottom:calc(100% + 12px); }
 /* the bust glyph sets line-height:0 for its sprite; the bubble must put it back */
 .iv .terms .gbubble { display:block; line-height:1.35; box-shadow:5px 5px 0 rgba(0,0,0,0.75); }
 .iv .terms .gbubble .week-note { line-height:1.35; }
@@ -193,19 +245,29 @@
 .iv .sworn { max-width:326px; margin:34px auto 0; padding:56px 12px 10px; }
 .iv .sworn .rk-head { text-align:center; margin-bottom:6px; }
 .iv .sworn .rk-head .rk-title { display:block; }
-.iv .sworn .sw-line { display:block; color:var(--dim-readable);
-  font-family:var(--font-fine); font-size:var(--type-fine); margin-top:5px; line-height:1.4; }
+.iv .sworn .sw-line { display:block; color:#c6bdd8;
+  font-family:var(--font-body); font-size:var(--type-body); margin-top:5px; line-height:1.4; }
 .iv .sworn .sw-line b { color:var(--ink); font-weight:400; }
 .iv .sworn .cooling { display:block; margin-top:8px; padding:5px 8px;
-  background:rgba(240,120,40,0.10); border:1px solid #6a4020; color:#e8a860;
-  font-family:var(--font-fine); font-size:var(--type-fine); text-align:center; line-height:1.4; }
+  background:rgba(240,120,40,0.12); border:1px solid #8a5028; color:#f4b877;
+  font-family:var(--font-body); font-size:var(--type-body); text-align:center; line-height:1.4; }
 
-/* room caption, borrowed straight from the yard */
-.iv .hut .room-cap { position:relative; z-index:4; margin:14px 0 0; max-width:428px; }
-.iv .hut .room-cap .cap { display:inline-block; background:rgba(8,8,14,0.86);
-  border:1px solid #4a3d20; padding:4px 10px; color:var(--dim-readable); }
-.iv .hut .room-cap .cap b { color:var(--ink); font-weight:400; }
+/* room caption, borrowed straight from the yard — but sat ON the floor, with
+   dirt showing under it and a shadow it casts, not a black bar over the room */
+.iv .hut .room-cap { position:relative; z-index:4; margin:16px 0 0; max-width:452px; }
+.iv .hut .room-cap .cap { display:inline-block; background:rgba(26,16,10,0.9);
+  border:1px solid #6a512a; border-top-color:#8a6a40; padding:5px 11px 6px; color:#cfc6b0;
+  box-shadow:0 5px 10px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(0,0,0,0.5); }
+.iv .hut .room-cap .cap b { color:var(--gold-bright); font-weight:400; }
 .iv-phone .hut .room-cap { max-width:none; text-align:center; }
+
+/* ---- contrast floor: nothing on this page may sit near its background ---- */
+.iv .terms .rk-foot, .iv .sworn .rk-foot { color:#b6adcb; }
+.iv .board-glyph .g-cap { color:#b0a6c6; }
+.iv .terms .gbubble .week-note { font-family:var(--font-body); font-size:var(--type-body);
+  color:#cfc6dd; margin-top:6px; }
+.iv .term-row .t-key { color:#a79dbe; }
+.iv .rack .rk-sub { color:#bdb3d0; }
 `;
     var el = document.createElement('style');
     el.id = 'iv-forge-scene';
@@ -259,106 +321,187 @@
       '...wwwwwwwwwwww...',
       '...kwwwwwwwwwwk...',
     ]},
-    /* billets, three heats. Same bar; only the fire in it differs. */
-    billet_white: { p: { k:'#2a2028', y:'#f0b040', W:'#fff4c8' }, r: [
-      '......yyyyyyyyyy......',
-      '....yyWWWWWWWWWWyy....',
-      'kkkkyWWWWWWWWWWWWykkkk',
-      '....yyWWWWWWWWWWyy....',
-      '......yyyyyyyyyy......',
+    /* -------------------------------------------------------------------
+       BILLETS — square-section bar stock, not bread. Every one is the same
+       bar drawn the same way: a bright top arris, a lit top face, a shadowed
+       front face, a tapered tip. Four bands run down its length so the heat
+       visibly falls off toward the cold end you would pick it up by.
+         K/k/j  the cold grey end       R/r/e  where the colour starts
+         O/o/n  working heat            W/w/y  the hot tip
+       Only the palette changes between the three heats.
+       ------------------------------------------------------------------- */
+    billet_white: { p: {
+      K:'#9a9aa8', k:'#63636f', j:'#3c3c46',
+      R:'#c05028', r:'#8a2c10', e:'#5a1608',
+      O:'#f8b040', o:'#e07820', n:'#a04008',
+      W:'#fffdf2', w:'#fff0b0', y:'#f2bc48' }, r: [
+      '...KKKKKRRRRRROOOOOOWWWW..',
+      '..kkkkkkrrrrrroooooowwwww.',
+      '..kkkkkkrrrrrroooooowwwww.',
+      '..jjjjjjeeeeeennnnnnyyyyy.',
+      '..jjjjjjeeeeeennnnnnyyyyy.',
+      '...jjjjjeeeeeennnnnnyyyy..',
+      '..........................',
     ]},
-    billet_orange: { p: { k:'#2a2028', y:'#c05820', W:'#f0a040' }, r: [
-      '......yyyyyyyyyy......',
-      '....yyWWWWWWWWWWyy....',
-      'kkkkyWWWWWWWWWWWWykkkk',
-      '....yyWWWWWWWWWWyy....',
-      '......yyyyyyyyyy......',
+    billet_orange: { p: {
+      K:'#9a9aa8', k:'#63636f', j:'#3c3c46',
+      R:'#8a3418', r:'#5e1c08', e:'#3c1004',
+      O:'#d06020', o:'#a03c10', n:'#701e06',
+      W:'#f4a03c', w:'#dc741c', y:'#a84810' }, r: [
+      '...KKKKKRRRRRROOOOOOWWWW..',
+      '..kkkkkkrrrrrroooooowwwww.',
+      '..kkkkkkrrrrrroooooowwwww.',
+      '..jjjjjjeeeeeennnnnnyyyyy.',
+      '..jjjjjjeeeeeennnnnnyyyyy.',
+      '...jjjjjeeeeeennnnnnyyyy..',
+      '..........................',
     ]},
-    billet_red: { p: { k:'#2a2028', y:'#6a1c0c', W:'#b03a1c' }, r: [
-      '......yyyyyyyyyy......',
-      '....yyWWWWWWWWWWyy....',
-      'kkkkyWWWWWWWWWWWWykkkk',
-      '....yyWWWWWWWWWWyy....',
-      '......yyyyyyyyyy......',
+    billet_red: { p: {
+      K:'#9a9aa8', k:'#63636f', j:'#3c3c46',
+      R:'#5a2410', r:'#3e1408', e:'#280c04',
+      O:'#8e2e10', o:'#6a1c08', n:'#440e04',
+      W:'#c8481a', w:'#9e2e0e', y:'#6a1806' }, r: [
+      '...KKKKKRRRRRROOOOOOWWWW..',
+      '..kkkkkkrrrrrroooooowwwww.',
+      '..kkkkkkrrrrrroooooowwwww.',
+      '..jjjjjjeeeeeennnnnnyyyyy.',
+      '..jjjjjjeeeeeennnnnnyyyyy.',
+      '...jjjjjeeeeeennnnnnyyyy..',
+      '..........................',
     ]},
-    /* the same billet, struck and going off the boil on the anvil face */
-    billet_struck: { p: { k:'#2a2028', y:'#8a3010', W:'#d8763a', d:'#4a4450' }, r: [
-      '......yyyyyyyyyy......',
-      '....yyWWWWddWWWWyy....',
-      'kkkkyWWWWddddWWWWykkkk',
-      '....yyWWWWddWWWWyy....',
-      '......yyyyyyyyyy......',
+    /* the same bar, struck once and going off the boil on the anvil face:
+       the heat has dropped away at both ends and only the stretch the hammer
+       actually landed on is still bright */
+    billet_struck: { p: {
+      K:'#9a9aa8', k:'#63636f', j:'#3c3c46',
+      R:'#8a3418', r:'#5e2010', e:'#3c1206',
+      O:'#f09040', o:'#c85c1c', n:'#7e2e0c',
+      W:'#8a3418', w:'#5e2010', y:'#3c1206' }, r: [
+      '...KKKKKRRROOOOOORWWWW....',
+      '..kkkkkkrrroooooorwwwww...',
+      '..kkkkkkrrroooooorwwwww...',
+      '..jjjjjjeeennnnnneyyyyy...',
+      '..jjjjjjeeennnnnneyyyyy...',
+      '...jjjjjeeennnnnneyyyy....',
+      '..........................',
     ]},
-    /* Grunhilda Iron-Bell at her station: circlet, red braids, leather apron */
-    grun_smith: { p: { h:'#b84a20', H:'#d86a30', f:'#e0b088', K:'#1a1410', m:'#c04030',
-                       i:'#8a8a9a', d:'#6a3a18', a:'#7a4a28', A:'#9a6238', t:'#3a3a46', b:'#241a10' }, r: [
-      '...hhhhhhhh...',
-      '..hHHHHHHHHh..',
-      '..iiiiiiiiii..',
-      '..hHffffffHh..',
-      '..hHfKffKfHh..',
-      '..hHffffffHh..',
-      '..hHfmmmmfHh..',
-      '..hdffffffdh..',
-      '..ddaaaaaadd..',
-      '.ffAaaaaaaAff.',
-      '.ffAaaaaaaAff.',
-      '.f.aaaaaaaa.f.',
-      '...aaaaaaaa...',
-      '...aaaaaaaa...',
-      '...AaaaaaaA...',
-      '....tt..tt....',
-      '....tt..tt....',
-      '....bb..bb....',
+    /* Grunhilda Iron-Bell at her station: circlet, red braids, leather apron,
+       and — the thing every figure in this pass was missing — ARMS. Her left
+       hangs at her side; her right is out and up, hand open at the height of
+       the anvil face she is standing at. */
+    grun_smith: { p: { h:'#a8401c', H:'#d86a30', f:'#e0b088', F:'#c08e68', K:'#1a1410', m:'#8e3a2c',
+                       i:'#b4b4c0', s:'#474154', S:'#5d566d', d:'#33200e',
+                       a:'#7a4a28', A:'#9a6238', t:'#3a3a46', b:'#241a10' }, r: [
+      '.....hhhhhh.....',
+      '....hhHHHHhh....',
+      '....iiiiiiii....',
+      '....hffffffh....',
+      '....hfKffKfh....',
+      '....hffffffh....',
+      '....hfFmmFfh....',
+      '....hhffffhh....',
+      '..hhSSSSSSSShh..',
+      '..SsdAaaaaAdsSff',
+      '..SsdaaaaaadsSff',
+      '..Ssaaaaaaaas...',
+      '..ffaaaaaaaaA...',
+      '..ffaaaaaaaa....',
+      '...Aaaaaaaaa....',
+      '...aaaaaaaaaa...',
+      '...AaaaaaaaaA...',
+      '....tt....tt....',
+      '....tt....tt....',
+      '....bb....bb....',
     ]},
-    /* the quench trough — water that has met a great deal of hot iron */
-    trough: { p: { w:'#5a4428', W:'#7a5f38', a:'#2e5a80', b:'#7ab0d0', k:'#241a0e' }, r: [
-      '..................',
-      '.wwwwwwwwwwwwwwww.',
-      '.WaaaaaaaaaaaaaaW.',
-      '.Wabbaaaabbaaaaaw.',
-      '.Waaaaaaaaaabbaaw.',
-      '.wwwwwwwwwwwwwwww.',
-      '.wWwwwwwwwwwwwwWw.',
-      '.wwwwwwwwwwwwwwww.',
-      '..kwwwwwwwwwwwwk..',
-      '..................',
+    /* the quench trough — an open wooden tub, iron-banded, filled to the rim
+       with water that has the light broken on it. A brown box with two blue
+       dashes in it is not a thing anyone can name. */
+    trough: { p: { w:'#5a4428', W:'#8a6a40', d:'#33240f', i:'#8a8a9a',
+                   a:'#0d3046', A:'#1e5a7c', b:'#8ecbe4', k:'#1a1208' }, r: [
+      'dwwwwwwwwwwwwwwwwwwwwd',
+      'dWaaaaaaaaaaaaaaaaaaWd',
+      'dWAAAAAAAAAAAAAAAAAAWd',
+      'dWAbbAAAAAAAAAAbbAAAWd',
+      'dWAAAAAAAbbAAAAAAAAAWd',
+      'dWAAAAAAAAAAAAAAbbAAWd',
+      'dWAAAAAAAAAAAAAAAAAAWd',
+      'dwwwwwwwwwwwwwwwwwwwwd',
+      '.dwwwwwwwwwwwwwwwwwwd.',
+      '.iiiiiiiiiiiiiiiiiiii.',
+      '.dwwWwwwwwwWwwwwwwWwd.',
+      '.dwwWwwwwwwWwwwwwwWwd.',
+      '.iiiiiiiiiiiiiiiiiiii.',
+      '.dwwwwwwwwwwwwwwwwwwd.',
+      '..kkk............kkk..',
     ]},
-    /* her hammer — hung on the rail, raised over the strike strip, leaned on
-       the stump once the oath is struck */
-    hammer: { p: { k:'#20202a', i:'#6a6a78', I:'#a2a2b0', w:'#6a4e2c', W:'#8a6a40' }, r: [
+    /* her hammer — a head with the haft driven THROUGH its eye and running
+       on down past it. Hung on the rail, raised over the strike strip,
+       leaned against the stump once the oath is struck. */
+    hammer: { p: { k:'#1c1c24', i:'#5e5e6c', I:'#9a9aa8', L:'#c6c6d2',
+                   w:'#7a5a30', W:'#a07c46', d:'#4a3418' }, r: [
       '..............',
-      '..kkkkkkkkk...',
-      '.kiIIIIIIIik..',
-      '.kiIiiiiiIik..',
-      '.kiIIIIIIIik..',
-      '..kkkkkkkkk...',
-      '.....ww.......',
-      '.....ww.......',
-      '.....ww.......',
-      '.....ww.......',
-      '.....ww.......',
-      '.....Ww.......',
-      '.....WW.......',
+      '..kkkkkkkkkk..',
+      '.kLLLLLLLLLLk.',
+      '.kIIIkwwkIIIk.',
+      '.kIIIkwwkIIIk.',
+      '.kiiikwwkiiik.',
+      '..kkkkwwkkkk..',
+      '.....kwwk.....',
+      '.....kWwk.....',
+      '.....kWwk.....',
+      '.....kWwk.....',
+      '.....kWwk.....',
+      '.....kWwk.....',
+      '.....kWwk.....',
+      '.....kwwk.....',
+      '....kdwwdk....',
+      '....kddddk....',
       '..............',
     ]},
-    /* tongs — the corner glyph that puts a billet back into the fire */
-    tongs: { p: { i:'#8a8a9a', I:'#b4b4c0', k:'#2a2a34' }, r: [
-      '............',
+    /* tongs — two arms crossing on a rivet you can actually see, jaws above
+       it, reins below. The old pair had a gap where the pivot should be and
+       read as two bent staples. */
+    tongs: { p: { i:'#7a7a88', I:'#b4b4c0', r:'#e8e8f2' }, r: [
       '..II....II..',
+      '..iI....Ii..',
+      '...I....I...',
+      '...Ii..iI...',
+      '....IiiI....',
+      '...IIrrII...',
+      '...IIrrII...',
+      '....IiiI....',
+      '...iI..Ii...',
+      '...i....i...',
       '..ii....ii..',
-      '...ii..ii...',
-      '....iIIi....',
-      '.....kk.....',
-      '....iiii....',
-      '...ii..ii...',
       '..ii....ii..',
-      '..ii....ii..',
-      '..ii....ii..',
+      '.ii......ii.',
+      '.II......II.',
+      '.II......II.',
       '............',
     ]},
-    /* cold bar stock, hung on the wall and used as the iron-at-hand glyph */
-    barstock: { p: { i:'#6a6a78', I:'#9a9aa8', k:'#2a2a34' }, r: [
+    /* the same tongs with iron in them — the corner glyph that puts a billet
+       back in the coals says so by holding one */
+    tongs_hot: { p: { i:'#7a7a88', I:'#b4b4c0', r:'#e8e8f2', O:'#c05820', y:'#f4b048' }, r: [
+      '..II....II..',
+      '.OOOOOOOOOO.',
+      '.OyyyyyyyyO.',
+      '..iI....Ii..',
+      '...I....I...',
+      '...Ii..iI...',
+      '....IiiI....',
+      '...IIrrII...',
+      '...IIrrII...',
+      '....IiiI....',
+      '...iI..Ii...',
+      '...i....i...',
+      '..ii....ii..',
+      '..ii....ii..',
+      '.ii......ii.',
+      '.II......II.',
+      '.II......II.',
+    ]},
+    /* cold bar stock hung on the wall rail beside the tools */
+    stock_bar: { p: { i:'#6a6a78', I:'#9a9aa8', k:'#2a2a34' }, r: [
       '............',
       '....kIIk....',
       '....kiik....',
@@ -372,6 +515,65 @@
       '...kIIIIk...',
       '............',
     ]},
+    /* ---- the corner glyphs, at the size they are actually seen ---- */
+    /* DOCTRINES: a bound book, spine and page-edges both visible, so it can
+       never be confused with the two tan rectangles a sibling mockup uses */
+    doctrine_book: { p: { k:'#1a0c0a', s:'#5a1a12', c:'#8a2c20', C:'#a83828',
+                          p:'#efe7d2', q:'#bdb094', g:'#c9a24b' }, r: [
+      '.kkkkkkkkkk.',
+      '.kssCCCCCppk',
+      '.kssCCCCCqpk',
+      '.kssCggggppk',
+      '.kssCggggqpk',
+      '.kssCCCCCppk',
+      '.ksscccccqpk',
+      '.ksscccccppk',
+      '.ksscccccqpk',
+      '.ksscccccppk',
+      '.kkkkkkkkkk.',
+      '............',
+    ]},
+    /* IRON AT HAND: what stock is standing in the bin by the door, which is
+       a readable object; a single vertical bar was not */
+    iron_bin: { p: { i:'#7a7a88', I:'#b4b4c0', k:'#22222c', w:'#6a4e2c', W:'#8a6a40' }, r: [
+      '.....II.....',
+      '.II..II.....',
+      '.II..II..II.',
+      '.iI..iI..Ii.',
+      '..ii.ii.ii..',
+      '..iiiiiiii..',
+      '..wwwwwwww..',
+      '.wWWWWWWWWw.',
+      '.wWwwwwwwWw.',
+      '.wWwwwwwwWw.',
+      '.wwwwwwwwww.',
+      '..kkkkkkkk..',
+    ]},
+    /* the forked posts the rack is made of: three forks, a splayed foot */
+    rack_post: { p: { i:'#7a7a88', I:'#a8a8b6', d:'#43434e', k:'#1e1e26' }, r: [
+      /* fork, cradle bottom at row 6 */
+      '.I....d.', '.I....d.', '.I....d.', '.I....d.', '.I....d.', '.Ii..id.', '..Iiid..',
+      '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..',
+      /* fork, cradle bottom at row 20 */
+      '.I....d.', '.I....d.', '.I....d.', '.I....d.', '.I....d.', '.Ii..id.', '..Iiid..',
+      '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..',
+      /* fork, cradle bottom at row 34 */
+      '.I....d.', '.I....d.', '.I....d.', '.I....d.', '.I....d.', '.Ii..id.', '..Iiid..',
+      '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..',
+      '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..', '..Iiid..',
+      /* splayed foot */
+      '.Iiiiid.', 'Iiiiiiid', 'kkkkkkkk',
+    ]},
+    /* coal, heaped where she can reach it, with two lumps still alight */
+    coal_heap: { p: { k:'#141419', K:'#26262e', d:'#34343e', o:'#e07030', y:'#f0c060' }, r: [
+      '.......kk.......',
+      '.....kkKdkk.....',
+      '...kdKkkkKdkk...',
+      '..kKkkoykkkKkk..',
+      '.kdkkkkkkkKkkdk.',
+      'kKkkoykkkdkkKkKk',
+      'kkkkkkkkkkkkkkkk',
+    ]},
   });
 
   /* ==========================================================================
@@ -383,8 +585,9 @@
     + 'the bones all four huts share.';
 
   var TAG_RACK = 'THE BILLETS ARE THE OFFERS|'
-    + 'Replaces the offer-card list. Three heats; hotter is heavier. Nothing states its terms '
-    + 'until you touch it.';
+    + 'Replaces the offer-card list. A forked stand, three rails, iron lying where she dropped '
+    + 'it — no frame, no header, no even rows. Each heat is scratched into its own rail. Hotter '
+    + 'is heavier. Nothing states its terms until you touch it.';
 
   var TAG_TAIL = 'THE WORLD POINTS BACK|'
     + 'The panel opened from the billet you touched, and its tail is nailed to it. Touch another '
@@ -407,8 +610,9 @@
     + 'it once.';
 
   var TAG_SWORN = 'THE OATH IS ON THE ANVIL|'
-    + 'The same room with the iron moved — struck, cooling, her hammer leaned on the stump. '
-    + 'Nothing else changed.';
+    + 'The same room with the iron moved — struck and cooling on the face, her hammer down off '
+    + 'its peg and leaned on the stump, two billets still on the rack behind her. Nothing else '
+    + 'changed.';
 
   var TAG_PLATE = 'A PLATE, NOT A PANEL|'
     + 'A sworn oath’s terms hang on a small plate, tail on the iron it describes. Smaller than the '
@@ -429,11 +633,13 @@
       </div>`;
   }
 
+  /* the door names itself on its own lintel board — no floating plate hanging
+     in the air over the room, and nothing to collide with the tool rail */
   function doorEl(side, width, height, tagged, right) {
     return `<div class="spot doorway" style="${right ? 'right' : 'left'}:${side};width:${width}px"
         ${tagged ? `data-seam="DOOR" data-tag="${TAG_DOOR}"` : ''}>
-        <span class="splate">THE DRILL YARD<small>the routine, built next door</small></span>
         <div class="door-frame" style="height:${height}px">
+          <div class="door-lintel"><i class="n1"></i>the drill yard<i class="n2"></i></div>
           <div class="door-plank"><span class="knob"></span></div>
           <div class="door-under"></div>
         </div>
@@ -446,17 +652,23 @@
         <div class="rail-hung">
           ${IV.spriteTag('hammer', 42)}
           ${IV.spriteTag('tongs', 36)}
-          ${IV.spriteTag('barstock', 36)}
+          ${IV.spriteTag('stock_bar', 36)}
         </div>
       </div>`;
   }
 
-  function billet(key, heat, cls, px, chosen) {
-    return `<button class="billet ${cls}">
+  /* One billet: a rail with its heat scratched into it near the cold end, and
+     the bar itself lying across that rail at the angle she left it at. The
+     button is the whole rail-and-bar, because the bar is what you touch.
+     opt = { top, lx, x, rot } — all of it hand-placed, because a rack that
+     lays its iron out on an even grid is a list again. */
+  function billet(key, heat, cls, px, opt) {
+    return `<button class="billet ${cls}" style="top:${opt.top}px">
         <span class="b-rail"></span>
-        ${IV.spriteTag(key, px)}
-        <span class="b-heat">${heat}</span>
-        ${chosen ? '<span class="tap-box"></span>' : ''}
+        ${heat ? `<span class="b-scratch" style="left:${opt.lx}px">${heat}</span>` : ''}
+        <span class="b-bar" style="left:${opt.x}px;--rot:${opt.rot}">
+          ${IV.spriteTag(key, px)}
+        </span>
       </button>`;
   }
 
@@ -486,32 +698,35 @@
           </div>
 
           <div class="spot coolrack" data-seam="RACK" data-tag="${TAG_RACK}">
-            <div class="cr-frame">
-              ${billet('billet_red', 'dull red', 'heat-red', 88)}
-              ${billet('billet_orange', 'orange', 'heat-orange', 88)}
-              ${billet('billet_white', 'white-hot', 'heat-white chosen', 88, true)}
+            <div class="cr-stand">
+              <span class="cr-post l">${IV.spriteTag('rack_post', 24)}</span>
+              <span class="cr-post r">${IV.spriteTag('rack_post', 24)}</span>
+              ${billet('billet_red', 'dull red', 'heat-red', 78,
+                       { top:91, lx:22, x:76, rot:'-2deg' })}
+              ${billet('billet_orange', 'orange', 'heat-orange', 78,
+                       { top:49, lx:74, x:118, rot:'2.5deg' })}
+              ${billet('billet_white', 'white-hot', 'heat-white chosen', 78,
+                       { top:7, lx:40, x:98, rot:'-3.5deg' })}
             </div>
-            <span class="splate">the cooling rack<small>three heats</small></span>
           </div>
 
           <div class="spot smith">
-            ${IV.spriteTag('grun_smith', 84)}
+            <div class="smith-anvil">
+              <span class="smith-fig">${IV.spriteTag('grun_smith', 96)}</span>
+              <div class="anvil-hold">${IV.spriteTag('anvil', 108)}</div>
+            </div>
             <span class="splate">Grunhilda</span>
           </div>
 
           <div class="spot">
-            <div class="anvil-hold">${IV.spriteTag('anvil', 108)}</div>
-          </div>
-
-          <div class="spot">
-            <div style="display:flex;align-items:flex-end;gap:10px">
+            <div style="display:flex;align-items:flex-end;gap:8px">
+              ${IV.spriteTag('coal_heap', 64)}
               ${IV.spriteTag('barrel', 40)}
-              ${IV.spriteTag('stone_pile', 56)}
             </div>
           </div>
 
         </div>
-        <div class="room-cap"><span class="cap">The coals are up. <b>Three billets</b> lie cooling &mdash; the hotter the iron, the heavier the oath she holds you to.</span></div>
+        <div class="room-cap"><span class="cap">The coals are up. <b>Three billets</b> lie on her rack, cooling &mdash; the hotter the iron, the heavier the oath she holds you to.</span></div>
       </div>
     </div>`;
   }
@@ -524,11 +739,12 @@
         <div class="wall-beam high"></div>
         ${windowEl(84, '8%', 34)}
         <div class="lightfall" style="left:7%;width:106px;top:98px;height:44px"></div>
-        <div class="wall-rail" style="left:38%;width:104px;top:40px">
+        <div class="wall-rail" style="left:34%;width:96px;top:40px">
           <div class="rail-bar"></div>
           <div class="rail-hung">
-            ${IV.spriteTag('hammer', 28)}
+            <span class="peg"></span>
             ${IV.spriteTag('tongs', 24)}
+            ${IV.spriteTag('stock_bar', 24)}
           </div>
         </div>
         ${doorEl('2%', 92, 96, false, true)}
@@ -543,23 +759,27 @@
             ${IV.spriteTag('hearth', 66)}
           </div>
 
-          <div class="spot smith">
-            ${IV.spriteTag('grun_smith', 42)}
+          <div class="spot coolrack">
+            <div class="cr-stand">
+              <span class="cr-post l">${IV.spriteTag('rack_post', 16)}</span>
+              <span class="cr-post r">${IV.spriteTag('rack_post', 16)}</span>
+              ${billet('billet_orange', '', 'heat-orange dim', 52,
+                       { top:30, x:26, rot:'2deg' })}
+              ${billet('billet_red', '', 'heat-red dim', 52,
+                       { top:58, x:16, rot:'-2.5deg' })}
+            </div>
           </div>
 
-          <div class="spot" data-seam="SWORN" data-tag="${TAG_SWORN}">
-            <div class="anvil-hold">
-              ${IV.spriteTag('anvil', 90)}
-              <div class="on-anvil" style="top:2px">${IV.spriteTag('billet_struck', 66)}</div>
-              <div class="lean">${IV.spriteTag('hammer', 42)}</div>
-              <span class="glint" style="left:8px;top:-4px"></span>
-              <span class="glint" style="right:14px;top:8px"></span>
+          <div class="spot smith" data-seam="SWORN" data-tag="${TAG_SWORN}">
+            <div class="smith-anvil">
+              <span class="smith-fig">${IV.spriteTag('grun_smith', 48)}</span>
+              <div class="anvil-hold">
+                ${IV.spriteTag('anvil', 72)}
+                <div class="on-anvil" style="top:-6px">${IV.spriteTag('billet_struck', 52)}</div>
+                <div class="lean">${IV.spriteTag('hammer', 28)}</div>
+              </div>
             </div>
             <span class="splate">struck at dusk<small>and cooling since</small></span>
-          </div>
-
-          <div class="spot">
-            ${IV.spriteTag('barrel', 32)}
           </div>
 
         </div>
@@ -571,15 +791,15 @@
   /* --- the terms panel, opened from the white-hot billet ------------------ */
 
   function termsPanel() {
-    return `<div class="rack tail-up terms" style="--tailx:325px"
+    return `<div class="rack tail-up terms" style="--tailx:402px"
         data-seam="TERMS" data-tag="${TAG_TAIL}">
 
       <button class="board-glyph glyph-book2" data-seam="GLYPHS" data-tag="${TAG_GLYPH}">
-        ${IV.spriteTag('book_glyph', 24)}
+        ${IV.spriteTag('doctrine_book', 24)}
         <span class="g-cap">DOCTRINES</span>
       </button>
       <button class="board-glyph glyph-iron">
-        ${IV.spriteTag('barstock', 24)}
+        ${IV.spriteTag('iron_bin', 24)}
         <span class="g-cap">IRON AT HAND</span>
       </button>
       <button class="board-glyph glyph-grun tapped" data-seam="BUST" data-tag="${TAG_BUST}">
@@ -648,7 +868,7 @@
         data-seam="PLATE" data-tag="${TAG_PLATE}">
 
       <button class="board-glyph glyph-tongs" data-seam="ABANDON" data-tag="${TAG_ABANDON}">
-        ${IV.spriteTag('tongs', 24)}
+        ${IV.spriteTag('tongs_hot', 24)}
         <span class="g-cap">BACK TO THE FIRE</span>
       </button>
       <button class="board-glyph glyph-grun">
@@ -717,13 +937,13 @@
     frames: {
       phone: {
         title: 'Phone — 414px bezel — THE SWORN STATE',
-        sub: 'the oath already struck: the billet on the anvil, cooling, her hammer leaned on the stump, terms on a small plate below, tongs in the corner to put it back in the fire',
-        chips: ['sworn on the anvil', 'small plate, tail on the iron', 'tongs = abandon', 'the yard door'],
+        sub: 'the oath already struck: the billet cooling on the anvil, her hammer leaned against the stump, two billets left on the rack behind her, terms on a small plate below with her tongs in its corner to put the iron back in the fire',
+        chips: ['sworn on the anvil', 'two left on the rack', 'small plate, tail on the iron', 'tongs = abandon'],
         html: scenePhone(),
       },
       desktop: {
         title: 'Desktop — 900px viewport, scaled to fit — THE CHOOSING STATE',
-        sub: 'three billets on the rack, the white-hot one lifted into the light, its terms open below with the tail nailed to it, her bust speaking because it was tapped',
+        sub: 'three billets lying on the forked rack at three heats, the white-hot one lifted off its rail and into the light, its terms open below with the tail nailed to it, her bust speaking because it was tapped',
         chips: ['a room, not a void', 'billets = offers', 'tail points back', 'corner glyphs', 'the yard door'],
         url: 'ironvale.local:8322/#giver?giver=strength — the forge',
         html: sceneDesktop(),
