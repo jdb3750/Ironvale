@@ -39,10 +39,11 @@ line the row, one per kind of ware — the Dyer's Tent hung with cloth swatches
 the Tinker's Bench of oddities (behavior plugins), the Bellmaker's Cart of
 chimes and bells (sound kits). Browsing costs nothing and executes nothing:
 every stall renders from manifest metadata alone, and its signboard carries no
-more than the trade and a count of wares. Step up to a stall and the merchant
-speaks — what a ware is, who made it, what it asks of the player, all in
-plain language, answered with response lines like any other conversation in
-the Vale. A ware taken home travels packed, into the ornament box in the
+more than the trade and a count of wares. Step up to a stall and the goods are
+in reach — tap one and its paper tag swings into view with the plain facts of
+what it is, who made it, and what it asks of the player; the merchant speaks
+the full disclosure when the player moves to take it home, answered with
+response lines like any other conversation in the Vale. A ware taken home travels packed, into the ornament box in the
 player's dwelling; hung upon the hearth tree there, it wakes and works. When
 a new version of an installed ware appears in the index, a raven brings word,
 the same way ravens already carry sync news.
@@ -392,10 +393,24 @@ the docker-compose-from-a-stranger bar §2i sets.
 Player-facing, therefore in-world, end to end. The Bazaar is a walkable
 town-scene reached from the square: a row of stalls under one sky, each with
 its merchant behind the boards and its goods set out, grouped by ware type
-and browsable while offline from the cached index. On a narrow screen the row
-folds into the same two-column town grid the app already uses at phone
-widths — the stalls stack in pairs, nothing redesigned. Copy in the register
-the game already speaks:
+and browsable while offline from the cached index. The row renders in the
+town's canonical register — stalls at the same 5x density as the square's
+buildings, under the canonical sky, with the hero at his town scale. The
+Bazaar is the same village seen from its market lane, not a close-up of one;
+town consistency wins over any staged-for-legibility variant. On a narrow
+screen the row folds into the same two-column town grid the app already uses
+at phone widths — the stalls stack in pairs, nothing redesigned.
+
+One rule governs every plugin-management surface, here and at the hearth
+tree: **the crucial facts are always legible, in plain shared language.** A
+ware's paper tag — and any page that stands in for it — shows the
+contributor's chosen icon, the name, the description, the version as plain
+semver ("v1.5.0" is fine here), the plugin type, and the declared
+permissions. The fiction decorates those facts; it never obscures them. Full
+costume is reserved for playing the game — managing *how* you play may break
+the fourth wall, and wherever costume and clarity pull apart, clarity wins.
+
+Copy in the register the game already speaks:
 
 - The screen: **"The Bazaar Row"** — "Traders from beyond the Vale — every
   stall hangs its board."
@@ -403,21 +418,38 @@ the game already speaks:
   Stall" (doctrines and programs), "The Tinker's Bench" (behavior wares),
   "The Bellmaker's Cart" (sound kits). The signboard carries the trade and an
   in-world count — "Dyes — five wares", "Scrolls — four" — and nothing more;
-  the listing lives with the merchant, not on the sign.
-- Stepping up to a stall opens the merchant's dialogue, in the same window
-  every other conversation in the Vale uses. The merchant speaks a ware's
-  disclosure as speech: name, maker ("crafted by"), what it does, and its
-  tier in plain words — tier 0: "Cloth and ink. This ware cannot act on its
-  own."; tier 1: "A charm. It will act within your hall, with your leave.";
-  tier 2: "A hired hand. It will work your ledgers and speak with the ravens.
-  Take only from traders you trust."
-- Permissions are spoken before anything comes home: "This ware asks to:
-  read your wellness ledger; send ravens beyond the Vale" — WebExtensions'
-  honest human-readable strings, in the merchant's voice.
-- The player answers with response lines, not buttons: "Take it home." (the
-  ware travels packed, straight to the ornament box — §8c), "What does 'first
-  tier of trust' mean?", "Another day, trader." Taking a ware home never
-  activates it; nothing bought at a stall acts until it hangs on the tree.
+  the listing lives on the goods themselves, not on the sign.
+- The Scrivener's Stall is run by Wick's estranged brother: an outland rival
+  with Wick's own face in different dress. Wick refuses to speak of him, and
+  Wick's one catty line on the subject — a scrivener, they say, from beyond;
+  check the margins before you swear by anything — doubles as the Bazaar's
+  check-the-margins trust warning, worn as character.
+- Goods are directly handleable. Browsing is tactile: tap a good and it
+  comes to hand, its paper tag swinging into view with the full plain facts
+  the rule above requires. The merchant offers a half-line of patter while
+  the player turns things over — he is ceremony and character, never a gate
+  in front of basic information.
+- The merchant speaks the full disclosure at the commitment threshold —
+  after "Take it home," before the parcel is wrapped — in the same window
+  every other conversation in the Vale uses: name, maker ("crafted by"),
+  what it does, and its tier in plain words — tier 0: "Cloth and ink. This
+  ware cannot act on its own."; tier 1: "A charm. It will act within your
+  hall, with your leave."; tier 2: "A hired hand. It will work your ledgers
+  and speak with the ravens. Take only from traders you trust."
+- Permissions are spoken in the same breath, before anything comes home:
+  "This ware asks to: read your wellness ledger; send ravens beyond the
+  Vale" — WebExtensions' honest human-readable strings, in the merchant's
+  voice. They also stand printed on the tag, so the speech confirms what the
+  tag already showed.
+- The player answers with response lines, not buttons: "Take it home." opens
+  the disclosure, and once it is spoken the choices are "I'll hang it this
+  very hour." — which walks the player to the hearth tree with the ware
+  pre-selected — and "It can sleep a while.", which sends it packed to the
+  ornament box (§8c). The walk home remains available but is never required
+  for the first purchase to make sense. "What does 'first tier of trust'
+  mean?" and "Another day, trader." round out the lines. Taking a ware home
+  never activates it; nothing bought at a stall acts until it hangs on the
+  tree.
 - An incompatible or broken ware: "This ware was made for another season of
   the Vale. The trader must mend it." — the §2h break-loudly rule, worn as
   copy. Never a silent absence.
@@ -429,7 +461,10 @@ is the direct payoff of §6's declarative contribution points.
 ### 8c. The Hearth Tree
 
 The lifecycle lives at home, not at market. In the player's dwelling stands
-the hearth tree, an evergreen in a tub, and the rule it embodies fits in one
+the hearth tree, a branchy yule-tree in a tub: yule-style charm, but with
+real structural limbs rather than a solid leaf cone — wares hang from actual
+branches, and new limbs extrude at plant-node-like angles as the collection
+grows, a little light procedural math. The rule the tree embodies fits in one
 line: what hangs upon the tree works; what sleeps in the box only sleeps. The
 stalls fill the ornament box — the tree is where a ware wakes. This replaces
 any shelf- or list-shaped lifecycle screen: enablement is not a toggle in a
@@ -437,9 +472,11 @@ row of rows, it is an ornament hung.
 
 The screen is a split view. On the left, the tree itself, active wares hung
 as glowing ornaments, the ornament box open on the floor beside it holding
-whatever has come home unhung. On the right, a detail list of every owned
-ware with its state in Vale speech — "upon the tree", "in the box", "being
-hung…" — and choosing a ware hangs it or lifts it down. The hanging is proper
+whatever has come home unhung; any ornament swings out its paper tag on tap,
+carrying the same plain facts the stall's tag shows (§8b). On the right, a
+detail list of every owned ware with its state in Vale speech — "upon the
+tree", "in the box", "being hung…" — and choosing a ware hangs it or lifts
+it down. The hanging is proper
 work: a pair of pixel hands in the player's own skin tone carries the
 ornament up and sets it on a branch, and that animation is the plugin load
 mask (§7) — the loader runs behind the very beat the player is watching, so
@@ -449,9 +486,14 @@ ware entirely — uninstall — keeps its line, "Return the ware," from the same
 list, with "its ledger entries will be struck from the record" when the
 player elects to clear the kv namespace.
 
-The tree also gives capacity a shape a shelf never had: where a shelf fills
-and ends, branches grow and the box deepens — the view scales with a
-player's collection instead of overflowing it.
+The tree also gives capacity a shape a shelf never had: branches grow
+forever. Unbounded capacity is canon — where a shelf fills and ends, the
+tree puts out another limb and the box deepens, and there is no hook count
+and no cap. Legibility at scale is handled by the tree telling the summary
+truth and the list the itemized truth: ornaments cluster by stall on a
+shared bough, a tapped cluster fans its wares out for handling, and when the
+box outgrows depiction it shows a fuller sprite with a chalked count on the
+slats — honest at any size, with curation never forced by the furniture.
 
 The look of all of this is settled in mockups rather than prose:
 `docs/mockups/bazaar-row-v2.png` (the row), `bazaar-row-mobile.png` (the same
@@ -466,7 +508,10 @@ Sync already speaks through ravens ("The ravens returned: N new deeds",
 join the same postal service: the background loop's index refresh compares
 release tags, and when an installed ware has a newer compatible release, the
 raven's news includes "A raven brings word of new wares at the Bazaar" — and
-in the row itself, the raven perches over the stall it brings word of.
+in the row itself, the raven perches over the stall it brings word of. The
+raven names versions plainly — "v1.5.0 hangs on the cart; yours is v1.4.1"
+— because update news is plugin management, and §8b's rule holds: the fact
+stays legible even in a character's mouth.
 Updating remains a deliberate act at the ware's stall — no silent auto-update,
 because tier 1 and 2 wares are trusted per version, and because a player whose
 game changed overnight without their hand on it has lost something this game

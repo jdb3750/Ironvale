@@ -1,6 +1,8 @@
 # The Plugin Bazaar — a design critique of the mockups
 
 **Status: review notes for the author. Nothing here is approved to build.**
+The author's rulings on the seven boss calls have since been folded into
+`docs/plugin-bazaar-plan.md` (§8); this document stands as the review record.
 
 What was reviewed: the four canonical mockups —
 `docs/mockups/{bazaar-row-v2,bazaar-row-mobile,bazaar-stall,dwelling-tree}`,
