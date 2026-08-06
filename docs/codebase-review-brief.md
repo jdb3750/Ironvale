@@ -900,3 +900,111 @@ differs, say so, because `AGENTS.md` and `PLUGINS.md` both quote it.
 - Any other §3 entry, and `static/`.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 6 — make claiming an unguided deed atomic
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes `app/` and `tests/`.** No `static/`, so no `?v=` bump.
+> Re-read "Mutation testing: commit first, always" before you break anything.
+
+### The defect
+
+`claim_unguided_bonus` (`quests.py:1123`) does this, in this order:
+
+```
+cand = cands.pop(idx)
+db.kv_set("unguided_bonus_candidates", cands)   # commits the removal
+rewards = _apply_unguided_bonus(cand)           # pays, then records
+```
+
+`db.kv_set` commits. `_apply_unguided_bonus` then saves the character
+(`:1075`) and only afterwards writes the quest row and the ledger event
+(`:1084`). **An exception anywhere in that window leaves the player paid, the
+bubble gone, and no record that the deed ever happened.**
+
+Re-queuing is blocked by the same-day `unguided_bonus_seen` key and the
+`start >= today` filter, so nobody gets paid twice — the loss is the record,
+and an activity that `_activity_already_rewarded` can no longer see.
+
+### The trap — do not simply swap the lines
+
+The removal is **deliberate** on one non-error path. When
+`_apply_unguided_bonus` returns `None` — the activity got linked to a real quest
+between queuing and the tap, so the quest already paid — the bubble must still
+disappear and nothing must be granted. A naive "do the work first, then remove"
+reorder resurrects that bubble every time.
+
+So the correct states are:
+
+| Outcome | Candidate removed? | Player paid? | Quest row + ledger? |
+| --- | --- | --- | --- |
+| Normal claim | yes | yes | yes |
+| Already rewarded (`None`) | **yes** | no | no |
+| Anything raises | **no** | no | no |
+
+Get all three right. The third is the one that is wrong today.
+
+### The idiom to follow — it already exists here
+
+`create_quest_from_offer` (`quests.py:565`) is the house pattern: do every write
+without committing, `db.commit()` once at the end, `db.rollback()` and re-raise
+in an `except`. `db.rollback()` exists (`db.py:309`) and is used for exactly
+this.
+
+**`ROADMAP.md` §3 records that this atomicity contract is structural and
+unwritten** — `create_quest_from_offer` depends on `insert_attribution`
+deliberately *not* committing, and nothing says so at the boundary. You are
+adding a second instance of the same contract. **Name the invariant in a comment
+where you rely on it**, per `AGENTS.md`. That closes half of an existing §3 entry
+as a side effect, which is a good reason to do it properly rather than with a
+`try/finally` that papers over it.
+
+### Tests
+
+The failure is a *window*, so test the window — inject a failure between the
+removal and the record, and assert the player is not left paid-with-no-record.
+At minimum:
+
+- Force `_record_unguided_completion` to raise, then assert **all three** of:
+  the candidate is still claimable, the character's gold/XP are unchanged, and
+  no `unguided_activity` quest row exists.
+- The already-rewarded path still drops the bubble and pays nothing.
+- An ordinary claim is unchanged — same XP, gold, vigor, stat gains, quest row
+  and Chronicle entry as before.
+
+### The acceptance bar
+
+Commit first, then mutation-test: revert your ordering/transaction change,
+capture the failure, restore, re-run. Report both halves.
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+Quote the final line of each. Smoke is currently **242 checks** — report any
+change, because `AGENTS.md` and `PLUGINS.md` quote it.
+
+### Out of scope for this seam
+
+- **The routine-forging duplicate**, which has the same *shape* — a committed
+  write followed by unguarded work — but **not the same fix.** `save_routine`
+  (`programs.py:89`) mints `"r" + uuid4().hex[:8]` on every call and has nothing
+  to deduplicate on, so making a retry safe needs a client-supplied idempotency
+  key. That is frontend work and it belongs with the routine-ownership seam.
+  *(An earlier plan of mine put both instances in this seam. That was wrong —
+  the shape is shared, the remedy is not.)*
+- **Whether an unguided deed should advance an authored Scheduled lane.** Open
+  question in §3, nobody has decided it, and it is not decided here.
+- **Backfilling historically misattributed rows.** Live data, needs its own
+  sign-off.
+- `static/`, and any other §3 entry.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."
