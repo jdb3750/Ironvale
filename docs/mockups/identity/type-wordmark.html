@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iron Vale — Type, Titles and the Wordmark</title>
+<style>
+/* ============ the strikes already in the repo ============ */
+@font-face { font-family:'quanta-strike-10'; src:url('../../../static/fonts/quanta-strike-10-regular.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'quanta-strike-12'; src:url('../../../static/fonts/quanta-strike-12-regular.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'quanta-strike-12'; src:url('../../../static/fonts/quanta-strike-12-bold.woff2') format('woff2'); font-weight:700; font-display:block; }
+@font-face { font-family:'quanta-strike-14'; src:url('../../../static/fonts/quanta-strike-14-regular.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'quanta-strike-16'; src:url('../../../static/fonts/quanta-strike-16-regular.woff2') format('woff2'); font-weight:400; font-display:block; }
+/* ============ THE TWO DEAD STRIKES, WIRED UP ============
+   quanta-strike-18-regular.woff2 (8840 B) and -20-regular.woff2 (9792 B) ship
+   in static/fonts/ today and are referenced by nothing. These four lines are
+   the entire cost of adding them. */
+@font-face { font-family:'quanta-strike-18'; src:url('../../../static/fonts/quanta-strike-18-regular.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'quanta-strike-20'; src:url('../../../static/fonts/quanta-strike-20-regular.woff2') format('woff2'); font-weight:400; font-display:block; }
+@font-face { font-family:'PressStart'; src:url('../../../static/fonts/pressstart.woff2') format('woff2'); }
+
+.ivt {
+  --bg:#0a0a12; --panel:#121220; --panel2:#191928; --surface-raised:#24243b;
+  --ink:#d8cfa8; --dim:#776f8e; --dim-readable:#958ca8;
+  --gold:#c9a24b; --gold-bright:#f0d080;
+  --red:#c85050; --green:#7ab55c; --blue:#6aa0c8; --purple:#a06ac8;
+  --hair:#4a3d20; --ring:#6b5426; --floor:#3a2c10; --keyface:#2e2a1c; --pressed:#12100a;
+
+  --font-fine:'quanta-strike-10',monospace;
+  --font-body:'quanta-strike-12',monospace;
+  --font-title:'quanta-strike-14',monospace;
+  --font-form:'quanta-strike-16',monospace;
+  --font-lede:'quanta-strike-18',monospace;      /* NEW ROLE */
+  --font-herald:'quanta-strike-20',monospace;    /* NEW ROLE */
+  --font-display:'PressStart',monospace;
+  --type-fine:10px; --type-body:12px; --type-title:14px; --type-form:16px;
+  --type-lede:18px; --type-herald:20px;
+
+  background:var(--bg); color:var(--ink);
+  font-family:var(--font-body); font-size:var(--type-body); line-height:1.35;
+  -webkit-font-smoothing:none;
+  padding:0 0 90px;
+}
+.ivt *, .ivt *::before, .ivt *::after { box-sizing:border-box; margin:0; padding:0; }
+.ivt canvas { image-rendering:pixelated; display:block; }
+.ivt b { font-weight:700; }
+.ivt h1,.ivt h2,.ivt h3,.ivt h4 { font-weight:normal; }
+.ivt code { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--gold-bright); }
+
+.wrap { max-width:1180px; margin:0 auto; padding:0 18px; }
+.narrow { max-width:880px; }
+
+/* --- document chrome for the mockup itself --- */
+.sec { margin:52px 0 0; }
+.sec-head { display:flex; align-items:baseline; gap:12px; border-bottom:2px solid var(--hair); padding-bottom:6px; margin-bottom:18px; }
+.sec-num { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--ring); letter-spacing:2px; }
+.sec-name { font-family:var(--font-form); font-size:var(--type-form); color:var(--gold-bright); letter-spacing:1px; }
+.sec-sub { font-family:var(--font-body); font-size:var(--type-body); color:var(--dim-readable); margin-left:auto; }
+.note { font-family:var(--font-body); font-size:var(--type-body); color:var(--dim-readable); max-width:70ch; margin:10px 0; }
+.note em { color:var(--gold); font-style:normal; }
+.lab { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; }
+.stack { display:flex; flex-direction:column; gap:10px; }
+
+/* --- the app's real window chrome, held constant --- */
+.win { position:relative; background:var(--panel); border:2px solid var(--gold);
+  box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--ring), 6px 6px 0 rgba(0,0,0,.5);
+  padding:14px; margin:20px 0 14px; }
+.win > .win-title { position:absolute; top:-14px; left:12px; background:var(--bg);
+  color:var(--gold-bright); font-family:var(--font-title); font-size:var(--type-title);
+  padding:0 10px; letter-spacing:1px; text-transform:uppercase; }
+.btn { background:var(--keyface); color:var(--gold-bright); border:2px solid;
+  border-color:var(--gold-bright) #7a5f28 #52401c var(--gold);
+  font-family:var(--font-title); font-size:var(--type-title);
+  font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:6px 12px;
+  box-shadow:0 4px 0 var(--floor), 0 6px 0 rgba(0,0,0,.5); cursor:default; }
+.btn.small { padding:3px 8px; }
+.muted { color:var(--dim-readable); }
+.g { color:var(--gold-bright); }
+.rule { border:none; border-top:1px solid var(--hair); margin:10px 0; }
+
+/* --- swatch / demo plates --- */
+.plate { background:var(--panel2); border:1px solid var(--hair); padding:14px; }
+.plate.dark { background:#07070d; }
+.plate.light { background:#e8e2cf; }
+.plate.stone { background:#45415a; }
+.plate.gold  { background:var(--gold); }
+.pixgrid { position:relative; display:inline-block; }
+.pixgrid::after { content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:linear-gradient(to right, rgba(255,255,255,.14) 1px, transparent 1px),
+                   linear-gradient(to bottom, rgba(255,255,255,.14) 1px, transparent 1px);
+  background-size:var(--gs) var(--gs); }
+.pixgrid.onlight::after { background-image:linear-gradient(to right, rgba(0,0,0,.16) 1px, transparent 1px),
+                   linear-gradient(to bottom, rgba(0,0,0,.16) 1px, transparent 1px); }
+.caption { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); letter-spacing:1px; margin-top:8px; }
+
+/* --- type ladder --- */
+.ladder-row { display:flex; align-items:baseline; gap:14px; padding:7px 0; border-bottom:1px solid #1e1a2c; }
+.ladder-key { width:190px; flex:none; font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); letter-spacing:1px; }
+.ladder-new { color:var(--green); }
+.t10 { font-family:var(--font-fine); font-size:var(--type-fine); }
+.t12 { font-family:var(--font-body); font-size:var(--type-body); }
+.t14 { font-family:var(--font-title); font-size:var(--type-title); }
+.t16 { font-family:var(--font-form); font-size:var(--type-form); }
+.t18 { font-family:var(--font-lede); font-size:var(--type-lede); }
+.t20 { font-family:var(--font-herald); font-size:var(--type-herald); }
+.t26 { font-family:var(--font-display); font-size:26px; color:var(--gold-bright); text-shadow:3px 3px 0 var(--floor); letter-spacing:2px; }
+
+/* --- role demonstration --- */
+.role-shout { text-transform:uppercase; letter-spacing:1px; }
+.role-panel { font-family:var(--font-fine); font-size:var(--type-fine); text-transform:uppercase; letter-spacing:3px; color:var(--gold); }
+.role-body { font-family:var(--font-body); font-size:var(--type-body); color:var(--ink); }
+.role-voice { font-family:var(--font-lede); font-size:var(--type-lede); color:var(--ink); line-height:1.45; }
+.role-num { font-family:var(--font-form); font-size:var(--type-form); font-variant-numeric:tabular-nums; letter-spacing:1px; }
+
+/* --- ledger table --- */
+table.ledger { border-collapse:collapse; width:100%; }
+table.ledger th { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim);
+  letter-spacing:2px; text-transform:uppercase; text-align:left; padding:4px 10px 6px 0; border-bottom:1px solid var(--hair); }
+table.ledger td { font-family:var(--font-body); font-size:var(--type-body); padding:4px 10px 4px 0; border-bottom:1px solid #1c1830; }
+table.ledger td.n { text-align:right; padding-right:14px; }
+table.ledger td.drawn { text-align:right; padding-right:14px; vertical-align:middle; }
+table.ledger .u { color:var(--dim); }
+
+/* --- statbar, from the real Hall --- */
+.statbar { display:flex; align-items:center; gap:8px; margin:5px 0; }
+.sb-label { width:34px; font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); letter-spacing:1px; }
+.sb-track { flex:1; height:10px; background:var(--pressed); border:1px solid var(--hair); }
+.sb-fill { display:block; height:100%; }
+.sb-val { width:34px; text-align:right; }
+
+/* --- title treatments --- */
+.win.carved > .carved-title { position:absolute; top:-11px; left:14px; background:var(--bg); padding:0 8px; }
+.win.tag { padding-top:22px; }
+.hang { position:absolute; top:-16px; left:16px; background:var(--keyface);
+  border:2px solid; border-color:var(--gold-bright) var(--ring) var(--floor) var(--gold);
+  padding:4px 10px 5px; box-shadow:0 3px 0 var(--floor); display:flex; align-items:center; gap:8px; }
+.hang::before, .hang::after { content:''; position:absolute; top:-7px; width:2px; height:7px; background:var(--ring); }
+.hang::before { left:9px; } .hang::after { right:9px; }
+.banner { position:absolute; top:-18px; left:-8px; right:-8px; height:26px; display:flex; align-items:center; justify-content:center; }
+.banner .cloth { position:absolute; inset:0; background:#7a2020;
+  clip-path:polygon(0 0,100% 0,100% 100%,calc(100% - 12px) 62%,12px 62%,0 100%); border-top:2px solid #a03030; }
+.banner .cloth::after { content:''; position:absolute; left:0; right:0; top:0; height:2px; background:#c04040; }
+.banner .txt { position:relative; z-index:2; margin-top:-5px; }
+
+/* --- drop-cap content --- */
+.illum { display:flex; gap:12px; align-items:flex-start; }
+.illum .body { flex:1; }
+.illum p { margin-bottom:8px; }
+.dialog { background:var(--panel2); border:1px solid var(--hair); border-left:3px solid var(--gold); padding:12px; }
+
+/* --- specimen sheet --- */
+.spec { background:#07070d; border:1px solid var(--hair); padding:18px; }
+.spec-name { font-family:var(--font-form); font-size:var(--type-form); color:var(--gold-bright); letter-spacing:2px; }
+.spec-meta { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim); letter-spacing:1px; margin:4px 0 14px; }
+.pairs { display:flex; gap:10px; flex-wrap:wrap; }
+.pair { padding:10px; border:1px solid rgba(255,255,255,.08); }
+
+/* --- phone frame --- */
+.phone { width:390px; flex:none; border:2px solid var(--hair); background:var(--bg); padding:10px 10px 16px; }
+
+/* --- annotation wall --- */
+.anno { background:var(--panel2); border-left:3px solid var(--gold); padding:16px 18px; margin:14px 0; }
+.anno h4 { font-family:var(--font-title); font-size:var(--type-title); color:var(--gold-bright);
+  letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+.anno ul { list-style:none; }
+.anno li { font-family:var(--font-body); font-size:var(--type-body); color:var(--ink); margin:0 0 7px; padding-left:16px; position:relative; }
+.anno li::before { content:'\25B8'; position:absolute; left:0; color:var(--gold); }
+.anno li.cost::before { color:var(--red); }
+.anno li.keep::before { color:var(--green); }
+.dead { color:var(--red); }
+.alive { color:var(--green); }
+pre.snip { font-family:var(--font-fine); font-size:var(--type-fine); color:#9fd08a; background:#07070d;
+  border:1px solid var(--hair); padding:10px 12px; overflow-x:auto; line-height:1.5; }
+pre.snip .c { color:var(--dim); }
+pre.data { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--gold); background:#07070d;
+  border:1px solid var(--hair); padding:10px 12px; overflow-x:auto; line-height:1.15; max-height:340px; }
+details.src { margin-top:10px; }
+details.src summary { font-family:var(--font-fine); font-size:var(--type-fine); color:var(--dim);
+  letter-spacing:2px; text-transform:uppercase; cursor:default; padding:4px 0; }
+
+/* --- keep wide drawn plates inside their own gutter, never the page's --- */
+.grid2 > *, .grid3 > *, .row > * { min-width:0; }
+.plate, .spec, .pairs, .ladder-row, #wordmark-sheet, .row { max-width:100%; }
+.plate, .spec, .ladder-row { overflow-x:auto; }
+@media (max-width:980px) {
+  .grid2, .grid3 { grid-template-columns:1fr; }
+  .wrap { padding:0 10px; }
+  .ladder-key { width:110px; }
+  .phone { width:100%; max-width:390px; }
+  .row { overflow-x:auto; }
+  .sec-head { flex-wrap:wrap; }
+  .sec-sub { margin-left:0; width:100%; }
+}
+</style>
+</head><body>
+<div class="ivt">
+
+<div class="wrap">
+
+<!-- ============ MASTHEAD ============ -->
+<div style="padding:44px 0 10px">
+  <div style="overflow-x:auto;max-width:100%"><canvas data-mark="markA" data-px="4" data-shadow="8,8,#000000"></canvas></div>
+  <div style="margin-top:22px;max-width:74ch" class="t18">Type, titles and the wordmark.</div>
+  <div class="note" style="margin-top:8px">Option 6 of six. The other five change what the panels are made of.
+  This one changes what the letters are, on the theory that a screen of <code>text-transform:uppercase; letter-spacing:1px</code>
+  in a clean pixel font is the loudest generic signal in the whole interface — and that the cheapest way to look hand-made
+  is to have somebody actually draw something.</div>
+  <div class="note">Nothing here is a font file. The mark above is a sprite: a palette map and row strings, the same
+  <code>{ p, r }</code> shape as every sprite in <code>static/js/pixel.js</code>. You can read its source at the bottom of section 1.</div>
+</div>
+
+<!-- ============ 0 — THE TELL ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">00</span><span class="sec-name">The tell</span>
+    <span class="sec-sub">same treatment, same size, same gold, everywhere</span></div>
+  <div class="grid2">
+    <div>
+      <div class="lab">Today — every title is one object</div>
+      <div class="plate" style="padding:26px 18px 20px">
+        <div class="t26" style="margin-bottom:26px">IRON VALE</div>
+        <div class="win" style="margin-top:26px"><span class="win-title">The Mantel</span>
+          <div class="muted">what the years leave on the shelf — tap a keepsake</div>
+        </div>
+        <div class="win"><span class="win-title">Doctrines of Iron-Bell</span>
+          <div class="muted">Swear to a doctrine and its next session leads the day's offers.</div>
+        </div>
+        <div class="win"><span class="win-title">The Curator's Notes</span>
+          <div class="muted">The numbers speak well of you today. Hoo.</div>
+        </div>
+      </div>
+      <div class="caption">PressStart 26px + three identical 14px cutouts. The screen title and the panel titles
+      are the same idea at two sizes. Nothing was drawn.</div>
+    </div>
+    <div>
+      <div class="lab">Proposed — four different kinds of object</div>
+      <div class="plate" style="padding:26px 18px 20px">
+        <canvas data-mark="markA" data-px="2" data-shadow="4,4,#000000" style="margin-bottom:22px"></canvas>
+        <div class="win tag" style="margin-top:30px">
+          <span class="hang"><canvas data-mark="title_mantel" data-px="1"></canvas></span>
+          <div class="muted">what the years leave on the shelf — tap a keepsake</div>
+        </div>
+        <div class="win carved" style="margin-top:26px">
+          <span class="carved-title"><canvas data-mark="title_doctrines" data-px="1"></canvas></span>
+          <div class="muted">Swear to a doctrine and its next session leads the day's offers.</div>
+        </div>
+        <div class="win"><span class="win-title" style="font-family:var(--font-fine);font-size:var(--type-fine);letter-spacing:3px">The Curator's Notes</span>
+          <div class="muted">The numbers speak well of you today. Hoo.</div>
+        </div>
+      </div>
+      <div class="caption">A drawn mark, a carved title, a hanging tag, and a small letterspaced label —
+      a hierarchy you can read with the words blurred out.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1 — THREE DIRECTIONS ============ -->
+<div class="sec" id="wordmark-sheet-outer">
+  <div class="sec-head"><span class="sec-num">01</span><span class="sec-name">Three wordmarks, drawn</span>
+    <span class="sec-sub">1&times; / 2&times; / 4&times;, on ink and on paper</span></div>
+  <div class="note">There is no wordmark and no logotype anywhere in the project today — the app icon is a gold square
+  inside a gold square, 622 bytes of it. Each of these is a hand-drawn pixel mark, not a font rendering. They are shown
+  at their native pixel size first, because that is the only size at which the drawing is honest.</div>
+
+  <div id="wordmark-sheet" style="background:#07070d;padding:24px 22px 20px;border:1px solid var(--hair)">
+
+    <!-- A -->
+    <div style="margin-bottom:30px">
+      <div class="spec-name">A &mdash; VALE CHISEL</div>
+      <div class="spec-meta">slab serif &middot; cap 16 &middot; 4px stems, 4px bars &middot; inlaid channel one pixel inside every shaded wall
+        &middot; struck baseline rule &middot; gold lozenge in the word space (the app already spends that glyph as its coin)</div>
+      <div class="row" style="align-items:flex-end;gap:26px">
+        <div><canvas data-mark="markA" data-px="1"></canvas><div class="caption">1&times; &mdash; 136&times;22</div></div>
+        <div><canvas data-mark="markA" data-px="2"></canvas><div class="caption">2&times;</div></div>
+      </div>
+      <div style="margin-top:16px" class="row">
+        <div><div class="pixgrid" style="--gs:4px"><canvas data-mark="markA" data-px="4"></canvas></div><div class="caption">4&times; with pixel grid</div></div>
+        <div>
+          <div class="plate light" style="padding:14px"><div class="pixgrid onlight" style="--gs:4px"><canvas data-mark="markA_light" data-px="4"></canvas></div></div>
+          <div class="caption">4&times; on paper &mdash; the inlay flips: channel goes light, face goes dark</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div style="margin-bottom:30px;border-top:1px solid var(--hair);padding-top:22px">
+      <div class="spec-name">B &mdash; VALE BLACK</div>
+      <div class="spec-meta">compressed blackletter-flavoured &middot; cap 16 &middot; 3px stems &middot; sheared terminals, diamond feet
+        &middot; hard 1px outline so it can sit on gold &middot; blackletter word-point instead of a space</div>
+      <div class="row" style="align-items:flex-end;gap:26px">
+        <div><canvas data-mark="markB" data-px="1"></canvas><div class="caption">1&times; &mdash; 93&times;18</div></div>
+        <div><canvas data-mark="markB" data-px="2"></canvas><div class="caption">2&times;</div></div>
+      </div>
+      <div style="margin-top:16px" class="row">
+        <div><div class="pixgrid" style="--gs:4px"><canvas data-mark="markB" data-px="4"></canvas></div><div class="caption">4&times; with pixel grid</div></div>
+        <div>
+          <div class="plate light" style="padding:14px"><div class="pixgrid onlight" style="--gs:4px"><canvas data-mark="markB_light" data-px="4"></canvas></div></div>
+          <div class="caption">4&times; on paper</div>
+        </div>
+        <div>
+          <div class="plate gold" style="padding:14px"><canvas data-mark="markB" data-px="3"></canvas></div>
+          <div class="caption">3&times; on gold &mdash; what the outline is for</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div style="border-top:1px solid var(--hair);padding-top:22px">
+      <div class="spec-name">C &mdash; CUTSTONE</div>
+      <div class="spec-meta">rune-cut &middot; cap 13 &middot; not one curve in the face &middot; the letter is an incision, not a stroke:
+        upper-left wall in shadow, lower-right wall catching the light &middot; stacked-cut rune divider for the space</div>
+      <div class="row" style="align-items:flex-end;gap:26px">
+        <div class="plate stone" style="padding:10px"><canvas data-mark="markC" data-px="1"></canvas><div class="caption" style="color:#1e1a26">1&times; &mdash; 104&times;13</div></div>
+        <div class="plate stone" style="padding:10px"><canvas data-mark="markC" data-px="2"></canvas></div>
+      </div>
+      <div style="margin-top:16px" class="row">
+        <div class="plate stone" style="padding:10px"><div class="pixgrid" style="--gs:4px"><canvas data-mark="markC" data-px="4"></canvas></div>
+          <div class="caption" style="color:#1e1a26">4&times; cut in stone</div></div>
+        <div class="plate" style="padding:10px;background:#3a2c10">
+          <div class="pixgrid" style="--gs:4px"><canvas data-mark="markC_gilt" data-px="4"></canvas></div>
+          <div class="caption">4&times; gilded &mdash; same cut, gold leaf in the lit wall</div></div>
+      </div>
+      <div style="margin-top:14px" class="row">
+        <div class="plate light" style="padding:14px"><canvas data-mark="markC_light" data-px="3"></canvas>
+          <div class="caption" style="color:#5a5648">3&times; on paper &mdash; carving inverts cleanly; ink does not</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px"><em>The pick: A.</em> B is the most characterful and the least legible &mdash;
+  compressed blackletter at 93px wide loses the counters of <b>O</b> and <b>A</b> the moment anything scales it,
+  and Iron Vale is a game about numbers you have to read. C is beautiful but it is a <em>surface</em> treatment, not a mark:
+  it needs stone under it, so it cannot be the icon or the favicon. A survives on ink, on paper, on gold, at 16&times;16,
+  and it keeps the game's existing gold. C stays in the kit as the title face &mdash; see section 07.</div>
+
+  <details class="src"><summary>the mark's source, in the repo's own sprite format</summary>
+    <pre class="data" id="markA-src"></pre>
+  </details>
+</div>
+
+<!-- ============ 2 — THE WINNER IN PLACE ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">02</span><span class="sec-name">In place</span>
+    <span class="sec-sub">gate &middot; icon &middot; loading &middot; 16&times;16</span></div>
+
+  <div class="grid2">
+    <div>
+      <div class="lab">The login gate</div>
+      <div class="plate dark" style="padding:44px 24px 34px;text-align:center">
+        <div style="display:flex;justify-content:center"><canvas data-mark="markA_stack" data-px="3" data-shadow="6,6,#000000"></canvas></div>
+        <div style="margin-top:26px;color:var(--dim-readable)" class="t14">the gate is shut. speak, and it opens.</div>
+        <div style="margin:22px auto 0;max-width:260px;text-align:left">
+          <div class="lab">name</div>
+          <div style="background:var(--pressed);border:2px solid;border-color:var(--floor) var(--ring) var(--ring) var(--floor);padding:6px 8px" class="t16">&nbsp;</div>
+          <div class="lab" style="margin-top:12px">word</div>
+          <div style="background:var(--pressed);border:2px solid;border-color:var(--floor) var(--ring) var(--ring) var(--floor);padding:6px 8px" class="t16">&nbsp;</div>
+          <div style="margin-top:16px;text-align:center"><span class="btn">ENTER</span></div>
+        </div>
+      </div>
+      <div class="caption">The stacked lockup at 3&times;. Today this screen is <code>.pixel-title</code> at 22px:
+      the same PressStart as every other title, only smaller.</div>
+    </div>
+
+    <div>
+      <div class="lab">The loading screen</div>
+      <div class="plate dark" style="padding:60px 24px 56px;text-align:center">
+        <div style="display:flex;justify-content:center"><canvas data-mark="markA" data-px="2" data-shadow="4,4,#000000"></canvas></div>
+        <div style="margin:30px auto 0;width:220px;height:12px;background:var(--pressed);border:1px solid var(--hair)">
+          <div style="width:64%;height:100%;background:var(--gold)"></div>
+        </div>
+        <div class="t12 muted" style="margin-top:12px">the ravens are still out &mdash; 4 of 7 returned</div>
+      </div>
+      <div class="caption">One mark, one rule, one line of copy. The mark carries it; nothing else has to.</div>
+
+      <div class="lab" style="margin-top:22px">The seal &mdash; drawn at 16&times;16, not scaled into it</div>
+      <div class="row" style="align-items:flex-end">
+        <div><canvas data-mark="seal16" data-px="1"></canvas><div class="caption">16px favicon</div></div>
+        <div><canvas data-mark="seal16" data-px="2"></canvas><div class="caption">32px</div></div>
+        <div><canvas data-mark="seal16" data-px="4"></canvas><div class="caption">64px</div></div>
+        <div><canvas data-mark="seal16" data-px="12"></canvas><div class="caption">192px app icon</div></div>
+      </div>
+      <div class="caption" style="margin-top:10px">An <b>IV</b> monogram in a struck ring: the I keeps its slab serifs,
+      the V keeps the chisel's 2px stems. Every pixel of this is placed at 16&times;16 &mdash; the wordmark is <em>not</em>
+      shrunk into the favicon, because at 16px a nine-letter wordmark is four grey smudges. That is the honest answer,
+      and it is why the mark and the seal are two drawings, not one.</div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:22px;align-items:flex-start">
+    <div class="plate" style="padding:12px">
+      <div class="row" style="gap:8px;align-items:center">
+        <canvas data-mark="seal16" data-px="1"></canvas>
+        <span class="t12 muted">Iron Vale &mdash; The Hall of Maud</span>
+      </div>
+      <div class="caption">browser tab, actual size</div>
+    </div>
+    <div class="plate" style="padding:12px;background:#1a1a1a">
+      <div style="display:flex;gap:14px;align-items:flex-end">
+        <div style="text-align:center"><canvas data-mark="seal16" data-px="6"></canvas>
+          <div class="t10" style="color:#ccc;margin-top:5px">Iron Vale</div></div>
+        <div style="text-align:center;opacity:.4"><div style="width:96px;height:96px;background:#111;border:1px solid #333"></div>
+          <div class="t10" style="color:#ccc;margin-top:5px">Some App</div></div>
+      </div>
+      <div class="caption">home screen, 96px</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3 — THE DEAD STRIKES ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">03</span><span class="sec-name">The two dead strikes</span>
+    <span class="sec-sub">18 and 20 ship today and are wired to nothing</span></div>
+  <div class="note"><code>static/fonts/quanta-strike-18-regular.woff2</code> (8,840 B) and
+  <code>quanta-strike-20-regular.woff2</code> (9,792 B) are in the repository right now. Neither has an
+  <code>@font-face</code> rule; neither is named in any CSS or JS file. The ladder therefore jumps
+  <span class="alive">16px</span> straight to <span class="dead">26px PressStart</span>, which is why every title in the
+  app is either small or shouting with nothing in between. This page has them wired up &mdash; the two rows below are
+  rendering from those files.</div>
+
+  <pre class="snip"><span class="c">/* the entire cost of adding both roles */</span>
+@font-face { font-family:'quanta-strike-18'; src:url('/static/fonts/quanta-strike-18-regular.woff2') format('woff2');
+             font-weight:400; font-style:normal; font-display:block; }
+@font-face { font-family:'quanta-strike-20'; src:url('/static/fonts/quanta-strike-20-regular.woff2') format('woff2');
+             font-weight:400; font-style:normal; font-display:block; }
+
+<span class="c">/* two token pairs, matching the existing family+size discipline */</span>
+--font-lede:   'quanta-strike-18', monospace;   --type-lede:   18px;   <span class="c">/* NPC voice, ceremony */</span>
+--font-herald: 'quanta-strike-20', monospace;   --type-herald: 20px;   <span class="c">/* screen ledes, tab headings */</span></pre>
+
+  <div class="plate" style="margin-top:18px">
+    <div class="ladder-row"><span class="ladder-key">fine &middot; 10</span><span class="t10">Iron is honest, friend. It weighs what it weighs.</span></div>
+    <div class="ladder-row"><span class="ladder-key">body &middot; 12</span><span class="t12">Iron is honest, friend. It weighs what it weighs.</span></div>
+    <div class="ladder-row"><span class="ladder-key">title &middot; 14</span><span class="t14">Iron is honest, friend.</span></div>
+    <div class="ladder-row"><span class="ladder-key">form &middot; 16</span><span class="t16">Iron is honest, friend.</span></div>
+    <div class="ladder-row"><span class="ladder-key ladder-new">lede &middot; 18 &middot; NEW</span><span class="t18">Iron is honest, friend.</span></div>
+    <div class="ladder-row"><span class="ladder-key ladder-new">herald &middot; 20 &middot; NEW</span><span class="t20">Iron is honest.</span></div>
+    <div class="ladder-row" style="align-items:flex-end"><span class="ladder-key">screen title &middot; drawn</span>
+      <canvas data-mark="title_hall" data-px="1"></canvas></div>
+    <div class="ladder-row" style="align-items:flex-end;border-bottom:none"><span class="ladder-key">the mark &middot; drawn</span>
+      <canvas data-mark="markA" data-px="1"></canvas></div>
+  </div>
+  <div class="caption">Six strikes and two drawings. The top of the ladder stops being a font, which is the point:
+  a display face you cannot letterspace, cannot resize and cannot fake is the thing that reads as authored.</div>
+
+  <div class="grid2" style="margin-top:22px">
+    <div>
+      <div class="lab">Today &mdash; the gap</div>
+      <div class="plate" style="padding:18px">
+        <div class="t16" style="color:var(--gold-bright);text-transform:uppercase;letter-spacing:1px">The Compendium of Honest Labor</div>
+        <div class="t12 muted" style="margin-top:8px">Do read the how before you swing the what.</div>
+        <div class="t26" style="margin-top:20px">COMPENDIUM</div>
+      </div>
+      <div class="caption">16px reads as a form field; 26px PressStart reads as a title card. Nothing sits between them,
+      so screen ledes get set at body size and disappear.</div>
+    </div>
+    <div>
+      <div class="lab">With 18 and 20 in the ladder</div>
+      <div class="plate" style="padding:18px">
+        <div style="display:flex"><canvas data-mark="title_hall" data-px="1"></canvas></div>
+        <div class="t20" style="color:var(--gold);margin-top:14px">The Compendium of Honest Labor</div>
+        <div class="t18" style="margin-top:10px;color:var(--ink)">Do read the how before you swing the what.</div>
+        <div class="t12 muted" style="margin-top:10px">247 entries &middot; 38 you have performed</div>
+      </div>
+      <div class="caption">Drawn title, 20px heading, 18px voice, 12px detail. Four steps, four jobs.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4 — KILL THE UNIFORM UPPERCASE ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">04</span><span class="sec-name">Stop shouting</span>
+    <span class="sec-sub">roles as different objects, not one object at different sizes</span></div>
+  <div class="note">The app currently applies <code>text-transform:uppercase</code> and <code>letter-spacing:1px</code>
+  to titles, buttons, chips, labels, tabs and section heads alike. Uppercase is a <em>tool</em>: it works on a 10px label
+  because there are three words of it. On a sentence it removes ascenders and descenders, which are most of what you read
+  a word by, and it makes everything sound like the same person shouting.</div>
+
+  <div class="grid2">
+    <div>
+      <div class="lab">Today &mdash; one voice</div>
+      <div class="plate" style="padding:16px">
+        <div class="win" style="margin-top:22px"><span class="win-title">The Omens</span>
+          <div class="role-shout" style="margin:4px 0">&#9656; YOUR SLEEP RAN SHORT TWO NIGHTS RUNNING</div>
+          <div class="role-shout" style="margin:4px 0">&#9656; THE IRON HAS BEEN HEAVY FOUR DAYS IN A ROW</div>
+          <div class="role-shout" style="margin:4px 0">&#9656; RESTING HEART RATE IS UP FIVE BEATS</div>
+          <div style="margin-top:12px"><span class="btn small">ACCEPT THE WRIT</span> <span class="btn small">DECLINE</span></div>
+        </div>
+      </div>
+      <div class="caption">Everything is the same weight of voice: the omens, the buttons, the title.</div>
+    </div>
+    <div>
+      <div class="lab">Proposed &mdash; four voices</div>
+      <div class="plate" style="padding:16px">
+        <div class="win carved" style="margin-top:22px">
+          <span class="carved-title"><canvas data-mark="title_omens" data-px="1"></canvas></span>
+          <div class="role-body" style="margin:5px 0">&#9656; Your sleep ran short two nights running.</div>
+          <div class="role-body" style="margin:5px 0">&#9656; The iron has been heavy four days in a row.</div>
+          <div class="role-body" style="margin:5px 0">&#9656; Resting heart rate is up five beats.</div>
+          <div style="margin-top:12px"><span class="btn small">ACCEPT</span> <span class="btn small">DECLINE</span></div>
+          <div class="role-panel" style="margin-top:12px">Read by Elowen &middot; 06 Aug</div>
+        </div>
+      </div>
+      <div class="caption">Title carved; omens in mixed-case body; the two verbs stay uppercase because a button
+      is a key you press, and keys have legends; the attribution drops to 10px with wide tracking.</div>
+    </div>
+  </div>
+
+  <div class="plate" style="margin-top:20px;padding:18px">
+    <div class="lab">Mixed case at 12px, which is where the argument is actually won or lost</div>
+    <div class="grid2" style="gap:26px;margin-top:10px">
+      <div>
+        <div class="role-shout t12" style="color:var(--ink);max-width:52ch">SWEAR TO A DOCTRINE AND ITS NEXT SESSION LEADS THE DAY'S OFFERS, WEIGHTS PROGRESSING AS YOU COMPLETE THEM. THE LEDGER IS PATIENT, BUT IT DOES PREFER THE TRUTH.</div>
+        <div class="caption">uppercase &middot; 12px &middot; quanta-strike-12</div>
+      </div>
+      <div>
+        <div class="t12" style="color:var(--ink);max-width:52ch">Swear to a doctrine and its next session leads the day's offers, weights progressing as you complete them. The ledger is patient, but it does prefer the truth.</div>
+        <div class="caption">mixed case &middot; 12px &middot; same strike, same measure &mdash; and it is two lines shorter</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="plate" style="margin-top:18px;padding:18px">
+    <div class="lab">The role table</div>
+    <div style="margin-top:10px">
+      <div class="ladder-row"><span class="ladder-key">screen title</span><canvas data-mark="title_town" data-px="1"></canvas></div>
+      <div class="ladder-row"><span class="ladder-key">panel title</span><span class="role-panel">Your Own Routines</span></div>
+      <div class="ladder-row"><span class="ladder-key">lede / NPC voice</span><span class="role-voice">Rest is also training.</span></div>
+      <div class="ladder-row"><span class="ladder-key">body</span><span class="role-body">The willow bends and does not break. Be the willow.</span></div>
+      <div class="ladder-row"><span class="ladder-key">key legend</span><span class="btn small">SWEAR TO IT</span></div>
+      <div class="ladder-row"><span class="ladder-key">stat / number</span><span class="role-num g">148.5<span class="muted" style="font-size:10px"> kg</span></span></div>
+      <div class="ladder-row" style="border-bottom:none"><span class="ladder-key">fine print</span><span class="t10 muted" style="letter-spacing:1px">activity as of 06 Aug, 07:12 &middot; provider: raven</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 5 — ILLUMINATED CAPITALS ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">05</span><span class="sec-name">Illuminated capitals</span>
+    <span class="sec-sub">five drawn, 24&times;24, in real copy</span></div>
+  <div class="note">Each is a 24&times;24 sprite: a struck double border, a field, a drawn ornament, and a Vale Chisel
+  capital sitting inside it. The ornaments are four different plants &mdash; a climbing vine, a corded band,
+  a thorn bracket and a laurel &mdash; so the same letter can carry a different weather depending on who is speaking.</div>
+
+  <div class="row" style="align-items:flex-start;margin-bottom:22px">
+    <div><canvas data-mark="capT" data-px="3"></canvas><div class="caption">T &middot; vine</div></div>
+    <div><canvas data-mark="capI" data-px="3"></canvas><div class="caption">I &middot; cord</div></div>
+    <div><canvas data-mark="capA" data-px="3"></canvas><div class="caption">A &middot; thorn</div></div>
+    <div><canvas data-mark="capR" data-px="3"></canvas><div class="caption">R &middot; laurel</div></div>
+    <div><canvas data-mark="capE" data-px="3"></canvas><div class="caption">E &middot; vine</div></div>
+    <div style="align-self:flex-end"><div class="pixgrid" style="--gs:6px"><canvas data-mark="capT" data-px="6"></canvas></div>
+      <div class="caption">6&times; &mdash; the vine is 1px stem, 2px leaf, 1px berry</div></div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="lab">Quest giver &mdash; Grunhilda Iron-Bell</div>
+      <div class="win tag" style="margin-top:24px">
+        <span class="hang"><canvas data-mark="title_writ" data-px="1"></canvas></span>
+        <div class="illum">
+          <canvas data-mark="capT" data-px="2"></canvas>
+          <div class="body">
+            <div class="role-voice">he bell does not care how you feel. Lift it anyway.</div>
+            <div class="role-body muted" style="margin-top:10px">My grandmother forged these. She could swing two. Just saying.</div>
+          </div>
+        </div>
+        <hr class="rule">
+        <div class="role-panel">The path</div>
+        <div class="role-body" style="margin-top:6px">&#9656; Kettlebell Swing &mdash; 5&times;12 @ 24&nbsp;kg</div>
+        <div class="role-body">&#9656; Goblet Squat &mdash; 4&times;10 @ 20&nbsp;kg</div>
+        <div class="role-body">&#9656; Turkish Get-Up &mdash; 3&times;5 @ 16&nbsp;kg</div>
+        <div class="role-body" style="margin-top:8px">reward: <b>+180 XP</b> &middot; <span class="g">&#9670;45+</span> &middot; +3 vigor</div>
+        <div style="margin-top:12px"><span class="btn small">SWEAR TO IT</span> <span class="btn small">NOT TODAY</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab">Doctrine card</div>
+      <div class="win carved" style="margin-top:24px">
+        <span class="carved-title"><canvas data-mark="title_doctrines" data-px="1"></canvas></span>
+        <div class="illum" style="margin-top:4px">
+          <canvas data-mark="capA" data-px="2"></canvas>
+          <div class="body">
+            <div class="role-voice">knight is measured by what they can carry.</div>
+            <div class="role-body muted" style="margin-top:8px">The Loadbearer's Oath &mdash; four sessions a week, the barbell
+            leading, everything else in service of it.</div>
+          </div>
+        </div>
+        <hr class="rule">
+        <div class="role-body">&#9656; <b style="color:var(--blue)">Day I</b>: Back Squat 5&times;5, Row 4&times;8</div>
+        <div class="role-body">&#9656; <b style="color:var(--blue)">Day II</b>: Deadlift 3&times;5, Press 5&times;5</div>
+        <div style="margin-top:10px"><span class="btn small">SWEAR TO IT</span></div>
+      </div>
+
+      <div class="lab" style="margin-top:26px">Almanac page &mdash; Maud's monthly edition</div>
+      <div class="win" style="margin-top:24px;background:#171422">
+        <span class="win-title" style="font-family:var(--font-fine);font-size:var(--type-fine);letter-spacing:3px">Almanac &middot; the eighth moon</span>
+        <div class="illum">
+          <canvas data-mark="capE" data-px="2"></canvas>
+          <div class="body">
+            <div class="role-body">very kilometer, reported by the crows. They exaggerate nothing; I checked.
+            I bind one edition each time a moon closes. Mind the ink &mdash; it is still wet in places, and the
+            Undercroft has been damp all season.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><em>Where the drop cap stops working:</em> it needs at least three lines of copy beside it or it
+  overhangs into white space, and it needs the first letter to be a capital the set actually has. Five letters is not a
+  set. A real deployment draws all 26 &mdash; roughly a day of work &mdash; or restricts illumination to the four surfaces
+  that get long copy: giver dialog, doctrine descriptions, almanac pages, keepsake plaques. Everything else gets no
+  drop cap and loses nothing.</div>
+</div>
+
+<!-- ============ 6 — NUMERALS ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">06</span><span class="sec-name">Numerals with a face</span>
+    <span class="sec-sub">this app is mostly numbers</span></div>
+  <div class="note">Weights, reps, sets, kilometers, heart rates, dates, levels, gold. The numerals are the most-read
+  glyphs in Iron Vale and they are currently whatever the strike happened to ship. The Chisel numerals are drawn as a
+  ledger set: <b>slashed zero</b> so it never reads as an O in a weight, <b>flagged one</b> with a full foot serif so
+  it never reads as an I, <b>barred seven</b>, and a <b>4</b> with a closed counter that survives the 4px stem.</div>
+
+  <div class="plate" style="padding:18px">
+    <div class="lab">The set, 1&times; / 2&times; / 4&times;</div>
+    <canvas data-mark="numerals" data-px="1" style="margin:8px 0"></canvas>
+    <canvas data-mark="numerals" data-px="2" style="margin:8px 0"></canvas>
+    <div class="pixgrid" style="--gs:4px;margin-top:8px"><canvas data-mark="numerals" data-px="4"></canvas></div>
+  </div>
+
+  <div class="grid2" style="margin-top:22px">
+    <div>
+      <div class="lab">The Iron Ledger &mdash; drawn numerals in the headline column</div>
+      <div class="win carved" style="margin-top:24px">
+        <span class="carved-title"><canvas data-mark="title_ledger" data-px="1"></canvas></span>
+        <table class="ledger" style="margin-top:6px">
+          <tr><th>Lift</th><th style="text-align:right">Best</th><th style="text-align:right">Last</th><th style="text-align:right">Moved</th></tr>
+          <tr><td>Deadlift</td><td class="n">180.0 <span class="u">kg</span></td><td class="n">172.5</td><td class="n" style="color:var(--green)">+7.5</td></tr>
+          <tr><td>Back Squat</td><td class="n">140.0 <span class="u">kg</span></td><td class="n">140.0</td><td class="n muted">&mdash;</td></tr>
+          <tr><td>Overhead Press</td><td class="n">67.5 <span class="u">kg</span></td><td class="n">65.0</td><td class="n" style="color:var(--green)">+2.5</td></tr>
+          <tr><td>Kettlebell Swing</td><td class="n">32.0 <span class="u">kg</span></td><td class="n">32.0</td><td class="n muted">&mdash;</td></tr>
+          <tr><td>Bench Press</td><td class="n">102.5 <span class="u">kg</span></td><td class="n">105.0</td><td class="n" style="color:var(--red)">&minus;2.5</td></tr>
+        </table>
+        <div class="role-panel" style="margin-top:12px">Mind your fingers &mdash; some of these numbers bite</div>
+      </div>
+      <div class="caption">Body numerals stay in the strike with <code>font-variant-numeric:tabular-nums</code>
+      so the decimal points line up. Only the headline number is drawn.</div>
+    </div>
+
+    <div>
+      <div class="lab">The headline number, drawn</div>
+      <div class="win tag" style="margin-top:24px">
+        <span class="hang"><canvas data-mark="title_mantel" data-px="1"></canvas></span>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:2px">
+          <canvas data-num="180" data-px="2"></canvas>
+          <span class="t14 muted" style="padding-bottom:4px">kg &middot; deadlift &middot; sworn 06 Aug</span>
+        </div>
+        <hr class="rule">
+        <div class="statbar"><span class="sb-label">STR</span><span class="sb-track"><span class="sb-fill" style="width:74%;background:var(--red)"></span></span><span class="sb-val role-num">37</span></div>
+        <div class="statbar"><span class="sb-label">END</span><span class="sb-track"><span class="sb-fill" style="width:58%;background:var(--green)"></span></span><span class="sb-val role-num">29</span></div>
+        <div class="statbar"><span class="sb-label">CON</span><span class="sb-track"><span class="sb-fill" style="width:82%;background:var(--gold)"></span></span><span class="sb-val role-num">41</span></div>
+        <div class="statbar"><span class="sb-label">SPR</span><span class="sb-track"><span class="sb-fill" style="width:46%;background:var(--blue)"></span></span><span class="sb-val role-num">23</span></div>
+        <hr class="rule">
+        <div class="row" style="gap:22px;align-items:flex-end">
+          <div><canvas data-num="14" data-px="1"></canvas><div class="caption">level</div></div>
+          <div><canvas data-num="2470" data-px="1"></canvas><div class="caption">&#9670; gold</div></div>
+          <div><canvas data-num="86" data-px="1"></canvas><div class="caption">day streak</div></div>
+        </div>
+      </div>
+      <div class="caption">One drawn number per panel, at most. Two competing drawn numbers and the panel stops
+      having a subject.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 7 — TITLE TREATMENTS ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">07</span><span class="sec-name">Three title treatments</span>
+    <span class="sec-sub">the <code>.win-title</code> cutout is the same on every panel today</span></div>
+  <div class="note">All three keep the existing <code>.win</code> geometry exactly: 2px gold border, 2px bg ring,
+  2px <code>#6b5426</code> outer ring, 6px offset drop. Only the label changes. <em>This is where this option meets the
+  frame-materials worker</em> &mdash; the carved variant assumes the frame has a surface to cut into, so if that option
+  lands, the carved title should adopt its material and its light direction rather than keeping this one.</div>
+
+  <div class="grid3">
+    <div>
+      <div class="lab">a &mdash; carved into the frame</div>
+      <div class="win carved" style="margin-top:22px">
+        <span class="carved-title"><canvas data-mark="title_mantel" data-px="1"></canvas></span>
+        <div class="role-body muted">bare wood, for now. it is patient.</div>
+        <div style="height:40px"></div>
+      </div>
+      <div class="caption">Cutstone at 1&times;, gilded. Sits in the same cutout the current title uses, so no
+      layout changes at all. Cheapest of the three.</div>
+    </div>
+    <div>
+      <div class="lab">b &mdash; hanging tag</div>
+      <div class="win tag" style="margin-top:22px">
+        <span class="hang"><canvas data-mark="title_writ" data-px="1"></canvas></span>
+        <div class="role-body muted">The ledger is patient, but it does prefer the truth.</div>
+        <div style="height:40px"></div>
+      </div>
+      <div class="caption">A key-face plaque on two nails, using the button's own bevel colours. Reads as a thing
+      hung on the panel, not printed on it. Costs 8px of top padding.</div>
+    </div>
+    <div>
+      <div class="lab">c &mdash; banner ribbon</div>
+      <div class="win" style="margin-top:24px;padding-top:18px">
+        <span class="banner"><span class="cloth"></span><span class="txt"><canvas data-mark="title_omens_cloth" data-px="1"></canvas></span></span>
+        <div class="role-body muted">Heartbeats, breath, and sleep &mdash; the body keeps its own chronicle.</div>
+        <div style="height:40px"></div>
+      </div>
+      <div class="caption">Cloth over the frame with a swallowtail. Loudest; reserve it for ceremony
+      &mdash; level-up, a sworn writ, a death. Wrong for a settings panel.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 8 — SPECIMEN SHEET ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">08</span><span class="sec-name">Specimen</span>
+    <span class="sec-sub">the way a release ships one</span></div>
+
+  <div class="spec">
+    <div class="spec-name">VALE CHISEL</div>
+    <div class="spec-meta">26 capitals &middot; 10 ledger numerals &middot; 7 marks &middot; cap 16 &middot; drawn, not fitted &mdash; widths run 6 to 19</div>
+    <canvas data-mark="specA_upper" data-px="1" style="margin-bottom:6px"></canvas>
+    <canvas data-mark="specA_upper2" data-px="1" style="margin-bottom:6px"></canvas>
+    <canvas data-mark="numerals" data-px="1" style="margin-bottom:6px"></canvas>
+    <canvas data-mark="specA_punct" data-px="1" style="margin-bottom:14px"></canvas>
+    <div class="row" style="align-items:flex-end;margin-bottom:14px">
+      <canvas data-mark="title_hall" data-px="1"></canvas>
+      <canvas data-mark="title_town" data-px="1"></canvas>
+    </div>
+    <div class="lab">colour on colour</div>
+    <div class="pairs" style="margin-top:8px">
+      <div class="pair" style="background:#0a0a12"><canvas data-mark="title_hall" data-px="1"></canvas><div class="caption">on --bg</div></div>
+      <div class="pair" style="background:#121220"><canvas data-mark="title_hall" data-px="1"></canvas><div class="caption">on --panel</div></div>
+      <div class="pair" style="background:#24243b"><canvas data-mark="title_hall" data-px="1"></canvas><div class="caption">on --surface-raised</div></div>
+      <div class="pair" style="background:#e8e2cf"><canvas data-mark="markA_light" data-px="1"></canvas><div class="caption" style="color:#5a5648">on paper</div></div>
+      <div class="pair" style="background:#7a2020"><canvas data-mark="title_hall" data-px="1"></canvas><div class="caption">on banner cloth</div></div>
+    </div>
+    <div class="lab" style="margin-top:16px">in a paragraph</div>
+    <div class="illum" style="margin-top:8px;max-width:64ch">
+      <canvas data-mark="capT" data-px="2"></canvas>
+      <div class="body role-body">he roads remember every step. They have been asking after you. Wind at your back
+      today, friend &mdash; a shame to waste it. I ran these hills before your grandmother was born, and the hills have not
+      moved since. Your turn. Come back with mud to the knee and I will call it an honest morning.</div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:18px">
+    <div class="spec">
+      <div class="spec-name">VALE BLACK</div>
+      <div class="spec-meta">26 capitals &middot; cap 16 &middot; no numerals drawn &mdash; a compressed blackletter numeral is
+        unreadable at 3px stems, and this app cannot afford an unreadable number</div>
+      <canvas data-mark="specB_upper" data-px="1" style="margin-bottom:6px"></canvas>
+      <canvas data-mark="specB_upper2" data-px="1" style="margin-bottom:12px"></canvas>
+      <canvas data-mark="markB" data-px="2"></canvas>
+      <div class="caption">Kept for one job: the death card and the ceremony banner, where the mood
+      matters more than the reading speed.</div>
+    </div>
+    <div class="spec" style="background:#45415a">
+      <div class="spec-name" style="color:#f4f0e4">CUTSTONE</div>
+      <div class="spec-meta" style="color:#c8c2d8">26 capitals &middot; cap 13 &middot; no curve in the face &middot; needs a surface:
+        it is a light effect, so it only exists where there is stone to cut</div>
+      <canvas data-mark="specC_upper" data-px="1" style="margin-bottom:6px"></canvas>
+      <canvas data-mark="specC_upper2" data-px="1" style="margin-bottom:12px"></canvas>
+      <canvas data-mark="markC" data-px="2"></canvas>
+      <div class="caption" style="color:#1e1a26">The working title face. Every <code style="color:#f0d080">.win-title</code>
+      in section 07 is this, at 1&times;, gilded.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 9 — SMALL-SIZE HONESTY ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">09</span><span class="sec-name">Where it stops working</span>
+    <span class="sec-sub">ornament dies at 10px; say so</span></div>
+
+  <div class="grid3">
+    <div class="plate">
+      <div class="lab">The mark, scaled down</div>
+      <div class="stack" style="margin-top:10px">
+        <div><canvas data-mark="markA" data-px="1"></canvas><div class="caption">1&times; &mdash; native. Floor.</div></div>
+        <div style="transform:scale(0.7);transform-origin:left top;height:22px"><canvas data-mark="markA" data-px="1"></canvas></div>
+        <div class="caption" style="margin-top:8px">0.7&times; &mdash; the inlay channel is now a half-pixel and the browser
+        greys it. <b class="dead">Do not.</b> The mark has one size and its multiples.</div>
+      </div>
+    </div>
+    <div class="plate">
+      <div class="lab">The drop cap, scaled down</div>
+      <div class="row" style="margin-top:10px;align-items:flex-end">
+        <div><canvas data-mark="capT" data-px="2"></canvas><div class="caption">2&times; &mdash; 48px. Works.</div></div>
+        <div><canvas data-mark="capT" data-px="1"></canvas><div class="caption">1&times; &mdash; 24px. The vine survives; the berry is one pixel.</div></div>
+      </div>
+      <div class="caption" style="margin-top:10px"><b class="dead">Below 24px there is no drop cap</b> &mdash; the border
+      alone eats 4 of the 24 rows. The fallback is the plain 18px lede with the first three words in
+      <code>--gold-bright</code>, which is what the phone layout gets.</div>
+      <div class="dialog" style="margin-top:10px">
+        <span class="t18" style="color:var(--gold-bright)">The bell does not</span>
+        <span class="t18"> care how you feel. Lift it anyway.</span>
+      </div>
+    </div>
+    <div class="plate">
+      <div class="lab">Titles at the floor</div>
+      <div class="stack" style="margin-top:10px">
+        <div><canvas data-mark="title_omens" data-px="1"></canvas><div class="caption">Cutstone 1&times; &mdash; 13px tall. Works: the cut is 1px and 1px is legal.</div></div>
+        <div style="margin-top:6px"><span class="role-panel">THE OMENS</span><div class="caption">10px letterspaced &mdash; the fallback everywhere the panel is too narrow for a drawn title</div></div>
+        <div style="margin-top:6px"><span class="t10 muted" style="letter-spacing:2px">read by elowen &middot; 06 aug</span>
+          <div class="caption"><b class="dead">10px is the hard floor</b> for anything drawn. Below it, ornament is noise;
+          use the strike and widen the tracking instead.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 10 — THE PHONE ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">10</span><span class="sec-name">390px</span>
+    <span class="sec-sub">display type eats a phone fast</span></div>
+  <div class="note">The current <code>--type-display-title</code> is 26px PressStart with 2px tracking:
+  &ldquo;IRON VALE&rdquo; alone is 9 characters and overruns 390px minus the 10px page padding on both sides.
+  The drawn mark is 136px wide at 1&times;, so it fits at 2&times; (272px) with room to spare, and the ladder below it
+  never needs to go above 20px.</div>
+
+  <div class="row" style="align-items:flex-start">
+    <div class="phone">
+      <div style="text-align:center;padding:16px 0 10px">
+        <div style="display:flex;justify-content:center"><canvas data-mark="markA" data-px="2" data-shadow="4,4,#000000"></canvas></div>
+      </div>
+      <div class="win carved" style="margin-top:22px">
+        <span class="carved-title"><canvas data-mark="title_writ" data-px="1"></canvas></span>
+        <div class="illum">
+          <canvas data-mark="capT" data-px="1"></canvas>
+          <div class="body"><span class="t18" style="color:var(--gold-bright)">he bell does not</span>
+            <span class="role-body"> care how you feel. Lift it anyway.</span></div>
+        </div>
+        <hr class="rule">
+        <div class="role-body">&#9656; Kettlebell Swing &mdash; 5&times;12 @ 24&nbsp;kg</div>
+        <div class="role-body">&#9656; Goblet Squat &mdash; 4&times;10 @ 20&nbsp;kg</div>
+        <div class="role-body" style="margin-top:8px">reward: <b>+180 XP</b> &middot; <span class="g">&#9670;45+</span></div>
+        <div style="margin-top:12px"><span class="btn small">SWEAR TO IT</span></div>
+      </div>
+      <div class="win tag" style="margin-top:26px">
+        <span class="hang"><canvas data-mark="title_mantel" data-px="1"></canvas></span>
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <canvas data-num="180" data-px="1"></canvas>
+          <span class="t12 muted" style="padding-bottom:2px">kg &middot; deadlift</span>
+        </div>
+        <div class="statbar" style="margin-top:10px"><span class="sb-label">STR</span><span class="sb-track"><span class="sb-fill" style="width:74%;background:var(--red)"></span></span><span class="sb-val role-num">37</span></div>
+        <div class="statbar"><span class="sb-label">END</span><span class="sb-track"><span class="sb-fill" style="width:58%;background:var(--green)"></span></span><span class="sb-val role-num">29</span></div>
+      </div>
+      <div class="win" style="margin-top:26px">
+        <span class="win-title" style="font-family:var(--font-fine);font-size:var(--type-fine);letter-spacing:3px">Your Own Routines</span>
+        <div class="role-body muted">None yet. Forge one below.</div>
+        <div style="margin-top:10px"><span class="btn small">FORGE</span></div>
+      </div>
+      <div class="caption" style="margin-top:14px">390&times;844. Mark at 2&times;, drop cap at 1&times;, titles at 1&times;,
+      one drawn number, everything else in the strikes.</div>
+    </div>
+
+    <div style="flex:1;min-width:300px">
+      <div class="lab">What breaks on a phone, and the rule</div>
+      <div class="anno" style="margin-top:8px">
+        <ul>
+          <li>The 4&times; mark is 544px. Anything above 2&times; is desktop-only; the gate uses the stacked
+            lockup at 2&times; (126px wide) instead.</li>
+          <li class="cost">Drop caps drop to 1&times; (24px), which is only two lines of 12px body. On any card with
+            fewer than three lines the drop cap is dropped entirely and the first three words go gold.</li>
+          <li class="keep">Cutstone titles need no change &mdash; the longest one, &ldquo;THE IRON LEDGER&rdquo;, is 173px.</li>
+          <li class="keep">The 18/20 strikes are what make the phone work: a lede at 18px reads as a heading on a 390px
+            column, where the same words at 26px PressStart wrap to three lines.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ANNOTATION WALL ============ -->
+<div class="sec">
+  <div class="sec-head"><span class="sec-num">&mdash;</span><span class="sec-name">What this changes, keeps and costs</span></div>
+
+  <div class="grid2">
+    <div class="anno">
+      <h4>What it changes</h4>
+      <ul>
+        <li>Iron Vale gets a wordmark. There is none today.</li>
+        <li>The app icon becomes a drawn seal instead of a square in a square, and the favicon is drawn at 16&times;16
+          rather than scaled to it.</li>
+        <li>Screen titles stop being PressStart and become drawn art; panel titles drop to 10px with 3px tracking.
+          Those are two different objects now instead of one at two sizes.</li>
+        <li>Body copy goes mixed case. Buttons, chips and the 10px labels stay uppercase.</li>
+        <li>Two font files that already ship get used, and the display ladder gains its missing rungs at 18 and 20.</li>
+        <li>Long copy gets an illuminated capital on four surfaces: giver dialog, doctrine cards, almanac pages, keepsakes.</li>
+        <li>Headline numbers get a drawn ledger set with a slashed zero and a flagged one.</li>
+      </ul>
+    </div>
+    <div class="anno">
+      <h4>What it keeps</h4>
+      <ul>
+        <li class="keep">Every panel and key geometry, untouched: <code>.win</code> border, both rings, the 6px drop,
+          <code>.btn</code> bevel colours and 4px key floor.</li>
+        <li class="keep">The whole palette. The three drawn faces use <code>--gold-bright</code>, <code>--gold</code>,
+          <code>#6b5426</code> and <code>#3a2c10</code> only &mdash; all four are already in the stylesheet, two of them
+          as un-tokenized recurring values.</li>
+        <li class="keep">All four active Quanta strikes at their native sizes. Nothing is resized away from its strike.</li>
+        <li class="keep">The size-bound doctrine from <code>DESIGN.md:129-133</code>. The two new roles are two more
+          size-bound strikes, not fluid type.</li>
+        <li class="keep">The sprite pipeline. Every drawn thing here is <code>{ p, r }</code> row-strings rendered to a
+          canvas by the same 18 lines <code>pixel.js</code> already has.</li>
+        <li class="keep">The gameboy read: hard pixels, no smoothing, no anti-aliasing, one light source top-left.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="anno" style="border-left-color:var(--red)">
+    <h4>What it costs &mdash; the honest list</h4>
+    <ul>
+      <li class="cost"><b>No new font files are needed.</b> Not one. The wordmark, the three faces, the drop caps, the
+        numerals and every drawn title on this page are sprites &mdash; row strings in JS, rendered to canvas. The only
+        font work is the two <code>@font-face</code> blocks for strikes already sitting in <code>static/fonts/</code>.
+        Total added bytes over the wire: 18,632, both files already committed.</li>
+      <li class="cost"><b>The drawn faces are 68 glyph masks of source.</b> A–Z in three faces plus 0–9 in one, at
+        roughly 16 lines each. That is real code sitting in a JS file &mdash; call it 1,400 short lines. It compresses
+        to almost nothing and it never needs a build step, but somebody has to look at it in a diff.</li>
+      <li class="cost"><b>Mixed case is a copy rewrite, and it is the biggest cost here.</b> Turning off
+        <code>text-transform:uppercase</code> does not produce mixed case &mdash; it produces whatever case the string was
+        written in. Most of the app's strings were authored knowing they would be shouted, so a good many are already
+        capitalised correctly, but the sweep has to be done by hand across <code>giver.js</code>, <code>hall.js</code>,
+        <code>town.js</code>, <code>misc.js</code>, <code>ranch.js</code>, <code>colosseum.js</code> and
+        <code>dungeon.js</code> &mdash; and every string has to be read in place, because &ldquo;SWORN&rdquo; is a chip
+        and stays, while &ldquo;THE OMENS&rdquo; is a heading and goes. There is no safe automatic version of this.</li>
+      <li class="cost"><b>144 paired family+size declarations is what a new role actually means.</b> The stylesheet
+        writes <code>font-family</code> and <code>font-size</code> together every time, by design. Adding
+        <code>--font-lede</code> and <code>--font-herald</code> is two token pairs, but every place that <em>adopts</em>
+        a new role is a two-line edit, and the pairs cannot drift apart or the strike blurs. That discipline is the
+        reason the app looks crisp; it is also the reason a type change is never a one-line change here.</li>
+      <li class="cost"><b>Drawn titles are images, so they carry no text.</b> Each canvas needs an
+        <code>aria-label</code> and the underlying string must stay in the DOM for search, selection and screen readers
+        &mdash; the same thing <code>spriteTag()</code> already does not do. If a title needs to be dynamic
+        (&ldquo;Doctrines of <em>Iron-Bell</em>&rdquo;), it cannot be drawn: it gets the 10px letterspaced treatment and
+        only the fixed part is art. About a third of the app's panel titles interpolate a name, so a third of them will
+        never be carved.</li>
+      <li class="cost"><b>Five drop caps is not a set.</b> Twenty-six is, and the four ornament variants multiply that
+        by however many moods you want. Ship the four surfaces listed above, or draw the other twenty-one.</li>
+    </ul>
+  </div>
+
+  <div class="anno" style="border-left-color:var(--blue)">
+    <h4>Where this meets the other five options</h4>
+    <ul>
+      <li><b>Frame materials.</b> The carved title in section 07 assumes there is a material to cut into. If that option
+        lands, this one should adopt its surface colour and its light direction rather than shipping its own stone.
+        The two are the same decision seen from opposite sides.</li>
+      <li><b>Nine-slice tile kit.</b> The hanging tag is a small nine-slice waiting to happen; the banner ribbon is
+        currently CSS <code>clip-path</code> and should be tiles if that kit exists.</li>
+      <li><b>Palette studies.</b> Vale Chisel is drawn entirely from four existing gold values. Any palette shift
+        rewrites the mark's palette map &mdash; four hex strings in one object &mdash; and nothing else.</li>
+      <li><b>Micro-detail.</b> The inlay channel, the struck baseline rule and the seal's ring are micro-detail; if that
+        option has a house rule for 1px highlights, this should follow it.</li>
+    </ul>
+  </div>
+
+  <div class="anno">
+    <h4>The surprises, reported rather than designed around</h4>
+    <ul>
+      <li><code>vt323.woff2</code> has an <code>@font-face</code> at <code>style.css:2-5</code> and is applied to
+        nothing at all &mdash; it is loaded and then never named again. The 18 and 20 strikes are the reverse: files with
+        no rule. So the repo ships one rule with no user and two users with no rule. Worth deleting the VT323 block in
+        the same pass that adds the other two.</li>
+      <li><code>#3a2c10</code> is doing two unrelated jobs: it is the key floor shadow on <code>.btn</code> and it is
+        the <code>.pixel-title</code> text-shadow. If display type stops being PressStart, that second use disappears and
+        the value becomes a single-purpose token. Worth naming.</li>
+      <li>The heaviest reason today's titles read as generated is not the font &mdash; it is that
+        <code>.win-title</code>, <code>.btn</code>, <code>.chip</code>, <code>.omens-title</code>,
+        <code>.counsel-label</code> and the tab buttons all carry <code>text-transform:uppercase</code> plus
+        <code>letter-spacing:1px</code>. Six different kinds of object with one typographic voice. Fixing that costs
+        no new assets at all and is probably worth doing even if none of the drawn work ships.</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+/* The sprites. Palette map + row strings, '.' transparent — the same
+   { p, r } shape as every sprite in static/js/pixel.js. */
+const MARKS = {"markA":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":["HHHHHHHHHHHH...HHHHHHHHHHH.........HHHHH.......HHHH......HHHH............HHHH.......HHHH........HHHHH........HHHH...........HHHHHHHHHHHH","HIIIFFFFIIIS...HFFFIIIIIIS.......HHISSSIHH.....HFIS......HFIS............HFIS.......HFIS........HFFIS........HFIS...........HFFFIIIIIIIS","SSSSIFFISSSS...HFFISSSSSIS......HFIS...SIIH....HFFIHHH...HFIS.....H......SIIS.......HFIS.......HFFIFIH.......HFIS...........HFFISSSSSSSS","....HFIS.......HFIS.....HIHH....HIS.....HIS....HFFFFIS...HFIS....HIH......HFIH.....HFIS........HFISIIS.......HFIS...........HFIS........","....HFIS.......HFIS.....HFIS...HFIS.....HFIH...HFFFIFIH..HFIS...HFFIH.....HFIS.....HFIS.......HFIS.HFIH......HFIS...........HFIS........","....HFIS.......HFIS.....HISS...HFIS.....HFIS...HFFISIIS..HFIS..HFFFFIH....SIIS.....HFIS.......HFIS.HFIS......HFIS...........HFIS........","....HFIS.......HFFIHHHHHIS.....HFIS.....HFIS...HFIS.HFIH.HFIS.HFFFFFFIH....HFIH...HFIS........HFIS.SIIS......HFIS...........HFFIHHHHHH..","....HFIS.......HFFFIIFFFIS.....HFIS.....HFIS...HFIS.SIIS.HFFIHIFFFFFFFIH...HFIS...HFIS.......HFIS...HFIH.....HFIS...........HFFFIIIIIS..","....HFIS.......HFFISSIFFIS.....HFIS.....HFIS...HFIS..HFIHFFIS.SIFFFFFIS....SIIS...HFIS.......HFIS...HFIS.....HFIS...........HFFISSSSSS..","....HFIS.......HFIS..HFIS......HFIS.....HFIS...HFIS..SIFFFFIS..SIFFFIS......HFIH.HFIS........HFIS...SIIS.....HFIS...........HFIS........","....HFIS.......HFIS..SIIS......HFIS.....HFIS...HFIS...HFFFFIS...SIFIS.......HFIS.HFIS.......HFIS.....HFIH....HFIS...........HFIS........","....HFIS.......HFIS...HFIH.....SIIS.....HFIS...HFIS...SIFFFIS....SIS........SIIS.HFIS.......HFFIHHHHHIFIS....HFIS...........HFIS........","....HFIS.......HFIS...SIIS......HIS.....HIS....HFIS....HIFFIS.....S..........HFIHFIS........HFISSSSSSSIIS....HFIS...........HFIS........","HHHHFFFIHHHH...HFIS....HFIH.....SIIH...HIIS....HFIS....SSIFIS................SIFFFIS.......HFIS.......HFIH...HFFIHHHHHHHH...HFFIHHHHHHHH","HIIIIIIIIIIS...HIIS....HIIS......SSIHHHISS.....HIIS......HIIS.................HIIIS........HIIS.......HIIS...HIIIIIIIIIIS...HIIIIIIIIIIS","SSSSSSSSSSSS...SSSS....SSSS........SSSSS.......SSSS......SSSS.................SSSSS........SSSS.......SSSS...SSSSSSSSSSSS...SSSSSSSSSSSS","........................................................................................................................................","........................................................................................................................................","HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH","HISSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSIS","HS....................................................................................................................................HS","SS....................................................................................................................................SS"]},"markA_light":{"p":{"H":"#8a6a20","I":"#f0d8a8","F":"#6b5426","S":"#3a2c10"},"r":["HHHHHHHHHHHH...HHHHHHHHHHH.........HHHHH.......HHHH......HHHH............HHHH.......HHHH........HHHHH........HHHH...........HHHHHHHHHHHH","HIIIFFFFIIIS...HFFFIIIIIIS.......HHISSSIHH.....HFIS......HFIS............HFIS.......HFIS........HFFIS........HFIS...........HFFFIIIIIIIS","SSSSIFFISSSS...HFFISSSSSIS......HFIS...SIIH....HFFIHHH...HFIS.....H......SIIS.......HFIS.......HFFIFIH.......HFIS...........HFFISSSSSSSS","....HFIS.......HFIS.....HIHH....HIS.....HIS....HFFFFIS...HFIS....HIH......HFIH.....HFIS........HFISIIS.......HFIS...........HFIS........","....HFIS.......HFIS.....HFIS...HFIS.....HFIH...HFFFIFIH..HFIS...HFFIH.....HFIS.....HFIS.......HFIS.HFIH......HFIS...........HFIS........","....HFIS.......HFIS.....HISS...HFIS.....HFIS...HFFISIIS..HFIS..HFFFFIH....SIIS.....HFIS.......HFIS.HFIS......HFIS...........HFIS........","....HFIS.......HFFIHHHHHIS.....HFIS.....HFIS...HFIS.HFIH.HFIS.HFFFFFFIH....HFIH...HFIS........HFIS.SIIS......HFIS...........HFFIHHHHHH..","....HFIS.......HFFFIIFFFIS.....HFIS.....HFIS...HFIS.SIIS.HFFIHIFFFFFFFIH...HFIS...HFIS.......HFIS...HFIH.....HFIS...........HFFFIIIIIS..","....HFIS.......HFFISSIFFIS.....HFIS.....HFIS...HFIS..HFIHFFIS.SIFFFFFIS....SIIS...HFIS.......HFIS...HFIS.....HFIS...........HFFISSSSSS..","....HFIS.......HFIS..HFIS......HFIS.....HFIS...HFIS..SIFFFFIS..SIFFFIS......HFIH.HFIS........HFIS...SIIS.....HFIS...........HFIS........","....HFIS.......HFIS..SIIS......HFIS.....HFIS...HFIS...HFFFFIS...SIFIS.......HFIS.HFIS.......HFIS.....HFIH....HFIS...........HFIS........","....HFIS.......HFIS...HFIH.....SIIS.....HFIS...HFIS...SIFFFIS....SIS........SIIS.HFIS.......HFFIHHHHHIFIS....HFIS...........HFIS........","....HFIS.......HFIS...SIIS......HIS.....HIS....HFIS....HIFFIS.....S..........HFIHFIS........HFISSSSSSSIIS....HFIS...........HFIS........","HHHHFFFIHHHH...HFIS....HFIH.....SIIH...HIIS....HFIS....SSIFIS................SIFFFIS.......HFIS.......HFIH...HFFIHHHHHHHH...HFFIHHHHHHHH","HIIIIIIIIIIS...HIIS....HIIS......SSIHHHISS.....HIIS......HIIS.................HIIIS........HIIS.......HIIS...HIIIIIIIIIIS...HIIIIIIIIIIS","SSSSSSSSSSSS...SSSS....SSSS........SSSSS.......SSSS......SSSS.................SSSSS........SSSS.......SSSS...SSSSSSSSSSSS...SSSSSSSSSSSS","........................................................................................................................................","........................................................................................................................................","HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH","HISSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSIS","HS....................................................................................................................................HS","SS....................................................................................................................................SS"]},"markB":{"p":{"K":"#0a0a12","H":"#f0d080","F":"#c9a24b","S":"#6b5426"},"r":["..KKKKK...KKKKKKKK....KKKKKKK..KKKKK..KKKKK.......KKKKK..KKKKK...KKKKK.....KKKKK....KKKKKKKK.",".KKHHHKK..KHHHHHHKK..KKHHHHHKK.KHHHK..KHHHK.......KHHHK..KHHHK...KHHHK....KKHHHK....KHHHHHHKK",".KHFFFHK..KHFFSSFHKKKKHFSSSFHKKKHFFKKKKHFFK.......KHFFK..KHFFK..KKHFFK....KHFFSK....KHFFSSSHK",".KKHFFKK..KHFFKKHFHKKHFFKKKHFHKKHFFHHKHFFFK.......KHFFK..KHFFK..KHFFFK....KHFFKK....KHFFKKKKK","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFFFKHFFFK.......KSFFKKKKHFSK..KHFFFKK...KHFFK....KKHFSK....","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFSFKHFFFK.......KKHFHKKHFFKK..KHFFFHK...KHFFK....KHFFKK....","..KHFFK...KHFFKKHFSKKHFFK.KHFFKKHFFKHHFFFFK........KHFFKKHFFK..KKHFSFFKK..KHFFK....KHFFK.....","..KHFFK...KHFFHHFSKKKHFFK.KHFFKKHFFKHFFFFFK..KKK...KSFFKKHFSK..KHFFKHFHK..KHFFK....KHFFKKK...","..KHFFK...KHFFSFFKK.KHFFK.KHFFKKHFFKHFFFFFK.KKHKK..KKHFHHFFKK..KHFFKHFFK..KHFFK....KHFFHHK...","..KHFFK...KHFFKHFHK.KHFFK.KHFFKKHFFKSFFFFFKKKHFHKK..KHFFFFFK...KHFFHFFFK..KHFFK....KHFFSSK...","..KHFFK...KHFFKSFFKKKHFFK.KHFFKKHFFKKHFFFFKKHFFFHK..KSFFFFSK...KHFFSFFFK..KHFFK....KHFFKKK...","..KHFFK...KHFFKKHFHKKHFFK.KHFFKKHFFKKHFFFFKKKSFSKK..KKHFFFKK...KHFFKHFFK..KHFFK....KHFFK.....","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFKKSFFFFK.KKSKK....KHFFFK...KKHFSKSFFKKKKHFSK....KSFFKK....","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFKKKHFFFK..KKK.....KSFFSK...KHFFKKKHFHKKHFFKK....KKHFHK....",".KKHFFKK.KKHFSKKHFFKKSFFKKKHFSKKHFFK.KSFFFK..........KKHFKK...KHFFK.KHFFKKHFFKKKKK..KHFFKKKKK",".KHFFFHK.KHFFKKKHFFKKKSFHHHFSKKKHFFK.KKHFFK...........KHFK....KHFFK.KHFFKKSFFHHHHK..KHFFHHHHK",".KKSSSKK.KSSSK.KSSSK.KKSSSSSKK.KSSSK..KSSSK...........KSSK....KSSSK.KSSSKKKSSSSSSK..KSSSSSSKK","..KKKKK..KKKKK.KKKKK..KKKKKKK..KKKKK..KKKKK...........KKKK....KKKKK.KKKKK.KKKKKKKK..KKKKKKKK."]},"markB_light":{"p":{"K":"#2a2418","H":"#c8a860","F":"#8a6a20","S":"#3a2c10"},"r":["..KKKKK...KKKKKKKK....KKKKKKK..KKKKK..KKKKK.......KKKKK..KKKKK...KKKKK.....KKKKK....KKKKKKKK.",".KKHHHKK..KHHHHHHKK..KKHHHHHKK.KHHHK..KHHHK.......KHHHK..KHHHK...KHHHK....KKHHHK....KHHHHHHKK",".KHFFFHK..KHFFSSFHKKKKHFSSSFHKKKHFFKKKKHFFK.......KHFFK..KHFFK..KKHFFK....KHFFSK....KHFFSSSHK",".KKHFFKK..KHFFKKHFHKKHFFKKKHFHKKHFFHHKHFFFK.......KHFFK..KHFFK..KHFFFK....KHFFKK....KHFFKKKKK","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFFFKHFFFK.......KSFFKKKKHFSK..KHFFFKK...KHFFK....KKHFSK....","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFSFKHFFFK.......KKHFHKKHFFKK..KHFFFHK...KHFFK....KHFFKK....","..KHFFK...KHFFKKHFSKKHFFK.KHFFKKHFFKHHFFFFK........KHFFKKHFFK..KKHFSFFKK..KHFFK....KHFFK.....","..KHFFK...KHFFHHFSKKKHFFK.KHFFKKHFFKHFFFFFK..KKK...KSFFKKHFSK..KHFFKHFHK..KHFFK....KHFFKKK...","..KHFFK...KHFFSFFKK.KHFFK.KHFFKKHFFKHFFFFFK.KKHKK..KKHFHHFFKK..KHFFKHFFK..KHFFK....KHFFHHK...","..KHFFK...KHFFKHFHK.KHFFK.KHFFKKHFFKSFFFFFKKKHFHKK..KHFFFFFK...KHFFHFFFK..KHFFK....KHFFSSK...","..KHFFK...KHFFKSFFKKKHFFK.KHFFKKHFFKKHFFFFKKHFFFHK..KSFFFFSK...KHFFSFFFK..KHFFK....KHFFKKK...","..KHFFK...KHFFKKHFHKKHFFK.KHFFKKHFFKKHFFFFKKKSFSKK..KKHFFFKK...KHFFKHFFK..KHFFK....KHFFK.....","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFKKSFFFFK.KKSKK....KHFFFK...KKHFSKSFFKKKKHFSK....KSFFKK....","..KHFFK...KHFFKKHFFKKHFFK.KHFFKKHFFKKKHFFFK..KKK.....KSFFSK...KHFFKKKHFHKKHFFKK....KKHFHK....",".KKHFFKK.KKHFSKKHFFKKSFFKKKHFSKKHFFK.KSFFFK..........KKHFKK...KHFFK.KHFFKKHFFKKKKK..KHFFKKKKK",".KHFFFHK.KHFFKKKHFFKKKSFHHHFSKKKHFFK.KKHFFK...........KHFK....KHFFK.KHFFKKSFFHHHHK..KHFFHHHHK",".KKSSSKK.KSSSK.KSSSK.KKSSSSSKK.KSSSK..KSSSK...........KSSK....KSSSK.KSSSKKKSSSSSSK..KSSSSSSKK","..KKKKK..KKKKK.KKKKK..KKKKKKK..KKKKK..KKKKK...........KKKK....KKKKK.KKKKK.KKKKKKKK..KKKKKKKK."]},"markC":{"p":{"L":"#a89c86","K":"#14141e","M":"#1e1a26"},"r":["LLKKKLL....KKKLLK........KLLLK......KKK...KKK.....KK......KKK...KKK.......KKK.......KKK.........KKKLLLLL","..KML......KML..KK......KL...KK.....KMMKK.KML.....KL......KML...KML.......KLL.......KML.........KML.....","..KML......KML...KL....KL.....KK....KMMML.KML.....KL......KML...KML......KL.KK......KML.........KML.....","..KML......KML..KL.....KL.....KL....KMMML.KML.....KL.......KMK.KML.......KL.KL......KML.........KML.....","..KML......KMMKKL......KL.....KL....KMMLL.KML..............KML.KML......KL...KK.....KML.........KML.....","..KML......KMMLL.......KL.....KL....KML.KKMML..............KML.KML......KL...KL.....KML.........KMMKKK..","..KML......KML.KK......KL.....KL....KML.KMMML...............KMKML.......KMKKKML.....KML.........KMMLLL..","..KML......KML.KL......KL.....KL....KML.KMMML...............KMMML.......KMLLLML.....KML.........KML.....","..KML......KML..KK.....KL.....KL....KML.KMMML...............KMMML.......KL...KL.....KML.........KML.....","..KML......KML..KL.....KL.....KL....KML..KMML.....KK.........KML........KL...KL.....KML.........KML.....","..KML......KML...KK....KL.....KL....KML..KMML.....KL.........KML.......KL.....KK....KML.........KML.....","..KML......KML...KL.....KK...KL.....KML..KMML.....KL.........KML.......KL.....KL....KML.........KML.....","LLLLLLL....KLL...KL......KLLLL......KLL...KLL.....KL..........L........KL.....KL....KLLLLLLL....KLLLLLLL"]},"markC_gilt":{"p":{"L":"#f0d080","K":"#0a0806","M":"#6b5426"},"r":["LLKKKLL....KKKLLK........KLLLK......KKK...KKK.....KK......KKK...KKK.......KKK.......KKK.........KKKLLLLL","..KML......KML..KK......KL...KK.....KMMKK.KML.....KL......KML...KML.......KLL.......KML.........KML.....","..KML......KML...KL....KL.....KK....KMMML.KML.....KL......KML...KML......KL.KK......KML.........KML.....","..KML......KML..KL.....KL.....KL....KMMML.KML.....KL.......KMK.KML.......KL.KL......KML.........KML.....","..KML......KMMKKL......KL.....KL....KMMLL.KML..............KML.KML......KL...KK.....KML.........KML.....","..KML......KMMLL.......KL.....KL....KML.KKMML..............KML.KML......KL...KL.....KML.........KMMKKK..","..KML......KML.KK......KL.....KL....KML.KMMML...............KMKML.......KMKKKML.....KML.........KMMLLL..","..KML......KML.KL......KL.....KL....KML.KMMML...............KMMML.......KMLLLML.....KML.........KML.....","..KML......KML..KK.....KL.....KL....KML.KMMML...............KMMML.......KL...KL.....KML.........KML.....","..KML......KML..KL.....KL.....KL....KML..KMML.....KK.........KML........KL...KL.....KML.........KML.....","..KML......KML...KK....KL.....KL....KML..KMML.....KL.........KML.......KL.....KK....KML.........KML.....","..KML......KML...KL.....KK...KL.....KML..KMML.....KL.........KML.......KL.....KL....KML.........KML.....","LLLLLLL....KLL...KL......KLLLL......KLL...KLL.....KL..........L........KL.....KL....KLLLLLLL....KLLLLLLL"]},"markC_light":{"p":{"L":"#c0baa6","K":"#4a4658","M":"#6a6478"},"r":["LLKKKLL....KKKLLK........KLLLK......KKK...KKK.....KK......KKK...KKK.......KKK.......KKK.........KKKLLLLL","..KML......KML..KK......KL...KK.....KMMKK.KML.....KL......KML...KML.......KLL.......KML.........KML.....","..KML......KML...KL....KL.....KK....KMMML.KML.....KL......KML...KML......KL.KK......KML.........KML.....","..KML......KML..KL.....KL.....KL....KMMML.KML.....KL.......KMK.KML.......KL.KL......KML.........KML.....","..KML......KMMKKL......KL.....KL....KMMLL.KML..............KML.KML......KL...KK.....KML.........KML.....","..KML......KMMLL.......KL.....KL....KML.KKMML..............KML.KML......KL...KL.....KML.........KMMKKK..","..KML......KML.KK......KL.....KL....KML.KMMML...............KMKML.......KMKKKML.....KML.........KMMLLL..","..KML......KML.KL......KL.....KL....KML.KMMML...............KMMML.......KMLLLML.....KML.........KML.....","..KML......KML..KK.....KL.....KL....KML.KMMML...............KMMML.......KL...KL.....KML.........KML.....","..KML......KML..KL.....KL.....KL....KML..KMML.....KK.........KML........KL...KL.....KML.........KML.....","..KML......KML...KK....KL.....KL....KML..KMML.....KL.........KML.......KL.....KK....KML.........KML.....","..KML......KML...KL.....KK...KL.....KML..KMML.....KL.........KML.......KL.....KL....KML.........KML.....","LLLLLLL....KLL...KL......KLLLL......KLL...KLL.....KL..........L........KL.....KL....KLLLLLLL....KLLLLLLL"]},"markA_stack":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":[".HHHHHHHHHHHH...HHHHHHHHHHH.........HHHHH.......HHHH......HHHH.",".HIIIFFFFIIIS...HFFFIIIIIIS.......HHISSSIHH.....HFIS......HFIS.",".SSSSIFFISSSS...HFFISSSSSIS......HFIS...SIIH....HFFIHHH...HFIS.",".....HFIS.......HFIS.....HIHH....HIS.....HIS....HFFFFIS...HFIS.",".....HFIS.......HFIS.....HFIS...HFIS.....HFIH...HFFFIFIH..HFIS.",".....HFIS.......HFIS.....HISS...HFIS.....HFIS...HFFISIIS..HFIS.",".....HFIS.......HFFIHHHHHIS.....HFIS.....HFIS...HFIS.HFIH.HFIS.",".....HFIS.......HFFFIIFFFIS.....HFIS.....HFIS...HFIS.SIIS.HFIS.",".....HFIS.......HFFISSIFFIS.....HFIS.....HFIS...HFIS..HFIHFFIS.",".....HFIS.......HFIS..HFIS......HFIS.....HFIS...HFIS..SIFFFFIS.",".....HFIS.......HFIS..SIIS......HFIS.....HFIS...HFIS...HFFFFIS.",".....HFIS.......HFIS...HFIH.....SIIS.....HFIS...HFIS...SIFFFIS.",".....HFIS.......HFIS...SIIS......HIS.....HIS....HFIS....HIFFIS.",".HHHHFFFIHHHH...HFIS....HFIH.....SIIH...HIIS....HFIS....SSIFIS.",".HIIIIIIIIIIS...HIIS....HIIS......SSIHHHISS.....HIIS......HIIS.",".SSSSSSSSSSSS...SSSS....SSSS........SSSSS.......SSSS......SSSS.","...............................................................","...............................................................","...............................................................","HHHH.......HHHH........HHHHH........HHHH...........HHHHHHHHHHHH","HFIS.......HFIS........HFFIS........HFIS...........HFFFIIIIIIIS","SIIS.......HFIS.......HFFIFIH.......HFIS...........HFFISSSSSSSS",".HFIH.....HFIS........HFISIIS.......HFIS...........HFIS........",".HFIS.....HFIS.......HFIS.HFIH......HFIS...........HFIS........",".SIIS.....HFIS.......HFIS.HFIS......HFIS...........HFIS........","..HFIH...HFIS........HFIS.SIIS......HFIS...........HFFIHHHHHH..","..HFIS...HFIS.......HFIS...HFIH.....HFIS...........HFFFIIIIIS..","..SIIS...HFIS.......HFIS...HFIS.....HFIS...........HFFISSSSSS..","...HFIH.HFIS........HFIS...SIIS.....HFIS...........HFIS........","...HFIS.HFIS.......HFIS.....HFIH....HFIS...........HFIS........","...SIIS.HFIS.......HFFIHHHHHIFIS....HFIS...........HFIS........","....HFIHFIS........HFISSSSSSSIIS....HFIS...........HFIS........","....SIFFFIS.......HFIS.......HFIH...HFFIHHHHHHHH...HFFIHHHHHHHH",".....HIIIS........HIIS.......HIIS...HIIIIIIIIIIS...HIIIIIIIIIIS",".....SSSSS........SSSS.......SSSS...SSSSSSSSSSSS...SSSSSSSSSSSS"]},"seal16":{"p":{"d":"#3a2c10","G":"#f0d080","k":"#0a0a12","g":"#c9a24b"},"r":["dddddddddddddddd","dGGGGGGGGGGGGGGd","dGkkkkkkkkkkkkGd","dGGGGGkGGkkGGkGd","dGkGGkkGGkkGGkGd","dGkGGkkGGkkGGkGd","dGkGGkkGGkkGGkGd","dGkGGkkGGkkGGkGd","dGkGGkkGGkkGGkGd","dGkGGkkkGGGGkkGd","dGkGGkkkkGGkkkGd","dGkGGkkkkGGkkkGd","dGGGGGkkkGGkkkGd","dGkkkkkkkkkkkkGd","dGGGGGGGGGGGGGGd","dddddddddddddddd"]},"capT":{"p":{"b":"#3a2c10","B":"#6b5426","v":"#4a6a38","f":"#191928","V":"#7ab55c","H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":["bbbbbbbbbbbbbbbbbbbbbbbb","bBBBBBBBBBBBBBBBBBBBBBBb","bBvvffffffffffffffffffBb","bBVVvfffffffffffffffffBb","bBvvfvHHHHHHHHHHHHHfffBb","bBfffvHIIIIFFFFIIISfffBb","bBfffvSSSSSIFFISSSSfffBb","bBffvvfffffHFISfffffffBb","bBffvffffffHFISfffffffBb","bBfvvffffffHFISfffffffBb","bBfvfffffffHFISfffffffBb","bBvvfffffffHFISfffffffBb","bBvffffffffHFISfffffffBb","bBvvfffffffHFISfffffffBb","bBfvfffffffHFISfffffffBb","bBfvvffffffHFISfffffffBb","bBffvffffffHFISfffffffBb","bBffvvfffffHFISfffffffBb","bBfffvfffffHIISfffffffBb","bBfffvvffffSSSSfffffffBb","bBffffvvffffffffffffffBb","bBfffffvvvffffffffffffBb","bBBBBBBBBBBBBBBBBBBBBBBb","bbbbbbbbbbbbbbbbbbbbbbbb"]},"capI":{"p":{"b":"#3a2c10","B":"#6b5426","f":"#191928","H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":["bbbbbbbbbbbbbbbbbbbbbbbb","bBBBBBBBBBBBBBBBBBBBBBBb","bBffffffffffffffffffffBb","bBffffffffffffffffffffBb","bBffffHHHHHHHHHHHHffffBb","bBffffHIIIFFFFIIISffffBb","bBffffSSSSIFFISSSSffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffffffHFISffffffffBb","bBffffHHHHFFFIHHHHffffBb","bBffffHIIIIIIIIIISffffBb","bBffffSSSSSSSSSSSSffffBb","bBffffffffffffffffffffBb","bBffffffffffffffffffffBb","bBBBBBBBBBBBBBBBBBBBBBBb","bbbbbbbbbbbbbbbbbbbbbbbb"]},"capA":{"p":{"b":"#3a2c10","B":"#6b5426","f":"#191928","v":"#4a6a38","H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["bbbbbbbbbbbbbbbbbbbbbbbb","bBBBBBBBBBBBBBBBBBBBBBBb","bBffffffffffffffffffffBb","bBfffffffffffffffffffvBb","bBffffffffHHHHHfffffvvBb","bBffffffffHFFISffffvvfBb","bBfffffffHFFIFIHffvvfvBb","bBfffffffHFISIISfffvfvBb","bBffffffHFISfHFIHffvvvBb","bBffffffHFISfHFISfffvfBb","bBffffffHFISfSIISffvvfBb","bBfffffHFISfffHFIHvvffBb","bBfffffHFISfffHFISvfvfBb","bBfffffHFISfffSIISvfvvBb","bBffffHFISfffffHFIHvvfBb","bBffffHFFIHHHHHIFISvffBb","bBffffHFISSSSSSSIISvffBb","bBfffHFISfffffffHFIHffBb","bBfffHIISfffffffHIISffBb","bBfffSSSSffffffvSSSSffBb","bBffffffffffffvvffffffBb","bBffffffffffffffffffffBb","bBBBBBBBBBBBBBBBBBBBBBBb","bbbbbbbbbbbbbbbbbbbbbbbb"]},"capR":{"p":{"b":"#3a2c10","B":"#6b5426","f":"#191928","H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426","V":"#7ab55c","v":"#4a6a38"},"r":["bbbbbbbbbbbbbbbbbbbbbbbb","bBBBBBBBBBBBBBBBBBBBBBBb","bBffffffffffffffffffffBb","bBffffffffffffffffffffBb","bBffffHHHHHHHHHHHfffffBb","bBffffHFFFIIIIIISfffffBb","bBffffHFFISSSSSISfffffBb","bBffffHFISfffffHIHHfffBb","bBffffHFISfffffHFISfffBb","bBffffHFISfffffHISSfffBb","bBffffHFFIHHHHHISfffffBb","bBffffHFFFIIFFFISfffffBb","bBffffHFFISSIFFISfffffBb","bBffffHFISffHFISffffffBb","bBffffHFISffSIISffffffBb","bBffffHFISfffHFIHfffffBb","bBffffHFISfffSIISfffffBb","bBVfffHFISffffHFIHffVfBb","bBVvffHIISffffHIISfvVVBb","bBvvffSSSSffffSSSSfvvfBb","bBfvvfffffffffffffvvffBb","bBffvvvfffffffffvvvfffBb","bBBBBBBBBBBBBBBBBBBBBBBb","bbbbbbbbbbbbbbbbbbbbbbbb"]},"capE":{"p":{"b":"#3a2c10","B":"#6b5426","v":"#4a6a38","f":"#191928","V":"#7ab55c","H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["bbbbbbbbbbbbbbbbbbbbbbbb","bBBBBBBBBBBBBBBBBBBBBBBb","bBvvffffffffffffffffffBb","bBVVvfffffffffffffffffBb","bBvvfvHHHHHHHHHHHHffffBb","bBfffvHFFFIIIIIIISffffBb","bBfffvHFFISSSSSSSSffffBb","bBffvvHFISffffffffffffBb","bBffvfHFISffffffffffffBb","bBfvvfHFISffffffffffffBb","bBfvffHFFIHHHHHHffffffBb","bBvvffHFFFIIIIISffffffBb","bBvfffHFFISSSSSSffffffBb","bBvvffHFISffffffffffffBb","bBfvffHFISffffffffffffBb","bBfvvfHFISffffffffffffBb","bBffvfHFISffffffffffffBb","bBffvvHFFIHHHHHHHHffffBb","bBfffvHIIIIIIIIIISffffBb","bBfffvSSSSSSSSSSSSffffBb","bBffffvvffffffffffffffBb","bBfffffvvvffffffffffffBb","bBBBBBBBBBBBBBBBBBBBBBBb","bbbbbbbbbbbbbbbbbbbbbbbb"]},"numerals":{"p":{"H":"#f0d080","I":"#3a2c10","S":"#6b5426","F":"#c9a24b"},"r":["...HHHHHH.........HHHH.......HHHHHHHHHH.....HHHHHHHHHH..........HHHHHH....HHHHHHHHHHHH.......HHHHH......HHHHHHHHHHHH......HHHHHH.........HHHHHH...",".HHISSSSIHH......HFFIS.......HIIIIIIFIS.....HIIIIIIFIS..........HFFFIS....HFFFIIIIIIIS.....HHISSSS......HIIIIIIIFFIS......HIIIIS.......HHFISSIIHH.","HFIS....HFIH....HSIFIS.......SSSSSSSIIS.....SSSSSSSIIS.........HFFFFIS....HFFISSSSSSSS....HFIS...SH.....SSSSSSSSIFIS....HHISSSSIHH.....HFIS..SIIS.","HFIS....HFIS......HFIS..............HFIH...........HFIH........HFIFFIS....HFIS...........HFIS...................HFIS...HFIS....HFIH...HFIS....HFIH","HFIS...HFFIS......HFIS..............HFIS...........HFIS.......HFISIFIS....HFIS...........HFIS...................HFIS...HFIS....HFIS...HFIS....HFIS","HFIS...HFFIS......HFIS..............HFIS...........HFIS......HFIS.HFIS....HFIS...........HFIS..................HFIS....SIIS....HFIS...HFIS....HFIS","HFIS..HIFFIS......HFIS.............HFIS......HHHHHHFIS.......HFIS.HFIS....HFFIHHHHHH.....HFFIHHHHHH...........HFIS......SIIHHHHFIS....HFIS....HFIS","HFIS..HSIFIS......HFIS.............HISS......HIIIIIFIS......HFIS..HFIS....HIIIIIIIIS.....HFFISSSSIIH......HHHHFFIS.......HFIIIIIS.....SIIS....HFIS","HFIS.HS.HFIS......HFIS...........HHIS........SSSSSSIIS.....HFIS...HFIS....SSSSSSSSIS.....HFIS....HFIH.....SSSIFFIS......HFISSSSIIH.....SIIHHHHFFIS","HFFIHS..HFIS......HFIS..........HIIS...............HFIH...HFIS....HFIS............HIHH...HFIS....HFIS........HFIS......HFIS....HFIH.....SSSSSSIIS.","HFFFIS..HFIS......HFIS.........HISS................HFIS...HFFIHHHHFFFIH...........HFIS...HFIS....HFIS.......HFIS.......HFIS....HFIS...........HFIH","HFFIS...HFIS......HFIS.......HHIS..................HFIS...HIIIIIIIFFFIS...........HFIS...HFIS....HFIS.......HFIS.......HFIS....HFIS...........HFIS","HFIS....HFIS......HFIS......HFIS...................HFIS...SSSSSSSSIFFIS...........HFIS...SIIS....HFIS......HFIS........SIIS....HIIS...........HFIS","SIIS....HIIS...HHHFFFIHHH...HFFIHHHHHHHH....HHHHHHHFIS............HFIS.....HHHHHHHFIS.....HIIH..HFIS.......HFIS.........SSIHHHHISS......HH...HFIS.",".SSIHHHHISS....HIIIIIIIIS...HIIIIIIIIIIS....HIIIIIIIIS............HIIS.....HIIIIIIIIS.....SSIIHHIISS......HIIS............HIIIIS.........HHHHIIS..","...SSSSSS......SSSSSSSSSS...SSSSSSSSSSSS....SSSSSSSSSS............SSSS.....SSSSSSSSSS.......SSSSSS........SSSS............SSSSSS.........SSSSSS..."]},"d0":{"p":{"H":"#f0d080","I":"#3a2c10","S":"#6b5426","F":"#c9a24b"},"r":["...HHHHHH...",".HHISSSSIHH.","HFIS....HFIH","HFIS....HFIS","HFIS...HFFIS","HFIS...HFFIS","HFIS..HIFFIS","HFIS..HSIFIS","HFIS.HS.HFIS","HFFIHS..HFIS","HFFFIS..HFIS","HFFIS...HFIS","HFIS....HFIS","SIIS....HIIS",".SSIHHHHISS.","...SSSSSS..."]},"d1":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["...HHHH...","..HFFIS...",".HSIFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","...HFIS...","HHHFFFIHHH","HIIIIIIIIS","SSSSSSSSSS"]},"d2":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":[".HHHHHHHHHH.",".HIIIIIIFIS.",".SSSSSSSIIS.","........HFIH","........HFIS","........HFIS",".......HFIS.",".......HISS.",".....HHIS...","....HIIS....","...HISS.....",".HHIS.......","HFIS........","HFFIHHHHHHHH","HIIIIIIIIIIS","SSSSSSSSSSSS"]},"d3":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":[".HHHHHHHHHH.",".HIIIIIIFIS.",".SSSSSSSIIS.","........HFIH","........HFIS","........HFIS","..HHHHHHFIS.","..HIIIIIFIS.","..SSSSSSIIS.","........HFIH","........HFIS","........HFIS","........HFIS",".HHHHHHHFIS.",".HIIIIIIIIS.",".SSSSSSSSSS."]},"d4":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["......HHHHHH.","......HFFFIS.",".....HFFFFIS.",".....HFIFFIS.","....HFISIFIS.","...HFIS.HFIS.","...HFIS.HFIS.","..HFIS..HFIS.",".HFIS...HFIS.","HFIS....HFIS.","HFFIHHHHFFFIH","HIIIIIIIFFFIS","SSSSSSSSIFFIS","........HFIS.","........HIIS.","........SSSS."]},"d5":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["HHHHHHHHHHHH","HFFFIIIIIIIS","HFFISSSSSSSS","HFIS........","HFIS........","HFIS........","HFFIHHHHHH..","HIIIIIIIIS..","SSSSSSSSIS..","........HIHH","........HFIS","........HFIS","........HFIS",".HHHHHHHFIS.",".HIIIIIIIIS.",".SSSSSSSSSS."]},"d6":{"p":{"H":"#f0d080","I":"#3a2c10","S":"#6b5426","F":"#c9a24b"},"r":["....HHHHH...","..HHISSSS...",".HFIS...SH..","HFIS........","HFIS........","HFIS........","HFFIHHHHHH..","HFFISSSSIIH.","HFIS....HFIH","HFIS....HFIS","HFIS....HFIS","HFIS....HFIS","SIIS....HFIS",".HIIH..HFIS.",".SSIIHHIISS.","...SSSSSS..."]},"d7":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":["HHHHHHHHHHHH","HIIIIIIIFFIS","SSSSSSSSIFIS","........HFIS","........HFIS",".......HFIS.","......HFIS..","..HHHHFFIS..","..SSSIFFIS..",".....HFIS...","....HFIS....","....HFIS....","...HFIS.....","...HFIS.....","..HIIS......","..SSSS......"]},"d8":{"p":{"H":"#f0d080","I":"#3a2c10","S":"#6b5426","F":"#c9a24b"},"r":["...HHHHHH...","...HIIIIS...",".HHISSSSIHH.","HFIS....HFIH","HFIS....HFIS","SIIS....HFIS",".SIIHHHHFIS.","..HFIIIIIS..",".HFISSSSIIH.","HFIS....HFIH","HFIS....HFIS","HFIS....HFIS","SIIS....HIIS",".SSIHHHHISS.","...HIIIIS...","...SSSSSS..."]},"d9":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["...HHHHHH...",".HHFISSIIHH.",".HFIS..SIIS.","HFIS....HFIH","HFIS....HFIS","HFIS....HFIS","HFIS....HFIS","SIIS....HFIS",".SIIHHHHFFIS","..SSSSSSIIS.","........HFIH","........HFIS","........HFIS","..HH...HFIS.","...HHHHIIS..","...SSSSSS..."]},"specA_upper":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":[".....HHHHH........HHHHHHHHHH..........HHHHHHH.....HHHHHHHHHH......HHHHHHHHHHHH...HHHHHHHHHHHH.......HHHHHHH.....HHHH.....HHHH...HHHHHHHHHHHH...HHHHHHHHHHHH...HHHH.....HHHH...HHHH...........HHHH.........HHHH",".....HFFIS........HFFFIIIFIS........HHISSSIIS.....HFFFIIIIIIH.....HFFFIIIIIIIS...HFFFIIIIIIIS.....HHISSSIIS.....HFIS.....HFIS...HIIIFFFFIIIS...HIIIIFFFFIIS...HFIS.....HFIS...HFIS...........HFIS.........HFIS","....HFFIFIH.......HFFISSSIIS.......HFIS...SIIH....HFFISSSSSIS.....HFFISSSSSSSS...HFFISSSSSSSS....HFIS...SIIH....HFIS.....HFIS...SSSSIFFISSSS...SSSSSIFFISSS...HFIS....HFIS....HFIS...........HFFIH.......HFFIS","....HFISIIS.......HFIS...HFIH......HIS.....SSS....HFIS.....HIHH...HFIS...........HFIS............HIS.....SSS....HFIS.....HFIS.......HFIS............HFIS......HFIS....HFIS....HFIS...........HFFIS.......SIFIS","...HFIS.HFIH......HFIS...HFIS.....HFIS............HFIS.....HFIS...HFIS...........HFIS...........HFIS............HFIS.....HFIS.......HFIS............HFIS......HFIS...HFIS.....HFIS...........HFIS.HH...HH.HFIS","...HFIS.HFIS......HFIS...HFIS.....HFIS............HFIS.....HFIS...HFIS...........HFIS...........HFIS............HFIS.....HFIS.......HFIS............HFIS......HFIS...HFIS.....HFIS...........HFIS.SS...HS.HFIS","...HFIS.SIIS......HFIS...HFIS.....HFIS............HFIS.....HFIS...HFFIHHHHHH.....HFFIHHHHHH.....HFIS............HFFIHHHHHFFIS.......HFIS............HFIS......HFIS..HFIS......HFIS...........HFIS..HH.HS..HFIS","..HFIS...HFIH.....HFFIHHHFFIS.....HFIS............HFIS.....HFIS...HFFFIIIIIS.....HFFFIIIIIS.....HFIS...HHHHHH...HFFFFFFFFFFIS.......HFIS............HFIS......HFFIHHFIS.......HFIS...........HFIS..SS.HS..HFIS","..HFIS...HFIS.....HFFFIIIIIIS.....HFIS............HFIS.....HFIS...HFFISSSSSS.....HFFISSSSSS.....HFIS...SSIFIS...HFFFIIIIIFFIS.......HFIS............HFIS......HFFISSIIS.......HFIS...........HFIS...HHS...HFIS","..HFIS...SIIS.....HFFISSSSSIS.....HFIS............HFIS.....HFIS...HFIS...........HFIS...........HFIS.....HFIS...HFFISSSSSIFIS.......HFIS............HFIS......HFIS..SIIH......HFIS...........HFIS...SSS...HFIS",".HFIS.....HFIH....HFIS.....HIHH...HFIS............HFIS.....HFIS...HFIS...........HFIS...........HFIS.....HFIS...HFIS.....HFIS.......HFIS.......HHHH.HFIS......HFIS...HFIH.....HFIS...........HFIS.........HFIS",".HFFIHHHHHIFIS....HFIS.....HFIS...SIIS............HFIS.....HFIS...HFIS...........HFIS...........SIIS.....HFIS...HFIS.....HFIS.......HFIS.......HFIS.HFIS......HFIS...SIIS.....HFIS...........HFIS.........HFIS",".HFISSSSSSSIIS....HFIS.....HFIS....HIS.....HHH....HFIS.....HISS...HFIS...........HFIS............HIS.....HIS....HFIS.....HFIS.......HFIS.......HFIS.HFIS......HFIS....HFIH....HFIS...........HFIS.........HFIS","HFIS.......HFIH...HFFIHHHHHFFIS....SIIH...HFIS....HFFIHHHHHIS.....HFFIHHHHHHHH...HFIS............SIIH...HFIS....HFIS.....HFIS...HHHHFFFIHHHH...HFFIHFFIS......HFIS....SIIS....HFFIHHHHHHHH...HFIS.........HFIS","HIIS.......HIIS...HIIIIIIIIIIIS.....SSIHHHIIS.....HIIIIIIIIIS.....HIIIIIIIIIIS...HIIS.............SSIHHHIIS.....HIIS.....HIIS...HIIIIIIIIIIS...HIIIIIIIS......HIIS.....HIIH...HIIIIIIIIIIS...HIIS.........HIIS","SSSS.......SSSS...SSSSSSSSSSSSS.......SSSSSSS.....SSSSSSSSSS......SSSSSSSSSSSS...SSSS...............SSSSSSS.....SSSS.....SSSS...SSSSSSSSSSSS...SSSSSSSSS......SSSS.....SSSS...SSSSSSSSSSSS...SSSS.........SSSS"]},"specA_upper2":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":["HHHH......HHHH.......HHHHH.......HHHHHHHHHHH.........HHHHH........HHHHHHHHHHH.......HHHHHHHHHH....HHHHHHHHHHHHH...HHHH.....HHHH...HHHH.......HHHH...HHHH...........HHHH...HHHH.......HHHH...HHHH......HHHH...HHHHHHHHHHHHH","HFIS......HFIS.....HHISSSIHH.....HFFFIIIIIIS.......HHISSSIHH......HFFFIIIIIIS......HFISSSSSSIS....HIIIIFFFFIIIS...HFIS.....HFIS...HFIS.......HFIS...HFIS...........HFIS...SIIS.......HFIS...SIIS......HFIS...HIIIIIIIFFFIS","HFFIHHH...HFIS....HFIS...SIIH....HFFISSSSSIS......HFIS...SIIH.....HFFISSSSSIS.....HFIS......SSH...SSSSSIFFISSSS...HFIS.....HFIS...SIIS.......HFIS...HFIS...........HFIS....SIIH.....HFIS.....SIIH....HFIS....SSSSSSSSIFFIS","HFFFFIS...HFIS....HIS.....HIS....HFIS.....HIHH....HIS.....HIS.....HFIS.....HIHH...HFIS.................HFIS.......HFIS.....HFIS....HFIH.....HFIS....HFIS...........HFIS.....SIIH...HFIS.......SIIH..HFIS.............HFIS.","HFFFIFIH..HFIS...HFIS.....HFIH...HFIS.....HFIS...HFIS.....HFIH....HFIS.....HFIS...HFIS.................HFIS.......HFIS.....HFIS....HFIS.....HFIS....HFIS...........HFIS......HFIH.HFIS.........SIIHHFIS..............HFIS.","HFFISIIS..HFIS...HFIS.....HFIS...HFIS.....HISS...HFIS.....HFIS....HFIS.....HISS...SIIS.................HFIS.......HFIS.....HFIS....SIIS.....HFIS....HFIS...........HFIS......SIIS.HFIS..........SIFFIS..............HFIS..","HFIS.HFIH.HFIS...HFIS.....HFIS...HFFIHHHHHIS.....HFIS.....HFIS....HFFIHHHHHIS......HFIHHHHHHHH.........HFIS.......HFIS.....HFIS.....HFIH...HFIS.....HFIS...HHHHH...HFIS.......SIIHFIS............HFIS..............HFIS...","HFIS.SIIS.HFIS...HFIS.....HFIS...HFFFIIIIIIS.....HFIS.....HFIS....HFFFIIFFFIS......SIIIIIIIFIS.........HFIS.......HFIS.....HFIS.....HFIS...HFIS.....HFIS...HFFIS...HFIS........HFFIS.............HFIS.............HFIS....","HFIS..HFIHFFIS...HFIS.....HFIS...HFFISSSSSSS.....HFIS.....HFIS....HFFISSIFFIS.......SSSSSSSIIS.........HFIS.......HFIS.....HFIS.....SIIS...HFIS.....HFIS...HFFIS...HFIS........HFFIS.............HFIS............HFIS.....","HFIS..SIFFFFIS...HFIS.....HFIS...HFIS............HFIS.....HFIS....HFIS..HFIS...............HFIH........HFIS.......HFIS.....HFIS......HFIH.HFIS......HFIS...HFFIS...HFIS.......HFFIFIH............HFIS............HFIS.....","HFIS...HFFFFIS...HFIS.....HFIS...HFIS............HFIS.....HFIS....HFIS..SIIS...............HFIS........HFIS.......HFIS.....HFIS......HFIS.HFIS......HFIS...HFFIS...HFIS.......HFISIIS............HFIS...........HFIS......","HFIS...SIFFFIS...SIIS.....HFIS...HFIS............SIIS.....HFIS....HFIS...HFIH..............HFIS........HFIS.......HFIS.....HFIS......SIIS.HFIS......SIIS...HFFIS...HFIS......HFIS.SIIH...........HFIS..........HFIS.......","HFIS....HIFFIS....HIS.....HIS....HFIS.............HIS.....HIS.....HFIS...SIIS..............SIIS........HFIS.......SIIS.....HFIS.......HFIHFIS........HFIH..HFFIS..HFIS......HFIS...SIIH..........HFIS.........HFIS........","HFIS....SSIFIS....SIIH...HIIS....HFIS.............SIIH...HIIS.....HFIS....HFIH....HHH.......HIS........HFIS........HIS.....HIS........SIFFFIS........SIIS..HFFIS..HFIS.....HFIS.....SIIH.........HFIS........HFFFIHHHHHHHH","HIIS......HIIS.....SSIHHHISS.....HIIS..............SSIHHHISS.H....HIIS....HIIS.....SIHHHHHHHIS.........HIIS........SIIH...HIIS.........HIIIS..........HIIHHIIIIIHHIIS.....HIIS.......HIIH........HIIS........HIIIIIIIIIIIS","SSSS......SSSS.......SSSSS.......SSSS................SSSSS..HSH...SSSS....SSSS......SSSSSSSSSS.........SSSS.........SSSHHHSSS..........SSSSS..........SSSSSSSSSSSSSSS.....SSSS.......SSSS........SSSS........SSSSSSSSSSSSS"]},"specA_punct":{"p":{"H":"#f0d080","F":"#c9a24b","I":"#3a2c10","S":"#6b5426"},"r":[".........................................HHHH.....HHHHHHHHHH.",".........................................HFIS.....HIIIIIIFIS.",".........................................HFIS.....SSSSSSSIIS.","...................HHHH..................HFIS............HFIH","...................HFIS..................HFIS............HFIS","...................HIIS..................HFIS............HISS","...................SSSS.....HHHHHHHH.....HFIS.......HHHHHIS..","............................HFFFFFIS.....HFIS.......HFFFIIS..","............................HIIIIIIS.....HIIS.......HFFISSS..","............................SSSSSSSS.....SSSS.......HFIS.....","...................HHHH.............................HIIS.....","...................HFIS.............................SSSS.....",".HHHH.....HHHH.....HIIS..................HHHH................",".HFIS.....SIIS.....SSSS..................HFIS.......HHHH.....",".HIIS......HIS...........................HIIS.......HIIS.....",".SSSS......SS............................SSSS.......SSSS....."]},"specB_upper":{"p":{"K":"#0a0a12","H":"#f0d080","F":"#c9a24b","S":"#6b5426"},"r":["...KKKKK....KKKKKKKK....KKKKKKK...KKKKKKKK...KKKKKKKK..KKKKKKKK...KKKKKKK..KKKKK.KKKKK..KKKKK.....KKKKK..KKKKK.KKKKK..KKKKK...KKKKK....KKKKK","...KHHHK....KHHHHHHKK..KKHHHHHKK..KHHHHHHKK..KHHHHHHKK.KHHHHHHKK.KKHHHHHKK.KHHHK.KHHHK.KKHHHKK...KKHHHKK.KHHHK.KHHHK.KKHHHK...KHHHK....KHHHK","..KKHFFK....KHFFSSFHKK.KHFFSSFHKK.KHFFSSFHKK.KHFFSSSHK.KHFFSSSHK.KHFFSSFHKKKHFFK.KHFFK.KHFFFHK...KHFFFHK.KHFFKKKHFSK.KHFFSK...KHFFKK..KKHFFK","..KHFFFK....KHFFKKHFHK.KHFFKKSSHK.KHFFKKHFHK.KHFFKKKKK.KHFFKKKKK.KHFFKKSSHKKHFFK.KHFFK.KKHFFKK...KKHFFKK.KHFFKKHFFKK.KHFFKK...KHFFHK..KHFFFK","..KHFFFKK...KHFFKKHFFKKKHFSKKKKKK.KHFFKKHFFKKKHFSK....KKHFSK....KKHFSKKKKKKKHFFK.KHFFK..KHFFK.....KHFFK..KHFFKKHFSK..KHFFK....KHFFFKKKKHFFFK","..KHFFFHK...KHFFKKHFSKKHFFKK......KHFFKKHFFKKHFFKK....KHFFKK....KHFFKK.....KHFFK.KHFFK..KHFFK.....KHFFK..KHFFKHFFKK..KHFFK....KHFFFHKKHFFFFK",".KKHFSFFKK..KHFFKHFFKKKHFFK.......KHFFKKHFFKKHFFK.....KHFFK.....KHFFK......KHFFK.KHFFK..KHFFK.....KHFFK..KHFFKHFSK...KHFFK....KHFFSFKKHSFFFK",".KHFFKHFHK..KHFFHFFSK.KHFFK.......KHFFKKHFFKKHFFKKK...KHFFKKK...KHFFK......KHFFKKKHFFK..KHFFK.....KHFFK..KHFFHFFKK...KHFFK....KHFFKHHHFKHFFK",".KHFFKHFFK..KHFFFFFKK.KHFFK.......KHFFKKHFFKKHFFHHK...KHFFHHK...KHFFKKKKKKKKHFFHHHFFFK..KHFFK.....KHFFK..KHFFFFFK....KHFFK....KHFFKSFFSKHFFK",".KHFFHFFFK..KHFFSSFHKKKHFFK.......KHFFKKHFFKKHFFSSK...KHFFSSK...KHFFKKHHHHKKHFFSSSFFFK..KHFFK.....KHFFK..KHFFFFFK....KHFFK....KHFFKKHFKKHFFK",".KHFFSFFFK..KHFFKKHFHKKHFFK.......KHFFKKHFFKKHFFKKK...KHFFKKK...KHFFKKSFFFKKHFFKKKHFFK..KHFFK.....KHFFK..KHFFSFFKK...KHFFK....KHFFKKSSKKHFFK",".KHFFKHFFK..KHFFKKHFFKKHFFK.......KHFFKKHFFKKHFFK.....KHFFK.....KHFFKKKHFFKKHFFK.KHFFK..KHFFK.....KHFFK..KHFFKHFHK...KHFFK....KHFFKKKKKKHFFK","KKHFSKSFFKK.KHFFKKHFFKKSFFKK......KHFFKKHFFKKSFFKK....KHFFK.....KHFFK.KHFFKKHFFK.KHFFK..KHFFK..KKKKHFFK..KHFFKSFFKK.KKHFSK....KHFFK....KHFFK","KHFFKKKHFHK.KHFFKKHFFKKKHFHKKKKKK.KHFFKKHFFKKKHFHK....KHFFK.....KSFFKKKHFFKKHFFK.KHFFK..KHFFK..KHKKHFFK..KHFFKKHFHK.KHFFKK....KHFFK....KHFFK","KHFFK.KHFFK.KHFFKKHFSK.KHFFKKHHHK.KHFFKKHFSK.KHFFKKKKKKHFFK.....KKHFHKKHFSKKHFFK.KHFFK.KKHFFKK.KHKKHFFK..KHFFKKSFFKKKHFFKKKKK.KHFFK....KHFFK","KHFFK.KHFFK.KHFFHHFSKK.KSFFHHFSKK.KHFFHHFSKK.KHFFHHHHKKHFFK......KSFFHHFSKKKHFFK.KHFFK.KHFFFHK.KSHHFFSK..KHFFKKKHFHKKSFFHHHHK.KHFFK....KHFFK","KSSSK.KSSSK.KSSSSSSKK..KKSSSSSKK..KSSSSSSKK..KSSSSSSKKKSSSK......KKSSSSSKK.KSSSK.KSSSK.KKSSSKK.KKSSSSKK..KSSSK.KSSSKKKSSSSSSK.KSSSK....KSSSK","KKKKK.KKKKK.KKKKKKKK....KKKKKKK...KKKKKKKK...KKKKKKKK.KKKKK.......KKKKKKK..KKKKK.KKKKK..KKKKK...KKKKKK...KKKKK.KKKKK.KKKKKKKK.KKKKK....KKKKK"]},"specB_upper2":{"p":{"K":"#0a0a12","H":"#f0d080","F":"#c9a24b","S":"#6b5426"},"r":["KKKKK..KKKKK..KKKKKKK...KKKKKKKK....KKKKKKK...KKKKKKKK....KKKKKKK...KKKKKKKKKK.KKKKK.KKKKKKKKKK..KKKKKKKKKK.....KKKKKKKKKK..KKKKKKKKKK..KKKKK.KKKKKKKKK.","KHHHK..KHHHK.KKHHHHHKK..KHHHHHHKK..KKHHHHHKK..KHHHHHHKK..KKHHHHHKK.KKHHHHHHHHKKKHHHK.KHHHKKHHHK..KHHHKKHHHK.....KHHHKKHHHK..KHHHKKHHHK..KHHHKKKHHHHHHHKK","KHFFKKKKHFFKKKHFSSSFHKK.KHFFSSFHKKKKHFSSSFHKK.KHFFSSFHKK.KHFFSSFHKKKHSSFFFSSSHKKHFFK.KHFFKKHFFK..KHFFKKHFFK.....KHFFKKSFFKKKKHFSKKHFFK..KHFFKKHSSSSFFFHK","KHFFHHKHFFFKKHFFKKKHFHK.KHFFKKHFHKKHFFKKKHFHK.KHFFKKHFHK.KHFFKKSSHKKKKKHFFKKKKKKHFFK.KHFFKKHFFK..KHFFKKHFFK.....KHFFKKKHFHKKHFFKKKSFFKKKKHFSKKKKKKKHFFKK","KHFFFFKHFFFKKHFFK.KHFFK.KHFFKKHFFKKHFFK.KHFFK.KHFFKKHFFK.KHFFKKKKKK...KHFFK....KHFFK.KHFFKKSFFKKKKHFSKKHFFK.....KHFFK.KSFFKKHFSK.KKHFHKKHFFKK....KKHFSK.","KHFFSFKHFFFKKHFFK.KHFFK.KHFFKKHFFKKHFFK.KHFFK.KHFFKKHFFK.KHFFKKK......KHFFK....KHFFK.KHFFKKKHFHKKHFFKKKHFFK.....KHFFK.KKHFHHFFKK..KHFFKKHFFK.....KHFFKK.","KHFFKHHFFFFKKHFFK.KHFFK.KHFFKKHFSKKHFFK.KHFFK.KHFFKKHFSK.KSFFHHKK.....KHFFK....KHFFK.KHFFK.KHFFKKHFFK.KHFFKKKKKKKHFFK..KSFFFFSK...KSFFKKHFSK....KKHFSK..","KHFFKHFFFFFKKHFFK.KHFFK.KHFFHHFSKKKHFFK.KHFFK.KHFFHHFSKK.KKHFFFHK.....KHFFK....KHFFK.KHFFK.KSFFKKHFSK.KHFFKKHHHKKHFFK..KKHFFFKK...KKHFHHFFKK....KHFFKK..","KHFFKHFFFFFKKHFFK.KHFFK.KHFFSSSKK.KHFFK.KHFFK.KHFFSFFKK...KSFFFFKK....KHFFK....KHFFK.KHFFK.KKHFHHFFKK.KHFFKKHFFKKHFFK...KHFFFK.....KSFFFSSK....KKHFSK...","KHFFKSFFFFFKKHFFK.KHFFK.KHFFKKKK..KHFFK.KHFFK.KHFFKHFHK...KKHFFFHK....KHFFK....KHFFK.KHFFK..KHFFFFFK..KHFFKKHFFKKHFFK...KHFFFK.....KKHFFKKK....KHFFKK...","KHFFKKHFFFFKKHFFK.KHFFK.KHFFK.....KHFFK.KHFFK.KHFFKSFFKK...KSSFFFK....KHFFK....KHFFK.KHFFK..KSFFFFSK..KSFFKKHFFKKHFSK..KKHFFFKK.....KHFFK.....KKHFSK....","KHFFKKHFFFFKKHFFK.KHFFK.KHFFK.....KHFFK.KHFFK.KHFFKKHFHK...KKKHFFK....KHFFK....KHFFK.KHFFK..KKHFFFKK..KKHFHKHFFKHFFKK..KHFFFFHK.....KHFFK.....KHFFKK....","KHFFKKSFFFFKKHFFK.KHFFK.KHFFK.....KHFFKKKHFFK.KHFFKKHFFK.....KHFFK....KHFFK....KHFFK.KHFFK...KHFFFK....KHFFKHFFKHFFK..KKHFSSFFKK....KHFFK....KKHFSK.....","KHFFKKKHFFFKKHFFK.KHFFK.KHFFK.....KHFFKKHFFFK.KHFFKKHFFKKKKKKKSFFKK...KHFFK....KHFFK.KHFFK...KSFFSK....KSFFKHFFKHFSK..KHFFKKHFHK....KHFFK....KHFFKK.....","KHFFK.KSFFFKKSFFKKKHFSKKKHFSK.....KSFFKKKSFFKKKHFSKKHFFKKHHHKKKHFHK..KKHFFKK...KSFFKKKHFSK...KKHFKK....KKHFHFFFHFFKK.KKHFSKKSFFKK...KHFFK....KHFFKKKKKKK","KHFFK.KKHFFKKKSFHHHFSKKKHFFKK.....KKSFHHHKSFKKHFFKKKHFFKKKSFHHHFSKK..KHFFFHK...KKSFHHHFSKK....KHFK......KHFFFFFFFFK..KHFFKKKKHFHK...KHFFK....KSFFHHHHHHK","KSSSK..KSSSK.KKSSSSSKK.KSSSK.......KKSSSSKKSKKSSSK.KSSSK.KKSSSSSKK...KKSSSKK....KKSSSSSKK.....KSSK......KSSSSSSSSSK..KSSSK..KSSSK...KSSSK....KKSSSSSSSKK","KKKKK..KKKKK..KKKKKKK..KKKKK........KKKKKKKKKKKKKK.KKKKK..KKKKKKK.....KKKKK......KKKKKKK......KKKK......KKKKKKKKKKK..KKKKK..KKKKK...KKKKK.....KKKKKKKKK."]},"specC_upper":{"p":{"K":"#14141e","L":"#a89c86","M":"#1e1a26"},"r":["...KKK.......KKKLL.........KLLLK.....KKKLK.......KKKLLLLL....KKKLLLLL......KLLLK......KKK..KKK....LLKKKLL....LLLKKKLL....KKK...KK....KKK.........KKK.....KKK","...KLL.......KML..LK......KL...KL....KML.KK......KML.........KML..........KL...KL.....KML..KML......KML.........KML......KML...KL....KML.........KMMK...KMML","..KL.KK......KML...KL....KL..........KML..KK.....KML.........KML.........KL...........KML..KML......KML.........KML......KML..KL.....KML.........KMMLK.KLMML","..KL.KL......KML..LL.....KL..........KML...KK....KML.........KML.........KL...........KML..KML......KML.........KML......KML.KL......KML.........KML.KKL.KML",".KL...KK.....KMMKK.......KL..........KML...KL....KML.........KML.........KL...........KML..KML......KML.........KML......KMMKL.......KML.........KML..L..KML",".KL...KL.....KMMLL.......KL..........KML...KL....KMMKKK......KMMKKK......KL...........KML..KML......KML.........KML......KMMML.......KML.........KML.....KML",".KMKKKML.....KML..LK.....KL..........KML...KL....KMMLLL......KMMLLL......KL...LKKK....KMMLLMML......KML.........KML......KMMLL.......KML.........KML.....KML",".KMLLLML.....KML...KK....KL..........KML...KL....KML.........KML.........KL....KML....KML..KML......KML.........KML......KML.KK......KML.........KML.....KML",".KL...KL.....KML...KL....KL..........KML...KL....KML.........KML.........KL....KML....KML..KML......KML.........KML......KML..KK.....KML.........KML.....KML",".KL...KL.....KML...KL....KL..........KML...KL....KML.........KML.........KL....KML....KML..KML......KML.........KML......KML...KK....KML.........KML.....KML","KL.....KK....KML..LL.....KL..........KML..KL.....KML.........KML.........KL....KML....KML..KML......KML......KK.KML......KML...KL....KML.........KML.....KML","KL.....KL....KMMKK........KK...KL....KML.KL......KML.........KML..........KK...KL.....KML..KML......KML......KMKMML......KML...KL....KML.........KML.....KML","KL.....KL....KLLLL.........KLLLL.....KLLLL.......KLLLLLLL....KLL...........KLLLL......KLL..KLL....LLLLLLL.....KLLL.......KLL...KL....KLLLLLLL....KLL.....KLL"]},"specC_upper2":{"p":{"K":"#14141e","L":"#a89c86","M":"#1e1a26"},"r":["KKK...KKK......KLLLK......KKKLLK........KLLLK......KKKLLK.......KLLLLK.....LLLKKKLLL....KKK..KKK....KKK...KKK....KKK.......KKK....KKK...KKK....KKK...KKK....LLLLLKKK","KMMKK.KML.....KL...KK.....KML..KK......KL...KK.....KML..KK.....KL....KL.......KML.......KML..KML....KML...KML....KML.......KML....KML...KML....KML...KML.........KML","KMMML.KML....KL.....KK....KML...KL....KL.....KK....KML...KL....KL.............KML.......KML..KML....KML...KML....KML.......KML.....KMK.KML......KMK.KML..........KML","KMMML.KML....KL.....KL....KML..KL.....KL.....KL....KML..KL.....KL.............KML.......KML..KML.....KMK.KML.....KML.......KML.....KML.KML......KML.KML.........KML.","KMMLL.KML....KL.....KL....KMMKKL......KL.....KL....KMMKKL.......KKK...........KML.......KML..KML.....KML.KML.....KML.......KML......KMKML........KMKML..........KML.","KML.KKMML....KL.....KL....KMMLL.......KL.....KL....KMMLL.........KMK..........KML.......KML..KML.....KML.KML.....KML.......KML......KMMML........KMMML.........KML..","KML.KMMML....KL.....KL....KML.........KL.....KL....KML.KK.........KMK.........KML.......KML..KML......KMKML......KML.......KML.......KML..........KML..........KML..","KML.KMMML....KL.....KL....KML.........KL.....KL....KML.KL..........KLK........KML.......KML..KML......KMMML......KML..KKK..KML......KMMMK.........KML.........KML...","KML.KMMML....KL.....KL....KML.........KL.....KL....KML..KK...........KK.......KML.......KML..KML......KMMML......KML..KML..KML......KMLML.........KML.........KML...","KML..KMML....KL.....KL....KML..........KK...KL.....KML..KL...........KL.......KML.......KML..KML.......KML........KMK.KML.KML......KML.KMK........KML........KML....","KML..KMML....KL.....KL....KML...........KLLKL......KML...KK..........KL.......KML.......KML..KML.......KML........KML.KML.KML......KML.KML........KML........KML....","KML..KMML.....KK...KL.....KML..............KL......KML...KL....LK....KL.......KML........KMKKML........KML.........KMKMMMKML......KML...KMK.......KML.......KML.....","KLL...KLL......KLLLL......KLL................LL....KLL...KL.....KLLLLL........KLL.........KLLL..........L...........KLLLLLL.......KLL...KLL.......KLL.......KLLLLLLL"]},"title_hall":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":["HHHHHHHHHHHHH...HHHH.....HHHH...HHHHHHHHHHHH............HHHH.....HHHH........HHHHH........HHHH...........HHHH........","HIIIIFFFFIIIS...HFIS.....HFIS...HFFFIIIIIIIS............HFIS.....HFIS........HFFIS........HFIS...........HFIS........","SSSSSIFFISSSS...HFIS.....HFIS...HFFISSSSSSSS............HFIS.....HFIS.......HFFIFIH.......HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFIS....................HFIS.....HFIS.......HFISIIS.......HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFIS....................HFIS.....HFIS......HFIS.HFIH......HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFIS....................HFIS.....HFIS......HFIS.HFIS......HFIS...........HFIS........",".....HFIS.......HFFIHHHHHFFIS...HFFIHHHHHH..............HFFIHHHHHFFIS......HFIS.SIIS......HFIS...........HFIS........",".....HFIS.......HFFFFFFFFFFIS...HFFFIIIIIS..............HFFFFFFFFFFIS.....HFIS...HFIH.....HFIS...........HFIS........",".....HFIS.......HFFFIIIIIFFIS...HFFISSSSSS..............HFFFIIIIIFFIS.....HFIS...HFIS.....HFIS...........HFIS........",".....HFIS.......HFFISSSSSIFIS...HFIS....................HFFISSSSSIFIS.....HFIS...SIIS.....HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFIS....................HFIS.....HFIS....HFIS.....HFIH....HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFIS....................HFIS.....HFIS....HFFIHHHHHIFIS....HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFIS....................HFIS.....HFIS....HFISSSSSSSIIS....HFIS...........HFIS........",".....HFIS.......HFIS.....HFIS...HFFIHHHHHHHH............HFIS.....HFIS...HFIS.......HFIH...HFFIHHHHHHHH...HFFIHHHHHHHH",".....HIIS.......HIIS.....HIIS...HIIIIIIIIIIS............HIIS.....HIIS...HIIS.......HIIS...HIIIIIIIIIIS...HIIIIIIIIIIS",".....SSSS.......SSSS.....SSSS...SSSSSSSSSSSS............SSSS.....SSSS...SSSS.......SSSS...SSSSSSSSSSSS...SSSSSSSSSSSS"]},"title_writ":{"p":{"L":"#f0d080","K":"#0a0806","M":"#6b5426"},"r":["LLLKKKLLL....KKK..KKK....KKKLLLLL.............KKK.......KKK....KKKLLK......LLKKKLL....LLLKKKLLL","...KML.......KML..KML....KML..................KML.......KML....KML..KK.......KML.........KML...","...KML.......KML..KML....KML..................KML.......KML....KML...KL......KML.........KML...","...KML.......KML..KML....KML..................KML.......KML....KML..KL.......KML.........KML...","...KML.......KML..KML....KML..................KML.......KML....KMMKKL........KML.........KML...","...KML.......KML..KML....KMMKKK...............KML.......KML....KMMLL.........KML.........KML...","...KML.......KMMLLMML....KMMLLL...............KML.......KML....KML.KK........KML.........KML...","...KML.......KML..KML....KML..................KML..KKK..KML....KML.KL........KML.........KML...","...KML.......KML..KML....KML..................KML..KML..KML....KML..KK.......KML.........KML...","...KML.......KML..KML....KML...................KMK.KML.KML.....KML..KL.......KML.........KML...","...KML.......KML..KML....KML...................KML.KML.KML.....KML...KK......KML.........KML...","...KML.......KML..KML....KML....................KMKMMMKML......KML...KL......KML.........KML...","...KLL.......KLL..KLL....KLLLLLLL................KLLLLLL.......KLL...KL....LLLLLLL.......KLL..."]},"title_doctrines":{"p":{"K":"#0a0806","L":"#f0d080","M":"#6b5426"},"r":["KKKLK.........KLLLK........KLLLK.....LLLKKKLLL....KKKLLK......LLKKKLL....KKK...KKK....KKKLLLLL.....KLLLLK.","KML.KK.......KL...KK......KL...KL.......KML.......KML..KK.......KML......KMMKK.KML....KML.........KL....KL","KML..KK.....KL.....KK....KL.............KML.......KML...KL......KML......KMMML.KML....KML.........KL......","KML...KK....KL.....KL....KL.............KML.......KML..KL.......KML......KMMML.KML....KML.........KL......","KML...KL....KL.....KL....KL.............KML.......KMMKKL........KML......KMMLL.KML....KML..........KKK....","KML...KL....KL.....KL....KL.............KML.......KMMLL.........KML......KML.KKMML....KMMKKK........KMK...","KML...KL....KL.....KL....KL.............KML.......KML.KK........KML......KML.KMMML....KMMLLL.........KMK..","KML...KL....KL.....KL....KL.............KML.......KML.KL........KML......KML.KMMML....KML.............KLK.","KML...KL....KL.....KL....KL.............KML.......KML..KK.......KML......KML.KMMML....KML...............KK","KML...KL....KL.....KL....KL.............KML.......KML..KL.......KML......KML..KMML....KML...............KL","KML..KL.....KL.....KL....KL.............KML.......KML...KK......KML......KML..KMML....KML...............KL","KML.KL.......KK...KL......KK...KL.......KML.......KML...KL......KML......KML..KMML....KML.........LK....KL","KLLLL.........KLLLL........KLLLL........KLL.......KLL...KL....LLLLLLL....KLL...KLL....KLLLLLLL.....KLLLLL."]},"title_mantel":{"p":{"L":"#f0d080","K":"#0a0806","M":"#6b5426"},"r":["LLLKKKLLL....KKK..KKK....KKKLLLLL.............KKK.....KKK.......KKK.......KKK...KKK....LLLKKKLLL....KKKLLLLL....KKK.....","...KML.......KML..KML....KML..................KMMK...KMML.......KLL.......KMMKK.KML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KMMLK.KLMML......KL.KK......KMMML.KML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KML.KKL.KML......KL.KL......KMMML.KML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KML..L..KML.....KL...KK.....KMMLL.KML.......KML.......KML.........KML.....","...KML.......KML..KML....KMMKKK...............KML.....KML.....KL...KL.....KML.KKMML.......KML.......KMMKKK......KML.....","...KML.......KMMLLMML....KMMLLL...............KML.....KML.....KMKKKML.....KML.KMMML.......KML.......KMMLLL......KML.....","...KML.......KML..KML....KML..................KML.....KML.....KMLLLML.....KML.KMMML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KML.....KML.....KL...KL.....KML.KMMML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KML.....KML.....KL...KL.....KML..KMML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KML.....KML....KL.....KK....KML..KMML.......KML.......KML.........KML.....","...KML.......KML..KML....KML..................KML.....KML....KL.....KL....KML..KMML.......KML.......KML.........KML.....","...KLL.......KLL..KLL....KLLLLLLL.............KLL.....KLL....KL.....KL....KLL...KLL.......KLL.......KLLLLLLL....KLLLLLLL"]},"title_omens":{"p":{"L":"#f0d080","K":"#0a0806","M":"#6b5426"},"r":["LLLKKKLLL....KKK..KKK....KKKLLLLL...............KLLLK......KKK.....KKK....KKKLLLLL....KKK...KKK.....KLLLLK.","...KML.......KML..KML....KML...................KL...KK.....KMMK...KMML....KML.........KMMKK.KML....KL....KL","...KML.......KML..KML....KML..................KL.....KK....KMMLK.KLMML....KML.........KMMML.KML....KL......","...KML.......KML..KML....KML..................KL.....KL....KML.KKL.KML....KML.........KMMML.KML....KL......","...KML.......KML..KML....KML..................KL.....KL....KML..L..KML....KML.........KMMLL.KML.....KKK....","...KML.......KML..KML....KMMKKK...............KL.....KL....KML.....KML....KMMKKK......KML.KKMML......KMK...","...KML.......KMMLLMML....KMMLLL...............KL.....KL....KML.....KML....KMMLLL......KML.KMMML.......KMK..","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML.KMMML........KLK.","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML.KMMML..........KK","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML..KMML..........KL","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML..KMML..........KL","...KML.......KML..KML....KML...................KK...KL.....KML.....KML....KML.........KML..KMML....LK....KL","...KLL.......KLL..KLL....KLLLLLLL...............KLLLL......KLL.....KLL....KLLLLLLL....KLL...KLL.....KLLLLL."]},"title_omens_cloth":{"p":{"L":"#f4e8cc","K":"#5a1414","M":"#8a2828"},"r":["LLLKKKLLL....KKK..KKK....KKKLLLLL...............KLLLK......KKK.....KKK....KKKLLLLL....KKK...KKK.....KLLLLK.","...KML.......KML..KML....KML...................KL...KK.....KMMK...KMML....KML.........KMMKK.KML....KL....KL","...KML.......KML..KML....KML..................KL.....KK....KMMLK.KLMML....KML.........KMMML.KML....KL......","...KML.......KML..KML....KML..................KL.....KL....KML.KKL.KML....KML.........KMMML.KML....KL......","...KML.......KML..KML....KML..................KL.....KL....KML..L..KML....KML.........KMMLL.KML.....KKK....","...KML.......KML..KML....KMMKKK...............KL.....KL....KML.....KML....KMMKKK......KML.KKMML......KMK...","...KML.......KMMLLMML....KMMLLL...............KL.....KL....KML.....KML....KMMLLL......KML.KMMML.......KMK..","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML.KMMML........KLK.","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML.KMMML..........KK","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML..KMML..........KL","...KML.......KML..KML....KML..................KL.....KL....KML.....KML....KML.........KML..KMML..........KL","...KML.......KML..KML....KML...................KK...KL.....KML.....KML....KML.........KML..KMML....LK....KL","...KLL.......KLL..KLL....KLLLLLLL...............KLLLL......KLL.....KLL....KLLLLLLL....KLL...KLL.....KLLLLL."]},"title_ledger":{"p":{"L":"#f0d080","K":"#0a0806","M":"#6b5426"},"r":["LLLKKKLLL....KKK..KKK....KKKLLLLL.............LLKKKLL....KKKLLK........KLLLK......KKK...KKK.............KKK.........KKKLLLLL....KKKLK.........KLLLK......KKKLLLLL....KKKLLK..","...KML.......KML..KML....KML....................KML......KML..KK......KL...KK.....KMMKK.KML.............KML.........KML.........KML.KK.......KL...KL.....KML.........KML..KK.","...KML.......KML..KML....KML....................KML......KML...KL....KL.....KK....KMMML.KML.............KML.........KML.........KML..KK.....KL...........KML.........KML...KL","...KML.......KML..KML....KML....................KML......KML..KL.....KL.....KL....KMMML.KML.............KML.........KML.........KML...KK....KL...........KML.........KML..KL.","...KML.......KML..KML....KML....................KML......KMMKKL......KL.....KL....KMMLL.KML.............KML.........KML.........KML...KL....KL...........KML.........KMMKKL..","...KML.......KML..KML....KMMKKK.................KML......KMMLL.......KL.....KL....KML.KKMML.............KML.........KMMKKK......KML...KL....KL...........KMMKKK......KMMLL...","...KML.......KMMLLMML....KMMLLL.................KML......KML.KK......KL.....KL....KML.KMMML.............KML.........KMMLLL......KML...KL....KL...LKKK....KMMLLL......KML.KK..","...KML.......KML..KML....KML....................KML......KML.KL......KL.....KL....KML.KMMML.............KML.........KML.........KML...KL....KL....KML....KML.........KML.KL..","...KML.......KML..KML....KML....................KML......KML..KK.....KL.....KL....KML.KMMML.............KML.........KML.........KML...KL....KL....KML....KML.........KML..KK.","...KML.......KML..KML....KML....................KML......KML..KL.....KL.....KL....KML..KMML.............KML.........KML.........KML...KL....KL....KML....KML.........KML..KL.","...KML.......KML..KML....KML....................KML......KML...KK....KL.....KL....KML..KMML.............KML.........KML.........KML..KL.....KL....KML....KML.........KML...KK","...KML.......KML..KML....KML....................KML......KML...KL.....KK...KL.....KML..KMML.............KML.........KML.........KML.KL.......KK...KL.....KML.........KML...KL","...KLL.......KLL..KLL....KLLLLLLL.............LLLLLLL....KLL...KL......KLLLL......KLL...KLL.............KLLLLLLL....KLLLLLLL....KLLLL.........KLLLL......KLLLLLLL....KLL...KL"]},"title_town":{"p":{"H":"#f0d080","I":"#3a2c10","F":"#c9a24b","S":"#6b5426"},"r":["HHHHHHHHHHHH...HHHHHHHHHHH.........HHHHH.......HHHH......HHHH...HHHH.......HHHH........HHHHH........HHHH...........HHHHHHHHHHHH............HHHHHHHHHHHHH.......HHHHH.......HHHH...........HHHH...HHHH......HHHH","HIIIFFFFIIIS...HFFFIIIIIIS.......HHISSSIHH.....HFIS......HFIS...HFIS.......HFIS........HFFIS........HFIS...........HFFFIIIIIIIS............HIIIIFFFFIIIS.....HHISSSIHH.....HFIS...........HFIS...HFIS......HFIS","SSSSIFFISSSS...HFFISSSSSIS......HFIS...SIIH....HFFIHHH...HFIS...SIIS.......HFIS.......HFFIFIH.......HFIS...........HFFISSSSSSSS............SSSSSIFFISSSS....HFIS...SIIH....HFIS...........HFIS...HFFIHHH...HFIS","....HFIS.......HFIS.....HIHH....HIS.....HIS....HFFFFIS...HFIS....HFIH.....HFIS........HFISIIS.......HFIS...........HFIS.........................HFIS........HIS.....HIS....HFIS...........HFIS...HFFFFIS...HFIS","....HFIS.......HFIS.....HFIS...HFIS.....HFIH...HFFFIFIH..HFIS....HFIS.....HFIS.......HFIS.HFIH......HFIS...........HFIS.........................HFIS.......HFIS.....HFIH...HFIS...........HFIS...HFFFIFIH..HFIS","....HFIS.......HFIS.....HISS...HFIS.....HFIS...HFFISIIS..HFIS....SIIS.....HFIS.......HFIS.HFIS......HFIS...........HFIS.........................HFIS.......HFIS.....HFIS...HFIS...........HFIS...HFFISIIS..HFIS","....HFIS.......HFFIHHHHHIS.....HFIS.....HFIS...HFIS.HFIH.HFIS.....HFIH...HFIS........HFIS.SIIS......HFIS...........HFFIHHHHHH...................HFIS.......HFIS.....HFIS...HFIS...HHHHH...HFIS...HFIS.HFIH.HFIS","....HFIS.......HFFFIIFFFIS.....HFIS.....HFIS...HFIS.SIIS.HFIS.....HFIS...HFIS.......HFIS...HFIH.....HFIS...........HFFFIIIIIS...................HFIS.......HFIS.....HFIS...HFIS...HFFIS...HFIS...HFIS.SIIS.HFIS","....HFIS.......HFFISSIFFIS.....HFIS.....HFIS...HFIS..HFIHFFIS.....SIIS...HFIS.......HFIS...HFIS.....HFIS...........HFFISSSSSS...................HFIS.......HFIS.....HFIS...HFIS...HFFIS...HFIS...HFIS..HFIHFFIS","....HFIS.......HFIS..HFIS......HFIS.....HFIS...HFIS..SIFFFFIS......HFIH.HFIS........HFIS...SIIS.....HFIS...........HFIS.........................HFIS.......HFIS.....HFIS...HFIS...HFFIS...HFIS...HFIS..SIFFFFIS","....HFIS.......HFIS..SIIS......HFIS.....HFIS...HFIS...HFFFFIS......HFIS.HFIS.......HFIS.....HFIH....HFIS...........HFIS.........................HFIS.......HFIS.....HFIS...HFIS...HFFIS...HFIS...HFIS...HFFFFIS","....HFIS.......HFIS...HFIH.....SIIS.....HFIS...HFIS...SIFFFIS......SIIS.HFIS.......HFFIHHHHHIFIS....HFIS...........HFIS.........................HFIS.......SIIS.....HFIS...SIIS...HFFIS...HFIS...HFIS...SIFFFIS","....HFIS.......HFIS...SIIS......HIS.....HIS....HFIS....HIFFIS.......HFIHFIS........HFISSSSSSSIIS....HFIS...........HFIS.........................HFIS........HIS.....HIS.....HFIH..HFFIS..HFIS....HFIS....HIFFIS","HHHHFFFIHHHH...HFIS....HFIH.....SIIH...HIIS....HFIS....SSIFIS.......SIFFFIS.......HFIS.......HFIH...HFFIHHHHHHHH...HFFIHHHHHHHH.................HFIS........SIIH...HIIS.....SIIS..HFFIS..HFIS....HFIS....SSIFIS","HIIIIIIIIIIS...HIIS....HIIS......SSIHHHISS.....HIIS......HIIS........HIIIS........HIIS.......HIIS...HIIIIIIIIIIS...HIIIIIIIIIIS.................HIIS.........SSIHHHISS.......HIIHHIIIIIHHIIS.....HIIS......HIIS","SSSSSSSSSSSS...SSSS....SSSS........SSSSS.......SSSS......SSSS........SSSSS........SSSS.......SSSS...SSSSSSSSSSSS...SSSSSSSSSSSS.................SSSS...........SSSSS.........SSSSSSSSSSSSSSS.....SSSS......SSSS"]}};
+
+/* Renderer. This is pixel.js's drawSprite with a scale argument and an
+   optional struck shadow; nothing else is different. */
+function drawMark(canvas, s, scale, shadow) {
+  const rows = s.r, h = rows.length, w = rows[0].length;
+  const sh = shadow ? shadow.split(',') : null;
+  const ox = sh ? Math.max(0, +sh[0]) : 0, oy = sh ? Math.max(0, +sh[1]) : 0;
+  canvas.width = w * scale + ox; canvas.height = h * scale + oy;
+  canvas.style.width = canvas.width + 'px'; canvas.style.height = canvas.height + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (sh) {
+    ctx.fillStyle = sh[2];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
+      if (rows[y][x] !== '.') ctx.fillRect(x * scale + ox, y * scale + oy, scale, scale);
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const c = s.p[rows[y][x]];
+    if (!c) continue;
+    ctx.fillStyle = c; ctx.fillRect(x * scale, y * scale, scale, scale);
+  }
+}
+
+/* set a number in the drawn ledger numerals, 3px of tracking */
+function numberSprite(str) {
+  const glyphs = str.split('').map(d => MARKS['d' + d]).filter(Boolean);
+  const h = glyphs[0].r.length, tr = 3;
+  const pal = Object.assign({}, glyphs[0].p);
+  const rows = [];
+  for (let y = 0; y < h; y++) rows.push(glyphs.map(g => g.r[y]).join('.'.repeat(tr)));
+  return { p: pal, r: rows };
+}
+
+document.querySelectorAll('canvas[data-mark]').forEach(c => {
+  const s = MARKS[c.dataset.mark];
+  if (s) drawMark(c, s, +(c.dataset.px || 1), c.dataset.shadow);
+});
+document.querySelectorAll('canvas[data-num]').forEach(c => {
+  drawMark(c, numberSprite(c.dataset.num), +(c.dataset.px || 1), c.dataset.shadow);
+});
+
+/* show the mark's own source, so the format claim is checkable */
+(function () {
+  const el = document.getElementById('markA-src');
+  if (!el) return;
+  const s = MARKS.markA;
+  const pal = Object.entries(s.p).map(([k, v]) => `${k}: '${v}'`).join(', ');
+  el.textContent =
+    "markA: { // IRON VALE — Vale Chisel, " + s.r[0].length + "×" + s.r.length + "\n" +
+    "  p: { " + pal + " },\n  r: [\n" +
+    s.r.map(r => "    '" + r + "',").join('\n') +
+    "\n  ],\n},";
+})();
+
+document.documentElement.setAttribute('data-marks-drawn', '1');
+</script>
+</body></html>

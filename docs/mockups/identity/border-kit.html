@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iron Vale — The Modular Border Kit</title>
+<style>
+/* ============================================================================
+   IRON VALE — IDENTITY EXPLORATION: THE MODULAR BORDER KIT
+   Everything is scoped under .bk so this page can be dropped anywhere.
+   Fonts are the project's own, loaded by relative path.
+   ========================================================================= */
+@font-face{font-family:'qs10';src:url('../../../static/fonts/quanta-strike-10-regular.woff2') format('woff2');font-display:block}
+@font-face{font-family:'qs12';src:url('../../../static/fonts/quanta-strike-12-regular.woff2') format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'qs12';src:url('../../../static/fonts/quanta-strike-12-bold.woff2') format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'qs14';src:url('../../../static/fonts/quanta-strike-14-regular.woff2') format('woff2');font-display:block}
+@font-face{font-family:'qs16';src:url('../../../static/fonts/quanta-strike-16-regular.woff2') format('woff2');font-display:block}
+@font-face{font-family:'qs18';src:url('../../../static/fonts/quanta-strike-18-regular.woff2') format('woff2');font-display:block}
+@font-face{font-family:'qs20';src:url('../../../static/fonts/quanta-strike-20-regular.woff2') format('woff2');font-display:block}
+@font-face{font-family:'PressStart';src:url('../../../static/fonts/pressstart.woff2') format('woff2');font-display:block}
+
+.bk{
+  --bg:#0a0a12; --ink:#d8cfa8; --dim:#958ca8; --dimmer:#776f8e;
+  --gold:#c9a24b; --gold-bright:#f0d080; --red:#c85050; --green:#7ab55c;
+  --blue:#6aa0c8; --purple:#a06ac8;
+  --f10:'qs10',monospace; --f12:'qs12',monospace; --f14:'qs14',monospace;
+  --f16:'qs16',monospace; --f18:'qs18',monospace; --f20:'qs20',monospace;
+  background:var(--bg); color:var(--ink);
+  font-family:var(--f12); font-size:12px; line-height:1.5;
+  -webkit-font-smoothing:none; font-smooth:never;
+  padding:0 0 96px; margin:0; overflow-x:hidden;
+}
+.bk *{box-sizing:border-box}
+.bk img,.bk canvas{image-rendering:pixelated}
+
+/* ---- page scaffolding (deliberately plain; the panels are the subject) ---- */
+.bk .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.bk .hero{padding:56px 20px 40px;border-bottom:2px solid #211f33;margin-bottom:8px;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 15px,rgba(255,255,255,.014) 15px 16px),
+    repeating-linear-gradient(0deg,transparent 0 15px,rgba(255,255,255,.014) 15px 16px);}
+.bk h1{font-family:'PressStart',monospace;font-size:26px;line-height:1.35;margin:0 0 18px;
+  color:var(--gold-bright);text-shadow:3px 3px 0 #3a2c10;letter-spacing:0}
+.bk h2{font-family:var(--f20);font-size:20px;margin:0 0 4px;color:var(--gold-bright);
+  text-transform:uppercase;letter-spacing:1px;font-weight:400}
+.bk h3{font-family:var(--f14);font-size:14px;margin:0 0 6px;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1px;font-weight:400}
+.bk .sec{padding:40px 0 8px}
+.bk .sec>.wrap>h2{position:relative;padding-left:0}
+.bk .kicker{font-family:var(--f10);font-size:10px;color:var(--dimmer);text-transform:uppercase;
+  letter-spacing:2px;margin:0 0 10px}
+.bk p{margin:0 0 12px;max-width:74ch;color:var(--ink)}
+.bk .lede{font-family:var(--f14);font-size:14px;color:var(--dim);max-width:70ch}
+.bk .note{font-family:var(--f10);font-size:10px;color:var(--dimmer);line-height:1.7;max-width:80ch}
+.bk b,.bk strong{color:var(--gold-bright);font-weight:700}
+.bk em{color:var(--blue);font-style:normal}
+.bk hr{border:0;border-top:2px solid #211f33;margin:28px 0}
+.bk code{font-family:var(--f12);font-size:12px;color:var(--green)}
+.bk .row{display:flex;flex-wrap:wrap;gap:24px}
+.bk .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.bk .grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px}
+
+/* ============================ THE KIT ITSELF ============================
+   Nine tiles, nine background layers. No border, no border-image.
+   Corner layers are listed first so they paint over the rails beneath.
+   ---------------------------------------------------------------------- */
+.bk .p9{
+  --s:2;                       /* integer scale: 1 = 8px chrome, 2 = 16px chrome */
+  --u:calc(8px * var(--s));
+  position:relative;
+  padding:calc(var(--u) + 7px) calc(var(--u) + 9px);
+  image-rendering:pixelated;
+  background-image:var(--tl),var(--tr),var(--bl),var(--br),var(--et),var(--eb),var(--el),var(--er),var(--fc);
+  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,repeat-x,repeat-x,repeat-y,repeat-y,repeat;
+  background-position:left top,right top,left bottom,right bottom,
+                      left top,left bottom,left top,right top,left top;
+  background-size:var(--u) var(--u);
+  box-shadow:calc(3px * var(--s)) calc(3px * var(--s)) 0 rgba(0,0,0,.55);
+  color:var(--ink);
+  margin-top:12px;
+}
+.bk .p9.flat{box-shadow:none}
+.bk .p9+.p9{margin-top:calc(var(--u) + 8px)}
+
+/* the title, nailed to the top rail as its own miniature panel */
+.bk .plaque{
+  --s:1; --u:8px;
+  position:absolute; top:calc(-6px); left:20px; z-index:2;
+  padding:2px 9px 3px;
+  image-rendering:pixelated;
+  background-image:var(--tl),var(--tr),var(--bl),var(--br),var(--et),var(--eb),var(--el),var(--er),var(--fc);
+  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,repeat-x,repeat-x,repeat-y,repeat-y,repeat;
+  background-position:left top,right top,left bottom,right bottom,
+                      left top,left bottom,left top,right top,left top;
+  background-size:8px 8px;
+  box-shadow:2px 3px 0 rgba(0,0,0,.6);
+  font-family:var(--f14);font-size:14px;line-height:1;color:var(--gold-bright);
+  text-transform:uppercase;letter-spacing:1px;white-space:nowrap;
+}
+.bk .plaque .nail{position:absolute;top:-7px;width:8px;height:8px;background-size:8px 8px;
+  background-repeat:no-repeat;image-rendering:pixelated}
+.bk .plaque .nail.l{left:3px} .bk .plaque .nail.r{right:3px}
+.bk .p9>.body{position:relative;z-index:1}
+.bk .p9.titled{padding-top:calc(var(--u) + 14px)}
+
+/* overlay ornaments — the things a repeating tile can never do */
+.bk .orn{position:absolute;image-rendering:pixelated;background-repeat:no-repeat;pointer-events:none;z-index:3}
+
+/* ============================ APP CONTENT ==============================
+   Buttons, chips, statbars, tables are lifted from static/style.css and left
+   ALONE on purpose: the kit changes the chrome, not the furniture.
+   ---------------------------------------------------------------------- */
+.bk .btn{background:#2e2a1c;color:var(--gold-bright);border:2px solid;
+  border-color:var(--gold-bright) #7a5f28 #52401c var(--gold);
+  padding:7px 14px;font-family:var(--f12);font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1px;cursor:pointer;
+  box-shadow:0 4px 0 #3a2c10,0 6px 0 rgba(0,0,0,.5);margin:2px 6px 8px 0}
+.bk .btn.green{color:#cfe8bc;border-color:#a6d68a #3f6b2c #2b4a1e #7ab55c;background:#1e2a18}
+.bk .btn.danger{color:#f0b0aa;border-color:#e08a80 #7a2c26 #55201c #c85050;background:#2a1614}
+.bk .btn.small{padding:5px 10px;font-size:12px}
+.bk .chip{display:inline-block;font-family:var(--f10);font-size:10px;padding:1px 6px;
+  border:2px solid #6b5426;background:#2e2a1c;color:var(--gold-bright);letter-spacing:1px;
+  text-transform:uppercase;vertical-align:2px}
+.bk .muted{color:var(--dim)}
+.bk .fine{font-family:var(--f10);font-size:10px;color:var(--dimmer)}
+.bk .rule{border:0;border-top:2px solid #22203a;margin:10px 0}
+.bk table.rpg{width:100%;border-collapse:collapse;font-family:var(--f12);font-size:12px}
+.bk table.rpg td{padding:4px 0;border-bottom:2px solid #22203a}
+.bk table.rpg td:last-child{text-align:right;color:var(--gold-bright)}
+.bk .statbar{display:flex;align-items:center;gap:8px;margin:5px 0}
+.bk .sb-label{font-family:var(--f10);font-size:10px;color:var(--dim);width:32px}
+.bk .sb-track{flex:1;height:10px;background:#0e0e18;border:2px solid;
+  border-color:#211f33 #5a526b #5a526b #211f33}
+.bk .sb-fill{display:block;height:100%}
+.bk .sb-val{font-family:var(--f10);font-size:10px;color:var(--gold-bright);width:22px;text-align:right}
+.bk .formrow{margin:8px 0}
+.bk .formrow label{display:block;font-family:var(--f10);font-size:10px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.bk input[type=text]{font-family:var(--f16);font-size:16px;background:#0e0e18;color:var(--ink);
+  border:2px solid;border-color:#211f33 #5a526b #5a526b #211f33;padding:5px 7px;width:100%}
+.bk .o-struct{font-family:var(--f12);font-size:12px;color:var(--dim);margin:5px 0;line-height:1.7}
+.bk .p-name{font-family:var(--f14);font-size:14px;color:var(--ink);margin-bottom:3px}
+
+/* ============================ REFERENCE SHEET ========================== */
+.bk .sheetbox{display:inline-block;position:relative;padding:0;line-height:0}
+.bk .sheetbox canvas{display:block}
+.bk .sheetbox .grid{position:absolute;inset:0;pointer-events:none}
+.bk .tilecard{display:flex;flex-direction:column;align-items:center;gap:5px}
+.bk .tilecard .lbl{font-family:var(--f10);font-size:10px;color:var(--dimmer);
+  text-transform:uppercase;letter-spacing:1px}
+.bk .tilecard .lbl b{color:var(--gold)}
+.bk .tilegrid{display:grid;grid-template-columns:repeat(3,max-content);gap:12px;justify-content:start}
+.bk .swatchrow{display:flex;gap:0;margin:6px 0 10px;border:2px solid #211f33;width:max-content}
+.bk .swatchrow .sw{width:34px;height:26px;position:relative}
+.bk .swatchrow .sw span{position:absolute;bottom:-16px;left:0;width:34px;text-align:center;
+  font-family:var(--f10);font-size:10px;color:var(--dimmer)}
+.bk .swatchlegend{height:18px}
+
+.bk pre{background:#0e0e18;border:2px solid;border-color:#211f33 #3a3450 #3a3450 #211f33;
+  padding:12px 14px;overflow-x:auto;font-family:var(--f12);font-size:12px;line-height:1.45;
+  color:#9fd08a;margin:0 0 14px;max-height:420px}
+.bk pre .k{color:var(--gold-bright)} .bk pre .c{color:var(--dimmer)}
+.bk details{border:2px solid #211f33;padding:8px 12px;margin:0 0 12px;background:#0e0e18}
+.bk summary{font-family:var(--f12);font-size:12px;color:var(--gold);cursor:pointer;
+  text-transform:uppercase;letter-spacing:1px}
+.bk details[open] summary{margin-bottom:10px}
+
+/* measurement table */
+.bk table.data{border-collapse:collapse;font-family:var(--f10);font-size:10px;margin:8px 0 16px;
+  width:100%;max-width:760px}
+.bk table.data th{text-align:left;color:var(--gold);font-weight:400;text-transform:uppercase;
+  letter-spacing:1px;border-bottom:2px solid #3a3450;padding:5px 10px 5px 0}
+.bk table.data td{padding:5px 10px 5px 0;border-bottom:2px solid #1a1828;color:var(--dim)}
+.bk table.data td.ok{color:var(--green)} .bk table.data td.bad{color:var(--red)}
+
+/* legend */
+.bk .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.bk .legend .li{display:flex;gap:12px;align-items:flex-start}
+.bk .legend .chipmat{width:48px;height:48px;flex:0 0 48px;image-rendering:pixelated;
+  background-size:16px 16px}
+.bk .legend .li .t{font-family:var(--f14);font-size:14px;color:var(--gold-bright);
+  text-transform:uppercase;letter-spacing:1px}
+.bk .legend .li .d{font-family:var(--f10);font-size:10px;color:var(--dim);line-height:1.6}
+
+/* phone frame */
+.bk .phone{width:min(390px,100%);border:2px solid #3a3450;background:var(--bg);
+  padding:0;position:relative;overflow:hidden}
+.bk #phones>div{max-width:100%;min-width:0}
+.bk .phone .status{font-family:var(--f10);font-size:10px;color:var(--dimmer);
+  padding:5px 12px;border-bottom:2px solid #211f33;display:flex;justify-content:space-between}
+.bk .phone .app{padding:10px 10px 24px}
+.bk .phone.bleed .app{padding:10px 0 24px}
+
+/* annotation wall */
+.bk .wall{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:0;
+  border:2px solid #211f33}
+.bk .wall .col{padding:18px 20px;border-right:2px solid #211f33}
+.bk .wall .col:last-child{border-right:0}
+.bk .wall h3{margin-bottom:10px;font-family:var(--f18);font-size:18px}
+.bk .wall ul{margin:0;padding:0;list-style:none}
+.bk .wall li{font-family:var(--f10);font-size:10px;color:var(--dim);line-height:1.75;
+  padding:0 0 9px 14px;position:relative}
+.bk .wall li:before{content:'\25B8';position:absolute;left:0;color:var(--gold)}
+.bk .wall li b{color:var(--ink)}
+
+@media (max-width:719px){
+  .bk h1{font-size:26px}
+  .bk .wall .col{border-right:0;border-bottom:2px solid #211f33}
+  .bk .wrap{padding:0 12px}
+}
+</style>
+</head>
+<body class="bk">
+
+<div class="hero"><div class="wrap">
+  <div class="kicker">Iron Vale &middot; identity exploration &middot; option: modular assets</div>
+  <h1>THE MODULAR<br>BORDER KIT</h1>
+  <p class="lede">Panels stop being CSS and become drawn art. A hand-placed nine-slice
+  &mdash; four corners, four rails, one fill, eight pixels square &mdash; means one panel can be
+  riveted iron and the next carved oak, at no layout cost.</p>
+  <p class="note" style="margin-top:14px">A box-shadow ring can only ever draw a rectangle of uniform thickness.
+  That is precisely why every panel in Iron Vale looks like every other panel, and why the chrome reads
+  machine-made: the machine had no other move available. A tile kit gives the corners somewhere to
+  put a nail.</p>
+</div></div>
+
+<!-- ===================== 1. THE FOUR MATERIALS ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">01 &middot; the materials</div>
+  <h2>Four sets, cut from one grammar</h2>
+  <p>A material in this kit is <b>eight colours and one corner stamp</b>. The eight colours are a
+  <em>band profile</em> read outer&rarr;inner: rim, chamfer, four face rows, inner shade, inner rim.
+  Every rail and every corner is generated from that profile by a single rule &mdash; a pixel's colour is
+  <code>P[min(distance to each outer edge)]</code>. That gives concentric bands, which is a frame; grain
+  therefore always runs <em>along</em> the rail, the way a plank is actually cut. Two hand-placed things
+  finish the corner: the <em>mitre seam</em>, one diagonal pixel run where the two rails meet, and a
+  <em>catch light</em> on the chamfer's corner, because a chamfer catches more light at a corner than
+  along a run. The ornament is then driven straight through the seam &mdash; which is exactly what a peg
+  is for.</p>
+  <div id="matgrid" class="grid4" style="margin-top:22px"></div>
+</div></div>
+
+<!-- ===================== 2. THE TILE SHEET ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">02 &middot; the sheet</div>
+  <h2>The sheet, drawn</h2>
+  <p>Each set is a 24&times;24 sheet: nine 8&times;8 tiles laid out the way a nine-slice expects them.
+  Shown at 10&times; with a pixel grid; the heavy lines are tile boundaries.</p>
+  <div id="sheets" class="row" style="margin-top:20px;gap:34px"></div>
+
+  <h3 style="margin-top:40px">Iron, tile by tile</h3>
+  <p class="note">The reference set, broken out. Note that <code>t</code> and <code>b</code> are not the
+  same tile and <code>l</code> and <code>r</code> are not the same tile: the chamfer stays on the outside
+  and the shade stays in the well, so the frame reads as a real chamfered ring viewed straight on rather
+  than as a lit object with a confused sun.</p>
+  <div id="ironbreak" class="tilegrid" style="margin-top:16px"></div>
+</div></div>
+
+<!-- ===================== 3. THE DATA ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">03 &middot; the data</div>
+  <h2>Ships in the project's own sprite format</h2>
+  <p>Every tile below is expressed exactly as <code>static/js/pixel.js</code> expects it &mdash; a palette
+  map plus row strings, <code>'.'</code> transparent. This is transcribable into <code>SPRITES</code>
+  as-is; nothing new needs to be invented to hold it.</p>
+  <p class="note">In practice you would not paste 36 tiles. The whole kit is 4 profiles, 4 corner stamps
+  and 4 rail marks &mdash; about 40 hand-placed pixels per material &mdash; and the 36 tiles are generated
+  from those at boot, the same way monsters are generated from DNA. Both forms are given here: the
+  generator inputs, then the expanded tiles.</p>
+  <h3 style="margin-top:26px">Generator inputs &mdash; what a person actually authors</h3>
+  <pre id="src-inputs"></pre>
+  <div id="src-tiles"></div>
+</div></div>
+
+<!-- ===================== 4. SAME PANEL, FOUR WAYS ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">04 &middot; modularity</div>
+  <h2>The same panel, four ways</h2>
+  <p>One screen's content &mdash; the Hall of Records body page &mdash; wearing each set in turn.
+  Identical markup, identical padding, identical furniture. Only the nine background layers change.</p>
+  <div id="fourways" class="grid4" style="margin-top:22px"></div>
+</div></div>
+
+<!-- ===================== 5. MATERIAL HAS MEANING ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">05 &middot; the rule</div>
+  <h2>Material has meaning</h2>
+  <p>A kit that assigns materials at random is a skin. A kit that assigns them by <em>what the place
+  is</em> is an identity &mdash; the player learns to read the frame before they read the words, and a
+  panel arriving in iron is already a warning.</p>
+  <div id="legend" class="legend" style="margin-top:20px"></div>
+  <p class="note" style="margin-top:22px"><b>The one rule:</b> material follows permanence and consequence,
+  never screen or feature. The Undercroft's shop panel is canvas, because Pip pitches it and strikes it;
+  the Undercroft's gate is stone, because it was there before Pip. Toasts and tooltips are always canvas
+  &mdash; they are pitched for a moment and taken down &mdash; which is why a toast never needs to explain
+  that it is temporary.</p>
+</div></div>
+
+<!-- ===================== 6. CORNERS ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">06 &middot; the detail budget</div>
+  <h2>Corners are where the money goes</h2>
+  <p>A rail repeats, so a rail must stay quiet. A corner appears exactly once per panel per corner,
+  so a corner can afford to be a specific object. Shown at 6&times;.</p>
+  <div id="corners" class="row" style="margin-top:20px;gap:30px"></div>
+
+  <h3 style="margin-top:38px">Ornaments that a repeating tile can never do</h3>
+  <p>These are overlay sprites, positioned once, sitting above the rails. They are the reason the kit is
+  a kit and not a texture: the wax ran down <em>this</em> panel's left rail, on <em>this</em> evening.</p>
+  <div id="ornaments" class="grid2" style="margin-top:20px;grid-template-columns:repeat(auto-fit,minmax(min(430px,100%),1fr))"></div>
+</div></div>
+
+<!-- ===================== 7. COMPOSABILITY ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">07 &middot; composability</div>
+  <h2>Every aspect ratio the app throws at it</h2>
+  <div id="compose"></div>
+</div></div>
+
+<!-- ===================== 8. PHONE ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">08 &middot; the phone case</div>
+  <h2>390 wide, where chrome costs real money</h2>
+  <p>Two 16px rails eat 32 of 390. The answer is not to thin the kit &mdash; it is to notice that the rail
+  <em>is</em> the padding. Today's <code>.win</code> spends 2px of border plus 14px of padding on each
+  side. The kit spends 16px of rail plus 7px of gap. Net cost: <b>14px of the 390</b>, and it buys the
+  entire identity. Bleeding the panels to the screen edge on phone gives back 20 of those 14 and reads
+  more like a game, not less.</p>
+  <div id="phones" class="row" style="margin-top:22px;gap:26px;align-items:flex-start"></div>
+</div></div>
+
+<!-- ===================== 9. THE CSS / THE MEASUREMENT ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">09 &middot; the mechanism</div>
+  <h2>How nine tiles become a panel &mdash; and which CSS actually survives</h2>
+  <p>The obvious answer is <code>border-image</code>. I tested it rather than trusting it, and the
+  obvious answer is the wrong one. Measurements below are real: Chromium 141, tiles rendered, the page
+  screenshotted, the screenshot's pixels read back and run-length counted across the top rail. A rail is
+  <b>exact</b> when every source pixel became a run of identical length.</p>
+
+  <h3 style="margin-top:26px">border-image, measured</h3>
+  <table class="data">
+    <tr><th>repeat mode</th><th>DPR 1</th><th>DPR 2</th><th>DPR 3</th><th>what goes wrong</th></tr>
+    <tr><td><code>repeat</code></td><td class="bad">exact only at even widths</td><td class="ok">always exact</td>
+        <td class="bad">exact only at even widths</td><td>the tiling is <em>centred</em> in the run, so an odd
+        remainder puts the phase on a half pixel and every tile in the rail jitters 1px</td></tr>
+    <tr><td><code>round</code></td><td class="bad">never exact</td><td class="bad">never exact</td>
+        <td class="bad">never exact</td><td>rescales the tile to fit a whole number of repeats &rarr;
+        non-integer scale &rarr; source pixels become blocks of 1 and 2</td></tr>
+    <tr><td><code>stretch</code></td><td class="bad">no</td><td class="bad">no</td><td class="bad">no</td>
+        <td>a source pixel became a 25px smear at width 200</td></tr>
+    <tr><td><code>space</code></td><td class="bad">never exact</td><td class="bad">never exact</td>
+        <td class="bad">never exact</td><td>inserts gaps between tiles; the rail develops holes</td></tr>
+  </table>
+  <p class="note"><b>The surprise:</b> DPR 2 saves <code>repeat</code> completely &mdash; the half-CSS-pixel
+  centring offset lands on a whole device pixel, so every width is exact. That means border-image looks
+  perfect on every modern phone and perfect in these very screenshots, and quietly wrong on a 1&times;
+  desktop monitor at odd panel widths. That is the worst possible failure mode: invisible to whoever
+  builds it.</p>
+
+  <h3 style="margin-top:30px">Nine background layers, measured</h3>
+  <p><code>background-repeat</code> anchors its phase to the element's origin instead of centring it.
+  Measured across the same widths: <b>exact at DPR 1, 2 and 3, at every width tried, with no conditions.</b>
+  So the kit is built from nine background layers on one element &mdash; which is also, pleasingly, literal:
+  the nine-slice is nine slices.</p>
+  <pre id="src-css"></pre>
+  <p class="note">No extra DOM. No <code>border</code> at all &mdash; the rails are painted, and
+  <code>padding</code> holds the content off them. Corner layers are listed first because in CSS the first
+  background layer paints on top, so the corners cover the rails running underneath them. The
+  <code>6px 6px 0</code> cast shadow survives untouched; it just moves to <code>8px 8px</code> so the whole
+  panel, chrome and shadow, sits on one 8px grid.</p>
+</div></div>
+
+<!-- ===================== 10. ANNOTATION WALL ===================== -->
+<div class="sec"><div class="wrap">
+  <div class="kicker">10 &middot; honestly</div>
+  <h2>What this changes, keeps, and costs</h2>
+  <div class="wall" style="margin-top:18px">
+    <div class="col">
+      <h3>What it changes</h3>
+      <ul>
+        <li><b>Panels become art.</b> <code>.win</code>'s three stacked box-shadow rings are deleted and
+        replaced by nine background layers pointing at sprite data.</li>
+        <li><b>Corners carry objects.</b> A rivet, a peg, a grommet, a chisel peck &mdash; things a
+        <code>border-width</code> cannot express at any thickness.</li>
+        <li><b>The title stops being a cutout.</b> <code>.win-title</code>'s <code>top:-14px</code>
+        notch over <code>var(--bg)</code> cannot survive a 16px rail. It becomes a plaque nailed to the
+        rail: same span, same text, new rule.</li>
+        <li><b>Material becomes vocabulary.</b> Four sets, assigned by permanence and consequence, learned
+        in about three screens.</li>
+        <li><b>Chrome thickness doubles</b>, 2px &rarr; 16px, and the panel starts to feel like an
+        object with a front and a back.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>What it keeps</h3>
+      <ul>
+        <li><b>Every button, chip, statbar, table and input is untouched.</b> The bevel-key idiom is the
+        best thing in the current stylesheet; the kit changes the room, not the furniture.</li>
+        <li><b>Square corners, no radius, no blur.</b> The kit is more rectangular than what it replaces,
+        not less.</li>
+        <li><b>The palette.</b> Every colour here is from <code>assets/palettes/town_palette.png</code>
+        or <code>base.png</code>, or is an existing token. The rim colour is literally
+        <code>--bg</code>, so panels still float on the same void.</li>
+        <li><b>The cast shadow</b> and the fixed vignette, unchanged.</li>
+        <li><b>The fonts</b> at native pixel sizes, unchanged. <code>quanta-strike-18</code> and
+        <code>-20</code> finally have a job: section headings.</li>
+        <li><b>The sprite pipeline.</b> Tiles are <code>{p,r}</code> rows in <code>pixel.js</code>,
+        rendered by the same canvas path as every monster.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>What it costs</h3>
+      <ul>
+        <li><b>Authoring.</b> Not 36 tiles &mdash; 4 profiles, 4 stamps, 4 rail marks. But every new
+        material is a real drawing decision and there is no shortcut for the first pass on each.</li>
+        <li><b>border-image is out.</b> Measured, not assumed: no repeat mode is pixel-exact across DPRs.
+        The nine-layer background approach costs one long <code>background-image</code> declaration
+        instead.</li>
+        <li><b>The rail phase does not meet the corner.</b> When a panel's width is not a multiple of 16,
+        the last rail tile is clipped where the corner starts. On stone this reads as a closer stone; on
+        canvas as a cut hem. It is a reading, not a fix.</li>
+        <li><b>Asymmetric sides need a second layer.</b> A torn bottom hem or a knocked-off corner cannot
+        come from the nine-slice &mdash; those are positioned overlay sprites. Fine, but it is more DOM.</li>
+        <li><b>~30 panel-ish classes in the stylesheet.</b> They do not all convert. Proposed triage:
+        <code>.win</code> and the raised surfaces take the kit at 2&times;; menus, toasts, bubbles and
+        tooltips take it at 1&times;; rows, dividers, cards and chips keep the existing 2px bevel and are
+        not touched at all. That is two new rules and an audit, not a rewrite &mdash; but the audit is real
+        work and will surface three or four surfaces that are neither.</li>
+        <li><b>Below ~40px of content the ornament turns to mush.</b> At 1&times; a rivet is 4 screen
+        pixels wide. Handled by stopping rather than shrinking: under that, a surface is a chip, not a
+        panel, and keeps the existing 2px bevel. Shown breaking, on purpose, in section 07.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:26px">One thing this option deliberately does <em>not</em> do: it does
+  not touch layout, spacing rhythm, navigation, or a single line of copy. It is a chrome swap. That is
+  either its great virtue or its limit, depending on how much of the &ldquo;looks AI&rdquo; problem lives
+  in the chrome &mdash; and the honest answer is: some of it, not all of it.</p>
+</div></div>
+
+<script>
+/* =========================================================================
+   THE KIT — data and generator
+   ====================================================================== */
+const T = 8;
+
+/* Four materials. P = band profile, outer -> inner, 8 entries.
+   stamp = 4x4 corner ornament ('.' keeps the frame beneath).
+   mark  = per-rail overrides, expressed as {band, at:[positions], color}.  */
+const MATERIALS = {
+  iron: {
+    name: 'IRON', tag: 'riveted plate',
+    P: ['#0a0a12','#7d8091','#585b65','#484a53','#3f414a','#484a53','#26262f','#0a0a12'],
+    fill: '#14141f', fleck: '#1c1c2b',
+    catch: '#9ea1b2', seam: '#303239',
+    stampPal: { o:'#71747f', R:'#adb0be', s:'#2b2d35' },
+    stamp: [ 'oRo', 'RRs', 'oss' ],
+    marks: [ {band:[1,2,3,4,5,6], at:[0], color:'#33333f'},
+             {band:[3,4], at:[3,4], color:'#8e91a0'},
+             {band:[5], at:[3,4], color:'#2e3038'} ],
+    domain: 'the Forge &middot; the Undercroft &middot; the Colosseum &middot; the Siege',
+    why: 'anything that can hurt you',
+  },
+  oak: {
+    name: 'OAK', tag: 'pegged joint',
+    P: ['#0a0a12','#8c6a3e','#6f5230','#5a4126','#4e381f','#5a4126','#2c1f11','#0a0a12'],
+    fill: '#17121e', fleck: '#1e1826',
+    catch: '#a97f4b', seam: '#33240f',
+    stampPal: { P:'#ab8541', p:'#5c451f' },
+    stamp: [ 'PPp', 'PPp', 'ppp' ],
+    marks: [ {band:[3,4], at:[5], color:'#3f2c18'},
+             {band:[2], at:[1,2,6], color:'#7d5c36'},
+             {band:[5], at:[3], color:'#4a341c'} ],
+    domain: 'the Hall of Records &middot; Doctrines &middot; the Scrivener &middot; the Almanac',
+    why: 'anything written down and kept',
+  },
+  stone: {
+    name: 'STONE', tag: 'coursed ashlar',
+    P: ['#0a0a12','#7a7468','#5c584e','#4a4740','#413e38','#4a4740','#232219','#0a0a12'],
+    fill: '#15151c', fleck: '#1c1c24',
+    catch: '#918a7b', seam: '#2b2924',
+    stampPal: { C:'#918a7b', d:'#2f2d27' },
+    stamp: [ 'ddd', 'dCd', 'ddd' ],
+    marks: [ {band:[1,2,3,4,5,6], at:[0], color:'#1c1a15'},
+             {band:[3], at:[3], color:'#666256'},
+             {band:[4], at:[6], color:'#37342e'},
+             {band:[2], at:[4], color:'#37342e'} ],
+    domain: 'the Undercroft gate &middot; the Vault &middot; the Long Road &middot; Settings',
+    why: 'anything that does not move',
+  },
+  canvas: {
+    name: 'CANVAS', tag: 'grommet & lacing',
+    P: ['#0a0a12','#a99c70','#847a52','#6b6342','#5f583b','#6b6342','#2f2c1c','#0a0a12'],
+    fill: '#171420', fleck: '#1f1b28',
+    catch: '#c4b784', seam: '#3c3826',
+    stampPal: { G:'#8c8fae', h:'#0f0e14' },
+    stamp: [ 'GGG', 'GhG', 'GGG' ],
+    marks: [ {band:[1], at:[2,3], color:'#d8cfa8'},
+             {band:[1], at:[6,7], color:'#d8cfa8'},
+             {band:[6], at:[0], color:'#4a4430'},
+             {band:[3,4], at:[0], color:'#7c7350'} ],
+    domain: 'the Crankwerk &middot; the Menagerie &middot; market stalls &middot; toasts',
+    why: 'anything pitched for the day and struck at dusk',
+  },
+};
+
+/* ---- the one rule that makes the frame: Chebyshev distance to the outside --- */
+const BANDFN = {
+  tl:(r,c)=>Math.min(r,c),        tr:(r,c)=>Math.min(r,T-1-c),
+  bl:(r,c)=>Math.min(T-1-r,c),    br:(r,c)=>Math.min(T-1-r,T-1-c),
+  t:(r)=>r,                       b:(r)=>T-1-r,
+  l:(r,c)=>c,                     r:(r,c)=>T-1-c,
+};
+const CORNERS = ['tl','tr','bl','br'], EDGES = ['t','b','l','r'];
+
+/* mark placement: band index counts from the OUTER edge, position runs along the rail */
+function markCell(side, band, pos){
+  if (side === 't') return [band, pos];
+  if (side === 'b') return [T-1-band, pos];
+  if (side === 'l') return [pos, band];
+  return [pos, T-1-band];               // 'r'
+}
+
+function buildTiles(m){
+  const t = {};
+  for (const k of CORNERS.concat(EDGES)) {
+    const g = [];
+    for (let r=0;r<T;r++){ const row=[]; for(let c=0;c<T;c++) row.push(m.P[BANDFN[k](r,c)]); g.push(row); }
+    t[k] = g;
+  }
+  // fill: quiet base with two flecks, so a big panel is not dead flat
+  t.c = [];
+  for (let r=0;r<T;r++){ const row=[]; for(let c=0;c<T;c++)
+    row.push(((r===2&&c===5)||(r===6&&c===1)) ? m.fleck : m.fill); t.c.push(row); }
+  // rail marks
+  for (const side of EDGES) for (const mk of m.marks) for (const b of mk.band) for (const p of mk.at) {
+    const [r,c] = markCell(side, b, p); t[side][r][c] = mk.color;
+  }
+  // corner stamps at offset (2,2), mirrored per corner, and one catch-light
+  // pixel where the chamfer turns the corner — the point of a chamfer is that
+  // the corner catches more light than the run does.
+  const N = m.stamp.length;
+  for (const k of CORNERS) {
+    const fh = (k==='tr'||k==='br'), fv = (k==='bl'||k==='br');
+    // the mitre seam: the diagonal where two rails actually meet
+    for (let d=2; d<=6; d++){
+      const rr = fv ? T-1-d : d, cc = fh ? T-1-d : d;
+      t[k][rr][cc] = m.seam;
+    }
+    for (let r=0;r<N;r++) for (let c=0;c<N;c++){
+      const ch = m.stamp[r][c]; if (ch === '.') continue;
+      const rr = 2 + (fv ? N-1-r : r), cc = 2 + (fh ? N-1-c : c);
+      t[k][rr][cc] = m.stampPal[ch];
+    }
+    const cr = fv ? T-2 : 1, cc2 = fh ? T-2 : 1;
+    t[k][cr][cc2] = m.catch;
+  }
+  return t;
+}
+
+/* ---- raster helpers ---- */
+function tileCanvas(grid, scale){
+  const rows = grid.length, cols = grid[0].length, cv = document.createElement('canvas');
+  cv.width = cols*scale; cv.height = rows*scale;
+  const x = cv.getContext('2d');
+  for (let r=0;r<rows;r++) for (let c=0;c<grid[r].length;c++){
+    const v = grid[r][c]; if (!v) continue; x.fillStyle = v; x.fillRect(c*scale, r*scale, scale, scale);
+  }
+  return cv;
+}
+const url = (grid) => 'url(' + tileCanvas(grid,1).toDataURL() + ')';
+/* lay one sprite over another, for showing an overlay's real result */
+function overlay(base, over, dr, dc){
+  const g = base.map(r => r.slice());
+  for (let r=0;r<over.length;r++) for (let c=0;c<over[r].length;c++){
+    const v = over[r][c]; if (v == null) continue;
+    const rr = r + (dr||0), cc = c + (dc||0);
+    if (g[rr] && g[rr][cc] !== undefined) g[rr][cc] = v;
+  }
+  return g;
+}
+
+const KITS = {};
+for (const key in MATERIALS) {
+  const tiles = buildTiles(MATERIALS[key]);
+  KITS[key] = { tiles, css: {
+    '--tl':url(tiles.tl), '--tr':url(tiles.tr), '--bl':url(tiles.bl), '--br':url(tiles.br),
+    '--et':url(tiles.t),  '--eb':url(tiles.b),  '--el':url(tiles.l),  '--er':url(tiles.r),
+    '--fc':url(tiles.c),
+  }};
+}
+function dress(el, mat){ const c = KITS[mat].css; for (const k in c) el.style.setProperty(k, c[k]); return el; }
+
+/* build a .p9 panel */
+function panel(mat, innerHTML, opts){
+  opts = opts || {};
+  const d = document.createElement('div');
+  d.className = 'p9' + (opts.title ? ' titled' : '') + (opts.cls ? ' '+opts.cls : '');
+  if (opts.scale) d.style.setProperty('--s', opts.scale);
+  if (opts.style) d.setAttribute('style', (d.getAttribute('style')||'') + ';' + opts.style);
+  dress(d, mat);
+  let h = '';
+  if (opts.title){
+    h += '<span class="plaque" data-mat="'+(opts.titleMat||mat)+'">'
+      +  '<i class="nail l"></i><i class="nail r"></i>' + opts.title + '</span>';
+  }
+  h += '<div class="body">' + innerHTML + '</div>';
+  d.innerHTML = h;
+  const pl = d.querySelector('.plaque');
+  if (pl){
+    dress(pl, pl.dataset.mat);
+    const nailUrl = url(SPR.nail);
+    pl.querySelectorAll('.nail').forEach(n => n.style.backgroundImage = nailUrl);
+  }
+  return d;
+}
+
+/* =========================================================================
+   HAND-AUTHORED OVERLAY SPRITES — the things a repeating tile cannot do
+   ====================================================================== */
+function spr(pal, rows){ return rows.map(row => Array.from(row).map(ch => ch==='.'?null:pal[ch])); }
+const SPR = {
+  // a nail the plaque hangs from
+  nail: spr({n:'#5c5f6b', N:'#c2c4d0', s:'#1a1a22'}, [
+    '........','..nnn...','.nNNNn..','.nNsNn..','..nsn...','...s....','........','........' ]),
+  // candle wax, run down a left rail overnight — 6 wide, 20 tall
+  wax: spr({W:'#efe6c4', w:'#c9bd97', s:'#8b8165'}, [
+    '..WW..','..WW..','.WWWw.','.WWWw.','.WWww.','..Www.','..Ww..','..Ww..',
+    '..Ww..','.WWWw.','.WWWw.','..Www.','..Ww..','..Ww..','.WWWw.','.WWWWw',
+    '.WWWWw','.wWWw.','..ss..','..s...' ]),
+  // rope lashing, tied over a canvas corner
+  lash: spr({R:'#c8b07a', r:'#8a7448', d:'#54462a'}, [
+    'rr......rr','.RR....RR.','..rr..rr..','...RRRR...','....rr....',
+    '....RR....','...rrrr...','..RR..RR..','.rr....rr.','RR......RR' ]),
+  // a stone corner with a chunk knocked off. It cannot erase the tile beneath it,
+  // so the "missing" pixels are painted --bg — which only reads as absence because
+  // Iron Vale panels float on a flat void. Honest trick, stated as one.
+  chip: spr({v:'#0a0a12', F:'#8a8478', f:'#67635a'}, [
+    'vvvvvFf.','vvvvvFf.','vvvvFf..','vvvFFf..',
+    'vvFf....','vvFf....','vFf.....','Ff......' ]),
+  // a torn hem for canvas, laid under the bottom rail
+  torn: spr({t:'#4a4430', T:'#6d6446'}, [ 'TtTttTtT','t.tt.t.t','..t..t..' ]),
+};
+
+/* =========================================================================
+   PAGE BUILD
+   ====================================================================== */
+const $ = s => document.querySelector(s);
+const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls)e.className=cls;
+  if(html!=null)e.innerHTML=html; return e; };
+
+/* ---- 01: material cards ---- */
+(function(){
+  const host = $('#matgrid');
+  for (const key in MATERIALS){
+    const m = MATERIALS[key];
+    const card = el('div');
+    card.appendChild(el('div','kicker', m.name + ' <span style="color:#776f8e">&mdash; ' + m.tag + '</span>'));
+    const sw = el('div','swatchrow');
+    m.P.forEach((c,i) => { const s = el('div','sw'); s.style.background = c;
+      s.appendChild(el('span',null,String(i))); sw.appendChild(s); });
+    card.appendChild(sw);
+    card.appendChild(el('div','swatchlegend'));
+    const demo = panel(key, '<div class="fine" style="color:#958ca8;line-height:1.7">'
+      + 'rim &middot; chamfer &middot; four face rows &middot; inner shade &middot; inner rim.<br>'
+      + 'One profile. Eight colours. Every tile.</div>');
+    demo.style.marginTop = '4px';
+    card.appendChild(demo);
+    host.appendChild(card);
+  }
+})();
+
+/* ---- 02: sheets + iron breakout ---- */
+function sheetEl(mat, scale){
+  const tiles = KITS[mat].tiles;
+  const box = el('div','sheetbox');
+  const cv = document.createElement('canvas');
+  cv.width = 24*scale; cv.height = 24*scale;
+  const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
+  const order = [['tl',0,0],['t',1,0],['tr',2,0],['l',0,1],['c',1,1],['r',2,1],['bl',0,2],['b',1,2],['br',2,2]];
+  for (const [k,cx,cy] of order){
+    const g = tiles[k];
+    for (let r=0;r<8;r++) for (let c=0;c<8;c++){
+      x.fillStyle = g[r][c]; x.fillRect((cx*8+c)*scale, (cy*8+r)*scale, scale, scale);
+    }
+  }
+  box.appendChild(cv);
+  const grid = el('div','grid');
+  grid.style.background =
+    'repeating-linear-gradient(90deg,transparent 0 '+(scale-1)+'px,rgba(255,255,255,.10) '+(scale-1)+'px '+scale+'px),'+
+    'repeating-linear-gradient(0deg,transparent 0 '+(scale-1)+'px,rgba(255,255,255,.10) '+(scale-1)+'px '+scale+'px),'+
+    'repeating-linear-gradient(90deg,transparent 0 '+(8*scale-2)+'px,rgba(240,208,128,.55) '+(8*scale-2)+'px '+(8*scale)+'px),'+
+    'repeating-linear-gradient(0deg,transparent 0 '+(8*scale-2)+'px,rgba(240,208,128,.55) '+(8*scale-2)+'px '+(8*scale)+'px)';
+  box.appendChild(grid);
+  return box;
+}
+(function(){
+  const host = $('#sheets');
+  for (const key in MATERIALS){
+    const col = el('div','tilecard');
+    col.appendChild(sheetEl(key, 10));
+    col.appendChild(el('div','lbl','<b>'+MATERIALS[key].name+'</b> &middot; 24&times;24 &middot; 9 tiles'));
+    host.appendChild(col);
+  }
+  const NAMES = { tl:'tl &mdash; corner', t:'t &mdash; top rail', tr:'tr &mdash; corner',
+    l:'l &mdash; left rail', c:'c &mdash; fill', r:'r &mdash; right rail',
+    bl:'bl &mdash; corner', b:'b &mdash; bottom rail', br:'br &mdash; corner' };
+  const bh = $('#ironbreak');
+  ['tl','t','tr','l','c','r','bl','b','br'].forEach(k => {
+    const card = el('div','tilecard');
+    const box = el('div','sheetbox');
+    box.appendChild(tileCanvas(KITS.iron.tiles[k], 14));
+    const g = el('div','grid');
+    g.style.background =
+      'repeating-linear-gradient(90deg,transparent 0 13px,rgba(255,255,255,.12) 13px 14px),'+
+      'repeating-linear-gradient(0deg,transparent 0 13px,rgba(255,255,255,.12) 13px 14px)';
+    g.style.outline = '2px solid rgba(240,208,128,.35)';
+    box.appendChild(g);
+    card.appendChild(box);
+    card.appendChild(el('div','lbl', NAMES[k]));
+    bh.appendChild(card);
+  });
+})();
+
+/* ---- 03: the data, in pixel.js format ---- */
+function toSpriteData(grid){
+  const pool = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const map = new Map(); let n = 0;
+  const rows = grid.map(row => row.map(v => {
+    if (v == null) return '.';
+    if (!map.has(v)) map.set(v, pool[n++]);
+    return map.get(v);
+  }).join(''));
+  const p = {}; for (const [hex,ch] of map) p[ch] = hex;
+  return { p, r: rows };
+}
+function fmtSprite(key, grid, indent){
+  const d = toSpriteData(grid);
+  const pal = Object.keys(d.p).map(ch => ch + ": '" + d.p[ch] + "'").join(', ');
+  return indent + '<span class="k">' + key + '</span>: {\n'
+    + indent + "  p: { " + pal + ' },\n'
+    + indent + '  r: [\n'
+    + d.r.map(r => indent + "    '" + r + "',").join('\n') + '\n'
+    + indent + '  ],\n' + indent + '},\n';
+}
+(function(){
+  let s = '<span class="c">// static/js/pixel.js — the whole kit, as authored</span>\n';
+  s += 'const BORDER_KITS = {\n';
+  for (const key in MATERIALS){
+    const m = MATERIALS[key];
+    s += "  <span class=\"k\">" + key + "</span>: {\n";
+    s += "    profile: ['" + m.P.join("', '") + "'],   <span class=\"c\">// outer -> inner</span>\n";
+    s += "    fill: '" + m.fill + "', fleck: '" + m.fleck + "',\n";
+    s += "    catch: '" + m.catch + "', seam: '" + m.seam + "',   <span class=\"c\">// corner only</span>\n";
+    s += "    stamp: { p: { " + Object.keys(m.stampPal).map(c=>c+": '"+m.stampPal[c]+"'").join(', ') + " },\n";
+    s += "             r: ['" + m.stamp.join("', '") + "'] },\n";
+    s += "    marks: " + JSON.stringify(m.marks).replace(/"/g,"'") + ",\n";
+    s += "  },\n";
+  }
+  s += '};\n\n<span class="c">// one rule builds all 36 tiles from the above:</span>\n';
+  s += "<span class=\"c\">//   px(r,c) = profile[ min(distance from r,c to each OUTER edge of the tile) ]</span>\n";
+  s += "<span class=\"c\">// then, on corners only: a mitre seam down the diagonal, a catch light on the</span>\n";
+  s += "<span class=\"c\">// chamfer corner, and the 3x3 stamp driven through the seam.</span>\n";
+  $('#src-inputs').innerHTML = s;
+
+  const host = $('#src-tiles');
+  let first = true;
+  for (const key in MATERIALS){
+    const det = el('details');
+    if (first) { det.setAttribute('open',''); first = false; }
+    det.appendChild(el('summary','', 'Expanded tiles &mdash; ' + MATERIALS[key].name
+      + ' (9 sprites, paste-ready)'));
+    let code = '<span class="c">// SPRITES additions — kit: ' + key + '</span>\n';
+    ['tl','t','tr','l','c','r','bl','b','br'].forEach(k => {
+      code += fmtSprite('kit_' + key + '_' + k, KITS[key].tiles[k], '');
+    });
+    const pre = el('pre'); pre.innerHTML = code;
+    det.appendChild(pre);
+    host.appendChild(det);
+  }
+
+  $('#src-css').innerHTML =
+'<span class="c">/* the panel — nine background layers, no border at all */</span>\n' +
+'.win {\n' +
+'  <span class="k">--s</span>: 2;                     <span class="c">/* integer scale; 2 = 16px chrome */</span>\n' +
+'  <span class="k">--u</span>: calc(8px * var(--s));\n' +
+'  position: relative;\n' +
+'  padding: calc(var(--u) + 7px) calc(var(--u) + 9px);\n' +
+'  image-rendering: pixelated;\n' +
+'  background-image:\n' +
+'    var(--tl), var(--tr), var(--bl), var(--br),      <span class="c">/* corners paint first = on top */</span>\n' +
+'    var(--et), var(--eb), var(--el), var(--er),      <span class="c">/* rails run underneath */</span>\n' +
+'    var(--fc);                                       <span class="c">/* fill */</span>\n' +
+'  background-repeat:\n' +
+'    no-repeat, no-repeat, no-repeat, no-repeat,\n' +
+'    repeat-x, repeat-x, repeat-y, repeat-y, repeat;\n' +
+'  background-position:\n' +
+'    left top, right top, left bottom, right bottom,\n' +
+'    left top, left bottom, left top, right top, left top;\n' +
+'  background-size: var(--u) var(--u);\n' +
+'  box-shadow: 8px 8px 0 rgba(0,0,0,0.55);            <span class="c">/* the existing cast shadow, on the 8px grid */</span>\n' +
+'}\n' +
+'.win.iron   { --tl: url(...); /* ...9 data URIs, or 9 canvases from pixel.js */ }\n' +
+'.win.oak    { ... }\n' +
+'.win.stone  { ... }\n' +
+'.win.canvas { ... }\n\n' +
+'<span class="c">/* small surfaces — toasts, tooltips, menus — same tiles, half the chrome */</span>\n' +
+'.toast, .tooltip, .menu { <span class="k">--s</span>: 1; }\n';
+})();
+
+/* ---- 04: the same panel, four ways (real Hall of Records content) ---- */
+const HALL_BODY =
+  '<div class="statbar"><span class="sb-label">STR</span><span class="sb-track">'
+  + '<span class="sb-fill" style="width:62%;background:var(--red)"></span></span><span class="sb-val">31</span></div>'
+  + '<div class="statbar"><span class="sb-label">END</span><span class="sb-track">'
+  + '<span class="sb-fill" style="width:88%;background:var(--green)"></span></span><span class="sb-val">44</span></div>'
+  + '<div class="statbar"><span class="sb-label">CON</span><span class="sb-track">'
+  + '<span class="sb-fill" style="width:54%;background:var(--gold)"></span></span><span class="sb-val">27</span></div>'
+  + '<div class="statbar"><span class="sb-label">SPR</span><span class="sb-track">'
+  + '<span class="sb-fill" style="width:40%;background:var(--blue)"></span></span><span class="sb-val">20</span></div>'
+  + '<hr class="rule">'
+  + '<table class="rpg">'
+  + '<tr><td>Quests completed</td><td>218</td></tr>'
+  + '<tr><td>Current streak</td><td>9 day(s) &mdash; best 31</td></tr>'
+  + '<tr><td>Deepest floor survived</td><td>14</td></tr>'
+  + '<tr><td>Deaths in the Undercroft</td><td>6</td></tr>'
+  + '</table>';
+(function(){
+  const host = $('#fourways');
+  for (const key in MATERIALS){
+    const box = el('div');
+    box.appendChild(panel(key, HALL_BODY, { title: 'Joe, Level 22' }));
+    box.appendChild(el('div','lbl fine','<span style="color:#c9a24b">'+MATERIALS[key].name+'</span> &mdash; '
+      + MATERIALS[key].why));
+    host.appendChild(box);
+  }
+})();
+
+/* ---- 05: legend ---- */
+(function(){
+  const host = $('#legend');
+  for (const key in MATERIALS){
+    const m = MATERIALS[key];
+    const li = el('div','li');
+    const chip = el('div','chipmat');
+    const c = KITS[key].css;
+    chip.style.backgroundImage = [c['--tl'],c['--tr'],c['--bl'],c['--br'],c['--et'],c['--eb'],c['--el'],c['--er'],c['--fc']].join(',');
+    chip.style.backgroundRepeat = 'no-repeat,no-repeat,no-repeat,no-repeat,repeat-x,repeat-x,repeat-y,repeat-y,repeat';
+    chip.style.backgroundPosition = 'left top,right top,left bottom,right bottom,left top,left bottom,left top,right top,left top';
+    li.appendChild(chip);
+    li.appendChild(el('div','', '<div class="t">'+m.name+'</div>'
+      + '<div class="d">'+m.why+'<br><span style="color:#776f8e">'+m.domain+'</span></div>'));
+    host.appendChild(li);
+  }
+})();
+
+/* ---- 06: corners up close + ornaments ---- */
+(function(){
+  const host = $('#corners');
+  const names = { iron:'a driven rivet, domed and lit from the north-west',
+    oak:'a pale peg through a mitred joint',
+    stone:'a chisel peck, struck square into the quoin',
+    canvas:'an iron grommet, punched through the hem' };
+  for (const key in MATERIALS){
+    const card = el('div','tilecard');
+    const box = el('div','sheetbox');
+    box.appendChild(tileCanvas(KITS[key].tiles.tl, 16));
+    const g = el('div','grid');
+    g.style.background =
+      'repeating-linear-gradient(90deg,transparent 0 15px,rgba(255,255,255,.09) 15px 16px),'+
+      'repeating-linear-gradient(0deg,transparent 0 15px,rgba(255,255,255,.09) 15px 16px)';
+    g.style.outline = '2px solid rgba(240,208,128,.30)';
+    box.appendChild(g);
+    card.appendChild(box);
+    card.appendChild(el('div','lbl','<b>'+MATERIALS[key].name+'</b><br>'
+      + '<span style="color:#776f8e">'+names[key]+'</span>'));
+    card.style.maxWidth = '200px';
+    host.appendChild(card);
+  }
+
+  const oh = $('#ornaments');
+  const items = [
+    ['nail','The hanging nail','The plaque is not a cutout in the rail — it is a small panel of its own, '
+      + 'nailed on. Two nails, drawn once, 8&times;8 each. The title now has a reason to be where it is.'],
+    ['wax','Candle wax','A run of wax down the left rail of the Scrivener\'s panel, and only that panel. '
+      + 'An overlay sprite, 6&times;20, drawn at the panel&rsquo;s own 2&times;. Nothing in a repeating tile can be a one-off.'],
+    ['lash','Rope lashing','Tied over a canvas corner. 10&times;10. Says "this was put up by hand and can '
+      + 'be taken down" without a word of copy.'],
+    ['chip','A knocked-off corner','Stone, damaged. 8&times;8, laid exactly over the <code>tl</code> tile. '
+      + 'It cannot <em>erase</em> the tile beneath it, so the missing stone is painted <code>--bg</code> '
+      + '&mdash; which only reads as absence because Iron Vale panels float on a flat void. An honest trick, '
+      + 'stated as one: on a textured background it would not work.'],
+  ];
+  for (const [k,title,desc] of items){
+    const card = el('div');
+    const strip = el('div');
+    strip.style.cssText = 'display:flex;align-items:flex-end;gap:18px;background:'
+      + (k === 'chip' ? '#0a0a12' : '#0e0e18')
+      + ';border:2px solid #211f33;padding:14px;margin-bottom:8px;min-height:120px';
+    if (k === 'chip'){
+      // show the real composite: the stone tl tile with the chip laid over it
+      const pair = el('div'); pair.style.cssText='display:flex;gap:10px;align-items:flex-end';
+      pair.appendChild(tileCanvas(KITS.stone.tiles.tl, 11));
+      const arrow = el('div','fine'); arrow.textContent='\u2192';
+      arrow.style.cssText='color:#776f8e;padding-bottom:34px'; pair.appendChild(arrow);
+      pair.appendChild(tileCanvas(overlay(KITS.stone.tiles.tl, SPR.chip, 0, 0), 11));
+      strip.appendChild(pair);
+    } else {
+      strip.appendChild(tileCanvas(SPR[k], k === 'wax' ? 8 : 12));
+    }
+    // show it in situ — every overlay is drawn at the panel's own 2x scale
+    if (k === 'nail'){
+      const p = panel('iron', '<div class="fine">The plaque hangs from these &mdash; and only from these.</div>',
+        { title:'THE MANTEL', scale:2 });
+      p.style.flex = '1'; strip.appendChild(p);
+    } else if (k === 'wax'){
+      const p = panel('oak', '<div class="fine">what the years leave on the shelf</div>'
+        + '<div class="fine" style="color:#776f8e">bare wood, for now. it is patient.</div>', { scale:2 });
+      p.style.flex = '1'; p.style.position='relative';
+      const o = el('i','orn'); o.style.cssText =
+        'left:2px;top:4px;width:12px;height:40px;background-size:12px 40px;background-image:' + url(SPR.wax);
+      p.appendChild(o); strip.appendChild(p);
+    } else if (k === 'lash'){
+      const p = panel('canvas', '<div class="fine">Crankwerk &mdash; one token a pull</div>'
+        + '<div class="fine" style="color:#776f8e">the crank is stiff on cold mornings</div>', { scale:2 });
+      p.style.flex='1'; p.style.position='relative';
+      const o = el('i','orn'); o.style.cssText =
+        'left:-2px;top:-2px;width:20px;height:20px;background-size:20px 20px;background-image:'+url(SPR.lash);
+      p.appendChild(o); strip.appendChild(p);
+    } else {
+      const p = panel('stone', '<div class="fine">the gate remembers every descent</div>'
+        + '<div class="fine" style="color:#776f8e">deepest floor survived: 14</div>', { scale:2 });
+      p.style.flex='1'; p.style.position='relative';
+      const o = el('i','orn'); o.style.cssText =
+        'left:0;top:0;width:16px;height:16px;background-size:16px 16px;background-image:'+url(SPR.chip);
+      p.appendChild(o); strip.appendChild(p);
+    }
+    card.appendChild(strip);
+    card.appendChild(el('div','lbl fine','<b style="color:#f0d080">'+title+'</b><br>'
+      + '<span style="color:#958ca8;line-height:1.7">'+desc+'</span>'));
+    oh.appendChild(card);
+  }
+})();
+
+/* ---- 07: composability ---- */
+(function(){
+  const host = $('#compose');
+
+  const wrapRow = (label, node, note) => {
+    const d = el('div'); d.style.marginBottom = '30px';
+    d.appendChild(el('div','kicker', label));
+    d.appendChild(node);
+    if (note) { const n = el('p','note'); n.innerHTML = note; n.style.marginTop='10px'; d.appendChild(n); }
+    return d;
+  };
+
+  /* panel inside a panel — real Doctrines content */
+  const inner = panel('oak',
+      '<div class="p-name">Starting Strength <span class="chip">SWORN</span></div>'
+    + '<div class="muted fine" style="margin:2px 0 4px">Linear progression. Three lifts a session, '
+    + 'five pounds a session, until it stops working.</div>'
+    + '<div class="o-struct">&#9656; <b style="color:var(--blue)">Session A</b>: Squat 3&times;5, '
+    + 'Bench Press 3&times;5, Deadlift 1&times;5<br>'
+    + '&#9656; <b style="color:var(--blue)">Session B</b>: Squat 3&times;5, Overhead Press 3&times;5, '
+    + 'Power Clean 5&times;3</div>'
+    + '<button class="btn danger small">RENOUNCE</button>', { scale: 1 });
+  const outer = panel('oak',
+      '<div class="muted" style="margin-bottom:10px">Swear to a doctrine and its next session leads the '
+    + 'day\'s offers, weights progressing as you complete them.</div>'
+    + '<div id="nest-slot"></div>', { title: 'Doctrines of Grunhilda' });
+  host.appendChild(wrapRow('panel inside a panel', outer,
+    'The inner panel drops to <code>--s:1</code>. Two 16px rails inside two 16px rails would be 64px of '
+    + 'chrome across; at 1&times; it is 48px and the nesting reads as a card <em>on</em> a board rather '
+    + 'than a hole in one. <b>Rule: nesting always steps the scale down by one.</b>'));
+  outer.querySelector('#nest-slot').appendChild(inner);
+
+  /* wide */
+  const wide = panel('stone',
+      '<div class="row" style="gap:26px">'
+    + '<div style="flex:1;min-width:180px"><div class="fine muted">DISTANCE WALKED</div>'
+    + '<div style="font-family:var(--f20);font-size:20px;color:var(--gold-bright)">1,284 km</div></div>'
+    + '<div style="flex:1;min-width:180px"><div class="fine muted">NEXT LANDMARK</div>'
+    + '<div style="font-family:var(--f20);font-size:20px;color:var(--gold-bright)">The Weeping Bridge</div></div>'
+    + '<div style="flex:1;min-width:180px"><div class="fine muted">STILL TO WALK</div>'
+    + '<div style="font-family:var(--f20);font-size:20px;color:var(--gold-bright)">41 km</div></div>'
+    + '</div>', { title: 'The Long Road' });
+  host.appendChild(wrapRow('wide', wide,
+    'A 1,100px rail is 68 repeats of one 16px tile. Because the rail texture is periodic and axis-invariant '
+    + 'except for its 8px mark, a full-width panel costs nothing extra and shows no seam.'));
+
+  /* tall + small, side by side */
+  const shelf = el('div','row'); shelf.style.alignItems = 'flex-start';
+  const tall = panel('iron',
+    ['Torch snuffed on floor 3.','Rat King fled west.','Found: Cracked Whetstone.','Pip raised his prices.',
+     'Torch relit.','Found: Iron Ration.','Floor 4 — the water is rising.','Bat swarm, dispersed.',
+     'Found: Bent Key.','Floor 5.'].map(t=>'<div style="padding:3px 0;border-bottom:2px solid #22203a">'
+     + '<span class="fine" style="color:#776f8e">&#9656;</span> '+t+'</div>').join(''),
+    { title:'The Descent', style:'width:260px' });
+  shelf.appendChild(tall);
+
+  const smallcol = el('div'); smallcol.style.cssText='flex:1;min-width:280px';
+  const toast = panel('canvas','<span style="color:var(--green)">&#9670;</span> Quest sworn. The raven is away.',
+    { scale:1, style:'display:inline-block' });
+  const tip = panel('canvas','<span class="fine">Vigor gates the Undercroft. Quests are the only source.</span>',
+    { scale:1, style:'display:inline-block;max-width:230px' });
+  const tiny = panel('canvas','<span class="fine">+3</span>', { scale:1, style:'display:inline-block' });
+  smallcol.appendChild(el('div','kicker','toast'));  smallcol.appendChild(toast);
+  smallcol.appendChild(el('div','kicker','tooltip', )); smallcol.appendChild(tip);
+  smallcol.appendChild(el('div','kicker','the breaking point')); smallcol.appendChild(tiny);
+  shelf.appendChild(smallcol);
+  host.appendChild(wrapRow('tall, and very small', shelf,
+    '<b>What breaks:</b> at 1&times; a grommet is 4 screen pixels of ring around 4 pixels of hole, and the '
+    + 'last chip &mdash; the <code>+3</code> &mdash; is 16px of chrome around 10px of text. The frame stops '
+    + 'being a frame and becomes noise. <b>How it is handled:</b> below 40px of content the kit stops. '
+    + 'Anything smaller keeps the existing 2px bevel and is not a panel at all &mdash; it is a chip. '
+    + 'Trying to nine-slice a chip is how kits die.'));
+})();
+
+/* ---- 08: phone ---- */
+(function(){
+  const host = $('#phones');
+  const mkPhone = (bleed) => {
+    const ph = el('div','phone' + (bleed?' bleed':''));
+    ph.appendChild(el('div','status','<span>IRON VALE</span><span>390 &times; 844</span>'));
+    const app = el('div','app');
+    const p1 = panel('oak',
+        '<div class="muted fine" style="margin-bottom:6px">Maud has the ledger open at your page.</div>'
+      + HALL_BODY, { title:'Joe, Level 22' });
+    const p2 = panel('iron',
+        '<div class="o-struct">&#9656; Kettlebell Swing &mdash; 5&times;20<br>'
+      + '&#9656; Goblet Squat &mdash; 3&times;12 @ 24kg</div>'
+      + '<div class="fine" style="margin:6px 0;color:#958ca8">reward: <b>+120 XP</b> &middot; '
+      + '<span style="color:var(--gold)">&#9670;38+</span> &middot; +2 vigor</div>'
+      + '<button class="btn green small">SWEAR TO IT</button>'
+      + '<button class="btn small">ANOTHER PATH</button>', { title:'The Iron Bell' });
+    const p3 = panel('stone',
+        '<div class="formrow"><label>name</label><input type="text" value="Joe"></div>'
+      + '<div class="fine" style="color:#776f8e">to change your look, tap your portrait at the top of any page</div>',
+      { title:'Game' });
+    app.appendChild(p1); app.appendChild(p2); app.appendChild(p3);
+    ph.appendChild(app);
+    return ph;
+  };
+  const a = el('div'); a.appendChild(el('div','kicker','inset &mdash; 10px gutter, panels float'));
+  a.appendChild(mkPhone(false));
+  const b = el('div'); b.appendChild(el('div','kicker','bled &mdash; rails against the glass'));
+  b.appendChild(mkPhone(true));
+  host.appendChild(a); host.appendChild(b);
+})();
+</script>
+</body>
+</html>
