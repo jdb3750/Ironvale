@@ -335,6 +335,168 @@ ok(
     f"-> {missing_writ_ts.status_code}: {missing_writ_ts.text[:120]}",
 )
 
+original_unguided_candidates = kv_raw("unguided_bonus_candidates")
+# A non-iterable value proves the outer queue guard independently: no
+# per-candidate predicate can run before iteration begins.
+db.kv_set("unguided_bonus_candidates", 5)
+nonlist_unguided_raw = kv_raw("unguided_bonus_candidates")
+nonlist_unguided = boot_client.get("/api/state")
+nonlist_unguided_unchanged = kv_raw("unguided_bonus_candidates") == nonlist_unguided_raw
+ok(
+    "state ignores a non-list unguided queue without overwriting it",
+    nonlist_unguided.status_code == 200
+    and nonlist_unguided.json()["unguided_pending"] == []
+    and nonlist_unguided_unchanged,
+    f"-> {nonlist_unguided.status_code}: {nonlist_unguided.text[:120]}",
+)
+
+db.kv_set("unguided_bonus_candidates", ["unreadable deed"])
+bare_unguided_raw = kv_raw("unguided_bonus_candidates")
+bare_unguided = boot_client.get("/api/state")
+bare_unguided_unchanged = kv_raw("unguided_bonus_candidates") == bare_unguided_raw
+ok(
+    "state ignores a bare value inside the unguided queue without overwriting it",
+    bare_unguided.status_code == 200
+    and bare_unguided.json()["unguided_pending"] == []
+    and bare_unguided_unchanged,
+    f"-> {bare_unguided.status_code}: {bare_unguided.text[:120]}",
+)
+
+stale_malformed_candidate = {
+    "activity_id": "smoke-malformed-stale-unguided",
+    "date": iso(1)[:10],
+}
+db.kv_set("unguided_bonus_candidates", [stale_malformed_candidate])
+stale_unguided_raw = kv_raw("unguided_bonus_candidates")
+stale_unguided = boot_client.get("/api/state")
+stale_unguided_unchanged = kv_raw("unguided_bonus_candidates") == stale_unguided_raw
+ok(
+    "state preserves a malformed stale unguided candidate without paying it",
+    stale_unguided.status_code == 200
+    and stale_unguided.json()["unguided_pending"] == []
+    and stale_unguided_unchanged,
+    f"-> {stale_unguided.status_code}: {stale_unguided.text[:120]}",
+)
+
+today_malformed_candidate = {
+    "activity_id": "smoke-malformed-today-unguided",
+    "date": game.today(),
+}
+db.kv_set("unguided_bonus_candidates", [today_malformed_candidate])
+today_unguided_raw = kv_raw("unguided_bonus_candidates")
+today_unguided = boot_client.get("/api/state")
+today_unguided_unchanged = kv_raw("unguided_bonus_candidates") == today_unguided_raw
+ok(
+    "state hides a malformed current unguided candidate without overwriting it",
+    today_unguided.status_code == 200
+    and today_unguided.json()["unguided_pending"] == []
+    and today_unguided_unchanged,
+    f"-> {today_unguided.status_code}: {today_unguided.text[:120]}",
+)
+
+malformed_claim = boot_client.post(
+    "/api/unguided/claim",
+    json={"activity_id": today_malformed_candidate["activity_id"]},
+)
+malformed_claim_unchanged = kv_raw("unguided_bonus_candidates") == today_unguided_raw
+ok(
+    "claiming a malformed unguided candidate is a clean refusal",
+    malformed_claim.status_code == 400
+    and "deed" in malformed_claim.json().get("error", "").casefold()
+    and malformed_claim_unchanged,
+    f"-> {malformed_claim.status_code}: {malformed_claim.text[:120]}",
+)
+
+# An unreadable row must not shadow a claimable deed behind it: unguided_pending
+# shows the healthy one, so the no-argument claim must reach that same one.
+shadow_activity_id = "smoke-shadowed-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'Run', 'shadowed deed', 1800, 5000)",
+    (shadow_activity_id, game.now_iso()),
+)
+db.commit()
+shadow_candidate = {
+    "activity_id": shadow_activity_id, "activity_name": "a shadowed deed",
+    "activity_type": "Run", "category": "run", "giver": "endurance",
+    "title": "shadowed deed", "minutes": 30, "date": game.today(),
+    "xp": 7, "gold": 5, "vigor": 2, "token": False, "drop": None,
+    "note": "shadowed", "stat_gains": {"end": 1},
+}
+db.kv_set("unguided_bonus_candidates", [today_malformed_candidate, shadow_candidate])
+db.commit()
+shadow_pending = [c["activity_id"] for c in quests.unguided_pending()]
+shadow_claim = boot_client.post("/api/unguided/claim", json={})
+ok(
+    "a malformed candidate does not shadow the claimable deed behind it",
+    shadow_pending == [shadow_activity_id] and shadow_claim.status_code == 200,
+    f"pending={shadow_pending} -> {shadow_claim.status_code}: {shadow_claim.text[:120]}",
+)
+ok(
+    "the shadowing malformed candidate is still preserved after that claim",
+    db.kv_get("unguided_bonus_candidates") == [today_malformed_candidate],
+)
+db.kv_set("unguided_bonus_candidates", [])
+db.commit()
+
+healthy_stale_activity_id = "smoke-healthy-stale-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'Run', 'healthy stale deed', 1800, NULL)",
+    (healthy_stale_activity_id, iso(1)),
+)
+db.commit()
+healthy_stale_candidate = {
+    "activity_id": healthy_stale_activity_id,
+    "activity_name": "a healthy stale deed",
+    "activity_type": "Run",
+    "category": "run",
+    "giver": "endurance",
+    "title": "healthy stale deed",
+    "minutes": 30,
+    "date": iso(1)[:10],
+    "xp": 7,
+    "gold": 5,
+    "vigor": 2,
+    "token": False,
+    "drop": None,
+    "note": "healthy stale deed",
+    "stat_gains": {"end": 1},
+}
+healthy_stale_char_before = game.get_char()
+healthy_stale_ledger_count_before = ledger_count()
+healthy_stale_ledger_id_before = db.q(
+    "SELECT COALESCE(MAX(id), 0) AS id FROM ledger",
+).fetchone()["id"]
+db.kv_set("unguided_bonus_candidates", [stale_malformed_candidate, healthy_stale_candidate])
+healthy_stale = boot_client.get("/api/state")
+healthy_stale_char_after = game.get_char()
+healthy_stale_quest = db.q(
+    "SELECT status FROM quests WHERE activity_id=?",
+    (healthy_stale_activity_id,),
+).fetchone()
+ok(
+    "a valid stale unguided candidate is still swept and recorded",
+    healthy_stale.status_code == 200
+    and healthy_stale.json()["unguided_pending"] == []
+    and db.kv_get("unguided_bonus_candidates") == [stale_malformed_candidate]
+    and healthy_stale_quest is not None
+    and healthy_stale_quest["status"] == "done"
+    and ledger_count() == healthy_stale_ledger_count_before + 1,
+    f"-> {healthy_stale.status_code}: {healthy_stale.text[:120]}",
+)
+ok(
+    "a valid stale unguided candidate keeps its ordinary payout",
+    healthy_stale_char_after["gold"] == healthy_stale_char_before["gold"] + 5
+    and healthy_stale_char_after["vigor"] == min(10, healthy_stale_char_before["vigor"] + 2)
+    and healthy_stale_char_after["stats"]["end"] == healthy_stale_char_before["stats"]["end"] + 1,
+)
+db.q("DELETE FROM quests WHERE activity_id=?", (healthy_stale_activity_id,))
+db.q("DELETE FROM activities WHERE id=?", (healthy_stale_activity_id,))
+db.q("DELETE FROM ledger WHERE id > ?", (healthy_stale_ledger_id_before,))
+restore_kv("character", original_character)
+restore_kv("unguided_bonus_candidates", original_unguided_candidates)
+
 list_details_quest = db.q(
     "INSERT INTO quests (giver, kind, title, details, status, accepted_at) "
     "VALUES ('endurance', 'run', 'Corrupt List Details', '[]', 'active', ?)",
