@@ -370,6 +370,29 @@ entries are open work with the removal path worked out.
   durable sync error surfaced, so boot is not affected. **Not investigated** —
   it was outside that seam and is recorded here rather than chased. Reproduce by
   seeding all five corrupt shapes together and watching the background task log.
+- **A claim for an unknown `activity_id` silently claims a different deed.**
+  Found 2026-08-05 during seam 7 verification, and **pre-existing** — the
+  `next((...), 0)` fallback in `claim_unguided_bonus` predates it. Ask for an
+  `activity_id` that is not in the queue (stale bubble, retry after the sweep
+  already paid it) and the claim quietly settles the *oldest* pending deed
+  instead of refusing. Seam 7 changed the fallback target from index 0 to the
+  first valid index, which makes it consistent, not correct. The honest fix is
+  to refuse an unmatched id — but it changes a live endpoint's contract, so it
+  wants its own seam and a look at what the frontend does with a stale bubble.
+- ~~**A malformed *stale* unguided candidate 500s the boot endpoint.**~~
+  **RESOLVED 2026-08-05** by review seam 7. One validity predicate behind one
+  reader: malformed entries stay in storage, are skipped by the sweep, filtered
+  out of `unguided_pending()` so no unclaimable bubble appears, and refused by a
+  claim with an in-world 400. A non-list queue degrades to empty without being
+  written over. All four guards plus the shadow fix below were each mutated
+  separately and each failed on its own, per the acceptance bar this seam
+  carried after two earlier seams shipped a guard that another guard masked.
+
+  **The seam introduced and fixed one defect of its own:** with an unreadable
+  row at index 0 and a claimable deed behind it, `unguided_pending()` showed the
+  healthy bubble while a no-argument claim refused it — the two paths disagreed
+  about what "pending" meant. Original finding:
+
 - **A malformed *stale* unguided candidate 500s the boot endpoint.** Found
   2026-08-05 during seam 6 verification, and **pre-existing** — seam 6 does not
   touch the line. `unguided_pending()` runs `_sweep_stale_unguided_candidates()`
@@ -386,6 +409,18 @@ entries are open work with the removal path worked out.
   quarantined) rather than taking the game down. Note the candidate is *player-
   visible state*, so dropping it silently loses a payout: prefer skipping the
   bad candidate and leaving it in place over deleting it.
+
+  **A corrupt queue will still fail the sync, on purpose.**
+  `grant_unguided_run_bonus()` (`quests.py:965`) is a fourth consumer — it reads
+  the queue, appends and writes it back — and seam 7 deliberately leaves it
+  unguarded. Boot failing locks the player out with nothing to do; a failed sync
+  is caught at `syncing.py:79`, recorded durably by `_record_failure` and
+  surfaced as *"The ravens were lost before they finished their rounds"*, which
+  is the honest response to data the app itself can never write. Two options
+  were considered and rejected: coercing the corrupt value to `[]` and writing
+  over it **destroys the preserved evidence**, and quarantining it to a second kv
+  key adds a permanent representation for a state that has never occurred.
+  Recorded so this is not re-litigated as an oversight.
 - **`save_char` and `db.inv_add` are duplicated at a call site.** Introduced by
   seam 6, deliberately and with the cost recorded here rather than hidden. Both
   helpers commit internally, so the atomic claim path inlines their SQL instead

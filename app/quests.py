@@ -886,6 +886,11 @@ def claim_deed(kind, minutes, note=""):
 # ---------------- unguided runs (no quest accepted, Fenn pays anyway) ----------------
 
 MIN_UNGUIDED_MINUTES = 8
+UNGUIDED_CANDIDATE_REQUIRED_FIELDS = frozenset({
+    "activity_id", "date", "minutes", "xp", "gold", "vigor", "token",
+    "drop", "stat_gains", "note",
+})
+UNGUIDED_STAT_KEYS = frozenset({"str", "end", "con", "spr"})
 
 UNGUIDED_TITLE_FLAVOR = {
     "run": ["The Unsworn Run", "The Road Without a Writ", "The Unbidden Pace"],
@@ -1111,20 +1116,72 @@ def _stage_unguided_candidates(candidates):
     )
 
 
+def _valid_unguided_candidate(candidate):
+    if not isinstance(candidate, dict):
+        return False
+    if not UNGUIDED_CANDIDATE_REQUIRED_FIELDS <= candidate.keys():
+        return False
+    if not isinstance(candidate["activity_id"], str) or not candidate["activity_id"]:
+        return False
+    try:
+        candidate_date = datetime.strptime(candidate["date"], "%Y-%m-%d").date().isoformat()
+    except (TypeError, ValueError):
+        return False
+    if candidate_date != candidate["date"]:
+        return False
+    reward_numbers = (candidate["minutes"], candidate["xp"], candidate["gold"], candidate["vigor"])
+    if any(type(value) is not int or value < 0 for value in reward_numbers):
+        return False
+    if candidate["minutes"] == 0 or type(candidate["token"]) is not bool:
+        return False
+    if candidate["drop"] is not None and not isinstance(candidate["drop"], str):
+        return False
+    if not isinstance(candidate["note"], str):
+        return False
+    for optional_text in ("activity_name", "activity_type", "category", "giver", "title"):
+        if (
+            optional_text in candidate
+            and candidate[optional_text] is not None
+            and not isinstance(candidate[optional_text], str)
+        ):
+            return False
+    gains = candidate["stat_gains"]
+    if not isinstance(gains, dict) or not gains:
+        return False
+    return all(
+        stat in UNGUIDED_STAT_KEYS and type(gain) is int and gain >= 0
+        for stat, gain in gains.items()
+    )
+
+
+def _read_unguided_candidates():
+    candidates = db.kv_get("unguided_bonus_candidates", [])
+    if not isinstance(candidates, list):
+        return [], []
+    valid_indexes = [
+        index for index, candidate in enumerate(candidates)
+        if _valid_unguided_candidate(candidate)
+    ]
+    return candidates, valid_indexes
+
+
 def _sweep_stale_unguided_candidates():
     """A candidate dated before today means a full day passed with nobody
     tapping the bubble — Fenn just pays quietly, with no bubble at all
     (there's no "same-day surprise" left to show)."""
     t = today()
-    cands = db.kv_get("unguided_bonus_candidates", [])
-    fresh = [c for c in cands if c["date"] == t]
-    stale = [c for c in cands if c["date"] != t]
-    if not stale:
+    cands, valid_indexes = _read_unguided_candidates()
+    stale_indexes = [index for index in valid_indexes if cands[index]["date"] != t]
+    if not stale_indexes:
         return
     try:
-        for cand in stale:
-            _apply_unguided_bonus(cand)
-        _stage_unguided_candidates(fresh)
+        for index in stale_indexes:
+            _apply_unguided_bonus(cands[index])
+        stale_indexes = set(stale_indexes)
+        _stage_unguided_candidates([
+            candidate for index, candidate in enumerate(cands)
+            if index not in stale_indexes
+        ])
         db.commit()
     except Exception:
         db.rollback()
@@ -1135,24 +1192,32 @@ def unguided_pending():
     """Read-only peek at today's still-unclaimed bubbles — never mutates the
     character; claiming is an explicit action (claim_unguided_bonus)."""
     _sweep_stale_unguided_candidates()
-    cands = db.kv_get("unguided_bonus_candidates", [])
-    for c in cands:
+    cands, valid_indexes = _read_unguided_candidates()
+    pending = [cands[index] for index in valid_indexes]
+    for c in pending:
         # Candidates queued before per-giver attribution lack the field. This
         # display default is intentionally repeated at the recording boundary
         # because each kv_get decodes a fresh object rather than persisting it.
         c.setdefault("giver", "endurance")
-    return cands
+    return pending
 
 
 def claim_unguided_bonus(activity_id=None):
     """The player tapped Fenn's bubble — grant the reward now. Claims the
     given activity_id if provided, else the oldest still-pending one."""
-    cands = db.kv_get("unguided_bonus_candidates", [])
+    cands, valid_indexes = _read_unguided_candidates()
     if not cands:
         raise ValueError("No deed waits to be claimed today.")
-    idx = 0
+    # "the oldest still-pending one" means the oldest one unguided_pending()
+    # would have shown — an unreadable row must not shadow a claimable deed.
+    idx = valid_indexes[0] if valid_indexes else 0
     if activity_id:
-        idx = next((i for i, c in enumerate(cands) if c["activity_id"] == activity_id), 0)
+        idx = next((
+            i for i, c in enumerate(cands)
+            if isinstance(c, dict) and c.get("activity_id") == activity_id
+        ), idx)
+    if idx not in valid_indexes:
+        raise ValueError("Wick cannot read that deed. It remains in the ledger.")
     cand = cands[idx]
     try:
         rewards = _apply_unguided_bonus(cand)
