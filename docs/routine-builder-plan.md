@@ -86,6 +86,10 @@ contract this fixes:
   with the movements that meet it (seams 1–2). No group-key palette.
 - The routine is a **physical ledger board** of iron plates hanging in the
   yard (seam 5's cards, staged as objects).
+- The muscle-tap rack and all secondary panels **float over the scene**
+  rather than reflowing it; the **forge is the routines entry point** (tap:
+  strike a new routine / draw an old one from the coals), replacing any
+  +/new-routine button.
 
 Visual companion: `docs/mockups/routine-builder-scene.html` (screenshots
 beside it in the same directory).

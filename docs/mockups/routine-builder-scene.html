@@ -161,13 +161,16 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .yard .ground { position:relative; padding:0 8px 12px; background-color:#3d3122; border-top:4px solid #2f4026; }
 
 /* things standing at the horizon poke up into the sky */
-.iv .hrow { display:flex; justify-content:space-between; align-items:flex-end; margin-top:-52px; position:relative; z-index:2; }
+.iv .hrow { display:flex; justify-content:flex-start; align-items:flex-end; margin-top:-52px; position:relative; z-index:2; }
+.iv-desktop .hrow { position:absolute; left:8px; top:-52px; margin-top:0; }
+.iv-desktop .stage { margin-top:-52px; }
 .iv .spot { text-align:center; position:relative; }
 .iv .spot .splate { font-family:var(--font-body); font-size:var(--type-body); line-height:1.1; color:var(--gold-bright);
   background:rgba(8,8,14,0.8); border:1px solid #4a3d20; padding:1px 6px; display:inline-block; margin-top:2px; max-width:160px; }
 .iv .spot .splate small { color:var(--dim); display:block; font-family:var(--font-fine); font-size:var(--type-fine); }
 .iv .forge-row { display:flex; align-items:flex-end; justify-content:center; gap:2px; }
 .iv .spot.tappable { cursor:pointer; }
+.iv .spot.tapped .splate { outline:2px solid var(--gold-bright); outline-offset:1px; }
 
 /* the training dummies */
 .iv .stage { display:flex; justify-content:center; align-items:flex-end; gap:26px; margin-top:10px; position:relative; z-index:1; }
@@ -204,10 +207,15 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .gbubble .btn { display:block; width:100%; }
 .iv .gbubble .week-note { display:block; text-align:center; margin-top:5px; color:var(--dim-readable); }
 
-/* the weapon rack — a raised panel that swung open from the tapped muscle */
+/* the weapon rack — a FLOATING panel that swung open over the scene from the
+   tapped muscle: elevated, deep-dropped shadow, and it reflows NOTHING */
 .iv .rack { position:relative; background:var(--surface-raised); border:2px solid;
   border-color:var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit);
-  box-shadow:4px 4px 0 rgba(0,0,0,0.6); padding:10px 10px 8px; z-index:3; }
+  box-shadow:8px 8px 0 rgba(0,0,0,0.65), 0 0 0 2px rgba(0,0,0,0.35); padding:10px 10px 8px; z-index:45; }
+/* floating-overlay plumbing: panels sit above the whole scene, out of flow */
+.iv .overlay-dim { position:absolute; inset:0; z-index:40; background:rgba(4,4,10,0.55); cursor:pointer; }
+.iv .rack-float { position:absolute; width:288px; }
+.iv-phone .forge-panel { position:absolute; left:22px; right:22px; top:474px; }
 .iv .rack .rk-title { font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px; text-transform:uppercase; color:var(--gold-bright); }
 .iv .rack .rk-sub { color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); margin:2px 0 4px; }
 .iv .rack.tail-up::after, .iv .rack.tail-up::before { content:''; position:absolute; bottom:100%; left:var(--tailx,70%); border:14px solid transparent; }
@@ -277,39 +285,34 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .board .btn.wide { margin-top:6px; }
 .iv .board-foot { margin-top:6px; text-align:center; color:var(--dim); font-family:var(--font-fine); font-size:var(--type-fine); }
 
-/* floor arrangement */
+/* floor arrangement — the wide ledger board sits central beneath the dummies */
 .iv .floor { margin-top:16px; position:relative; }
-.iv-phone .floor .rack { margin:24px 2px 0; }
 .iv-phone .floor .ledger { margin:18px 2px 0; }
-.iv-desktop .stage-row { display:flex; justify-content:center; align-items:flex-end; gap:18px; margin-top:-52px; position:relative; z-index:2; }
-.iv-desktop .stage-row .forge-spot { flex-shrink:0; }
-.iv-desktop .stage-row .stage { margin-top:0; }
-.iv-desktop .floor { display:grid; grid-template-columns:170px minmax(0,1fr); gap:0 18px; align-items:end; margin-top:142px; position:relative; z-index:3; }
-.iv-desktop .floor .ledger { max-width:610px; justify-self:end; width:100%; }
-.iv-desktop .corner-props { text-align:center; padding-bottom:4px; }
-.iv-desktop .corner-props .prop-row { display:flex; justify-content:center; align-items:flex-end; gap:10px; }
+.iv-desktop .floor .ledger { max-width:700px; margin:20px auto 0; }
 </style>
 
 <header class="mock-head">
   <h1>Iron Vale — the Drill Yard, drawn as a yard</h1>
-  <p>visual mockup v2, nothing wired up — same seams and payloads as v1, re-staged per Joe's note as a diegetic scene in the app's own tokens, fonts and sprite data</p>
+  <p>visual mockup v3, nothing wired up — same seams and payloads as before; re-composed per Joe's third note: dummies centered, floating panels, the forge given its job</p>
 </header>
 <div class="legend">
   <span><b>SEAM 1</b> — the dummy is the live muscle map, lit by set count</span>
-  <span><b>SEAM 2</b> — tap a dark muscle, the rack swings open</span>
+  <span><b>SEAM 2</b> — tap a dark muscle, the rack floats open OVER the scene</span>
+  <span><b>THE FORGE</b> — the routines entry point: strike a new routine, or draw an old one from the coals</span>
   <span><b>SEAM 5</b> — the routine is a ledger of iron plates; 48px steppers</span>
   <span><b>SEAM 6</b> — Grunhilda is a corner portrait on the board: reads on tap, ignorable; &ldquo;missing&rdquo; stays week-level</span>
 </div>
 <div class="vnote"><b>V2 vs V1 — the body is the navigation.</b> v1 arranged the feature as forms wearing pixel clothes: seven latched group keys, a card list, a stat panel. v2 stages the same seams as objects in a yard: the training dummy is the muscle map and the way in (tap a dark muscle, the rack answers), the routine hangs as forged plates, and the Compendium is a small book glyph on the board's upper-left corner for the lifter who already knows the movement's name. Grunhilda rides the opposite corner and speaks only when tapped. No palette buttons; everything is tap.</div>
+<div class="vnote"><b>V3 vs V2 — centered and floating.</b> per Joe's third note: the dummies stand centered on the page in both frames; every secondary panel (the weapon rack, the forge's routine list) now FLOATS over the scene — elevated, shadowed, reflowing nothing — instead of pushing content down; the barrel and stones left the yard so the ledger board could widen and move central; and the forge earned its job as the routines entry point — tap it to strike a new routine or draw an old one from the coals. Each frame demonstrates one floating panel open: the forge's list on phone, the weapon rack on desktop.</div>
 
 <div class="frames">
 
   <section class="station phone-station">
     <div class="station-head">
       <div class="st-title">Phone — 390px, the primary frame</div>
-      <div class="st-sub">the scene stacks: forge at the horizon, dummies center-stage, the rack slides over from the tapped muscle, the ledger hangs below &mdash; book and Grunhilda ride its corners, both UNTAPPED here</div>
+      <div class="st-sub">the scene stacks: forge at the left horizon, dummies centered, the wide ledger centered beneath &mdash; the FORGE PANEL is shown OPEN here, floating over the dimmed yard; book and Grunhilda ride the board's corners, untapped</div>
       <div class="tag-chips">
-        <span>dummy = seam 1</span><span>tap-muscle rack = seam 2</span><span>plates + steppers = seam 5</span><span>corner book + Grunhilda portrait = seam 6, untapped</span>
+        <span>dummy = seam 1</span><span>forge panel OPEN, floating</span><span>plates + steppers = seam 5</span><span>corner book + Grunhilda portrait = seam 6, untapped</span>
       </div>
     </div>
     <div class="phone-bezel">
@@ -322,9 +325,9 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   <section class="station desktop-station">
     <div class="station-head">
       <div class="st-title">Desktop — 900px viewport, scaled to fit</div>
-      <div class="st-sub">the full yard: forge left, dummies center, the rack swung open beside them, ledger hanging right &mdash; Grunhilda's portrait TAPPED here, her bubble open over the board</div>
+      <div class="st-sub">the full yard: forge at the left edge, dummies centered, the wide ledger centered beneath &mdash; the WEAPON RACK is shown OPEN here, floating over the scene from the tapped hamstrings; Grunhilda untapped (her tapped bubble was demonstrated last round)</div>
       <div class="tag-chips">
-        <span>dummy = seam 1</span><span>rack = seam 2</span><span>ledger = seam 5</span><span>tapped Grunhilda + open bubble = seam 6</span>
+        <span>dummy = seam 1</span><span>rack OPEN, floating = seam 2</span><span>ledger = seam 5</span><span>Grunhilda portrait = seam 6, untapped</span>
       </div>
     </div>
     <div class="gutter gutter-l" id="gutter-desktop"></div>
@@ -519,15 +522,6 @@ const SPRITES = {
   icon_token: { p: { p: '#a06ac8', l: '#c89ae8', d: '#6a3a8a' }, r: [
     '..pppp..', '.plplpp.', 'plpppppd', 'plpllppd', 'plpllppd', 'plpppppd', '.pppppd.', '..dddd..',
   ]},
-  /* hand-authored yard clutter: a water barrel and a pile of lifting stones */
-  barrel: { p: { w: '#6a4e2c', W: '#8a6a40', i: '#8a8a9a' }, r: [
-    '..WWWWWW..', '.WwwwwwwW.', '.iiiiiiii.', '.WwwwwwwW.', '.WwwwwwwW.',
-    '.iiiiiiii.', '.WwwwwwwW.', '..WWWWWW..',
-  ]},
-  stone_pile: { p: { s: '#62626e', S: '#84848f' }, r: [
-    '.....SSSS.....', '....SsSSSS....', '..SSSSssSSSS..', '.SSssSSSSssSS.',
-    '.SSssSSSSssSS.', '.SSSSSSSSSSSS.',
-  ]},
 };
 function drawSprite(canvas, key) {
   const s = SPRITES[key]; if (!s || !canvas) return;
@@ -624,43 +618,54 @@ function dummyHtml(side, scale, tapped) {
   </div>`;
 }
 
-function bubbleHtml() {
-  return `<div class="gbubble-wrap" data-seam="6" data-tag="SEAM 6|ON TAP ONLY — ignorable: her portrait was tapped, so the deed-bubble idiom opens anchored to it, tail on the portrait. The session line only describes; the 'missing' clause is the WEEK's reckoning (BUILDER.md §1) — counts and gaps, always with a verb"><div class="gbubble">
-    <span class="fb-line">&ldquo;This session meets the chest, the shoulders, the triceps &mdash; and now the hamstrings. Fourteen sets. Across your week, nothing has met the quads or the calves &mdash; forge a leg day?&rdquo;</span>
-    <button class="btn small" style="display:block;width:100%">FORGE A LEG DAY</button>
-    <span class="fine week-note">her reading, on tap only &mdash; &ldquo;missing&rdquo; comes from the week, never this session</span>
-  </div></div>`;
-}
-
-function forgeSpot(forgePx) {
-  return `<div class="spot forge-spot">
+function forgeSpot(forgePx, tapped) {
+  return `<div class="spot forge-spot tappable ${tapped ? 'tapped' : ''}" data-tag="THE FORGE|the routines entry point, standing tappable at the yard's left edge: strike a new routine, or draw an old one from the coals — it replaces any + / new-routine button${tapped ? '; TAPPED here, its panel floats open over the yard' : ' (the phone frame shows its panel open)'}">
     <div class="forge-row">${spriteTag('yard_forge', forgePx)}</div>
-    <span class="splate">the forge<small>Grunhilda&rsquo;s hearth &mdash; she keeps to the board now</small></span>
+    <span class="splate">the forge<small>strike a new routine, or draw an old one from the coals</small></span>
   </div>`;
 }
 
-function boardGlyphs(grunTapped) {
-  const grunTag = grunTapped ? '' :
-    ` data-tag="SEAM 6|UNTAPPED state: Grunhilda is a small portrait on the board's upper-right — out of the way, ignorable; tap or click her for a reading or evaluation of the workout (the desktop frame shows the bubble open)"`;
+function forgePanelHtml() {
+  return `<div class="overlay-dim"></div>
+  <div class="rack forge-panel" data-seam="FORGE" data-tag="THE FORGE, OPEN|floats over the scene — nothing reflows: the forge was tapped, so its panel opens over the dimmed yard (the dummies keep their center stage above it) listing what the coals hold; iron plaques for old routines, one blank to strike new">
+    <div class="rk-title">The Forge</div>
+    <div class="rk-sub">strike a new routine, or draw an old one from the coals</div>
+    <button class="plaque taken" disabled>
+      <span class="qname">Vale Push Day</span>
+      <span class="meets">on the board now</span>
+    </button>
+    <button class="plaque">
+      <span class="qname">Vale Pull Day</span>
+      <span class="meets">in the coals &mdash; draw it out</span>
+    </button>
+    <button class="plaque">
+      <span class="qname">+ Strike a new routine</span>
+      <span class="meets">a bare board, ready for plates</span>
+    </button>
+    <div class="rk-foot">tap the dark to close &mdash; the yard never moves beneath it</div>
+  </div>`;
+}
+
+function boardGlyphs() {
   return `<button class="board-glyph glyph-book" aria-label="the book — browse all movements" data-tag="THE BOOK|the Compendium shrunk to a corner glyph — the book — browse all movements. Upper-left of the board, same weight class as the app's ✕ close glyphs; the classic search for the lifter who already knows the name">
     ${spriteTag('book_glyph', 24)}<span class="g-cap">the book</span>
   </button>
-  <button class="board-glyph glyph-grun ${grunTapped ? 'tapped' : ''}" aria-label="Grunhilda — tap for a reading of this workout"${grunTag}>
+  <button class="board-glyph glyph-grun" aria-label="Grunhilda — tap for a reading of this workout" data-tag="SEAM 6|UNTAPPED: Grunhilda is a small portrait on the board's upper-right — out of the way, ignorable; tap her and her reading bubble floats open anchored to the portrait (demonstrated open in the v2 round; left untapped here so the open rack reads clean)">
     ${spriteTag('grun_bust', 24)}<span class="g-cap">Grunhilda</span>
   </button>`;
 }
 
-function stageHtml(scale) {
-  return `<div class="stage" data-seam="1" data-tag="SEAM 1|the dummy IS the muscle map — MUSCLE_MAP_ROWS verbatim from pixel.js, dressed as oak on a stand: worked muscles glow by set count, untouched ones stay dark wood; front and back stand side by side">
+function stageHtml(scale, tapped) {
+  return `<div class="stage" data-seam="1" data-tag="SEAM 1|the dummy IS the muscle map — MUSCLE_MAP_ROWS verbatim from pixel.js, dressed as oak on a stand: worked muscles glow by set count, untouched ones stay dark wood; front and back stand centered on the page${tapped ? '' : '; tap a dark muscle and the rack floats open over the scene (shown on desktop)'}">
     ${dummyHtml('front', scale, false)}
-    ${dummyHtml('back', scale, true)}
+    ${dummyHtml('back', scale, !!tapped)}
   </div>
   <div class="stage-caption"><span class="cap">The dummy feels the <b>chest</b>, <b>shoulders</b>, <b>triceps</b> &mdash; and now the <b>hamstrings</b>. Fourteen sets.
   <span class="fine" style="display:block;margin-top:3px;color:var(--dim)">sets alone light the dummy &mdash; runs and rides pass it by</span></span></div>`;
 }
 
 function rackHtml(tailClass, tailStyle) {
-  return `<div class="rack ${tailClass}" style="${tailStyle || ''}" data-seam="2" data-tag="SEAM 2|the body is the navigation: the hamstrings were tapped (glint on the back dummy), so the weapon rack swung open with the movements that meet them; Romanian Deadlift is greyed because the tap a moment ago already forged it onto the ledger">
+  return `<div class="rack rack-float ${tailClass}" style="${tailStyle || ''}" data-seam="2" data-tag="SEAM 2|floats over the scene — nothing reflows: the hamstrings were tapped (glint on the back dummy), so the weapon rack floats open anchored beside them, tail on the tapped muscle, shadow-dropped over whatever lies beneath; Romanian Deadlift is greyed because the tap a moment ago already forged it onto the ledger">
     <div class="rk-title">The Weapon Rack</div>
     <div class="rk-sub">swung open &mdash; movements that meet the ${'<span style="color:' + MUSCLE_COLORS.hamstrings + '">hamstrings</span>'}</div>
     ${RACK.map(r => `<button class="plaque ${r.taken ? 'taken' : ''}" ${r.taken ? 'disabled' : ''}>
@@ -689,14 +694,12 @@ function plateHtml(p, i, n) {
   </div>`;
 }
 
-function ledgerHtml(opts) {
-  opts = opts || {};
-  return `<div class="ledger" data-seam="5" data-tag="SEAM 5|the routine is a physical ledger hanging beside the dummy: each movement an iron plate stamped with name, sets×reps and one muscle rune; ▲/▼ latches, no drag; the fresh Romanian Deadlift plate landed unlatched on the logger's 48px steppers; Cable Fly rides in pale wood — the honest off-catalog state">
-    ${opts.grunTapped ? bubbleHtml() : ''}
+function ledgerHtml() {
+  return `<div class="ledger" data-seam="5" data-tag="SEAM 5|the routine is a physical ledger hanging wide and central beneath the dummies: each movement an iron plate stamped with name, sets×reps and one muscle rune; ▲/▼ latches, no drag; the fresh Romanian Deadlift plate landed unlatched on the logger's 48px steppers; Cable Fly rides in pale wood — the honest off-catalog state">
     <div class="ledger-beam"></div>
     <div class="ledger-hang"><i></i><i></i></div>
     <div class="board">
-      ${boardGlyphs(!!opts.grunTapped)}
+      ${boardGlyphs()}
       <div class="board-name"><span class="np">Vale Push Day</span><span class="fine">tap the nameplate to re-engrave it</span></div>
       ${LEDGER.map((p, i) => plateHtml(p, i, LEDGER.length)).join('')}
       <button class="btn wide green">FORGE ROUTINE</button>
@@ -774,15 +777,14 @@ function phoneScreen() {
       <div class="sky"><div class="mtns" data-fill="mtns"></div></div>
       <div class="ground" data-fill="dirt">
         <div class="hrow">
-          ${forgeSpot(104)}
-          <div class="spot"><div class="forge-row">${spriteTag('stone_pile', 56)}${spriteTag('barrel', 40)}</div></div>
+          ${forgeSpot(104, true)}
         </div>
-        ${stageHtml(3)}
+        ${stageHtml(3, false)}
         <div class="floor">
-          ${rackHtml('tail-up', '--tailx:calc(50% + 64px)')}
           ${ledgerHtml()}
         </div>
       </div>
+      ${forgePanelHtml()}
     </div>
     ${footerHtml()}
   </div>
@@ -796,21 +798,18 @@ function desktopScreen() {
       <span class="win-title">The Drill Yard</span>
       <div class="muted">Grunhilda&rsquo;s yard behind the forge. The dummy remembers every set you promise it.</div>
     </div>
-    <div class="yard" data-seam="A" data-tag="SEAM A|one tap from the town square; the whole screen is the yard — forge left, dummies center, rack swung open beside them, ledger hanging right with the book and Grunhilda riding its corners">
+    <div class="yard" data-seam="A" data-tag="SEAM A|one tap from the town square; the whole screen is the yard — forge at the left edge, dummies centered, the wide ledger centered beneath them, the rack floating open over it all">
       <div class="sky"><div class="mtns" data-fill="mtns"></div></div>
       <div class="ground" data-fill="dirt">
-        <div class="stage-row">
-          ${forgeSpot(104)}
-          <div style="max-width:400px">${stageHtml(4)}</div>
-          ${rackHtml('tail-left', '--taily:196px;width:288px;flex-shrink:0;align-self:flex-end')}
+        <div class="hrow">
+          ${forgeSpot(104, false)}
         </div>
+        ${stageHtml(4, true)}
         <div class="floor">
-          <div class="corner-props">
-            <div class="prop-row">${spriteTag('barrel', 48)}${spriteTag('stone_pile', 70)}</div>
-          </div>
-          ${ledgerHtml({ grunTapped: true })}
+          ${ledgerHtml()}
         </div>
       </div>
+      ${rackHtml('tail-left', '')}
     </div>
     ${footerHtml()}
   </div>`;
@@ -854,6 +853,25 @@ function placeTaps() {
 }
 placeTaps();
 
+/* float the desktop rack over the scene, anchored to the tapped muscle:
+   absolute over the yard, tail on the hamstrings, reflowing nothing */
+function placeRackFloat() {
+  const yard = document.querySelector('#frame-desktop .yard');
+  const rack = document.querySelector('#frame-desktop .rack-float');
+  const box = document.querySelector('#frame-desktop [data-tapbox="back"]');
+  if (!yard || !rack || !box) return;
+  const yr = yard.getBoundingClientRect();
+  const s = yr.width / yard.offsetWidth || 1;
+  const br = box.getBoundingClientRect();
+  const boxRight = (br.right - yr.left) / s;
+  const boxMidY = (br.top - yr.top + br.height / 2) / s;
+  const left = Math.min(boxRight + 22, yard.offsetWidth - rack.offsetWidth - 12);
+  const top = Math.max(10, boxMidY - 110);
+  rack.style.left = left + 'px';
+  rack.style.top = top + 'px';
+  rack.style.setProperty('--taily', (boxMidY - top) + 'px');
+}
+
 /* scale the desktop frame to fit its column */
 function fitDesktop() {
   const wrap = document.getElementById('scale-wrap');
@@ -892,7 +910,7 @@ function placeTags() {
   });
 }
 
-function layout() { fitDesktop(); placeTags(); }
+function layout() { placeRackFloat(); fitDesktop(); placeTags(); }
 window.addEventListener('resize', layout);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
 layout();
