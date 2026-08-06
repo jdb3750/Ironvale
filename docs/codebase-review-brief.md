@@ -1008,3 +1008,107 @@ change, because `AGENTS.md` and `PLUGINS.md` quote it.
 - `static/`, and any other §3 entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 7 — a corrupt bonus candidate must not take down the boot endpoint
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes `app/` and `tests/`.** No `static/`, so no `?v=` bump.
+> Re-read "Mutation testing: commit first, always" before you break anything.
+
+### The defect
+
+`/api/state` (`main.py:200`) calls `quests.unguided_pending()`, which runs
+`_sweep_stale_unguided_candidates()` first. Neither treats the stored candidate
+list as untrusted. **Reproduced against a scratch database:** a stale candidate
+missing its keys raises `KeyError: 'stat_gains'` straight out of `/api/state` —
+the game does not load.
+
+This is a **gap in seam 4's coverage**, not new damage. That seam guarded five
+persisted shapes on the boot path; `unguided_bonus_candidates` is another kv
+value on the same path and was not among them. Same rule from `AGENTS.md`:
+persisted data is untrusted input and must degrade, never raise.
+
+There are **three** distinct failure points, and it is easy to fix one and think
+you are done:
+
+1. **The partition** — `[c for c in cands if c["date"] == t]`
+   (`quests.py:1120`) raises on a candidate with no `date`, or on a non-mapping
+   entry, *before* any payout is attempted.
+2. **The payout** — `_apply_unguided_bonus` reads `cand["stat_gains"]`,
+   `["xp"]`, `["gold"]`, `["vigor"]`, `["token"]`, `["drop"]`, `["note"]`,
+   `["minutes"]` unguarded (`quests.py:1064` onward).
+3. **The list itself** — `db.kv_get("unguided_bonus_candidates", [])` can return
+   a non-list, and `unguided_pending()` then calls `.setdefault` on each entry,
+   which raises on anything that is not a dict.
+
+Seam 4's writ-notices guard is the precedent: it needed **both** an outer
+"is this even a list" check and a per-entry check, and the outer one initially
+shipped untested because the inner one masked it. Expect the same shape here.
+
+### The judgement call — losing a payout is worse than leaking a row
+
+A candidate is **player-visible state representing an unpaid reward**. Deleting
+a malformed one silently costs the player something they earned.
+
+**Recommended shape** — implement this unless you can argue better, and say why
+either way:
+
+- A single validity predicate, applied in one place.
+- Invalid candidates are **skipped, not deleted**: they stay in storage, are
+  never paid, and are **filtered out of what `unguided_pending()` returns**, so
+  no bubble appears for a candidate that cannot be claimed.
+- `claim_unguided_bonus` on an invalid candidate raises `ValueError` with an
+  in-world message — a clean 400, not a 500.
+
+Yes, that leaks a row that will never drain. **That is the right trade**: the
+queue is otherwise self-draining, one stuck row costs nothing, and the
+alternative destroys a reward. Do not add a cleanup that deletes them. Do not
+log on every sweep either — this runs on every boot and would flood the ledger.
+
+### Tests
+
+- A **stale** malformed candidate: `/api/state` returns 200, and the candidate
+  is still in storage afterwards.
+- A **today** malformed candidate: `/api/state` returns 200 and the candidate
+  does **not** appear in `unguided_pending`.
+- Claiming a malformed candidate returns **400**, not 500.
+- `unguided_bonus_candidates` stored as a non-list, and as a list containing a
+  bare string: `/api/state` returns 200.
+- **Valid candidates are completely unaffected** — still swept, still paid,
+  still claimable, same XP/gold/vigor/stat gains. A guard that quietly
+  disqualifies healthy candidates is worse than the crash.
+
+### The acceptance bar
+
+Commit first, then mutation-test **each** guard separately — the outer list
+check, the per-candidate check, and the `unguided_pending` filter. Seam 6 shipped
+a guard whose test could not fail because another guard masked it; do not repeat
+that. Report each removal and its failure.
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+Quote the final line of each. Smoke is currently **248 checks** — report any
+change, because `AGENTS.md` and `PLUGINS.md` quote it.
+
+### Out of scope for this seam
+
+- **Non-committing variants in `db.py`.** Seam 6 inlined `save_char` and
+  `db.inv_add` because both commit; that duplication is recorded in §3 and is
+  its own seam. Do not refactor it here.
+- **The frontend.** If a degraded value would render badly, report it — §3
+  already collects these for a frontend seam.
+- **Backfilling misattributed rows**, and **whether an unguided deed should
+  advance a Scheduled lane.** Both open, neither decided here.
+- Any other §3 entry.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."
