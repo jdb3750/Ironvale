@@ -32,16 +32,20 @@ attracts all four, and this one must not.
 
 ## 1. The vision, walked once end to end
 
-A player opens the town and finds a new corner of it: the Bazaar, a market
-screen in the same pixel register as everything else. Stalls line the square,
-one per kind of ware — the Dyer's Tent hung with cloth swatches (themes), the
-Scrivener's Stall stacked with bound doctrines (program packs), the Tinker's
-Bench of oddities (behavior plugins), the Bellmaker's Cart of chimes and bells
-(sound kits). Browsing costs nothing and executes nothing: every stall
-renders from manifest metadata alone. A ware's page shows what it is, who made it, what it
-asks of the player in plain language, and a single action. When a new version
-of an installed ware appears in the index, a raven brings word, the same way
-ravens already carry sync news.
+A player opens the town and finds a new corner of it: the Bazaar row, a
+walkable market lane in the same pixel register as everything else. Stalls
+line the row, one per kind of ware — the Dyer's Tent hung with cloth swatches
+(themes), the Scrivener's Stall stacked with bound doctrines (program packs),
+the Tinker's Bench of oddities (behavior plugins), the Bellmaker's Cart of
+chimes and bells (sound kits). Browsing costs nothing and executes nothing:
+every stall renders from manifest metadata alone, and its signboard carries no
+more than the trade and a count of wares. Step up to a stall and the merchant
+speaks — what a ware is, who made it, what it asks of the player, all in
+plain language, answered with response lines like any other conversation in
+the Vale. A ware taken home travels packed, into the ornament box in the
+player's dwelling; hung upon the hearth tree there, it wakes and works. When
+a new version of an installed ware appears in the index, a raven brings word,
+the same way ravens already carry sync news.
 
 Behind that screen there is almost nothing: a JSON index file in a public
 GitHub repository, one entry per ware pointing at an author's repo and its
@@ -179,9 +183,9 @@ never-400 rule is already doctrine). The one addition this plan makes to the
 `"network"`, `"reads:wellness"`, `"routes"` — borrowed from WebExtensions'
 install-time disclosure. The research's honest finding is that these strings
 are surfaced, not enforced, at tiers 1 and 2; they are still worth having
-because the Bazaar's ware pages render them to the player before install, and
-because a declared-but-unused permission is a review smell a human can catch
-in the index PR.
+because the stall's merchant speaks them to the player before a ware comes
+home, and because a declared-but-unused permission is a review smell a human
+can catch in the index PR.
 
 ## 5. Two tiers of ware, Factorio-shaped
 
@@ -266,8 +270,9 @@ Factorio's and Home Assistant's: a player installing code on their own
 machine, which they already do every time they pull a Docker image. All three
 of those ecosystems ship no sandbox, say so plainly, and thrive. What replaces
 the sandbox is the label (§2i's tiers, displayed wherever a ware is
-displayed), the disclosure (manifest permissions on the ware's page), the
-default (installed wares start disabled, Obsidian-style), and — the one real
+displayed), the disclosure (manifest permissions spoken by the merchant
+before a ware comes home), the default (a ware arrives in the ornament box,
+not on the tree — installed wares start inactive, Obsidian-style), and — the one real
 boundary — the restrictions a small API surface can actually enforce
 server-side once `game.grant()` exists: Factorio's "sandbox via small API
 rather than via VM," the cheapest effective trick in the whole survey.
@@ -335,7 +340,11 @@ collision-checked and refused loudly by name, on both the JS and Python sides.
 The Obsidian lesson worth copying alongside it is the auto-cleanup lifecycle:
 everything registered through the plugin handle is torn down when the ware is
 disabled, so disable-enable works without a restart and no ware needs to write
-teardown code to be a good citizen.
+teardown code to be a good citizen. The visible moment of loading gets a face
+of its own: hanging a ware upon the hearth tree (§8c) is the same beat in
+which the loader does its work, so the load mask is an animation the player
+already wanted to watch, and lifting the ornament down rewinds it while the
+auto-cleanup runs.
 
 Two operational requirements. First, from `PLUGINS.md` §3f: the loader has a
 hard off-switch (an env var the test suites set), because once wares can
@@ -380,50 +389,92 @@ the docker-compose-from-a-stranger bar §2i sets.
 
 ### 8b. The market screen
 
-Player-facing, therefore in-world, end to end. The Bazaar is a screen reached
-from the town — stalls grouped by ware type, browsable while offline from the
-cached index. Copy in the register the game already speaks:
+Player-facing, therefore in-world, end to end. The Bazaar is a walkable
+town-scene reached from the square: a row of stalls under one sky, each with
+its merchant behind the boards and its goods set out, grouped by ware type
+and browsable while offline from the cached index. On a narrow screen the row
+folds into the same two-column town grid the app already uses at phone
+widths — the stalls stack in pairs, nothing redesigned. Copy in the register
+the game already speaks:
 
-- The screen: **"The Bazaar"** — "Traders from beyond the Vale spread their
-  wares."
+- The screen: **"The Bazaar Row"** — "Traders from beyond the Vale — every
+  stall hangs its board."
 - A stall: one ware type — "The Dyer's Tent" (themes), "The Scrivener's
   Stall" (doctrines and programs), "The Tinker's Bench" (behavior wares),
-  "The Bellmaker's Cart" (sound kits).
-- A ware's page: name, author ("crafted by"), description, tier shown as
-  plain speech — tier 0: "Cloth and ink. This ware cannot act on its own.";
-  tier 1: "A charm. It will act within your hall, with your leave."; tier 2:
-  "A hired hand. It will work your ledgers and speak with the ravens. Take
-  only from traders you trust."
-- Permissions, rendered before install: "This ware asks to: read your
-  wellness ledger; send ravens beyond the Vale" — WebExtensions' honest
-  human-readable strings, in the Vale's voice.
-- Install: "Take it home." Installed-but-disabled: "Stored in your pack."
-  Enable: "Set it out." Disable: "Pack it away." Uninstall: "Return the
-  ware" — with "its ledger entries will be struck from the record" when the
-  player elects to clear the kv namespace.
+  "The Bellmaker's Cart" (sound kits). The signboard carries the trade and an
+  in-world count — "Dyes — five wares", "Scrolls — four" — and nothing more;
+  the listing lives with the merchant, not on the sign.
+- Stepping up to a stall opens the merchant's dialogue, in the same window
+  every other conversation in the Vale uses. The merchant speaks a ware's
+  disclosure as speech: name, maker ("crafted by"), what it does, and its
+  tier in plain words — tier 0: "Cloth and ink. This ware cannot act on its
+  own."; tier 1: "A charm. It will act within your hall, with your leave.";
+  tier 2: "A hired hand. It will work your ledgers and speak with the ravens.
+  Take only from traders you trust."
+- Permissions are spoken before anything comes home: "This ware asks to:
+  read your wellness ledger; send ravens beyond the Vale" — WebExtensions'
+  honest human-readable strings, in the merchant's voice.
+- The player answers with response lines, not buttons: "Take it home." (the
+  ware travels packed, straight to the ornament box — §8c), "What does 'first
+  tier of trust' mean?", "Another day, trader." Taking a ware home never
+  activates it; nothing bought at a stall acts until it hangs on the tree.
 - An incompatible or broken ware: "This ware was made for another season of
   the Vale. The trader must mend it." — the §2h break-loudly rule, worn as
   copy. Never a silent absence.
 
-Everything on this screen renders from manifests and the index — no ware code
+Everything in this scene renders from manifests and the index — no ware code
 executes at browse time, which is what makes browsing safe at every tier and
 is the direct payoff of §6's declarative contribution points.
 
-### 8c. Ravens carry word
+### 8c. The Hearth Tree
+
+The lifecycle lives at home, not at market. In the player's dwelling stands
+the hearth tree, an evergreen in a tub, and the rule it embodies fits in one
+line: what hangs upon the tree works; what sleeps in the box only sleeps. The
+stalls fill the ornament box — the tree is where a ware wakes. This replaces
+any shelf- or list-shaped lifecycle screen: enablement is not a toggle in a
+row of rows, it is an ornament hung.
+
+The screen is a split view. On the left, the tree itself, active wares hung
+as glowing ornaments, the ornament box open on the floor beside it holding
+whatever has come home unhung. On the right, a detail list of every owned
+ware with its state in Vale speech — "upon the tree", "in the box", "being
+hung…" — and choosing a ware hangs it or lifts it down. The hanging is proper
+work: a pair of pixel hands in the player's own skin tone carries the
+ornament up and sets it on a branch, and that animation is the plugin load
+mask (§7) — the loader runs behind the very beat the player is watching, so
+activation never shows a spinner. Lifting a ware down rewinds the same motion
+while the auto-cleanup lifecycle tears its registrations down. Returning a
+ware entirely — uninstall — keeps its line, "Return the ware," from the same
+list, with "its ledger entries will be struck from the record" when the
+player elects to clear the kv namespace.
+
+The tree also gives capacity a shape a shelf never had: where a shelf fills
+and ends, branches grow and the box deepens — the view scales with a
+player's collection instead of overflowing it.
+
+The look of all of this is settled in mockups rather than prose:
+`docs/mockups/bazaar-row-v2.png` (the row), `bazaar-row-mobile.png` (the same
+row at phone width), `bazaar-stall.png` (the step-up dialogue), and
+`dwelling-tree.png` (the hearth tree) are the visual reference for this
+section.
+
+### 8d. Ravens carry word
 
 Sync already speaks through ravens ("The ravens returned: N new deeds",
 `app/intervals.py:234`; failures are "the ravens were lost"). Ware updates
 join the same postal service: the background loop's index refresh compares
 release tags, and when an installed ware has a newer compatible release, the
-raven's news includes "A raven brings word of new wares at the Bazaar."
-Updating remains a deliberate act on the ware's page — no silent auto-update,
+raven's news includes "A raven brings word of new wares at the Bazaar" — and
+in the row itself, the raven perches over the stall it brings word of.
+Updating remains a deliberate act at the ware's stall — no silent auto-update,
 because tier 1 and 2 wares are trusted per version, and because a player whose
 game changed overnight without their hand on it has lost something this game
 cares about. A ware whose new release requires a newer `api_version` than the
 running game shows as "made for a coming season" rather than updating into a
 loud disable.
 
-### 8d. The ladder of deep customizability
+### 8e. The ladder of deep customizability
 
 The principle, made concrete as rungs, each zero-config to start and each a
 natural step to the next:
@@ -533,11 +584,13 @@ deeds to the ledger, its own page to settings. Excludes: minigame and
 town-slot harnesses; locale; anything requiring the voice-catalog extraction.
 
 **Phase 5 — the Bazaar.** The index repo with CI checks; the in-game client
-(index fetch, install, update, uninstall, tier and permission display); the
-market screen with its stalls; ravens carrying update word; install-from-URL.
-Player observes: the Bazaar opens in the town — browse, take a ware home, set
-it out, and later a raven brings word of new wares. Excludes: ratings,
-download counts, accounts, auto-update, any server-side anything.
+(index fetch, install, update, uninstall, tier and permission disclosure);
+the Bazaar row with its stalls and merchant dialogue; the hearth tree in the
+dwelling; ravens carrying update word; install-from-URL. Player observes: the
+Bazaar row opens in the town — read the boards, step up to a stall, take a
+ware home, hang it upon the hearth tree, and later a raven brings word of new
+wares. Excludes: ratings, download counts, accounts, auto-update, any
+server-side anything.
 
 **Phase 6 — community tooling.** The template repo, the `plugin new`
 scaffold, the ware author's smoke recipe and fixture helper, authoring docs
@@ -582,11 +635,12 @@ an `extras` JSON column — blocks the provider and chart harnesses and is
 easiest to settle before phase 4 starts. `PLUGINS.md` recommends the superset;
 this plan has no reason to disagree, but it is not settled until you settle it.
 
-**When does the Bazaar screen open?** A market with one stall and three wares
-— all authored by you — is either charming (a quiet market that fills as the
-Vale grows) or embarrassing (an empty mall). Ship the screen in phase 5
-regardless, or hold it until some threshold of wares exists and let
-install-from-URL carry early adopters?
+**When does the Bazaar row open?** A row with one stall and three wares — all
+authored by you — is either charming (a quiet market that fills as the Vale
+grows) or embarrassing (an empty mall). Ship the row in phase 5 regardless,
+or hold it until some threshold of wares exists and let install-from-URL
+carry early adopters? The hearth tree does not wait on this answer either
+way — wares that arrive by hand-copied folder or by URL still need hanging.
 
 **The Undercroft as the proof.** `PLUGINS.md` §5 argues core should ship at
 least one whole subsystem through a harness, because a seam only stays real if
