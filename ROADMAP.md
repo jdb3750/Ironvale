@@ -370,6 +370,47 @@ entries are open work with the removal path worked out.
   durable sync error surfaced, so boot is not affected. **Not investigated** —
   it was outside that seam and is recorded here rather than chased. Reproduce by
   seeding all five corrupt shapes together and watching the background task log.
+- **A malformed *stale* unguided candidate 500s the boot endpoint.** Found
+  2026-08-05 during seam 6 verification, and **pre-existing** — seam 6 does not
+  touch the line. `unguided_pending()` runs `_sweep_stale_unguided_candidates()`
+  and is called from `/api/state` (`main.py:200`); the sweep hands each stale
+  candidate to `_apply_unguided_bonus`, which reads `cand["stat_gains"]`,
+  `cand["xp"]` and friends unguarded. Reproduced against a scratch DB: a
+  candidate dated yesterday with those keys missing raises
+  `KeyError: 'stat_gains'` straight out of `/api/state`.
+
+  **This is a gap in seam 4's coverage, not a new defect.** That seam guarded
+  five persisted shapes on the boot path; `unguided_bonus_candidates` is another
+  kv value on the same path and was not among them. Same rule applies —
+  persisted data is untrusted, and a corrupt candidate should be dropped (or
+  quarantined) rather than taking the game down. Note the candidate is *player-
+  visible state*, so dropping it silently loses a payout: prefer skipping the
+  bad candidate and leaving it in place over deleting it.
+- **`save_char` and `db.inv_add` are duplicated at a call site.** Introduced by
+  seam 6, deliberately and with the cost recorded here rather than hidden. Both
+  helpers commit internally, so the atomic claim path inlines their SQL instead
+  (`quests.py`, the character kv upsert and the inventory upsert). That is two
+  copies of each statement that can drift — the exact "duplicated logic that has
+  drifted" shape Pass A looked for. **The honest fix is non-committing variants
+  in `db.py`** (`save_char(c, commit=False)` / `inv_add(..., commit=False)`, or
+  a `db.transaction()` context manager) so callers compose instead of copying.
+  Cheap, and it gets cheaper the sooner it happens.
+- ~~**Claiming an unguided deed is not atomic, and the losing end is the
+  record.**~~ **RESOLVED 2026-08-05** by review seam 6. Every write in the claim
+  now stays pending until one `db.commit()`, with `db.rollback()` and a re-raise
+  on failure — the idiom `create_quest_from_offer` already used. All three
+  outcomes are pinned by tests: a normal claim removes-pays-records, the
+  already-rewarded path still commits the removal before its 400 (that bubble is
+  *meant* to vanish), and anything raising leaves the candidate claimable, the
+  character untouched and no quest row. The stale sweep got the same boundary
+  and is now all-or-nothing.
+
+  **This also closes half of the `create_quest_from_offer` legibility entry
+  below**: the no-internal-commit contract is now named in a comment at
+  `_record_unguided_completion`, and — after a verification pass found the
+  comment was unfalsifiable — enforced by a test that calls the recorder
+  directly, rolls back, and asserts the row is gone. Original finding:
+
 - **Claiming an unguided deed is not atomic, and the losing end is the record.**
   Found 2026-08-05 while scoping seam 5. `claim_unguided_bonus`
   (`quests.py:1119`) pops the candidate and **persists that removal**

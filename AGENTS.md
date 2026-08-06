@@ -364,7 +364,7 @@ TestClient/profile-routing gotchas.
   inadmissible dates must degrade to unknown, never raise. `/api/state` is the
   boot endpoint; a 400 there means the game does not load.
 
-**Regression net**: `.venv/bin/python tests/smoke.py` — 242 checks over every
+**Regression net**: `.venv/bin/python tests/smoke.py` — 248 checks over every
 read endpoint plus the quest/dungeon/gacha/scrivener lifecycles on a throwaway
 scratch DB. Run it before AND after any refactor that moves code; identical
 green is the acceptance bar. It must never point at the live `data/` dir (it
