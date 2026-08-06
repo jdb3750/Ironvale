@@ -621,6 +621,90 @@ ok(
     and legacy_event["text"].startswith("Old Fenn"),
 )
 
+# Given: a claimable deed whose quest recorder fails after reward calculation.
+atomic_activity_id = "smoke-atomic-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'WeightTraining', 'atomic deed', 1800, NULL)",
+    (atomic_activity_id, game.now_iso()),
+)
+db.commit()
+db.kv_set("unguided_bonus_candidates", [{
+    "activity_id": atomic_activity_id, "activity_name": "an atomic deed",
+    "activity_type": "WeightTraining", "category": "strength", "giver": "strength",
+    "title": "atomic deed", "minutes": 30, "date": game.today(),
+    "xp": 7, "gold": 5, "vigor": 2, "token": False, "drop": None,
+    "note": "atomic", "stat_gains": {"str": 1},
+}])
+atomic_char_before = game.get_char()
+atomic_ledger_before = ledger_count()
+original_unguided_recorder = quests._record_unguided_completion
+
+
+def fail_unguided_record(*_args):
+    raise RuntimeError("simulated unguided recorder failure")
+
+
+# When: the failure is injected inside the claim transaction window.
+atomic_failure = None
+quests._record_unguided_completion = fail_unguided_record
+try:
+    quests.claim_unguided_bonus(atomic_activity_id)
+except RuntimeError as exc:
+    atomic_failure = str(exc)
+finally:
+    quests._record_unguided_completion = original_unguided_recorder
+
+# Then: every write rolls back, including the candidate removal and payout.
+ok(
+    "failed unguided recording propagates its error",
+    atomic_failure == "simulated unguided recorder failure",
+)
+ok(
+    "failed unguided recording leaves the candidate claimable",
+    [candidate["activity_id"] for candidate in db.kv_get("unguided_bonus_candidates", [])]
+    == [atomic_activity_id],
+)
+ok(
+    "failed unguided recording leaves the character unchanged",
+    game.get_char() == atomic_char_before,
+)
+ok(
+    "failed unguided recording creates no quest or Chronicle event",
+    db.q(
+        "SELECT COUNT(*) AS n FROM quests WHERE activity_id=?",
+        (atomic_activity_id,),
+    ).fetchone()["n"] == 0
+    and ledger_count() == atomic_ledger_before,
+)
+db.kv_set("unguided_bonus_candidates", [])
+
+# The recorder must leave its insert PENDING — the claim/sweep caller owns the
+# only commit. Without this the rollback above cannot undo the quest row, and
+# the invariant comment in _record_unguided_completion would be unfalsifiable.
+pending_activity_id = "smoke-pending-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'WeightTraining', 'pending deed', 1800, NULL)",
+    (pending_activity_id, game.now_iso()),
+)
+db.commit()
+quests._record_unguided_completion(
+    {"activity_id": pending_activity_id, "activity_type": "WeightTraining",
+     "category": "strength", "giver": "strength", "minutes": 30,
+     "title": "pending deed"},
+    {"xp": 1, "gold": 1},
+    game.now_iso(),
+)
+db.rollback()
+ok(
+    "the unguided recorder leaves its insert pending for the caller to commit",
+    db.q(
+        "SELECT COUNT(*) AS n FROM quests WHERE activity_id=?",
+        (pending_activity_id,),
+    ).fetchone()["n"] == 0,
+)
+
 # never pay twice: an activity linked to a completed quest must not also pay an
 # unguided bonus. Re-queue the just-claimed climb (now quest-linked) and confirm
 # both payout paths refuse it.
@@ -634,6 +718,7 @@ db.kv_set("unguided_bonus_candidates", [{
 dupe = client.post("/api/unguided/claim", json={"activity_id": "smoke-free-climb"})
 ok("double unguided claim refused", dupe.status_code == 400)
 ok("refused claim paid nothing", game.get_char()["gold"] == gold_before)
+ok("already-rewarded unguided claim drops its bubble", db.kv_get("unguided_bonus_candidates") == [])
 quests._sweep_stale_unguided_candidates()  # stale-payout path must also refuse
 ok("double unguided sweep paid nothing", game.get_char()["gold"] == gold_before)
 
