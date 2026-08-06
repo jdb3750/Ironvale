@@ -1015,6 +1015,8 @@ def grant_unguided_run_bonus():
 def _record_unguided_completion(cand, rewards, completed_at):
     import json
 
+    # Transaction invariant: the claim or stale-sweep caller owns the only
+    # commit; this recorder must leave its insert pending for rollback.
     # No dedup guard needed here: _apply_unguided_bonus already refuses to pay
     # (and thus never reaches this) when the activity is linked to any quest.
     giver = cand.get("giver", "endurance")
@@ -1034,7 +1036,6 @@ def _record_unguided_completion(cand, rewards, completed_at):
         (giver, "unguided_activity", title, json.dumps(details), accepted_at,
          completed_at, cand["activity_id"], json.dumps(rewards)),
     )
-    db.commit()
 
 
 def _activity_already_rewarded(activity_id):
@@ -1072,8 +1073,16 @@ def _apply_unguided_bonus(cand):
     if cand["token"]:
         c["tokens"] += 1
     if cand["drop"]:
-        db.inv_add(cand["drop"])
-    save_char(c)
+        db.q(
+            "INSERT INTO inventory (item_id, qty) VALUES (?, 1) "
+            "ON CONFLICT(item_id) DO UPDATE SET qty=qty+1",
+            (cand["drop"],),
+        )
+    db.q(
+        "INSERT INTO kv (key, value) VALUES ('character', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (json.dumps(c),),
+    )
     rewards = {
         "xp": cand["xp"], "gold": cand["gold"], "vigor": cand["vigor"], "token": cand["token"],
         "item": items.get(cand["drop"]) if cand["drop"] else None,
@@ -1089,8 +1098,17 @@ def _apply_unguided_bonus(cand):
         completed_at, "unguided_activity",
         f"{giver_name} rewarded an unguided activity ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
         + (f", LEVEL UP to {c['level']}!" if levels else ""),
+        connection=db.conn(),
     )
     return rewards
+
+
+def _stage_unguided_candidates(candidates):
+    db.q(
+        "INSERT INTO kv (key, value) VALUES ('unguided_bonus_candidates', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (json.dumps(candidates),),
+    )
 
 
 def _sweep_stale_unguided_candidates():
@@ -1101,10 +1119,16 @@ def _sweep_stale_unguided_candidates():
     cands = db.kv_get("unguided_bonus_candidates", [])
     fresh = [c for c in cands if c["date"] == t]
     stale = [c for c in cands if c["date"] != t]
-    for cand in stale:
-        _apply_unguided_bonus(cand)
-    if stale:
-        db.kv_set("unguided_bonus_candidates", fresh)
+    if not stale:
+        return
+    try:
+        for cand in stale:
+            _apply_unguided_bonus(cand)
+        _stage_unguided_candidates(fresh)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 def unguided_pending():
@@ -1129,9 +1153,15 @@ def claim_unguided_bonus(activity_id=None):
     idx = 0
     if activity_id:
         idx = next((i for i, c in enumerate(cands) if c["activity_id"] == activity_id), 0)
-    cand = cands.pop(idx)
-    db.kv_set("unguided_bonus_candidates", cands)
-    rewards = _apply_unguided_bonus(cand)
+    cand = cands[idx]
+    try:
+        rewards = _apply_unguided_bonus(cand)
+        cands.pop(idx)
+        _stage_unguided_candidates(cands)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     if rewards is None:
         # Activity got linked to a quest between queuing and this tap — the
         # quest already paid for it. Drop the bubble, grant nothing.
