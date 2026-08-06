@@ -481,32 +481,145 @@ r = client.post(f"/api/quests/{q[0]['id']}/complete", json={})
 ok("complete quest", r.status_code == 200 and "rewards" in r.json())
 ok("xp granted", client.get("/api/state").json()["character"]["xp"] > 0)
 
-free_climb = (game.now() + timedelta(minutes=2)).isoformat(timespec="seconds")
-db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
-     "VALUES ('smoke-free-climb', 'intervals.icu', ?, 'RockClimbing', 'unplanned climb', 1800, NULL)",
-     (free_climb,))
-free_other = (game.now() + timedelta(minutes=3)).isoformat(timespec="seconds")
-db.q("INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
-     "VALUES ('smoke-free-other', 'intervals.icu', ?, 'Elliptical', 'unplanned cross-training', 1500, NULL)",
-     (free_other,))
+unguided_types = {
+    "run": "Run",
+    "ride": "Ride",
+    "climb": "RockClimbing",
+    "strength": "WeightTraining",
+    "mobility": "Yoga",
+    "walk": "Walk",
+    "swim": "Swim",
+    "other": "Elliptical",
+}
+unguided_starts = {}
+for activity_category, activity_type in unguided_types.items():
+    activity_id = f"smoke-free-{activity_category}"
+    start = game.now_iso()
+    unguided_starts[activity_category] = start
+    db.q(
+        "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+        "VALUES (?, 'intervals.icu', ?, ?, ?, 1800, NULL)",
+        (activity_id, start, activity_type, f"unplanned {activity_category}"),
+    )
 db.commit()
 quests.grant_unguided_run_bonus()
 pending = quests.unguided_pending()
-climb = next(c for c in pending if c["activity_id"] == "smoke-free-climb")
-other = next(c for c in pending if c["activity_id"] == "smoke-free-other")
-ok("unguided climb queued", climb["title"])
-ok("unguided other activity queued", other["title"])
-ok("deed attributed to its archetype giver", climb["giver"] == "bram")
-ok("unclassifiable deed reaches Wick", other["giver"] == "wick")
-ok("iron deeds belong to Grunhilda", quests.deed_giver("HIIT") == "strength"
-   and quests.deed_giver("WeightTraining") == "strength"
-   and quests.deed_giver("OpenWaterSwim") == "endurance")
-rewards = quests.claim_unguided_bonus("smoke-free-climb")
-ok("unguided climb reward claimed", rewards["xp"] > 0)
-ok("unguided title returned", rewards["quest_title"] == climb["title"])
-quests.claim_unguided_bonus("smoke-free-other")
-day = client.get("/api/day/" + free_climb[:10]).json()
-ok("unguided title appears as calendar quest", any(q_["title"] == climb["title"] for q_ in day["quests"]))
+unguided = {
+    candidate["category"]: candidate
+    for candidate in pending
+    if candidate["activity_id"].startswith("smoke-free-")
+}
+ok(
+    "one unguided deed queued for every activity category",
+    len(unguided) == len(unguided_types)
+    and set(unguided) == set(unguided_types),
+)
+ok(
+    "queued unguided givers match the deed taxonomy",
+    all(
+        candidate["giver"] == quests.deed_giver(candidate["activity_type"])
+        for candidate in unguided.values()
+    ),
+)
+
+for candidate in pending:
+    candidate["token"] = False
+    candidate["drop"] = None
+db.kv_set("unguided_bonus_candidates", pending)
+
+persisted_givers = {}
+payouts_preserved = []
+chronicle_names = {
+    "run": "Old Fenn",
+    "ride": "Old Fenn",
+    "climb": "Ser Bram",
+    "strength": "Grunhilda",
+    "mobility": "Sage Elowen",
+    "walk": "Old Fenn",
+    "swim": "Old Fenn",
+    "other": "Wick the Scrivener",
+}
+chronicle_credits = []
+titles_preserved = []
+for activity_category, candidate in unguided.items():
+    before = game.get_char()
+    expected_progress = {"level": before["level"], "xp": before["xp"]}
+    expected_levels = game.apply_xp(expected_progress, candidate["xp"])
+    rewards = quests.claim_unguided_bonus(candidate["activity_id"])
+    after = game.get_char()
+    row = db.q(
+        "SELECT giver FROM quests WHERE activity_id=?",
+        (candidate["activity_id"],),
+    ).fetchone()
+    event = db.q(
+        "SELECT text FROM ledger WHERE kind='unguided_activity' ORDER BY id DESC LIMIT 1",
+    ).fetchone()
+    persisted_givers[activity_category] = row["giver"]
+    payouts_preserved.append(
+        rewards["xp"] == candidate["xp"]
+        and rewards["gold"] == candidate["gold"]
+        and rewards["vigor"] == candidate["vigor"]
+        and rewards["stat_gains"] == candidate["stat_gains"]
+        and rewards["levels"] == expected_levels
+        and after["level"] == expected_progress["level"]
+        and after["xp"] == expected_progress["xp"]
+        and after["gold"] == before["gold"] + candidate["gold"]
+        and after["vigor"] == min(10, before["vigor"] + candidate["vigor"])
+        and all(
+            after["stats"][stat] == min(99, before["stats"][stat] + gain)
+            for stat, gain in candidate["stat_gains"].items()
+        )
+    )
+    chronicle_credits.append(event["text"].startswith(chronicle_names[activity_category]))
+    titles_preserved.append(rewards["quest_title"] == candidate["title"])
+
+ok("unguided WeightTraining persists Grunhilda's giver key", persisted_givers["strength"] == "strength")
+ok("unguided climbing persists Bram's giver key", persisted_givers["climb"] == "bram")
+ok(
+    "queued and persisted unguided givers agree for every category",
+    all(
+        persisted_givers[activity_category]
+        == candidate["giver"]
+        == quests.deed_giver(candidate["activity_type"])
+        for activity_category, candidate in unguided.items()
+    ),
+)
+ok("unguided payouts preserve XP, gold, vigor and stat gains", all(payouts_preserved))
+ok("unguided Chronicle events name the responsible giver", all(chronicle_credits))
+day = client.get("/api/day/" + unguided_starts["climb"][:10]).json()
+calendar_titles = {quest["title"] for quest in day["quests"]}
+ok(
+    "unguided titles survive claim and appear in the calendar",
+    all(titles_preserved)
+    and all(candidate["title"] in calendar_titles for candidate in unguided.values()),
+)
+
+legacy_activity_id = "smoke-legacy-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'Run', 'legacy unsworn run', 1800, NULL)",
+    (legacy_activity_id, game.now_iso()),
+)
+db.commit()
+db.kv_set("unguided_bonus_candidates", [{
+    "activity_id": legacy_activity_id, "activity_name": "a legacy run",
+    "activity_type": "Run", "category": "run", "title": "legacy deed",
+    "minutes": 30, "date": game.today(), "xp": 1, "gold": 1, "vigor": 1,
+    "token": False, "drop": None, "note": "legacy", "stat_gains": {"end": 1},
+}])
+quests.claim_unguided_bonus(legacy_activity_id)
+legacy_row = db.q(
+    "SELECT giver FROM quests WHERE activity_id=?",
+    (legacy_activity_id,),
+).fetchone()
+legacy_event = db.q(
+    "SELECT text FROM ledger WHERE kind='unguided_activity' ORDER BY id DESC LIMIT 1",
+).fetchone()
+ok(
+    "legacy unguided candidates default to Fenn at the recording boundary",
+    legacy_row["giver"] == "endurance"
+    and legacy_event["text"].startswith("Old Fenn"),
+)
 
 # never pay twice: an activity linked to a completed quest must not also pay an
 # unguided bonus. Re-queue the just-claimed climb (now quest-linked) and confirm

@@ -19,7 +19,7 @@ from .counsel_context_model import (
     WellnessSnapshot,
 )
 from .game import (
-    CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, RUN_TYPES, apply_xp, category,
+    CATEGORIES, CLAIM_PRORATE, CLAIM_TYPES, GIVERS, RUN_TYPES, apply_xp, category,
     get_char, now, now_iso, save_char, today,
 )
 
@@ -1017,6 +1017,7 @@ def _record_unguided_completion(cand, rewards, completed_at):
 
     # No dedup guard needed here: _apply_unguided_bonus already refuses to pay
     # (and thus never reaches this) when the activity is linked to any quest.
+    giver = cand.get("giver", "endurance")
     activity = db.q("SELECT start FROM activities WHERE id=?", (cand["activity_id"],)).fetchone()
     accepted_at = activity["start"] if activity else completed_at
     title = _unguided_completion_title(cand)
@@ -1030,7 +1031,7 @@ def _record_unguided_completion(cand, rewards, completed_at):
     db.q(
         "INSERT INTO quests (giver, kind, title, details, status, accepted_at, completed_at, "
         "honor, activity_id, rewards) VALUES (?,?,?,?, 'done', ?, ?, 0, ?, ?)",
-        ("endurance", "unguided_activity", title, json.dumps(details), accepted_at,
+        (giver, "unguided_activity", title, json.dumps(details), accepted_at,
          completed_at, cand["activity_id"], json.dumps(rewards)),
     )
     db.commit()
@@ -1082,9 +1083,11 @@ def _apply_unguided_bonus(cand):
     }
     completed_at = now_iso()
     _record_unguided_completion(cand, rewards, completed_at)
+    giver = cand.get("giver", "endurance")
+    giver_name = GIVERS.get(giver, {}).get("name", "Wick the Scrivener")
     db.log_event(
         completed_at, "unguided_activity",
-        f"Fenn rewarded an unguided activity ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
+        f"{giver_name} rewarded an unguided activity ({cand['minutes']} min) — +{cand['xp']} XP, +{cand['gold']} gold"
         + (f", LEVEL UP to {c['level']}!" if levels else ""),
     )
     return rewards
@@ -1110,8 +1113,9 @@ def unguided_pending():
     _sweep_stale_unguided_candidates()
     cands = db.kv_get("unguided_bonus_candidates", [])
     for c in cands:
-        # candidates queued before per-giver attribution lack the field;
-        # they were all Fenn's back then (load-bearing JSON: .setdefault)
+        # Candidates queued before per-giver attribution lack the field. This
+        # display default is intentionally repeated at the recording boundary
+        # because each kv_get decodes a fresh object rather than persisting it.
         c.setdefault("giver", "endurance")
     return cands
 

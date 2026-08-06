@@ -746,3 +746,157 @@ number and will need updating.
 - Any other §3 entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
+
+---
+
+## Seam 5 — persist the giver the code actually computed
+
+*(paste the shared preamble from the top of this document, then this — but note
+that the read-only rule does NOT apply here. This seam changes files.)*
+
+> **This seam changes `app/` and `tests/`.** No `static/`, so no `?v=` bump.
+> Re-read "Mutation testing: commit first, always" before you break anything.
+
+### The defect
+
+`grant_unguided_run_bonus` assigns a per-category giver via `deed_giver()`
+(`quests.py:950`, backed by `DEED_GIVER_BY_CATEGORY` at `:912`) and stores it on
+the candidate as `cand["giver"]`. Then `_record_unguided_completion`
+(`quests.py:1033`) ignores it and writes the literal `"endurance"` into the
+INSERT.
+
+So every unguided deed is filed under Fenn regardless of what it was: a
+WeightTraining deed queues as `strength` and persists as `endurance`. The
+mismatch is invisible in the queue, which is why it survived — the *offered*
+giver is right and only the *claimed* record is wrong.
+
+The fix itself is one line: persist what the candidate carries. **The care is
+all in what that changes downstream.**
+
+### Compatibility decision — settled, do this
+
+A first attempt at this seam stopped here, correctly. `cand["giver"]` would
+raise `KeyError` on a legacy queued candidate: `unguided_pending()`
+(`quests.py:1113`) calls `c.setdefault("giver", "endurance")` on the list it
+just decoded, but `db.kv_get` runs `json.loads` on **every** call and returns a
+fresh object, so that default is written to a throwaway and never persisted.
+`claim_unguided_bonus()` re-reads the kv value and gets candidates with no
+`giver` key at all. The comment calling that setdefault "load-bearing" is
+wrong — **correct the comment while you are in there.** It is harmless today
+only because the hardcode you are removing masks it.
+
+**Use `cand.get("giver", "endurance")` at the recording boundary. Do not
+migrate.** The default is *truthful*: candidates queued before per-giver
+attribution really were all Fenn's. And the queue is transient —
+`_sweep_stale_unguided_candidates` pays out and drops anything not dated today,
+so a legacy candidate can only exist for under a day. Migrating a self-draining
+queue would be live-data risk for nothing.
+
+**The ordering underneath is a separate, pre-existing defect — do not fix it
+here.** `claim_unguided_bonus` pops the candidate and persists that removal
+(`:1128`) *before* `_apply_unguided_bonus` saves the character (`:1075`) and
+records the quest row (`:1084`). Any exception in between leaves the player paid
+with no quest row and no ledger event. Re-queuing is blocked by the same-day
+`unguided_bonus_seen` key and the `start >= today` filter, so it is a lost
+record rather than a double payout — but it is recorded in `ROADMAP.md` §3 as
+its own entry. Your `.get()` default is what keeps this seam from *triggering*
+it; it is not a fix for it.
+
+### The ledger line is in scope — settled
+
+`_apply_unguided_bonus` writes the Chronicle event three lines below the
+recorder, and it hardcodes Fenn too (`quests.py:1087`):
+`f"Fenn rewarded an unguided activity ..."`. The candidate's ceremony note is
+already per-giver (`DEED_NOTES[giver]`, chosen at `:991`), so **after the
+persistence fix the quest row and the ceremony would credit Grunhilda while the
+Chronicle still credits Fenn** — a contradiction this seam would *create*.
+Fix it here. Scope discipline exists to keep unrelated work out, not to force
+shipping an inconsistency the change introduced. It is a Python f-string, not
+`static/`, so no `?v=` bump.
+
+**The obvious fix has a trap. `GIVERS` has no `wick` entry.** `deed_giver()`
+returns `"wick"` for the `other` category and `DEED_NOTES` does have a `wick`
+voice — but `GIVER_ARCHETYPES` (and therefore `GIVERS`) holds only `endurance`,
+`strength`, `bram` and `recovery`. So `GIVERS[cand["giver"]]["name"]` raises
+`KeyError` on an `other`-category deed — **inside the non-atomic claim path,
+after the payout**, producing exactly the lost-record failure recorded in §3.
+
+Look up the display name safely and give `wick` a name that suits the Ledger
+House. Do not "fix" this by adding a `wick` entry to `GIVER_ARCHETYPES`: that
+tuple is the equipment-ownership model, `OFFERABLE_GIVERS` and the doctrine
+surface read it, and a scrivener does not own modalities. **If you think the
+asymmetry should be resolved structurally, report it — do not do it here.**
+
+### What this will change, and must be checked
+
+`deed_giver()` can return `"bram"` (unsworn climbs, deliberate and test-guarded)
+and `"wick"` (the `other` fallback). **Neither has ever appeared in
+`quests.giver` for an unguided row before**, because the hardcode masked them.
+Check every consumer tolerates them:
+
+- **`counsel_schedule._accepted_today()` (`counsel_schedule.py:57`)** counts
+  `WHERE giver=? AND substr(accepted_at,1,10)=?`, and unguided rows set
+  `accepted_at` from the *activity's* start. So today an unguided WeightTraining
+  deed inflates **Fenn's** accepted-today count; after the fix it will inflate
+  **Grunhilda's**. That is a real behaviour change in Scheduled mode. Work out
+  what it does to lane consumption and **report it before deciding** — there is
+  a live question underneath (whether an unguided deed should advance *any*
+  authored lane, given it was never accepted from a schedule) and that question
+  is **not yours to settle in this seam**.
+- **`quests.py:807`** grants stat gains by giver and has no `wick` branch.
+  Confirm whether unguided completions reach it at all — `_unguided_stat_gains`
+  looks like a separate path — and say which.
+- **`main.py:330`**, and anything else reading a quest's giver.
+
+### Historical rows
+
+Every past unguided completion says `endurance`, right or wrong. The stored
+`details` carries `activity_type` and `category`, so the true giver is
+**reconstructible**.
+
+**Do not migrate anything.** Live player data is safety rule 3 and needs Joe's
+explicit sign-off, separately. Report how many rows are affected in a scratch DB
+and confirm whether reconstruction is possible — that is the whole deliverable
+on this point.
+
+### Tests
+
+- An unguided completion for each category persists the giver `deed_giver()`
+  computes — at minimum a WeightTraining deed persisting `strength`, and a
+  climb persisting `bram`.
+- The offered/queued giver and the persisted giver **agree**. That equality is
+  the actual invariant; assert it rather than asserting a literal, so the test
+  survives a future taxonomy change.
+- The existing unguided payout behaviour is unchanged: same XP, gold, vigor and
+  stat gains as before.
+
+### The acceptance bar
+
+Commit first, then mutation-test: restore the hardcode, capture the failure,
+restore the fix, re-run. Report both halves.
+
+```
+.venv/bin/ruff check .
+.venv/bin/python tests/smoke.py
+npm run test:frontend
+npm run test:browser
+for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
+```
+
+Quote the final line of each. Smoke is currently **241 checks** — if your count
+differs, say so, because `AGENTS.md` and `PLUGINS.md` both quote it.
+
+### Out of scope for this seam
+
+- **Changing the giver taxonomy.** There is an unapproved idea in `ROADMAP.md`
+  §2 about splitting Fenn and Grunhilda by *logging shape* (time-based versus
+  set-based) rather than modality. This seam makes the persisted giver agree
+  with `deed_giver()` so that idea would have **one** place to change instead of
+  two. Do not start on it.
+- **`DEED_GIVER_BY_CATEGORY`'s Bram entry.** Crediting an unsworn climb to Bram
+  is correct, commented and test-guarded. After this fix it will start appearing
+  in `quests.giver` — that is the entry working, not breaking.
+- **Migrating historical rows.** Report only.
+- Any other §3 entry, and `static/`.
+
+Build → verify → **stop and report** → wait for an explicit "commit that seam."
