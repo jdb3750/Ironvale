@@ -395,6 +395,29 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
       '.....SSSS.....', '....SsSSSS....', '..SSSSssSSSS..', '.SSssSSSSssSS.',
       '.SSssSSSSssSS.', '.SSSSSSSSSSSS.',
     ]},
+    /* hand-authored: a raven sat in the footer, facing left, hunched the way
+       they sit when they have nowhere to be. She is the SEND RAVENS button:
+       the bird is already there, so there is nothing to press. Drawn in near-
+       blacks a shade above the page's own --bg so she reads as a silhouette
+       rather than a hole — b body, B the sheen along her back and crown, g the
+       folded wing lying down her flank and the wedge of her beak, k the gape
+       line and the shadow under her tail, e the one pale eye, f her feet. */
+    raven_perched: { p: { k: '#101018', b: '#20202a', B: '#4a4a5c', g: '#38384a', e: '#e4e4ee', f: '#6e6e7c' }, r: [
+      '.....BBBB.........',
+      '...BbbbbbbB.......',
+      '..bbebbbbbbB......',
+      '.ggbbbbbbbbbB.....',
+      'ggkbbbbbbbbbbB....',
+      '..bbbbbbbbbbBB....',
+      '..bbbgggbbbbBB....',
+      '..bbbggggbbbbB....',
+      '..bbbgggggbbbBBB..',
+      '...bbbgggggbbbbbbB',
+      '...bbbgggggbbkkkkk',
+      '....kbbbbbbk......',
+      '.....f...f........',
+      '....fff.fff.......',
+    ]},
   };
 
   /* merge scene-specific sprites in, same char-map shape */
@@ -567,7 +590,11 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   </div>`;
   };
 
-  /* IV.footer() — SEND RAVENS / SETTINGS / SOUND: ON + the raven line.
+  /* IV.footer() — SETTINGS / SOUND: ON + the raven line, with the raven on it.
+     SEND RAVENS is gone: a bird is not a button. She is perched on the line
+     that already says when the ravens last flew, and you send her by touching
+     her, the way you would send a real one. Same design law as the billets and
+     Grunhilda's hammer — the place does the work, not a pile of buttons.
      The .backrow and .footer-btns hide themselves under .iv-phone (CSS), so the
      same string serves both frames. */
   IV.footer = function (opts) {
@@ -577,11 +604,13 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
     return `<div class="backrow"><button class="btn small">&larr; BACK</button></div>
   <div class="footer">
     <div class="footer-btns">
-      <button class="btn small">SEND RAVENS</button>
       <button class="btn small">SETTINGS</button>
       <button class="btn small green">SOUND: ON</button>
     </div>
-    <div class="muted">ravens last flew ${ravens} &middot; they fly every 15 min</div>
+    <div class="muted" style="display:inline-flex;align-items:center;gap:7px">
+      ${IV.spriteTag('raven_perched', 18)}
+      <span>ravens last flew ${ravens} &middot; they fly every 15 min</span>
+    </div>
     <div class="muted fine" style="margin-top:4px">${version}</div>
   </div>`;
   };
