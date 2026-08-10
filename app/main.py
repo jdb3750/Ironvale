@@ -1,18 +1,62 @@
 """Iron Vale — a self-hosted fitness RPG. FastAPI app: serves the API and the static frontend."""
 import asyncio
 import hashlib
+import math
 import os
 from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse as _JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import counsel_adherence
 from . import colosseum, counsel, counsel_nudge, db, dungeon, economy, exercises, game, imported_exercises, intervals, items, lifts, monsters, profiles, programs, quests, raid, records, road, syncing, vault
 
-app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None)
+
+def _sanitize_nonfinite(value):
+    """Recursively replace non-finite floats (inf/-inf/nan) with None.
+
+    Persisted data is untrusted input (AGENTS.md rule 5: malformed rows
+    degrade to unknown, never raise) but that rule was only being applied by
+    individual readers that remembered to check `math.isfinite` before
+    serving a number. A non-finite `activities.distance` written straight
+    into SQLite reaches readers that never got that guard (e.g. stats_payload
+    in records.py), and Starlette's JSONResponse encodes with
+    allow_nan=False, so any inf/nan anywhere in the payload turns an
+    otherwise-healthy response into a 400 for the whole endpoint.
+
+    DECISION (seam 9): sanitize once, here, at the serialisation boundary,
+    rather than adding a fourth/fifth/Nth per-reader `math.isfinite` guard.
+    This is the same "degrade, don't raise" contract every other malformed
+    field already gets — applied uniformly instead of per-reader-as-remembered.
+    The tradeoff: a response can now go out with a silent `null` where a bad
+    row lives, which is less visible than a loud 400. Accepted because (a) the
+    400 was already silently swallowing the *specific* bad value — it just
+    also took the rest of the payload down with it — and (b) `/api/road`
+    already treats "distance unknown" as a normal, displayable state; this
+    just extends that same posture to every endpoint instead of the one that
+    happened to get a guard first.
+    """
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _sanitize_nonfinite(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_nonfinite(v) for v in value]
+    return value
+
+
+class JSONResponse(_JSONResponse):
+    """The app's default response class (see _sanitize_nonfinite above)."""
+
+    def render(self, content):
+        return super().render(_sanitize_nonfinite(content))
+
+
+app = FastAPI(title="Iron Vale", docs_url=None, redoc_url=None, openapi_url=None,
+              default_response_class=JSONResponse)
 app.include_router(lifts.router)
 
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL_SECONDS", "900"))  # 15 min
