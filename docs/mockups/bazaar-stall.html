@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — the Tinker’s Bench, a scene</title>
+<!-- Design mockup. Nothing here is wired up; it is drawing paper for
+     docs/plugin-bazaar-plan.md §8b, built on docs/mockups/_harness.js.
+     Rebuilt to fold in the author's seven boss-call rulings
+     (docs/plugin-bazaar-plan.md, diff 4e7e65c) after the design critique
+     at docs/plugin-bazaar-critique.md. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+  IV.injectStyles();
+
+  /* ==========================================================================
+     1. SCENE CSS
+     ========================================================================== */
+  (function () {
+    var css = `
+/* ================= THE BENCH — a close-up of one stall in the row ================= */
+.iv .bench-scene { position:relative; border:2px solid #4a3d20; margin:12px 4px 4px;
+  image-rendering:pixelated; overflow:hidden; }
+.iv .bench-sky { height:118px; position:relative; overflow:hidden;
+  background:linear-gradient(180deg,#7ea8d8 0,#a8c8e0 55%,#c8dcea 100%); }
+/* you are standing in the row: the neighbors intrude at the margins, dimmed,
+   so the banner band is not 80% empty cloud (Craft fix, kept alongside the
+   rulings) */
+.iv .bench-sky .neighbor { position:absolute; bottom:0; opacity:0.55; filter:brightness(0.7); }
+.iv .bench-sky .neighbor.l { left:-18px; }
+.iv .bench-sky .neighbor.r { right:-14px; }
+.iv .bench-sky .cloud { position:absolute; border-radius:50%; background:rgba(255,255,255,0.45); filter:blur(1px); }
+.iv .bench-plate { position:absolute; left:50%; top:10px; transform:translateX(-50%);
+  padding:4px 12px; background:#1a1208; border:2px solid #8a6a40; color:#f0d080;
+  font-family:var(--font-body); font-size:var(--type-body); white-space:nowrap; text-align:center; }
+.iv .bench-plate small { display:block; color:#c8bda0; font-family:var(--font-fine); font-size:var(--type-fine); margin-top:1px; }
+
+.iv .bench-floor { position:relative; padding:0 10px 16px; background-color:#4a4256; border-top:4px solid #2c2c34; }
+.iv .bench-floor::before { content:''; position:absolute; inset:0; z-index:0;
+  background:linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.02) 40%, rgba(0,0,0,0.30)); pointer-events:none; }
+
+/* the crossbeam: a rail the goods actually hang from — not a black void */
+.iv .beam { position:relative; height:8px; margin:26px 8px 0;
+  background:linear-gradient(180deg,#8a6a40,#4c3820); border:1px solid #241a0e; z-index:1; }
+.iv .goods-hang { display:flex; justify-content:center; gap:34px; margin-top:-2px; position:relative; z-index:2; }
+.iv .good { text-align:center; cursor:pointer; background:none; border:none; padding:0; }
+.iv .good .tie { display:block; width:1px; height:14px; background:#c8c2a8; margin:0 auto; opacity:0.85; }
+.iv .good canvas { filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.45)); }
+.iv .good.dim canvas { filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.45)) brightness(0.72); }
+.iv .good.held { transform:translateY(6px) scale(1.16); }
+.iv .good.held canvas { filter:drop-shadow(0 0 8px rgba(255,242,190,0.9)) drop-shadow(3px 4px 0 rgba(0,0,0,0.5)); }
+.iv .good .glabel { display:block; margin-top:4px; color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .good.held .glabel { color:var(--gold-bright); }
+
+/* the paper ware-tag, swung into view when a good comes to hand — plain
+   facts only, decorated no further (ruling 3 / ruling 1: plain semver) */
+.iv .ware-tag { position:relative; max-width:300px; margin:20px auto 0; padding:10px 12px 9px;
+  background:#efe6c2; border:1px solid #8a7a4a; box-shadow:4px 4px 0 rgba(0,0,0,0.6);
+  font-family:var(--font-body); font-size:var(--type-body); color:#3a3222; z-index:2; }
+.iv .ware-tag::before { content:''; position:absolute; top:-13px; left:50%; margin-left:-1px;
+  width:1px; height:13px; background:#8a7a4a; }
+.iv .wt-head { display:flex; align-items:center; gap:8px; }
+.iv .wt-head canvas { filter:none; }
+.iv .wt-name { color:#241a0e; font-family:var(--font-title); font-size:var(--type-title); display:block; }
+.iv .wt-version { color:#5a4a2a; font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .wt-desc { margin-top:5px; color:#4a4030; line-height:1.4; }
+.iv .wt-row { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; }
+.iv .wt-chip { display:inline-block; padding:2px 6px; border:1px solid #8a7a4a; color:#4a4030;
+  font-family:var(--font-fine); font-size:var(--type-fine); background:rgba(138,122,74,0.10); }
+.iv .wt-perm { margin-top:6px; padding-top:6px; border-top:1px solid rgba(138,122,74,0.4);
+  color:#5a4a2a; font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.4; }
+.iv .wt-maker { margin-top:4px; color:#7a6a4a; font-family:var(--font-fine); font-size:var(--type-fine); }
+
+/* the merchant — ceremony and character, never a gate: he offers a
+   half-line of patter WHILE the player turns things over */
+.iv .bench-patter { max-width:400px; margin:14px auto 0; padding:6px 10px; text-align:center;
+  background:rgba(26,16,10,0.85); border:1px solid #6a512a; color:#cfc6b0; position:relative; z-index:2; }
+.iv .bench-patter i { font-style:italic; }
+
+.iv .bench-cap { position:relative; z-index:2; margin:14px 0 0; max-width:520px; }
+.iv .bench-cap .cap { display:inline-block; background:rgba(26,16,10,0.9); border:1px solid #6a512a;
+  border-top-color:#8a6a40; padding:5px 11px 6px; color:#cfc6b0;
+  box-shadow:0 5px 10px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(0,0,0,0.5); }
+.iv .bench-cap .cap b { color:var(--gold-bright); font-weight:400; }
+
+/* ================= THE COMMITMENT DIALOGUE — giver.js chrome, verbatim ================= */
+.iv .gwin { max-width:560px; margin:26px auto 0; background:var(--panel); border:2px solid var(--gold);
+  box-shadow:6px 6px 0 rgba(0,0,0,0.6); padding:14px; display:flex; gap:14px; }
+.iv .gwin .portrait { width:112px; height:112px; flex-shrink:0; border:2px solid #4a3d20; background:#120c08;
+  display:flex; align-items:center; justify-content:center; }
+.iv .gwin .gtext { flex:1; min-width:0; }
+.iv .gwin .gname { color:var(--gold-bright); font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px; }
+.iv .gwin .gstage { color:var(--dim); font-family:var(--font-fine); font-size:var(--type-fine); font-style:italic; margin:2px 0 6px; }
+.iv .gwin .gsay { line-height:1.5; }
+.iv .gwin .gsay .cursor { display:inline-block; width:8px; height:1em; background:var(--ink); vertical-align:middle; margin-left:2px; }
+.iv .gwin .perm-line { display:block; margin-top:6px; color:#e8c888; font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .gwin .responses { margin-top:12px; display:flex; flex-direction:column; gap:5px; }
+.iv .gwin .rline { text-align:left; background:none; border:none; padding:3px 0; color:var(--dim-readable);
+  font-family:var(--font-body); font-size:var(--type-body); cursor:pointer; }
+.iv .gwin .rline:hover { color:var(--gold-bright); }
+.iv .gwin .rline.primary { color:var(--ink); }
+.iv .gwin .rline .aside { color:var(--dim); font-family:var(--font-fine); font-size:var(--type-fine); }
+
+.iv-phone .goods-hang { gap:20px; }
+.iv-phone .ware-tag { max-width:88%; }
+.iv-phone .gwin { flex-direction:column; align-items:center; text-align:center; }
+.iv-phone .gwin .portrait { width:88px; height:88px; }
+`;
+    var el = document.createElement('style');
+    el.id = 'iv-bazaar-stall-scene';
+    el.textContent = css;
+    document.head.appendChild(el);
+  })();
+
+  /* ==========================================================================
+     2. SPRITES
+     ========================================================================== */
+  IV.addSprites({
+    cog_charm: { p: { i:'#9a9aa8', I:'#c6c6d2', k:'#2a2a34', y:'#f0c060' }, r: [
+      '.i.ii.i..', 'iIIiIIIii', '.IiykyiI.', 'iIikkiIIi', '.IiykyiI.',
+      'iIIiIIIii', '.i.ii.i..',
+    ]},
+    coil_spring: { p: { i:'#8a8a9a', I:'#b4b4c0' }, r: [
+      'iIIIIIIIi', 'i.......i', 'iIIIIIIIi', 'i.......i', 'iIIIIIIIi',
+      'i.......i', 'iIIIIIIIi',
+    ]},
+    lantern_ware: { p: { i:'#5a5a68', y:'#f0d060', Y:'#fff4c8', k:'#2a2a34' }, r: [
+      '..kk..', '.iYYi.', '.iyyi.', '.iYYi.', '.iyyi.', '..ii..', '..kk..',
+    ]},
+    halvard: { p: { h:'#8a8478', f:'#e0b088', K:'#1a1410', g:'#c9a24b', G:'#e8c888',
+                    a:'#5a4a3a', A:'#7a6650', l:'#3a3a46' }, r: [
+      '.....hhhhhh.....', '....hhhhhhhh....', '....GGGGGGGG....', '....hffffffh....',
+      '....hfKffKfh....', '....hffggffh....', '....hffffffh....', '....hhffffhh....',
+      '..aaaaaaaaaaaa..', '.aAAAAAAAAAAAAa.', '.aAaaaaaaaaAAa..', '.aAaallllaAAa...',
+      '..aaaaaaaaaaaa..', '...ll....ll.....',
+    ]},
+  });
+
+  /* ==========================================================================
+     3. MARGIN NOTES
+     ========================================================================== */
+  var TAG_TAG = 'A TAG, NOT A MANIFEST|'
+    + 'Icon, name, one-line description, plain semver, type and the '
+    + 'declared permissions &mdash; the crucial facts, legible in plain '
+    + 'shared language, decorated no further (ruling 3).';
+  var TAG_HELD = 'GOODS COME TO HAND|'
+    + 'Tap a good and it comes to hand: the merchant is ceremony and '
+    + 'character while you turn things over, never a gate in front of the '
+    + 'plain facts.';
+  var TAG_COMMIT = 'DISCLOSURE AT THE THRESHOLD|'
+    + 'The full plain-speech disclosure moves here &mdash; after &ldquo;Take it '
+    + 'home,&rdquo; before the parcel is wrapped &mdash; not repeated for every '
+    + 'good turned over on the bench.';
+  var TAG_BRIDGE = 'THE WALK HOME: OFFERED, NOT OWED|'
+    + '&ldquo;I&rsquo;ll hang it this very hour&rdquo; walks the player home with the '
+    + 'ware pre-selected; &ldquo;It can sleep a while&rdquo; is equally valid. The '
+    + 'walk remains available but is never required for the first purchase '
+    + 'to make sense.';
+
+  /* ==========================================================================
+     4. THE BENCH
+     ========================================================================== */
+
+  function bench(phone) {
+    var iconPx = phone ? 40 : 48;
+    return `<div class="bench-scene">
+      <div class="bench-sky">
+        <div class="cloud" style="left:8%;top:10px;width:60px;height:16px"></div>
+        <div class="cloud" style="left:62%;top:18px;width:80px;height:20px"></div>
+        <div class="neighbor l" style="width:40px;height:34px;background:repeating-linear-gradient(90deg,#a83828 0 8px,#7a2418 8px 16px);clip-path:polygon(0 100%,0 20%,100% 0,100% 100%)"></div>
+        <div class="neighbor r" style="width:34px;height:30px;background:#3a6a3a;clip-path:polygon(100% 100%,100% 20%,0 0,0 100%)"></div>
+        <div class="bench-plate">The Tinker’s Bench<small>oddities &amp; charms</small></div>
+      </div>
+      <div class="bench-floor" data-fill="dirt">
+        <div class="beam"></div>
+        <div class="goods-hang" data-seam="HELD" data-tag="${TAG_HELD}">
+          <button class="good dim"><span class="tie"></span>${IV.spriteTag('coil_spring', iconPx)}<span class="glabel">the Coil</span></button>
+          <button class="good held"><span class="tie"></span>${IV.spriteTag('cog_charm', iconPx)}<span class="glabel">the Tinker’s Ledger</span></button>
+          <button class="good dim"><span class="tie"></span>${IV.spriteTag('lantern_ware', iconPx)}<span class="glabel">the Lantern</span></button>
+        </div>
+
+        <div class="ware-tag" data-seam="TAG" data-tag="${TAG_TAG}">
+          <div class="wt-head">
+            ${IV.spriteTag('cog_charm', 30)}
+            <span><span class="wt-name">the Tinker’s Ledger</span><span class="wt-version">v1.5.0 &middot; charm &middot; first tier of trust</span></span>
+          </div>
+          <div class="wt-desc">Charts your lifts against the season, and says so plainly &mdash; no more.</div>
+          <div class="wt-row"><span class="wt-chip">reads: lift history</span><span class="wt-chip">no coin asked</span></div>
+          <div class="wt-perm">This ware asks to: read your training ledger. No ravens beyond the Vale.</div>
+          <div class="wt-maker">maker’s mark &mdash; halvard/tinkers-ledger</div>
+        </div>
+
+        <div class="bench-patter">“Ah, the Ledger &mdash; good eye.” <i>(goggles up &mdash; a good sign)</i></div>
+
+        <div class="bench-cap"><span class="cap">Three charms lie on his bench today. <b>Nothing acts until it hangs upon your hearth tree.</b></span></div>
+      </div>
+    </div>`;
+  }
+
+  function commitDialogue() {
+    return `<div class="gwin" data-seam="COMMIT" data-tag="${TAG_COMMIT}">
+      <div class="portrait">${IV.spriteTag('halvard', 96)}</div>
+      <div class="gtext">
+        <div class="gname">Halvard</div>
+        <div class="gstage">(the Ledger wrapped in oilcloth, waiting on the counter)</div>
+        <div class="gsay">“The Tinker’s Ledger. Crafted by my own hand. It may do three things and three only: read your training ledger, every set and weight you ever logged; chart it against the season; and say so plainly, on a page of its own. No ravens beyond the Vale. No coin asked. First tier of trust &mdash; cloth and ink. This ware cannot act on its own.”
+          <span class="perm-line">This ware asks to: read your training ledger.</span>
+        </div>
+        <div class="responses" data-seam="BRIDGE" data-tag="${TAG_BRIDGE}">
+          <button class="rline primary">“I’ll hang it this very hour.” <span class="aside">walks you to the hearth tree, Ledger in hand</span></button>
+          <button class="rline primary">“It can sleep a while.” <span class="aside">packed to the ornament box</span></button>
+          <button class="rline">“What does ‘first tier of trust’ mean?”</button>
+          <button class="rline">“Another day, trader.”</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ==========================================================================
+     5. THE FRAME
+     ========================================================================== */
+
+  function sceneDesktop() {
+    return `<div class="app-pad">
+      ${IV.header({ phone:false })}
+      ${bench(false)}
+      ${commitDialogue()}
+      ${IV.footer()}
+    </div>`;
+  }
+
+  /* ==========================================================================
+     6. THE WALL
+     ========================================================================== */
+  IV.page({
+    title: 'Iron Vale — the Tinker’s Bench, a scene',
+    subtitle: 'visual mockup, nothing wired up · docs/plugin-bazaar-plan.md §8b · rebuilt to fold in the author’s seven rulings',
+    note: 'Rebuild of <code>bazaar-stall.png</code>. Goods hang from a crossbeam and come to hand on a '
+      + 'tap, swinging out a plain paper ware-tag &mdash; icon, name, description, plain semver, type and '
+      + 'declared permissions, decorated no further (ruling 3). The merchant offers a half-line of '
+      + 'patter while you turn things over; the full sworn disclosure waits for the commitment '
+      + 'threshold, after &ldquo;Take it home&rdquo; and before the parcel is wrapped, ending in a bridge '
+      + 'that is offered but never owed &mdash; walking home is one valid answer, letting it sleep in the '
+      + 'box is an equally valid other.',
+    legend: [
+      { label: 'TAG', text: 'plain facts on paper, nothing gilded — ruling 3' },
+      { label: 'HELD', text: 'goods come to hand; the merchant is companion, not gate' },
+      { label: 'COMMIT', text: 'full disclosure moves to the threshold, spoken once' },
+      { label: 'BRIDGE', text: 'the walk home is offered, never owed' },
+    ],
+    frames: {
+      desktop: {
+        title: 'Desktop — 900px viewport, scaled to fit',
+        sub: 'the bench, with the Tinker’s Ledger held and its tag swung into view, followed by Halvard’s full disclosure at the commitment threshold',
+        chips: ['plain-info tag', 'companion merchant', 'disclosure at commitment', 'bridge offered, not owed'],
+        url: 'ironvale.local:8322/#bazaar?stall=tinker — the bench',
+        html: sceneDesktop(),
+      },
+    },
+  });
+
+  IV.boot();
+</script>

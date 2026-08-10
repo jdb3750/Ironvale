@@ -1,0 +1,276 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Vale — the Hearth Tree, a scene</title>
+<!-- Design mockup. Nothing here is wired up; it is drawing paper for
+     docs/plugin-bazaar-plan.md §8c, built on docs/mockups/_harness.js.
+     Rebuilt to fold in the author's seven boss-call rulings
+     (docs/plugin-bazaar-plan.md, diff 4e7e65c) after the design critique
+     at docs/plugin-bazaar-critique.md. -->
+<script src="_harness.js"></script>
+<body>
+<script>
+  IV.injectStyles();
+
+  /* ==========================================================================
+     1. SCENE CSS
+     ========================================================================== */
+  (function () {
+    var css = `
+/* ================= THE DWELLING — split view: tree left, list right ================= */
+.iv .dwelling { position:relative; border:2px solid #4a3d20; margin:12px 4px 4px;
+  image-rendering:pixelated; background:#1e1626; overflow:hidden; }
+.iv .tree-split { display:flex; align-items:stretch; }
+.iv .tree-pane { flex:0 0 400px; position:relative; padding:16px 8px 80px; background:radial-gradient(ellipse at 50% 30%,#2a2038,#161020 72%); }
+.iv .list-pane { flex:1; min-width:0; padding:14px 14px 14px; background:#161020; border-left:2px solid #3a2c50; }
+.iv-phone .tree-split { flex-direction:column; }
+.iv-phone .tree-pane { flex:0 0 auto; padding:12px 4px 44px; }
+.iv-phone .list-pane { border-left:none; border-top:2px solid #3a2c50; }
+
+/* the hearth, so the ornaments have a reason to glow — tucked beside the
+   tub, not behind it, and not competing with the box for the same corner */
+.iv .hearth-fire { position:absolute; left:50%; bottom:0; margin-left:-80px; width:36px; height:30px; z-index:3; }
+.iv .hearth-fire .flame { position:absolute; bottom:0; left:8px; width:20px; height:24px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+  background:radial-gradient(ellipse at 50% 80%, #fff4c8, #f0a030 55%, #b03818 90%); filter:blur(0.4px);
+  animation:hearthFlicker 1.8s ease-in-out infinite alternate; }
+@keyframes hearthFlicker { from { opacity:0.85; transform:scaleY(0.94); } to { opacity:1; transform:scaleY(1.04); } }
+.iv .hearth-fire .glow { position:absolute; bottom:0; left:-14px; width:64px; height:40px;
+  background:radial-gradient(ellipse at center bottom, rgba(240,160,60,0.42), rgba(240,160,60,0) 74%); }
+
+/* ---- THE TREE: a tub, a trunk, and real forked limbs — not a solid cone.
+   Each .bough is a tapered CSS wedge, rotated and anchored at the trunk,
+   so the silhouette reads as branches rather than a triangle (ruling 6). ---- */
+.iv .tree-stand { position:relative; width:260px; height:320px; margin:0 auto; }
+.iv .trunk { position:absolute; left:50%; bottom:34px; margin-left:-8px; width:16px; height:160px;
+  background:linear-gradient(90deg,#241a10,#4a3018 45%,#2c1c0e); border-radius:3px 3px 0 0; z-index:2; }
+.iv .bough { position:absolute; left:50%; bottom:34px; width:13px; height:var(--len,70px);
+  background:linear-gradient(90deg,#1c3a1c,#4a8043 50%,#1c3a1c); border-radius:7px 7px 2px 2px;
+  box-shadow:1px 0 0 rgba(0,0,0,0.3);
+  transform-origin:bottom center; transform:rotate(var(--rot,0deg)) translateX(-50%);
+  z-index:1; }
+.iv .bough.hi { z-index:3; }
+.iv .tub { position:absolute; left:50%; bottom:0; margin-left:-42px; width:84px; height:36px; z-index:2;
+  background:linear-gradient(180deg,#8a6a40,#5a4428); border:2px solid #34251a; border-radius:0 0 8px 8px; }
+.iv .tub-band { position:absolute; left:-2px; right:-2px; top:6px; height:5px; background:#3a2a18; }
+
+/* ornaments cluster by stall on a shared bough — the tree tells the summary
+   truth, the list tells the itemized truth (ruling 5) */
+.iv .orn-cluster { position:absolute; display:flex; gap:3px; z-index:4; }
+.iv .orn { width:15px; height:15px; border-radius:50%; position:relative; }
+.iv .orn.on { filter:drop-shadow(0 0 6px var(--glow,rgba(240,208,128,0.8))); }
+.iv .orn.on::after { content:''; position:absolute; inset:3px; border-radius:50%; background:rgba(255,255,255,0.55); }
+.iv .orn.off { opacity:0.55; filter:grayscale(0.6) brightness(0.7); }
+.iv .orn.dye { background:#8a4ac0; --glow:rgba(180,120,224,0.85); }
+.iv .orn.scriv { background:#a83828; --glow:rgba(224,120,90,0.85); }
+.iv .orn.tinker { background:#8a8a9a; --glow:rgba(220,220,230,0.85); }
+.iv .orn.bell { background:#3a6a3a; --glow:rgba(120,200,120,0.85); }
+
+/* the unripe cone — installed, updated, waiting on a coming api_version */
+.iv .orn.bud { background:#2e5a30; border:1px solid #1c3a1e; opacity:0.8; }
+
+/* the fallen ornament — a broken ware lies at the foot of the tree, dark,
+   distinct from the box (kept from the critique's Tear 4; not one of the
+   seven rulings, but costs nothing and the tree's own state ledger implies it) */
+.iv .orn.fallen { background:#241c2c; box-shadow:none; filter:none; }
+
+.iv .tree-cap { position:absolute; left:8px; right:96px; bottom:8px; text-align:center; z-index:4; }
+.iv .tree-cap .cap { display:inline-block; background:rgba(20,12,8,0.88); border:1px solid #6a512a;
+  padding:4px 10px; color:#cfc6b0; font-family:var(--font-fine); font-size:var(--type-fine); }
+
+/* the ornament box: honest at any size — a fuller sprite with a chalked
+   count on the slats, never a literal depiction of every ware owned. Set
+   well clear of the tree-cap caption below it. */
+.iv .orn-box { position:absolute; right:2px; bottom:76px; width:88px; z-index:3; text-align:center; }
+.iv .orn-box .crate { position:relative; width:88px; height:58px; background:linear-gradient(180deg,#7d5f36,#4a3620);
+  border:2px solid #2a1d10; box-shadow:3px 3px 0 rgba(0,0,0,0.5); }
+.iv .orn-box .crate .slat { position:absolute; left:4px; right:4px; height:2px; background:#2a1d10; }
+.iv .orn-box .crate .chalk { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:#f2ead0; font-family:var(--font-title); font-size:var(--type-title); text-shadow:1px 1px 0 rgba(0,0,0,0.6); }
+.iv .orn-box .capline { display:block; margin-top:4px; color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); }
+
+/* ---- THE LIST: itemized truth, one row per ware, state in Vale speech ---- */
+.iv .list-head { text-align:center; margin-bottom:8px; }
+.iv .list-head .lt { color:var(--gold-bright); font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px; }
+.iv .list-head .ls { display:block; color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); margin-top:2px; }
+.iv .ware-row { display:flex; align-items:flex-start; gap:9px; padding:8px 4px; border-top:1px solid #2c2440; }
+.iv .ware-row:first-child { border-top:none; }
+.iv .ware-row canvas { flex-shrink:0; margin-top:2px; }
+.iv .ware-row .wr-name { color:var(--ink); font-family:var(--font-body); font-size:var(--type-body); display:block; }
+.iv .ware-row .wr-state { display:block; color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); margin-top:1px; }
+.iv .ware-row.hanging .wr-state { color:#f0c060; }
+.iv .ware-row.hanging { background:rgba(240,208,128,0.06); }
+.iv .ware-row .wr-status { display:flex; align-items:center; gap:5px; margin-top:3px; }
+.iv .ware-row .wr-status canvas { margin-top:0; }
+.iv .ware-row.fallen .wr-name { color:#9a92a8; }
+.iv .ware-row.fallen .wr-state { color:#c88a7a; }
+`;
+    var el = document.createElement('style');
+    el.id = 'iv-dwelling-tree-scene';
+    el.textContent = css;
+    document.head.appendChild(el);
+  })();
+
+  /* ==========================================================================
+     2. SPRITES
+     ========================================================================== */
+  IV.addSprites({
+    hand_small: { p: { f:'#e0b088', F:'#c08e68' }, r: [
+      '.ff.', 'ffff', 'ffff', '.FF.',
+    ]},
+    icon_dye: { p: { p:'#8a4ac0', P:'#b47ae0' }, r: ['.P.', 'PpP', '.p.'] },
+    icon_scroll: { p: { c:'#a83828', p:'#efe7d2' }, r: ['ccc', 'cpc', 'ccc'] },
+    icon_gear: { p: { i:'#9a9aa8', I:'#c6c6d2' }, r: ['iIi', 'Iii', 'iIi'] },
+    icon_bell: { p: { g:'#c9a24b', G:'#f0d080' }, r: ['.g.', 'gGg', '.k.'] },
+  });
+
+  /* ==========================================================================
+     3. MARGIN NOTES
+     ========================================================================== */
+  var TAG_BRANCHY = 'REAL LIMBS, NOT A CONE|'
+    + 'A branchy yule-tree in a tub &mdash; structural boughs at plant-node '
+    + 'angles, wares hung from actual branches, not baubles glued to a solid '
+    + 'leaf triangle (ruling 6).';
+  var TAG_UNBOUNDED = 'NO HOOK COUNT, NO CAP|'
+    + 'Branches grow forever. The tree tells the summary truth &mdash; '
+    + 'ornaments cluster by stall on a shared bough &mdash; and the box '
+    + 'tells its count on the slats rather than depicting every ware '
+    + '(ruling 5): &ldquo;the box holds nine.&rdquo;';
+  var TAG_LIST = 'THE ITEMIZED TRUTH|'
+    + 'The split view&rsquo;s other half: one row per owned ware, its state in '
+    + 'Vale speech &mdash; upon the tree, in the box, being hung.';
+
+  /* ==========================================================================
+     4. THE TREE
+     ========================================================================== */
+
+  function boughs() {
+    // hand-placed branch geometry: alternating sides, varied length/angle —
+    // a real fork, not a symmetric grid
+    var specs = [
+      { rot: -50, len: 96, bottom: 38 },
+      { rot: 44, len: 88, bottom: 50 },
+      { rot: -32, len: 108, bottom: 74 },
+      { rot: 38, len: 98, bottom: 92 },
+      { rot: -46, len: 76, bottom: 112 },
+      { rot: 24, len: 84, bottom: 122 },
+      { rot: -18, len: 70, bottom: 148, hi: true },
+      { rot: 20, len: 66, bottom: 156, hi: true },
+      { rot: -8, len: 50, bottom: 176, hi: true },
+      { rot: 10, len: 46, bottom: 182, hi: true },
+    ];
+    return specs.map(function (s) {
+      return `<div class="bough ${s.hi ? 'hi' : ''}" style="--rot:${s.rot}deg;--len:${s.len}px;bottom:${s.bottom}px"></div>`;
+    }).join('');
+  }
+
+  function tree() {
+    return `<div class="tree-stand" data-seam="BRANCHY" data-tag="${TAG_BRANCHY}">
+      <div class="hearth-fire"><div class="glow"></div><div class="flame"></div></div>
+      ${boughs()}
+      <div class="trunk"></div>
+      <div class="tub"><div class="tub-band"></div></div>
+
+      <!-- clusters: all dyes share one bough, etc. — summary truth -->
+      <div class="orn-cluster" style="left:64px;top:126px">
+        <span class="orn on dye"></span><span class="orn on dye"></span>
+      </div>
+      <div class="orn-cluster" style="left:174px;top:96px">
+        <span class="orn on scriv"></span>
+      </div>
+      <div class="orn-cluster" style="left:42px;top:172px">
+        <span class="orn on tinker"></span><span class="orn on tinker"></span><span class="orn on tinker"></span>
+      </div>
+      <div class="orn-cluster" style="left:182px;top:156px">
+        <span class="orn on bell"></span>
+      </div>
+      <div class="orn-cluster" style="left:118px;top:64px">
+        <span class="orn bud"></span>
+      </div>
+      <div class="orn fallen" style="position:absolute;left:196px;bottom:40px;z-index:2" title="fallen in the night"></div>
+
+      <div class="orn-box" data-seam="UNBOUNDED" data-tag="${TAG_UNBOUNDED}">
+        <div class="crate"><div class="slat" style="top:14px"></div><div class="slat" style="top:30px"></div><div class="slat" style="top:46px"></div>
+          <div class="chalk">9</div></div>
+        <span class="capline">the box holds nine</span>
+      </div>
+
+      <div class="tree-cap"><span class="cap">What hangs upon the tree <b>works.</b> What sleeps in the box only sleeps.</span></div>
+    </div>`;
+  }
+
+  /* ==========================================================================
+     5. THE LIST
+     ========================================================================== */
+
+  function wareRow(icon, name, sub, state, cls) {
+    return `<div class="ware-row ${cls || ''}">
+      ${IV.spriteTag(icon, 26)}
+      <div>
+        <span class="wr-name">${name}</span>
+        <span class="wr-state">${sub}</span>
+        <span class="wr-status">${state}</span>
+      </div>
+    </div>`;
+  }
+
+  function list() {
+    return `<div class="list-pane" data-seam="LIST" data-tag="${TAG_LIST}">
+      <div class="list-head"><span class="lt">Your Wares</span><span class="ls">nine owned, four hung</span></div>
+      ${wareRow('icon_gear', 'the Tinker’s Ledger', 'upon the tree', '<span class="wr-status-icon">' + IV.spriteTag('hand_small', 14) + '</span> the hands take but a breath', 'hanging')}
+      ${wareRow('icon_dye', 'Emberfall Dye', 'upon the tree', 'the dye branch holds one skein', '')}
+      ${wareRow('icon_dye', 'Winterwatch Dye', 'in the box', 'a raven left word &mdash; v1.5.0 waits at the cart', '')}
+      ${wareRow('icon_scroll', 'the Chartwright’s Doctrine', 'upon the tree', '', '')}
+      ${wareRow('icon_gear', 'Coldsnap Mobility', 'in the box', '', '')}
+      ${wareRow('icon_bell', 'Copper Chimes', 'upon the tree', '', '')}
+      ${wareRow('icon_gear', 'Waystone Font', 'a closed bud &mdash; will open in a coming season', '', '')}
+      ${wareRow('icon_gear', 'the Tinker’s Almanac', 'fallen in the night &mdash; made for another season of the Vale; the trader must mend it', '', 'fallen')}
+      ${wareRow('icon_dye', 'Duskrose Dye', 'in the box', '', '')}
+    </div>`;
+  }
+
+  /* ==========================================================================
+     6. THE FRAME
+     ========================================================================== */
+
+  function sceneDesktop() {
+    return `<div class="app-pad">
+      ${IV.header({ phone:false })}
+      <div class="dwelling">
+        <div class="tree-split">
+          <div class="tree-pane">${tree()}</div>
+          ${list()}
+        </div>
+      </div>
+      ${IV.footer()}
+    </div>`;
+  }
+
+  /* ==========================================================================
+     7. THE WALL
+     ========================================================================== */
+  IV.page({
+    title: 'Iron Vale — the Hearth Tree, a scene',
+    subtitle: 'visual mockup, nothing wired up · docs/plugin-bazaar-plan.md §8c · rebuilt to fold in the author’s seven rulings',
+    note: 'Rebuild of <code>dwelling-tree.png</code>. A branchy yule-tree with real structural limbs, not a '
+      + 'solid leaf cone (ruling 6) &mdash; ornaments cluster by stall on shared boughs, and capacity is '
+      + 'unbounded: no hook count, no cap, the box telling its count on the slats rather than depicting '
+      + 'every ware it holds (ruling 5). The split view keeps the tree as summary truth and the list as '
+      + 'itemized truth, exactly as §8c specs.',
+    legend: [
+      { label: 'BRANCHY', text: 'real forked limbs at plant-node angles, not a cone — ruling 6' },
+      { label: 'UNBOUNDED', text: 'no hook count, no cap — clusters + chalked count — ruling 5' },
+      { label: 'LIST', text: 'the itemized truth beside the tree’s summary truth' },
+    ],
+    frames: {
+      desktop: {
+        title: 'Desktop — 900px viewport, scaled to fit',
+        sub: 'the split view: the branchy hearth tree with clustered ornaments and the chalked box on the left, the itemized ware list on the right',
+        chips: ['branchy tree', 'unbounded capacity', 'clusters by stall', 'chalked box count'],
+        url: 'ironvale.local:8322/#dwelling — the hearth tree',
+        html: sceneDesktop(),
+      },
+    },
+  });
+
+  IV.boot();
+</script>
