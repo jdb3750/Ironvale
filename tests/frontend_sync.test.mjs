@@ -41,7 +41,7 @@ async function renderSettings(ambition) {
   };
   vm.runInContext(`
     S.state = globalThis.__settingsState;
-    counselSchedulePrograms = [];
+    programsCache = { programs: [], routines: [] };
     counselScheduleEditorHTML = () => '';
     shell = html => html;
   `, harness.context);

@@ -237,7 +237,6 @@ G.crank = async (useToken) => {
 
 let settingsTab = 'game';
 let counselScheduleDraft = null;
-let counselSchedulePrograms = null;
 let counselRoutineDraft = null;
 let counselRoutineSaving = false;
 let counselScheduleChooser = null;
@@ -250,7 +249,6 @@ const SETTINGS_TABS = Object.freeze([
 RESETS.push(() => {
   settingsTab = 'game';
   counselScheduleDraft = null;
-  counselSchedulePrograms = null;
   counselRoutineDraft = null;
   counselRoutineSaving = false;
   counselScheduleChooser = null;
@@ -279,11 +277,13 @@ function counselScheduleConfig(modality) {
 }
 
 function counselScheduleRoutineOptions() {
-  const builtIns = (counselSchedulePrograms?.programs || []).map(program => ({
+  // Reads the shared programsCache (app.js) directly rather than a local
+  // copy, so this always reflects whatever either editor last wrote.
+  const builtIns = (programsCache?.programs || []).map(program => ({
     value: program.key,
     label: program.name,
   }));
-  const custom = (counselSchedulePrograms?.routines || []).map(routine => ({
+  const custom = (programsCache?.routines || []).map(routine => ({
     value: `custom:${routine.id}`,
     label: routine.name,
   }));
@@ -717,7 +717,11 @@ function paintCounselRoutineDraft() {
 }
 
 G.openCounselRoutineBuilder = (day, index, optional = false) => {
-  counselRoutineDraft = { day, index, optional, exercises: [] };
+  // clientKey is held for the life of this draft: if the forge below fails
+  // after the routine is already created server-side, a retry sends the
+  // same key so the server can recognise the repeat instead of minting a
+  // second routine.
+  counselRoutineDraft = { day, index, optional, exercises: [], clientKey: randomClientKey() };
   counselRoutineSaving = false;
   const exerciseOptions = S.exercises.map(exercise => (
     `<option value="${esc(exercise.name)}">${esc(exercise.name)}</option>`
@@ -771,7 +775,11 @@ G.saveCounselRoutine = async () => {
     toast(name ? 'Write at least one movement.' : 'Name the routine.', true);
     return;
   }
-  // Mutation invariant: one player activation creates at most one custom routine.
+  // Mutation invariant: one player activation creates at most one custom
+  // routine — including across a retried forge. The POST is idempotent per
+  // clientKey (see programs.save_routine), so a retry of this same draft
+  // cannot mint a second routine even if an earlier attempt got partway
+  // through before failing.
   counselRoutineSaving = true;
   const saveButton = document.getElementById('schedule-routine-save');
   const overlay = saveButton?.closest('.overlay');
@@ -781,6 +789,9 @@ G.saveCounselRoutine = async () => {
   }
   overlay?.setAttribute('aria-busy', 'true');
   const target = { day: counselRoutineDraft.day, index: counselRoutineDraft.index };
+  const optional = counselRoutineDraft.optional;
+  let routine = null;
+  let slotWritten = false;
   try {
     const response = await api('/routines', {
       method: 'POST',
@@ -788,13 +799,28 @@ G.saveCounselRoutine = async () => {
         name,
         giver: 'strength',
         exercises: counselRoutineDraft.exercises,
+        client_key: counselRoutineDraft.clientKey,
       },
     });
-    counselSchedulePrograms = await api('/programs');
+    routine = response.routine;
+    // The routine exists server-side from this point on no matter what
+    // happens below — invalidate the shared cache and refetch immediately
+    // so it is visible to both editors even if the slot write below fails.
+    invalidatePrograms();
+    await fetchPrograms();
     counselScheduleWriteSlot(target.day, target.index, {
-      routine: `custom:${response.routine.id}`,
-      optional: counselRoutineDraft.optional,
+      routine: `custom:${routine.id}`,
+      optional,
     });
+    slotWritten = true;
+  } catch (error) {
+    // api() already toasted a network/validation failure. If the routine
+    // itself was forged but the weekly slot wasn't written, say so — the
+    // player should not be left thinking the whole forge was lost when the
+    // routine is sitting there, findable under Doctrines.
+    if (routine) {
+      toast('Routine forged, but the weekly slot was not written. Find it under Doctrines, or try again.', true);
+    }
   } finally {
     counselRoutineSaving = false;
     if (saveButton?.isConnected) {
@@ -803,6 +829,7 @@ G.saveCounselRoutine = async () => {
     }
     overlay?.removeAttribute('aria-busy');
   }
+  if (!slotWritten) return; // draft stays open so a failed forge can be retried safely
   counselRoutineDraft = null;
   SFX.fanfare();
   toast('Routine forged into the weekly plan.');
@@ -816,10 +843,15 @@ G.saveCounselRoutine = async () => {
 
 SCREENS.settings = async function () {
   const token = captureRouteToken();
-  if (counselSchedulePrograms === null) {
-    const programsPayload = await api('/programs');
+  // Shared with the doctrine editor (giver.js) via app.js's programsCache —
+  // this only hits the network when that cache has been invalidated, by
+  // either editor's mutations, or nothing has fetched it yet this profile.
+  // The token re-check stays INSIDE the miss, matching the original control
+  // flow: awaiting on a cache hit too would add a suspension point this
+  // screen never had, and a route change during it renders Settings empty.
+  if (programsCache === null) {
+    await fetchPrograms();
     if (!isRouteTokenCurrent(token)) return;
-    counselSchedulePrograms = programsPayload;
   }
   const s = S.state.settings;
   const c = S.state.character;

@@ -295,6 +295,32 @@ async function refreshState() {
   return S.state;
 }
 
+/* Doctrines & routines have exactly one owner: this cache. The Council
+   schedule editor (misc.js) and the doctrine editor (giver.js) both read it
+   through fetchPrograms() and both call invalidatePrograms() after any
+   mutation (create, select, delete) — so neither screen can go on serving a
+   programs/routines list the other has since changed. */
+let programsCache = null;
+
+async function fetchPrograms() {
+  if (programsCache === null) programsCache = await api('/programs');
+  return programsCache;
+}
+
+function invalidatePrograms() {
+  programsCache = null;
+}
+
+RESETS.push(() => { programsCache = null; });
+
+/* Not cryptographically strong — just unique enough to let the server
+   recognise a retried request as the same one. crypto.randomUUID() would
+   require a secure context, which a LAN-only deployment over plain http
+   does not have. */
+function randomClientKey() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 function clientTimeZone() {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
   catch (e) { return ''; }

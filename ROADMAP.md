@@ -614,6 +614,41 @@ entries are open work with the removal path worked out.
     produce a response whose settings and nudge describe different captures,
     against the one-snapshot invariant.
 
+- **The browser suite pins the asset version inside a test named for
+  something else.** Found 2026-08-05 during seam 10.
+  `tests/frontend_browser.test.mjs:4009` asserts
+  `item.assetVersion === '127'`, but that assertion sits inside the test
+  *"counsel hard warning and HARD chip meet WCAG AA contrast at all target
+  viewports"* (`:3789`). So a correct, required `?v=` bump fails a contrast
+  test, and the failure output is a wall of colour measurements with nothing
+  about caching in it. It cost real time to diagnose. Move the assertion into
+  its own named test — the `?v=` bump is a rule every `static/` seam must
+  follow, and the test that guards it should say so when it fails.
+- ~~**Routine forging can persist duplicates after a partial success.**~~ and
+  ~~**Routine state goes stale across Settings and Doctrines.**~~ **BOTH
+  RESOLVED 2026-08-05** by review seam 10, at the root rather than as two
+  symptoms. `programsCache` in `app.js` is now the single owner: both the
+  Council schedule editor and the doctrine editor read it through
+  `fetchPrograms()` and invalidate it through `invalidatePrograms()` after every
+  create, select and delete, so neither screen can serve a list the other has
+  changed. Duplicate forging is closed with a client-supplied idempotency key
+  held for the life of a draft; `save_routine` falls straight through when the
+  key is absent, which is every other caller. The forge now also distinguishes
+  its two failure modes — a routine created but not slotted tells the player it
+  exists and where to find it, instead of reading as total failure.
+
+  **Three things were found in review, not by the implementation.**
+  `SCREENS.settings` awaited unconditionally and then re-checked the route
+  token, adding a suspension point the screen never had on a cache hit; a route
+  change during it rendered Settings empty and failed two browser tests. The
+  `?v=` bump was never applied. And the idempotency key had **no test that
+  could fail** — the frontend harness's fake server implements the dedup
+  itself, so deleting the real `save_routine` implementation left that suite
+  green at 25/0. `tests/test_routine_idempotency.py` covers the server half.
+  That is the fifth guard in this review to ship untested; the pattern is
+  reliable enough now that it should be assumed rather than checked for.
+  Original findings:
+
 - **Routine forging can persist duplicates after a partial success.** Found
   2026-08-04. `G.saveCounselRoutine` (`misc.js:767`) POSTs `/routines`, then
   inside the same `try` refreshes `/programs` and writes the schedule slot. There
