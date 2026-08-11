@@ -329,7 +329,7 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   <span><b>SEAM 6</b> — Grunhilda speaks only when tapped; her ember glint = a week reading waits</span>
 </div>
 <div class="vnote"><b>V3 vs V2 — centered and floating.</b> per Joe's third note: the dummies stand centered, every secondary panel FLOATS over the scene — elevated, shadowed, reflowing nothing — and the forge earned its job as the routines entry point. The barrel and stones left the yard so the board could widen and move central.</div>
-<div class="vnote"><b>THIS ROUND — the yard at rest, and bare.</b> per Joe's decisions of 2026-08-06: the yard inherits the town's time-of-day clock and sky tilesets (drawn at dusk — one village, one sky); the first run is austere (dark dummy, bare board, the coals the brightest thing, no unprompted Grunhilda line); phone gets ONE dummy on a spinning plinth with two guards so the spin never gates information (the caption counts the whole body; a movement lighting the hidden side auto-turns the dummy), while desktop keeps the pair; plates take capped wear from logged sessions; the vocabulary is codified — the forge births (strike/draw), the board hangs, the plates wear, the dummy only mirrors, and weeks are never forged, hung, or struck. Critique fixes landed throughout: ravens join the dock, the caption is generated from the same counts that light the dummy, spec voice left the frames for the margins, tooltip census enforced, --dim-readable on wood, honest 44px-class reorder latches and corner-glyph hit regions, and the rack keeps the neutral-bevel-no-dim grammar of a coexisting floater.</div>
+<div class="vnote"><b>THIS ROUND — the yard at rest, and bare.</b> per Joe's decisions of 2026-08-06: the yard inherits the town's time-of-day clock and sky tilesets (drawn at dusk — one village, one sky); the first run is austere (dark dummy, bare board, the coals the brightest thing, no unprompted Grunhilda line); phone gets ONE dummy on a spinning plinth with two guards so the spin never gates information (the caption counts the whole body; a movement lighting the hidden side auto-turns the dummy), while desktop keeps the pair; plates take capped wear from logged sessions; the vocabulary is codified — the forge births (strike/draw), the board hangs, the plates wear, the dummy only mirrors, and weeks are never forged, hung, or struck. Critique fixes landed throughout: the caption is generated from the same counts that light the dummy, spec voice left the frames for the margins, tooltip census enforced, --dim-readable on wood, honest 44px-class reorder latches and corner-glyph hit regions, and the rack keeps the neutral-bevel-no-dim grammar of a coexisting floater.</div>
 
 <div class="frames">
 
@@ -338,7 +338,7 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
       <div class="st-title">Phone — at rest, 390px</div>
       <div class="st-sub">the state the player inhabits: no overlays open. One dummy on the spinning plinth, the mid-built board hanging beneath, the forge warm at the left horizon, both corner glyphs riding the board &mdash; the town&rsquo;s dusk sky overhead</div>
       <div class="tag-chips">
-        <span>one dummy + spinning plinth</span><span>worn Bench Press plate</span><span>ember glint on Grunhilda</span><span>ravens in the dock</span>
+        <span>one dummy + spinning plinth</span><span>worn Bench Press plate</span><span>ember glint on Grunhilda</span><span>three-button dock</span>
       </div>
     </div>
     <div class="phone-bezel">
@@ -870,10 +870,9 @@ function footerHtml() {
   </div>`;
 }
 function dockHtml(withTag) {
-  return `<nav class="phone-dock" ${withTag ? `data-tag="COMPACT DOCK|Back / Town / Ravens / Settings, in that order, 44px each — DESIGN.md&rsquo;s required contract, drawn in full so nobody builds a three-slot dock from the picture"` : ''}>
+  return `<nav class="phone-dock" ${withTag ? `data-tag="COMPACT DOCK|dock: no ravens button — ravens are becoming ambient notification birds (bazaar thread); DESIGN.md&rsquo;s dock contract to be updated when that lands."` : ''}>
     <button class="dock-action">&larr;<span>BACK</span></button>
     <button class="dock-action"><span>TOWN</span></button>
-    <button class="dock-action"><span>RAVENS</span></button>
     <button class="dock-action"><span>SETTINGS</span></button>
   </nav>`;
 }
