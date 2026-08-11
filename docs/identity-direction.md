@@ -2,8 +2,8 @@
 
 The chrome becomes drawn art. The border kit is the foundation; everything else
 either sits on it or waits for it. This document exists so the drawing can start
-without a follow-up question — sections 2 and 3 are the two specs that block a
-pixel editor, and the rest is scope.
+without a follow-up question — section 2 is the spec that blocks a pixel editor,
+section 3 is the half of it that sits behind body text, and the rest is scope.
 
 Joe has ruled that this project thread is the source of truth for the visual
 identity work, so this document governs where it and any other spec disagree.
@@ -22,19 +22,20 @@ it:
 - **`type-wordmark.html`** and **`wordmark-sheet.png`** — the drawn lettering
   Joe is redrawing from: the wordmark, the fixed screen titles and the
   illuminated capitals. Section 5 measures its glyphs.
-- **`material-chrome.html`** — kept for three of its ten sections and no more.
-  **00, "The lamp, and the rule it makes"**, which fixes the light source for
-  everything drawn here (`material-chrome.html:97-102`). **01–03**, "Bolted
-  iron", "Hung oak" and "Set stone", for their panel *textures* only — the
-  `.plate`, `.board` and `.slab` backgrounds and the ashlar wall that section 3
-  triages, which Joe redraws as pixel textures. And **04, "The title, five
-  ways"**, the title variants he is also redrawing — with one exception inside
-  it: the wax-sealed **parchment** strip is not a surviving variant
-  (`material-chrome.html:280`, `:725`, `:965`), because parchment is cut
-  including as a title label, per the table below. Sections 05–09 — the
-  per-material key sets, nesting, the side-by-side, the phone case and the cost
-  count — are cut, as is the plate/board/slab *construction* those textures sit
-  in.
+- **`material-chrome.html`** — Joe's ruling is that the border kit trumps it, so
+  what is left is one constraint and one idea. The constraint is **00, "The lamp,
+  and the rule it makes"**, which fixes the light source for everything drawn here
+  (`material-chrome.html:97-102`) and is cited throughout section 2. The idea is
+  **04, "The title, five ways"** — the title variants, which are still the one
+  part of the study he likes, and which he is redrawing. The panel textures in
+  **01–03** are no longer a deliverable of their own; they survive as the nearest
+  prior art for what the kit's fill tile paints, and section 3 triages them in
+  that role. Everything else is cut: the plate/board/slab construction, the ashlar
+  wall as a built surface, the per-material key sets, nesting, the side-by-side,
+  the phone case and the cost count. The wax-sealed **parchment** title strip
+  (`material-chrome.html:280`, `:725`, `:965`) is still not a surviving variant —
+  parchment returns as a *kit material*, not as a title treatment. See the
+  reversal in section 1.
 
 There are no page captures on the branch. The mockups are self-contained,
 dependency-free HTML with no build step: open the file.
@@ -43,12 +44,36 @@ dependency-free HTML with no build step: open the file.
 
 | Option | Verdict | What carries forward |
 | --- | --- | --- |
-| The Modular Border Kit | **Adopt** | All of it, as the foundation. Nine 8×8 tiles per material, four materials, material assigned by permanence and consequence. Section 2. |
-| The Detail Pass | **Partial** | Raven, bell, bolts/nails, panel title, streak flame, toasts, quill. Candle parked on a real implementation problem. Moth cut. Section 4. |
-| Material Chrome | **Partial** | Two things: the textured panel backdrops (redrawn as pixel textures, not the painterly ones in the mockup), and some title variants (redrawn). The plate/board/slab construction, the ashlar wall, the octagonal fasteners and the per-material key sets are all dropped. Section 3. |
-| Type, Titles & Wordmark | **Partial** | The hand-drawn paragraph work — illuminated capitals and ornamented copy. Drawn display and panel titles keep the idea and lose the execution. Section 5. |
-| Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch; the only place it is named again is section 0, to rule out the one title variant that used it. |
+| The Modular Border Kit | **Adopt** | All of it, as the foundation, and it now absorbs the interior of the box as well: the centre tile is the material background, not a flat fill behind one. Nine 8×8 tiles per material; four materials with the meanings rewritten (2g); a possible fifth for the Siege. Sections 2 and 3. |
+| The Detail Pass | **Partial** | Adopted: raven, bell, hanging title panel, streak flame, toast scrap, notched scrollbar, quill. Rewritten into something better: the wax seal. Dropped: corner nails, made redundant by the kit's own corners, and the ribbon on the tab. Held: candle, moth. Left undecided: the drawn empty states. Section 4. |
+| Material Chrome | **Partial** | The title variants, and nothing else — "border kit trumps everything else." The lamp rule (`material-chrome.html:97-102`) survives as a constraint rather than as a design, and the panel textures survive only as reference for the fill tile. Section 3. |
+| Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it needs hand-pixel tightening for readability, settled placement, and a set of rules for which face is used where — rules that do not exist yet. Section 5. |
+| Scroll & Parchment | **Cut, with one reversal** | The scroll stays cut as app-wide chrome and as the settings surface. **Parchment comes back as one of the four kit materials**, for quick notes and entries. See the reversals below and section 2g. |
 | Palette Studies | **Hold** | Nothing now. Gold gets restricted to the touchable and the earned, but that restriction rides in on the border work. |
+
+### Two rulings that reversed
+
+Both of these read the other way in an earlier version of this document. They are
+recorded as reversals rather than quietly rewritten, because anyone who saw the
+first ruling needs to know it changed, and because neither cut should be
+re-applied by someone working from the old text.
+
+**Parchment is back, as a kit material.** This document said "Cut. Nothing. Not
+settings, not as a vellum material in the kit, not as a title label, not
+anywhere." That is now wrong in exactly one place. Joe has given parchment a
+material meaning inside the kit — a quick note, an entry from somewhere, the feel
+of filling out a check — so it returns as **one of the four tile sets**, and only
+as that. Everything else parchment used to mean stays cut: the scroll as app-wide
+chrome, the scroll as the settings surface, and the wax-sealed parchment title
+strip in `material-chrome.html`. Parchment is a material now, not a world. The
+one measured finding that constrains drawing it is in 2g.
+
+**The moth is held, not cut.** This document marked it cut, following the
+mockup's own ranking (`detail-pass.html:844-853`, which ranks it last and says to
+cut it first). Joe now wants it kept while he thinks about a future for it — a
+little butterfly or a moth appearing on screen now and then. Held is not adopted:
+it is not scoped, it is not sequenced, and it is not in the seam list. It sits in
+the background of the thinking, which is exactly where he put it.
 
 The palette hold has one condition that would revive it: the border kit shipping
 and gold *still* reading as exhausting. That is the only evidence that a palette
@@ -107,8 +132,7 @@ glyphs that are one pixel wide in places. And the surface ramp collapses twice:
 read as one surface at arm's length**. Only `--surface-raised` `#24243b` (`:49`,
 L\* 15.24) is clearly separate. Worth carrying into section 3: some of what
 reads as flat is not the gold at all, it is three near-identical darks
-pretending to be a hierarchy, and the backdrop texture is being drawn onto that
-ground.
+pretending to be a hierarchy, and the fill tile is being drawn onto that ground.
 
 ---
 
@@ -157,13 +181,16 @@ stamp** and a short list of **rail marks**, and the generator expands them
 | Input | Size | What it is |
 | --- | --- | --- |
 | `profile` | 8 hex values | read outer→inner: rim, chamfer, four face rows, inner shade, inner rim (`border-kit.html:232-233`) |
-| `fill` + `fleck` | 2 hex values | the centre tile: flat fill with exactly two fleck pixels, at (2,5) and (6,1) (`:534-535`) |
+| `fill` + `fleck` | 2 hex values *today* | the centre tile: flat fill with exactly two fleck pixels, at (2,5) and (6,1) (`:534-535`). This is the one input that outgrows its row — the centre tile is the interior ground of the box, and section 3 is its real spec |
 | `catch` + `seam` | 2 hex values | corners only — the catch light and the mitre diagonal |
 | `stamp` | **3×3** char grid + 2–3 colours | the corner ornament (`:457`, iron is `['oRo','RRs','oss']`) |
 | `marks` | a handful of `{band, at, color}` | the 1–2px rail texture (`:459-461`) |
 
 That is about twelve hex values and nine stamp cells per material — the mockup's
 own estimate is roughly forty hand-placed pixels each (`border-kit.html:267-268`).
+That estimate is still right for the *frame*. It is no longer right for the whole
+material, because the fill is now a drawn ground rather than two hex values; see
+section 3.
 
 *Correction worth knowing before you draw:* the comment above the material data
 calls the stamp a "4x4 corner ornament" (`border-kit.html:449`). It is not. Every
@@ -317,7 +344,8 @@ plus `buildKitTiles(mat)` returning the nine 8×8 colour grids, and `kitVars(mat
 returning the nine `--tl`…`--fc` data-URI strings, set once per material at boot.
 Both are `border-kit.html:525-560` and `:563-593` transcribed.
 
-The backdrop texture in section 3 flips this recommendation — see there.
+This now covers the interior ground too. Section 3 used to flip the recommendation
+for it; the merge un-flips it, and all nine tiles take the same path.
 
 `border-image` is not an option, and this was measured rather than assumed. It
 is the justification for the whole nine-layer approach, so it is recorded in
@@ -370,7 +398,9 @@ band check in 2f tests for.
   and left faces, occlusion falling down and right. Every step hard — 1px or 2px,
   blur 0, no ramps (`material-chrome.html:97-102`).
 - Fleck the fill sparsely: two pixels per 8×8 tile. More and a large panel
-  shimmers under body text.
+  shimmers under body text. Treat that as the floor rather than the spec — once
+  the fill is the interior ground it has to satisfy section 3, which is a harder
+  brief than "two flecks" and points the same way.
 
 **What breaks it**
 
@@ -427,17 +457,145 @@ worth caring about), **1100** (a full-width desktop panel), and one deliberately
 awkward number like **347** so the clip lands somewhere ugly. Then repeat the set
 at `--s:1` against multiples of 8, since toasts and tooltips run there.
 
+### 2g. What each material means, and what its ornament is
+
+The kit's own rule is "material follows permanence and consequence, never screen
+or feature" (`border-kit.html:292-296`), and four `why` strings implement it in
+the data (`:463`, `:476`, `:490`, `:504`). The rule survives. The readings under
+it are rewritten, and one of the four materials changes identity.
+
+| Material | What it means | Where that lands |
+| --- | --- | --- |
+| **Iron** | where things are built, manufactured, ventured | the Forge, the Undercroft, the Colosseum — a workshop, not a threat |
+| **Oak** | showing listings and advertising wares — a daily specials board at a cafe | shops, offers, anything on sale for now |
+| **Stone** | things that last or stand with time, carved rather than written | Settings, and any "about" surface that states the doctrines or the methodology |
+| **Parchment** | a quick note, an entry from somewhere — the feel of filling out a check | short entries and quick records |
+
+**"Anything that can hurt you" is gone.** It was iron's `why`
+(`border-kit.html:463`) and Joe rejected it by name: it does not sound like this
+game. Iron is where work happens.
+
+**Parchment arrives carrying a measured constraint, and it is the one that will
+bite.** The deleted scroll study measured what happens to the app's accent
+language on a parchment field, and those numbers now govern a parchment tile
+rather than a whole theme. Read out of `docs/mockups/identity/scroll-parchment.html`
+at commit `0eb18bd` — the file is gone from this branch and is not being restored,
+so the figures are recorded here instead. Every bare `:n` in this entry is a line
+in that file at that commit:
+
+| On the vellum field `#d8cfa8` (`:118`) | Measured | The study's replacement |
+| --- | --- | --- |
+| `--gold #c9a24b` | **about 1.5:1** (`:1325-1326`) | `--gilt #8a6a1e` at ~4.4:1 (`:1326-1327`, `:128`) |
+| `--green #7ab55c` | **2.1:1** (`:1341`) | `--leaf #3d6a2a` (`:129`) |
+| `--blue #6aa0c8` | **2.4:1** (`:1342`) | `--lake #2f5a7a` (`:130`) |
+
+The field colour is not an invention. `#d8cfa8` is the app's own `--ink`
+(`static/style.css:53`), which is why the study's own comment on that token calls
+the field "identical to `--ink`".
+
+So there is a fork in front of whoever draws parchment, and it is not a small one.
+Section 2d requires the fill to stay in the panel family, near `--panel` `#121220`
+or `--panel2` `#191928`, because 12px body text sits on it — and a **dark**
+parchment tile keeps that constraint, keeps gold working, and largely gives up on
+looking like parchment. A **light** parchment tile is what the material is for,
+and it breaks 2d's fill constraint the moment it is drawn: gold at 1.5:1 on it is
+not dim, it is illegible, and every gold-accented thing that lands inside a
+parchment panel — a title, a key label, a stat label — needs a darker twin or has
+to stay out. That is the trap this entry exists to prevent, and it is not decided
+here. Whichever way it goes, `profile[0]` is still `--bg`, so the rim is dark
+regardless and the panel still floats on the void.
+
+Note what this does to the fourth slot. The mockup ships **canvas** there, meaning
+"anything pitched for the day and struck at dusk" (`border-kit.html:504`), and
+Joe's four do not include it — parchment takes the fourth meaning instead.
+Whether canvas is renamed, redrawn, or kept alongside parchment as a fifth is not
+something he said, and it is not decided here. The canvas figures cited in 2c and
+2f are readings of the shipped mockup and stay accurate either way.
+
+**A possible fifth: the Siege.** The Siege either keeps the ominous red borders it
+has now, or it gets a border built for it from scratch — Joe's words are
+"grotesque and creepy", something harrowing rather than a heavier iron. This is an
+open direction, not a decision. If it is taken it is a fifth tile set to draw, on
+the same twelve-values-and-a-stamp budget as the others, and it is the one place
+in the kit where the brief is to be unpleasant on purpose.
+
+**Ornament can go much further than the 3×3 stamp.** What ships is deliberately
+minimal — a driven rivet, a pale peg, a chisel peck, a punched grommet
+(`border-kit.html:861-864`). Joe wants the vocabulary pushed:
+
+| Material | Ornament to try |
+| --- | --- |
+| Oak | vines crawling along the rail |
+| Stone | chips knocked out of the edges |
+| Iron | patches soldered onto the plate |
+| Any | little bugs |
+
+All of it still obeys 2c. A silhouette — a bug, a chip, a soldered patch — stays
+whole inside one tile, or an arbitrary panel width saws it in half. The vine is
+the interesting case, because a vine is precisely the motif that wants to run
+*between* tiles: it has to be drawn either as a periodic line, which has no halves
+and survives being cut, or as a corner object, which is drawn once. A creeper that
+crosses the tile boundary as a creature will not survive the repeat.
+
+**The hanging signage is the part Joe singled out.** The plaque — the title as its
+own miniature kit box at `--s:1`, nailed over the top rail rather than notched
+into it (`border-kit.html:84-95`) — is the detail he called out as really fun, and
+he named the three the mockup hangs: Doctrines of Grunhilda (`:971`), The Long
+Road (`:987`), The Descent (`:999`). The detail pass reached the same conclusion
+from the other direction (section 4). Titles hang; that one is settled.
+
 ---
 
-## 3. The backdrop texture spec
+## 3. The interior ground, which is now the fill tile
 
-This is the second thing to draw, and it is a different problem from a border
-tile: it repeats on **both** axes, it must not resolve into a visible grid at
-panel size, and it sits behind body text, so it has a hard contrast ceiling that
+**This used to be a separate spec. It is not one any more, and that is the
+largest structural consequence of Joe's note on the fill.**
+
+His observation is that the centre tile can be the material background of the
+interior of the box, not merely something flat behind it. Checked against the
+mockup, that is already literally true. `--fc` is the last entry in the nine-layer
+`background-image` list, which makes it the **bottom** layer; it is the one layer
+set to `repeat` on both axes, positioned `left top`, and it is painted across the
+whole element box with the eight frame layers over the top of it
+(`border-kit.html:73-77`). There is no second surface underneath waiting for a
+backdrop texture. The backdrop *is* `--fc`.
+
+So the two are one piece of work, not two. A separate 32×32 backdrop tile would be
+a second tiled layer painting exactly the pixels the fill layer already paints, at
+a different period, per material — two grounds beating against each other for no
+gain. Section 7's seam list is updated to match: the backdrop is no longer its own
+seam, it is part of seam 1, and the drawing budget in 2b grows accordingly.
+
+**What does not merge, and has to be settled before drawing.** The old backdrop
+spec pinned two numbers that the fill layer contradicts:
+
+| The old spec said | The fill layer does | Consequence |
+| --- | --- | --- |
+| tile is 32×32 native | the fill tile is 8×8 like the other eight (`border-kit.html:446`) | an 8×8 ground repeats every 16px at `--s:2` and every 8px at `--s:1` — a far tighter period than any texture survives without reading as a grid |
+| render always at 1× | `background-size: var(--u) var(--u)` is a single value applied to all nine layers (`border-kit.html:77`), so the ground scales with the frame | the ground gets *coarser* exactly where the panel is largest, which is backwards |
+
+Both are fixable by one edit rather than a redesign: `background-size` takes a
+per-layer list, so the eight frame layers keep `var(--u) var(--u)` and `--fc` takes
+its own value. That is the entire mechanical cost of the merge, and it is a CSS
+change, not a drawing one.
+
+Which size wins is a real choice and it is deliberately left open. **8×8 at `--u`**
+keeps the kit uniform — nine tiles, one authoring path, one scale — at the cost of
+a repeat period so short that little but noise survives it. **32×32 at a fixed 1×**
+buys a ground that can carry a weave, a grain, or a course of stone without
+collapsing into a check, at the cost of the fill tile no longer being the same kind
+of object as the other eight. The texture work wants the second; the generator
+wants the first. Draw one of each at panel size before deciding.
+
+Everything below is the drawing brief for that tile. None of it changed when the
+seam merged — it repeats on **both** axes, it must not resolve into a visible grid
+at panel size, and it sits behind body text, so it has a hard contrast ceiling that
 a rail does not.
 
-**What is being replaced.** The panel textures in the material-chrome study, and
-it is worth knowing which of them were already right. The study's own rule was
+**What it is drawn against.** The panel textures in the material-chrome study.
+They are no longer a deliverable of their own — Joe's ruling is that the kit
+trumps them — but they are the only prior art for what a material's interior looks
+like, and it is worth knowing which of them were already right. The study's own rule was
 "all steps are hard: 1px or 2px, blur 0, no gradient ramps"
 (`material-chrome.html:101`) — the failure is not ramps, it is *angle*:
 
@@ -451,53 +609,88 @@ it is worth knowing which of them were already right. The study's own rule was
 So one was crisp and got rotated, one was half crisp, one was never crisp. That is
 the whole of the painterly problem.
 
-**The spec.**
+**The drawing constraints.** These are unchanged by the merge and they now attach
+to the fill tile whichever size it ends up being. The two rows that used to head
+this table — tile size and render scale — are the open question above, and the
+numbers behind them are worth keeping in front of you while you decide: an 8×8
+ground repeats about 37 times across a 300px panel and shows its diagonal
+immediately, 32×32 gives about 9 repeats across a phone panel and 24 across a
+desktop one, and 64×64 costs four times the drawing for detail the eye cannot
+resolve behind 12px glyphs.
 
 | Property | Value | Reason |
 | --- | --- | --- |
-| Tile size | **32×32 native** | 8×8 repeats ~37 times across a 300px panel and shows its diagonal immediately; 64×64 costs four times the drawing for detail the eye cannot resolve behind 12px glyphs. 32 gives ~9 repeats across a phone panel and ~24 across a desktop one. |
-| Render scale | **always 1×** | the frame scales with `--s`; the ground does not. A backdrop rendered at 2× has half as many texture cells across a panel and the repeat becomes legible. `background-size: 32px 32px`, full stop. |
-| Values | **3, maximum 4** | one base at `--panel` `#121220`, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. |
+| Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. On a light parchment tile this is the same rule with the values inverted — see the contrast figures in 2g before picking any accent. |
 | Contrast ceiling | every texture pixel within roughly ±6% relative luminance of `--panel` | it sits behind 10px and 12px glyphs (`static/style.css:80-82`, `--type-fine` and `--type-body`). Sanity check: if any texture pixel is closer in value to `--ink` `#d8cfa8` than to `--panel`, it is too bright. |
 | Steps | hard only, **dither instead of ramp** | where you want a transition, use a 50% checker between two adjacent values or a Bayer 4×4. A dither is made of the same hard pixels as everything else and survives `image-rendering: pixelated`; a ramp does not. |
-| Feature size | no feature touching more than ~6 of the 32 pixels in any row | longer runs resolve into stripes once the tile repeats. |
+| Feature size | no feature longer than about a fifth of the tile in any row — ~6 pixels at 32×32 | longer runs resolve into stripes once the tile repeats. |
 
-**Seamlessness.** Column 31 has to sit next to column 0 and row 31 next to row 0
-with no visible line. Author it in wrap-around/tiled mode, then verify by tiling
-it 4×4 into a 128×128 field. The two failure modes are a hard seam line and an
+**Seamlessness, on both axes.** The last column has to sit next to column 0 and
+the last row next to row 0 with no visible line. Author it in wrap-around/tiled
+mode, then verify by tiling it 4×4. This is a *different* rule from 2c, and the
+difference is worth being clear about, because 2c reads like it governs all nine
+tiles. It does not govern this one. 2c reserves rows and columns 0 and 7 for the
+generator so that a corner meets its rails without a join — but the fill layer is
+painted **underneath** all eight frame layers, so its outermost pixels are covered
+by the rails wherever the panel ends. The fill tile never meets a rail edge-to-edge;
+it only ever meets copies of itself. Its edges are therefore free of 2c and are
+instead the hardest part of the drawing. The two failure modes are a hard seam
+line and an
 *emergent diagonal* — one over-bright pixel repeating at a fixed offset reads as a
 drawn diagonal across the whole panel, and it is invisible in a single tile.
 
-**Test at panel size, not swatch size.** A 32×32 tile at 8× looks like a drawing;
-a 780×400 field of it at 1× is what a player sees. Put real content on it — a
-`.win` body at 12px with a `.rule` and a table — and check three things: the 10px
-fine text is still readable; no diagonal appears when you unfocus your eyes; and
-the texture survives a second panel's `6px 6px` cast shadow (`static/style.css:140`)
-overlapping it.
+**Test at panel size, not swatch size.** A tile at 8× looks like a drawing; a
+780×400 field of it at 1× is what a player sees. Put real content on it — a `.win`
+body at 12px with a `.rule` and a table, inside the actual frame — and check three
+things: the 10px fine text is still readable; no diagonal appears when you unfocus
+your eyes; and the texture survives a second panel's `6px 6px` cast shadow
+(`static/style.css:140`) overlapping it.
 
-**How it reaches the app.** Here the recommendation flips from section 2e: a
-32×32 texture is a genuine drawing rather than a parameter set, so it goes in as a
-served PNG under `static/art/ui/`, registered in `static/js/art.js` alongside the
-existing manifests. One caveat that follows from `art.js:102` building bare
-`/static/...` paths with no version query: version the *filename*
-(`panel_weave_v1.png` → `_v2`) rather than editing a file in place, or a redraw
-will serve stale from browser caches.
+**How it reaches the app.** The old recommendation here was a served PNG, on the
+argument that a 32×32 texture is a genuine drawing rather than a parameter set.
+That argument dies with the merge. The fill tile is one of the nine layers the kit
+already rasterizes to a data URI through `kitVars()` (`border-kit.html:563-593`),
+so it reaches the app on exactly the path section 2e recommends for everything
+else, and it inherits the cache behaviour that made row strings the right answer
+there — a `?v=N` bump in `static/index.html` ships it, where a bare
+`/static/art/...` PNG can serve stale indefinitely (`static/js/art.js:102`). One
+material's ground is a bigger blob of source than one material's profile, and that
+is the only thing that changes.
 
 ---
 
 ## 4. The icon list, ranked and scoped
 
-| Icon | Replaces | Sprite | Frames | Containment |
-| --- | --- | --- | --- | --- |
-| **Raven** | the `SEND RAVENS` key in the footer | **16×14**, rendered at 48px (3×) with a 60×52 tap target (`detail-pass.html:1597`, `:143`) | 9 — perch, blink, turn, ruffle, ready, launch ×2, news, lost | widest of the set: every screen's footer. Also fixes a real gap — phones currently have no send-ravens control at all (`detail-pass.html:882`) |
-| **Bolts / nails** | nothing; adds to `.win` (`static/style.css:137`) | **4×4** | 3 variants, rotated so no two corners match | most contained thing here. Gate to `.win` only (`detail-pass.html:512`) |
-| **Panel title** | `.win > .win-title`'s `--bg` cutout (`static/style.css:145-147`) | no sprite — CSS | — | one rule plus a margin bump, `14px 4px` → `16px 4px`, or titles clip the panel above (`detail-pass.html:546-548`) |
-| **Bell + sacking** | the `SOUND: ON` / `SOUND: OFF` key label | **14×14** | 4 — still, ring-left, ring-right, muffled | one control; the key, its travel and its latched state are untouched |
-| **Streak flame** | the `flamewob` CSS tween (`static/style.css:313`, keyframes `:1268`) | **10×10** | 4; frame 1 *is* the shipped `icon_flame`, pixel for pixel | header only, purely additive. Retires the last piece of sub-pixel tweened motion in an app that is otherwise all `steps(1, end)` |
-| **Toast scrap + tack** | `.toast` (`static/style.css:951`) | tack **6×6**; the scrap is a `clip-path` polygon | 1 | one component. `.err` keeps `--danger-ink` on the same scrap |
-| **Quill** | the block caret in `typewrite()`, called from `giver.js:386` and `:1195` | **6×9** | 2 | one function |
-| **Candle** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | parked — see below |
-| ~~Moth~~ | — | 8×6 | 2 | **cut** |
+| Icon | Verdict | Replaces | Sprite | Frames | Containment |
+| --- | --- | --- | --- | --- | --- |
+| **Raven** | **Adopt** — "excellent" | the `SEND RAVENS` key in the footer | **16×14**, rendered at 48px (3×) with a 60×52 tap target (`detail-pass.html:1597`, `:143`) | 9 — perch, blink, turn, ruffle, ready, launch ×2, news, lost | widest of the set: every screen's footer. Also fixes a real gap — phones currently have no send-ravens control at all (`detail-pass.html:882`) |
+| **Bell + sacking** | **Adopt** — "excellent" | the `SOUND: ON` / `SOUND: OFF` key label | **14×14** | 4 — still, ring-left, ring-right, muffled | one control; the key, its travel and its latched state are untouched |
+| **Panel title** | **Adopt, hanging** | `.win > .win-title`'s `--bg` cutout (`static/style.css:145-147`) | no sprite — CSS | — | it hangs over the rail as the kit's plaque does (`border-kit.html:84-95`), not as a cutout. One rule plus a margin bump, `14px 4px` → `16px 4px`, or titles clip the panel above (`detail-pass.html:546-548`) |
+| **Streak flame** | **Adopt** — "much better" | the `flamewob` CSS tween (`static/style.css:313`, keyframes `:1268`) | **10×10** | 4; frame 1 *is* the shipped `icon_flame`, pixel for pixel | header only, purely additive. Retires the last piece of sub-pixel tweened motion in an app that is otherwise all `steps(1, end)` |
+| **Notched scrollbar** | **Adopt** | the shared scrollbar treatment (`static/style.css:971-1014`) | none — CSS only | — | `::-webkit-scrollbar` only; Firefox keeps `scrollbar-width: thin` and is no worse off (`detail-pass.html:744-746`) |
+| **Quill** | **Adopt** | the block caret in `typewrite()`, called from `giver.js:386` and `:1195` | **6×9** | 2 | one function |
+| **Toast scrap + tack** | **Adopt, shape open** | `.toast` (`static/style.css:951`) | tack **6×6**; the scrap is a `clip-path` polygon | 1 | one component. `.err` keeps `--danger-ink` on the same scrap. Whether it stays its own drawing or becomes a parchment kit box is open — see below |
+| **Wax seal** | **Adopt, rewritten** | `confirmModal()` (`detail-pass.html:655`, sprite `:1251-1252`) | **12×12** | 4 — whole, two cracking, broken | not decoration on a dialog any more; the dialog becomes a letter. See below |
+| **Empty states** | **Neither** — "take it or leave it" | the muted-text empties (`detail-pass.html:760`) | drawn, one per screen | — | many screens, one line each. Neither in nor out; no work is sequenced against it |
+| **Candle** | **Hold** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | held, with a candidate clock — see below |
+| **Moth** | **Hold** | nothing; it is idle life (`detail-pass.html:844-853`) | 8×6 | 2 | held in the background while a future is thought about. Not scoped |
+| ~~Bolts / nails~~ | **Drop** — redundant | nothing; would add to `.win` (`static/style.css:137`) | 4×4 | 3 | the kit already drives an object through every corner (`border-kit.html:302-304`); a separate nail is a second object in the same 8px |
+| ~~Ribbon on the tab~~ | **Drop** | nothing; it would mark the active tab (`detail-pass.html:692-700`) | **5×12** (`:1468`) | 1 | the tab you are on is already clear enough. Joe would reconsider if the tabs stopped being buttons |
+
+**The two drops, in his words.** The corner nails "can be ignored because it's
+solved by the corner nails of the border kits" — the kit's stamp *is* the nail, so
+the standalone one was solving a problem the foundation removes. The ribbon he
+called a cool idea and turned down anyway, on the grounds that the current tab
+reads clearly as it is; the condition he attached is worth keeping, because it may
+come true — if the tab strip ever stops being a row of buttons, the ribbon comes
+back into play.
+
+**On the scrollbar, one caveat he raised himself.** It does not appear on his Mac.
+That is overlay scrollbars, not a defect in the treatment: macOS hides the track
+entirely until a scroll is in progress, so a drawn track has nothing to draw on
+most of the time. The mockup anticipated it and shows the two tracks at 3× side by
+side for exactly this reason (`detail-pass.html:236`, `:738-741`). Adopted on the
+understanding that its author may never see it on his own machine.
 
 **Two facts behind the raven's rank, both checked against the repo.** First,
 *there is no raven drawn anywhere in it.* `static/js/pixel.js` has no raven
@@ -515,23 +708,71 @@ credentials — while the status line goes on telling the player when the ravens
 last flew. That is a defect rather than a taste question, and adopting the raven
 is what fixes it.
 
-Ordering, if it helps: nails first (an afternoon, and every panel stops being a
-rectangle), then the raven (most work, biggest payoff, fixes a defect), then the
-title, bell and flame. Toast and quill after. The only shortlist item Joe did not
-name and did not rule out is the notched scrollbar (`detail-pass.html:894-895`) —
-pure CSS, no sprite, cheap whenever. The wax seal here — the seal sprite gating
-genuinely destructive actions, not the parchment title strip ruled out in
-section 0 — and the drawn empty states were already self-held in the mockup and
-stay held.
+Ordering, if it helps: the scrollbar first, because it is pure CSS and costs an
+afternoon, then the raven (most work, biggest payoff, fixes a defect), then the
+title, bell and flame. Toast, quill and the letter after. The nails have left the
+order entirely, which is the one real change to it — they used to lead.
 
-### The candle is parked
+### The seal is now the whole box
+
+Joe's rewrite of this is much stronger than the mockup's and it replaces it
+outright. The mockup gates a destructive action by putting a seal sprite on a
+`BREAK THE SEAL` button inside an otherwise ordinary confirm dialog
+(`detail-pass.html:674`). Joe's version: **the confirm box stops being a dialog
+and becomes a letter.** It arrives sealed. There is a back arrow that cancels, and
+there is the wax, and clicking the wax breaks it and opens the letter.
+
+That is a different interaction, not a dressed-up one. The mockup's version puts
+ornament on a control that already existed; Joe's makes the ornament *be* the
+control, and it turns confirmation into a small physical act with an obvious way
+out. It also fits the kit rather than sitting on top of it — a sealed letter is a
+box with a material, which is what section 2 already knows how to build, and the
+four sprite frames (`detail-pass.html:1251-1252`) describe the wax breaking, which
+is now the transition into the opened state rather than a button's press
+animation.
+
+Two things that need deciding when it is drawn, neither of them settled here: what
+the letter is made of, which is a question for 2g's materials and probably wants
+parchment; and where the boundary of "destructive enough to be sealed" sits, which
+is the same question the mockup was worrying about at `detail-pass.html:680-681`
+when it said the seal becomes noise everywhere and should be gated on
+`danger: true` alone.
+
+### The toast question is open
+
+The toast scrap is adopted; what it *is* is not settled. Three readings are live
+and Joe named all three. It can stay its own drawing, the tacked scrap of
+`detail-pass.html`'s section 06. It can merge with parchment now that parchment is
+a kit material — a toast is a quick note from somewhere, which is parchment's
+meaning almost word for word (2g). Or, in his own framing, it might "just be
+another type of border kitted object", in which case toasts stop being a special
+component and become a small panel at `--s:1` like menus and tooltips already are
+(2a).
+
+The third reading is the one that would simplify the most, and it is worth noting
+that the kit already runs at `--s:1` for toasts (`border-kit.html:426-429`) and
+that the mockup's own canvas material listed toasts in its domain
+(`border-kit.html:503`). Nothing is decided. Whoever draws it should pick
+deliberately rather than by default, because the merge changes what `.err` means:
+a scrap with `--danger-ink` is a variant, but a kit box in a different material is
+a different object.
+
+### The candle is held, and it now has a candidate clock
 
 Joe likes the concept and it stays on the list. Nothing in the app is the right
-clock for it today, so it is parked rather than scoped — there is no work to
+clock for it today, so it is held rather than scoped — there is no work to
 sequence here yet, and it should not be drawn against a duration invented to
 justify it.
 
-The engineering point that parks it: a burn-down needs a real duration with a
+**What changed is that he named the duration it wants.** Not a quest and not a
+week: a workout timer. Tracking a circuit, timing your sets — anything where the
+player is watching a span of seconds or minutes elapse. No such feature exists, so
+this does not make the candle scopeable. It does mean the candle should not be
+retrofitted onto one of the durations below out of impatience; it is waiting for a
+timer, and if a timer is ever introduced the candle is the thing that should
+render it.
+
+The engineering point that holds it: a burn-down needs a real duration with a
 known start, a known end, and a fraction the app can read at any moment, and the
 Everbright Torch the mockup names (`detail-pass.html:824`) is a consumable with
 `effect: {"reveal": True}` (`app/items.py:13`) — a one-shot reveal that fires
@@ -542,16 +783,53 @@ the Siege week (`raid.week_start()` at `app/raid.py:149` and `week_key()` at
 `app/quests.py:471-493`). Either could carry a candle if one later turns out to
 want one; neither is being recommended now.
 
-The mockup's own caveat stands and is a second reason to leave it parked: the
+The mockup's own caveat stands and is a second reason to leave it held: the
 app's existing meters — the XP bar, the ten vigor pips — are read at a glance,
 and a candle is worse at that (`detail-pass.html:820-825`). Five frames over a
 week is a step every 1.4 days, which is coarse. If it ships, it probably wants a
 wax pool that grows continuously beneath a stepped stub, so the coarse part is
-the stub and the fine part is the pool.
+the stub and the fine part is the pool. Note that a set timer largely dissolves
+this objection — over three minutes rather than seven days, five frames is a step
+every thirty-six seconds, and glance-reading a timer is what a burning candle is
+actually good at.
 
 ---
 
-## 5. The drawn-title execution fix
+## 5. Type, and the drawn-title execution fix
+
+### The verdict, and the three things it is waiting on
+
+The type study is adopted. Joe's word is "great" — and then three pieces of work
+that have to happen before any of it is right, none of which is a redesign.
+
+**It needs hand-pixeling.** The glyphs are close but not tight, and tightening
+them by hand is what makes them readable rather than merely drawn. The measured
+critique below is exactly that work, written down: it says which pixel in which
+stem is doing the wrong job.
+
+**Placement has to be nailed down.** Where a drawn title sits relative to its
+panel, its rail and its plaque is not settled anywhere, and the kit changes the
+answer — a title that hangs over a 16px rail (section 4) is not positioned the way
+a title notched into a 2px border was.
+
+**There are no rules for which face goes where, and there need to be.** This is
+the gap. `static/style.css` declares five strikes and applies them by habit rather
+than by role; the study's own "stop shouting" section is the closest thing to a
+role model and it only covers casing. An explicit table — this face at this size
+for this kind of string — does not exist yet, and every other decision in this
+section is downstream of it.
+
+**"Stop shouting" is adopted.** The app currently applies
+`text-transform: uppercase` and `letter-spacing: 1px` to titles, buttons, chips,
+labels, tabs and section heads alike (`type-wordmark.html:474-477`), which strips
+the ascenders and descenders that carry most of a word's shape and makes every
+string sound like the same person shouting. Roles become different objects, not
+one object at different sizes. Know the bill before starting: turning the property
+off does not produce mixed case, it produces whatever case the string was written
+in, and the sweep is a hand pass across `giver.js`, `hall.js`, `town.js`,
+`misc.js`, `ranch.js`, `colosseum.js` and `dungeon.js` where every string has to be
+read in place — "SWORN" is a chip and stays, "THE OMENS" is a heading and goes
+(`type-wordmark.html:929-935`). There is no safe automatic version.
 
 ### The diagnosis
 
@@ -611,8 +889,10 @@ one `#3a2c10`, one `#6b5426`.
   position — floating over the void — the shadow wall of every stroke vanishes,
   and what is left is a 1px bright hairline attached to nothing. A carved letter
   needs something to be carved into. This is the single biggest reason the
-  execution reads badly, and it is also the strongest argument for the textured
-  backdrop: the carve starts working the moment there is a surface behind it.
+  execution reads badly, and it is also the strongest argument for a drawn fill
+  tile: the carve starts working the moment there is a surface behind it — which,
+  after the merge in section 3, is the moment seam 1 ships rather than a seam
+  later.
 - *The strokes are too heavy for the cap height.* 3px stems at 13px cap height,
   and the counters do not keep up: the **H's counter is 2px**, the N's is 3px, the
   M's is 5px. So the colour of the line is wildly uneven — M reads open, H reads
@@ -634,12 +914,23 @@ shipping both means the player learns two title languages for no gain. Pick the
 rule and hold it: **raised for what is fixed onto a thing, incised for what is cut
 into it, nothing else.**
 
-**What needs no fix.** The illuminated capitals — 24×24, a struck 2px double
-border, a field, a plant ornament and a capital inside
-(`type-wordmark.html:541-543`) — are the part that works. They are read once, at
-the head of a paragraph, exactly where ornament is paid for. Their stated limits
-hold: at least three lines of copy beside one or drop it entirely
-(`type-wordmark.html:610-614`), and nothing drawn below 10px.
+**What the glyph critique does not touch.** The illuminated capitals — 24×24, a
+struck 2px double border, a field, a plant ornament and a capital inside
+(`type-wordmark.html:541-543`) — are the part that works as drawing, and Joe likes
+them, ornaments included. They are read once, at the head of a paragraph, exactly
+where ornament is paid for. Their stated limits hold: at least three lines of copy
+beside one or drop it entirely (`type-wordmark.html:610-614`), and nothing drawn
+below 10px.
+
+Two things about them are still open, and both are his. **They need to sit more
+naturally inline.** A 24×24 block dropped beside 12px copy currently reads as a
+capital parked next to a paragraph rather than one the paragraph is set around;
+that is a positioning and baseline problem, not a drawing one, and it belongs with
+the placement work above. **And they need to be used more selectively.** The limit
+in the mockup is a floor — three lines of copy — not a policy. A capital on every
+paragraph that clears the floor is a page of capitals, and the thing that makes
+one ceremonial is that the next one is a long way away. Which paragraphs get one
+is part of the missing rules for which face goes where.
 
 ### One rule with no user, and two files with no rule
 
@@ -663,30 +954,31 @@ If some menu entries become scenery objects you click in a scene, then a click i
 a transition from *being in a place* to *being handed a thing*. The frame kit is
 the thing. Three consequences follow.
 
-**The material rule survives, but it re-anchors — and improves.** Today the rule
-is "material follows permanence and consequence, never screen or feature"
-(`border-kit.html:292-296`). In a places world, permanence and consequence are
-properties of the **object you clicked**, not of the screen you routed to. The
-gate is stone because the gate is stone. Clicking Pip's stall hands you canvas
-because the stall is canvas. That is strictly better than the current version: the
-material stops being a taxonomy somebody has to assign consistently and becomes a
-fact about an object, which is what will keep it consistent as scenes get built by
-different passes months apart.
+**The material rule survives, but it re-anchors — and improves.** The rule is
+"material follows permanence and consequence, never screen or feature"
+(`border-kit.html:292-296`), and 2g rewrites what each material means under it. In
+a places world, those meanings are properties of the **object you clicked**, not
+of the screen you routed to. The gate is stone because the gate is stone. Clicking
+a stall hands you oak because a stall is where wares are advertised. That is
+strictly better than the current version: the material stops being a taxonomy
+somebody has to assign consistently and becomes a fact about an object, which is
+what will keep it consistent as scenes get built by different passes months apart.
 
 **Different menus for different occasions falls out for free.** A material is
-twelve hex values and a 3×3 stamp. A fifth or sixth set — brass for a betting
-board, something colder for whatever the Vale gets in winter — is an afternoon
-each, not a design system. The vocabulary extends in exactly the direction the
-places thread wants, without anything downstream changing.
+twelve hex values, a 3×3 stamp and a ground. A fifth or sixth set — the Siege's
+own harrowing border (2g), brass for a betting board, something colder for
+whatever the Vale gets in winter — is an afternoon each plus a texture, not a
+design system. The vocabulary extends in exactly the direction the places thread
+wants, without anything downstream changing.
 
 **Genuine menus stay genuine menus.** Not everything becomes a place. Settings is
-a menu: it gets the border kit as its chrome plus a textured backdrop behind it,
-and no scene owes it anything.
+a menu, and by 2g it is stone: it gets the border kit as its chrome, ground
+included, and no scene owes it anything.
 
 **The boundary, so the two threads do not collide.** The places thread owns the
 scenes — what is drawn where, what is clickable, how a click reads as walking up
 to a thing. This document owns the chrome a click hands you — the frame, its
-material, its backdrop, its title. The seam between them is one call: a scene
+material, its ground, its title. The seam between them is one call: a scene
 names a **material** and a **title** when it opens a panel, and nothing else
 crosses. If the places thread ever finds itself needing to specify what a panel
 *looks* like, that is the signal the boundary has slipped.
@@ -695,10 +987,19 @@ crosses. If the places thread ever finds itself needing to specify what a panel
 
 ## 7. Seams, in order
 
-**1 — The tile grid and the four materials, on `.win` only.** Build
-`BORDER_KITS`, the generator and the nine-layer background rule; apply it to
+This list is one seam shorter than it was. The backdrop texture used to be seam 3;
+section 3 explains why it is not a separate piece of work any more, and it has
+been folded into seam 1.
+
+**1 — The tile grid and the four materials, frame *and* ground, on `.win` only.**
+Build `BORDER_KITS`, the generator and the nine-layer background rule; apply it to
 `.win` at `--s:2` and to nothing else. This is the foundation, and it settles the
-two things that are expensive to get wrong later: the 8px grid and the seam rule.
+things that are expensive to get wrong later: the 8px grid, the seam rule, and now
+the fill tile — its size, its render scale, and the `background-size` split that
+lets the ground stop scaling with the frame. It is a bigger seam than it was, and
+that is the honest consequence of the fill insight rather than a reason to split
+it back apart: a frame shipped over a flat fill would have to be re-judged the
+moment the ground arrived underneath it.
 
 **2 — The chrome audit at `--s:1`.** Menus, toasts, bubbles and tooltips take the
 kit at half scale; rows, dividers, cards and chips keep their 2px bevel and are
@@ -706,21 +1007,19 @@ not touched. This is where roughly thirty panel-ish classes get triaged
 (`border-kit.html:426-429`), and it needs seam 1 shipped so the triage is judged
 against real tiles rather than a mockup — the audit will surface three or four
 surfaces that are neither a panel nor a chip, and those need a real frame in front
-of them to decide.
+of them to decide. The open toast question (section 4) resolves here or not at
+all, because "is a toast a kit object?" is exactly what this audit asks.
 
-**3 — The backdrop texture.** One 32×32 tile, applied behind the kit. It comes
-after 1 and 2 because it has to be judged against the frame sitting on it and the
-type sitting on it, and because it is what makes the carved title in seam 4
-possible at all.
+**3 — The title, then the icons.** The strap or the carve on `.win-title` (CSS on
+live text, so interpolation keeps working), hung as a plaque rather than notched,
+then the named icons in their own order: scrollbar, raven, bell, flame, toast,
+quill, letter. Each is independent of the others, and none blocks anything — which
+is exactly why they go last. The carve is no longer waiting on a separate backdrop
+seam; the surface it needs arrives with seam 1.
 
-**4 — The title, then the icons.** The strap or the carve on `.win-title` (CSS on
-live text, so interpolation keeps working), then the named icons in their own
-order: nails, raven, bell, flame, toast, quill. Each is independent of the others,
-and none blocks anything — which is exactly why they go last.
-
-**Brief seam 1 first.** It unblocks 2, 3 and the title, and it is the only one
-where a wrong decision is expensive to undo. A tile drawn on the wrong grid gets
-redrawn; a nail on the wrong panel is a one-line change.
+**Brief seam 1 first.** It unblocks 2 and the title, and it is the only one where
+a wrong decision is expensive to undo. A tile drawn on the wrong grid gets
+redrawn; a scrollbar on the wrong track is a one-line change.
 
 ### What seam 1 obliges in `DESIGN.md`
 
