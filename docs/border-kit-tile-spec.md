@@ -1,3 +1,15 @@
+> **Superseded in part.** Joe has ruled that the project thread this work was
+> done in is the source of truth for the visual identity, which makes
+> [`identity-direction.md`](identity-direction.md) the governing document
+> wherever the two disagree. They disagree on two points. **Vellum** is not a
+> material: parchment is cut entirely and does not return in any form, in the
+> kit or out of it, so the Vellum sections below do not describe work to be
+> done. And the **authoring model** here — hand-drawing 36 tiles per material —
+> is superseded by the band-profile-plus-stamp model, in which a colour band
+> profile, a 3x3 corner stamp and a few rail marks are authored per material and
+> the 36 tiles are generated from them. The rest of this document remains useful
+> reference.
+
 # Border kit tile spec
 
 Checked 2026-08-11. Nothing here is built. This is an authoring spec for

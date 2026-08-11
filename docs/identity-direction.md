@@ -5,6 +5,9 @@ either sits on it or waits for it. This document exists so the drawing can start
 without a follow-up question — sections 2 and 3 are the two specs that block a
 pixel editor, and the rest is scope.
 
+Joe has ruled that this project thread is the source of truth for the visual
+identity work, so this document governs where it and any other spec disagree.
+
 ## 1. What was decided
 
 | Option | Verdict | What carries forward |
@@ -361,34 +364,30 @@ name and did not rule out is the notched scrollbar (`detail-pass.html:894-895`) 
 pure CSS, no sprite, cheap whenever. The wax seal and the drawn empty states were
 already self-held in the mockup and stay held.
 
-### The candle's implementation problem
+### The candle is parked
 
-A burn-down needs a duration with a known start, a known end, and a fraction the
-app can read at any moment. There are two honest candidates in the code, and one
-that looks like a candidate and is not.
+Joe likes the concept and it stays on the list. Nothing in the app is the right
+clock for it today, so it is parked rather than scoped — there is no work to
+sequence here yet, and it should not be drawn against a duration invented to
+justify it.
 
-**The Siege week** is the strongest fit. `raid.week_start()` (`app/raid.py:149`)
-returns Monday 00:00 in the shared realm bell's timezone and `week_key()` (`:139`)
-is the ISO week, so start, end and elapsed fraction all fall out of one captured
-clock. The Siege is already framed as a week burning down toward a bell, and a
-candle reads "three days left" better than a bar does.
+The engineering point that parks it: a burn-down needs a real duration with a
+known start, a known end, and a fraction the app can read at any moment, and the
+Everbright Torch the mockup names (`detail-pass.html:824`) is a consumable with
+`effect: {"reveal": True}` (`app/items.py:13`) — a one-shot reveal that fires
+once and is gone, with no duration to map onto. Two durations that do exist are
+the Siege week (`raid.week_start()` at `app/raid.py:149` and `week_key()` at
+`:139`) and the Rest Writ's single calendar day (`writ_day` fixed at acceptance,
+`resolve_rest_writs()` completing it when `today() > writ_day`,
+`app/quests.py:471-493`). Either could carry a candle if one later turns out to
+want one; neither is being recommended now.
 
-**The Rest Writ** is the other. It spans one calendar day: `writ_day` is fixed at
-acceptance and `resolve_rest_writs()` completes it when `today() > writ_day`
-(`app/quests.py:471-493`). Shorter, and it has the right feel — a writ is
-something you hold overnight.
-
-**Not the dungeon torch.** The mockup names it (`detail-pass.html:824`), but the
-Everbright Torch is a consumable with `effect: {"reveal": True}`
-(`app/items.py:13`). It fires once and is gone. There is no torch duration to map
-onto; that candidate does not exist.
-
-The mockup's own caveat stands and is the reason to sequence this late: the app's
-existing meters — the XP bar, the ten vigor pips — are read at a glance, and a
-candle is worse at that (`detail-pass.html:820-825`). Five frames over a week is a
-step every 1.4 days, which is coarse. If it ships, it probably wants a wax pool
-that grows continuously beneath a stepped stub, so the coarse part is the stub and
-the fine part is the pool.
+The mockup's own caveat stands and is a second reason to leave it parked: the
+app's existing meters — the XP bar, the ten vigor pips — are read at a glance,
+and a candle is worse at that (`detail-pass.html:820-825`). Five frames over a
+week is a step every 1.4 days, which is coarse. If it ships, it probably wants a
+wax pool that grows continuously beneath a stepped stub, so the coarse part is
+the stub and the fine part is the pool.
 
 ---
 
