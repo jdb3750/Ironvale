@@ -567,7 +567,7 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   </div>`;
   };
 
-  /* IV.footer() — SEND RAVENS / SETTINGS / SOUND: ON + the raven line.
+  /* IV.footer() — SETTINGS / SOUND: ON + the raven line.
      The .backrow and .footer-btns hide themselves under .iv-phone (CSS), so the
      same string serves both frames. */
   IV.footer = function (opts) {
@@ -577,7 +577,6 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
     return `<div class="backrow"><button class="btn small">&larr; BACK</button></div>
   <div class="footer">
     <div class="footer-btns">
-      <button class="btn small">SEND RAVENS</button>
       <button class="btn small">SETTINGS</button>
       <button class="btn small green">SOUND: ON</button>
     </div>
