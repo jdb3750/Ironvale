@@ -347,6 +347,32 @@ entries are open work with the removal path worked out.
   trust stored shapes, and text in `moving_time` propagates into arithmetic.
   This is the standing "persisted data is untrusted input" rule in `AGENTS.md`:
   malformed rows must degrade to unknown, never raise.
+- **A non-finite distance dates a keepsake to the corrupt row.** Found
+  2026-08-05 during seam 9. `records._cumulative_km_date()` (`records.py:289`)
+  sums `distance` for rows `WHERE distance IS NOT NULL` — and `inf` is not
+  `NULL`, so the running total jumps to infinity and the *first* corrupt row
+  satisfies every threshold, reporting a keepsake as earned on that date.
+  `/api/keepsakes` still returns 200 and only exposes date strings, so this is
+  **data correctness, not availability** — a different class from the seam 9
+  serialisation fix, which is why it was left alone. Low severity: nothing in
+  the app can write a non-finite distance since seam 3 guarded ingestion.
+- ~~**A non-finite `activities.distance` returns 400 from `/api/stats`.**~~
+  **RESOLVED 2026-08-05** by review seam 9, fixed **once at the serialisation
+  boundary** rather than a fourth time per reader. A `JSONResponse` subclass
+  sanitises non-finite floats to `null` before encoding and is the app's default
+  response class, so `AGENTS.md`'s degrade-never-raise rule is structurally true
+  instead of applied per-reader-as-remembered. The tradeoff is named in the
+  code: a response can now carry a silent `null` where a bad row lives, which is
+  less visible than a 400 — accepted because the 400 was not surfacing the bad
+  value either, only taking the rest of the payload with it.
+
+  **The real risk was the fix, not the defect**, so it was verified from that
+  side: healthy payloads are provably unaltered across twelve endpoints. A
+  sanitiser that rounded, reordered or stringified ordinary numbers would have
+  been far worse than the 400. Both halves — the float branch and the
+  `default_response_class` wiring — were mutated separately and each failed on
+  its own. Original finding:
+
 - **A non-finite `activities.distance` returns 400 from `/api/stats`.** Found
   2026-08-05 during seam 8 verification. Seam 3 stopped infinity at ingestion and
   taught `/api/road` to degrade, but `/api/stats` was never covered: with an
