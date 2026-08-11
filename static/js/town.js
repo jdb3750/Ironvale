@@ -11,7 +11,7 @@ const DEED_BUBBLES = {
     label: 'FENN LEFT THIS FOR YOU',
     lines: [
       'Psst. I saw that. You didn\u2019t even ask me first.',
-      'Off without a word to me, were you? Rude. Here \u2014 take this anyway.',
+      'Off without a word to me, were you? Rude. Here — take this anyway.',
       'The road tattled on you. Good thing I don\u2019t hold grudges as long as I hold coin.',
     ],
   },
@@ -47,7 +47,7 @@ const DEED_BUBBLES = {
     label: 'WICK RECORDED A DEED',
     lines: [
       'A deed reached the ledger without a writ. I recorded it. Obviously.',
-      'Unsworn, unasked \u2014 still ink-worthy. Signed and sealed.',
+      'Unsworn, unasked — still ink-worthy. Signed and sealed.',
       'The record keeps what the road forgets. Your pay, per the ledger.',
     ],
   },
@@ -240,21 +240,30 @@ G.claimFennBubble = async () => {
   const b = S.fennQueue && S.fennQueue[0];
   if (!b) return;
   document.querySelectorAll('.fenn-bubble-wrap').forEach(x => x.remove());
-  const rewards = await api('/unguided/claim', { method: 'POST', body: { activity_id: b.activity_id } });
+  let rewards = null;
+  try {
+    rewards = await api('/unguided/claim', { method: 'POST', body: { activity_id: b.activity_id } });
+  } catch (e) {
+    // Refused (stale bubble the sweep already paid, a retry, etc.) —
+    // api() already toasted the reason. Self-heal exactly like a success:
+    // refresh so the stale entry drops out and any real pending bubble
+    // reappears, instead of leaving the player stranded with no bubble.
+  }
   const requestStillCurrent = isRouteTokenCurrent(routeToken);
   await refreshState();
   if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   render();
-  // NB: no token passed \u2014 showCeremony must default-capture AFTER render(),
+  if (!rewards) return;
+  // NB: no token passed — showCeremony must default-capture AFTER render(),
   // which bumps viewGeneration. Passing the pre-render routeToken here made the
   // ceremony's own isRouteTokenCurrent guard fail every time and silently
   // swallowed the reward reveal. The guard above already covers navigation.
-  showCeremony(rewards, rewards.quest_title || b.title || `A Deed Unsworn \u2014 ${b.minutes} min`);
+  showCeremony(rewards, rewards.quest_title || b.title || `A Deed Unsworn — ${b.minutes} min`);
 };
 
 /* ---- The willow's writ bubble: Elowen sends word when a Rest Writ resolved
    overnight (kept or broken). Unlike Fenn's bubble, the rewards were ALREADY
-   applied at resolution (the streak stitch can't wait for a tap) \u2014 the bubble
+   applied at resolution (the streak stitch can't wait for a tap) — the bubble
    is purely the moment of telling you. Same queue-mirror discipline as
    Fenn's: S.writQueue is replaced wholesale on every refreshState. ---- */
 function showWillowBubbleIfQueued() {
@@ -272,7 +281,7 @@ function showWillowBubbleIfQueued() {
   anchor.insertAdjacentHTML('beforeend', `
     <div class="fenn-bubble-wrap willow-bubble-wrap" data-ts="${esc(next.ts)}">
       <button type="button" class="fenn-bubble willow" style="width:100%;font:inherit;color:inherit;text-align:inherit" aria-label="Read the willow's writ notice" onclick="G.ackWillowBubble()">
-        <span class="fb-line" style="display:block">&ldquo;${kept ? 'The writ is kept. Rise rested \u2014 the Vale noticed.' : 'The iron called, and you answered. The willow does not scold.'}&rdquo;</span>
+        <span class="fb-line" style="display:block">&ldquo;${kept ? 'The writ is kept. Rise rested — the Vale noticed.' : 'The iron called, and you answered. The willow does not scold.'}&rdquo;</span>
         ${kept ? `<span class="fb-rewards">
           <span style="color:var(--purple)">+${next.rewards.xp} XP</span>
           <span class="g">&#9670; +${next.rewards.gold}</span>
@@ -295,12 +304,12 @@ G.ackWillowBubble = async () => {
   if (!requestStillCurrent || !isRouteTokenCurrent(routeToken)) return;
   render();
   if (n.type === 'kept') {
-    showCeremony(n.rewards, 'The Rest Writ \u2014 Kept');
+    showCeremony(n.rewards, 'The Rest Writ — Kept');
   } else {
     SFX.accept();
     showModal(`<div class="win center" style="max-width:380px">
       <span class="win-title">The Writ Slipped Away</span>
-      <p style="margin:10px 0">${esc(n.detail || 'Training')} broke the stillness. The willow bends; it does not break \u2014 and neither, apparently, do you.</p>
+      <p style="margin:10px 0">${esc(n.detail || 'Training')} broke the stillness. The willow bends; it does not break — and neither, apparently, do you.</p>
       <p class="muted" style="font-family: var(--font-body); font-size: var(--type-body)">No penalty. The omens will be read again tomorrow.</p>
       <button class="btn" onclick="G.closeOverlay(this.closest('.overlay'))">ONWARD</button>
     </div>`);
