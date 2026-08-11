@@ -28,7 +28,7 @@ const DEED_BUBBLES = {
     anchor: 'bld-bram',
     label: 'SER BRAM TOOK NOTE',
     lines: [
-      'Iron moved is iron moved, writ or no writ. Take your pay.',
+      'Ground gained is ground gained, writ or no writ. Take your pay.',
       'You trained without orders. Good. Initiative suits you.',
       'The keep saw you working. A knight settles his debts.',
     ],
