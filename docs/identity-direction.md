@@ -33,9 +33,9 @@ it:
   that role. Everything else is cut: the plate/board/slab construction, the ashlar
   wall as a built surface, the per-material key sets, nesting, the side-by-side,
   the phone case and the cost count. The wax-sealed **parchment** title strip
-  (`material-chrome.html:280`, `:725`, `:965`) is still not a surviving variant —
-  parchment returns as a *kit material*, not as a title treatment. See the
-  reversal in section 1.
+  (`material-chrome.html:280`, `:725`, `:965`) is not a surviving variant either,
+  because parchment is cut — including as a title label, per the table in
+  section 1.
 
 There are no page captures on the branch. The mockups are self-contained,
 dependency-free HTML with no build step: open the file.
@@ -48,25 +48,19 @@ dependency-free HTML with no build step: open the file.
 | The Detail Pass | **Partial** | Adopted: raven, bell, hanging title panel, streak flame, toast scrap, notched scrollbar, quill. Rewritten into something better: the wax seal. Dropped: corner nails, made redundant by the kit's own corners, and the ribbon on the tab. Held: candle, moth. Left undecided: the drawn empty states. Section 4. |
 | Material Chrome | **Partial** | The title variants, and nothing else — "border kit trumps everything else." The lamp rule (`material-chrome.html:97-102`) survives as a constraint rather than as a design, and the panel textures survive only as reference for the fill tile. Section 3. |
 | Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it needs hand-pixel tightening for readability, settled placement, and a set of rules for which face is used where — rules that do not exist yet. Section 5. |
-| Scroll & Parchment | **Cut, with one reversal** | The scroll stays cut as app-wide chrome and as the settings surface. **Parchment comes back as one of the four kit materials**, for quick notes and entries. See the reversals below and section 2g. |
+| Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch. Beyond the correction below, it is named again in two places only: section 0, to rule out the one title variant that used it, and 2g, where a contrast figure the study measured survives as a warning about pale grounds. |
 | Palette Studies | **Hold** | Nothing now. Gold gets restricted to the touchable and the earned, but that restriction rides in on the border work. |
 
-### Two rulings that reversed
+One correction, so nobody reopens it: a draft of this document briefly listed
+parchment as the fourth kit material, on a wording slip — the fourth material is
+**canvas** (2g), and parchment stays cut.
 
-Both of these read the other way in an earlier version of this document. They are
-recorded as reversals rather than quietly rewritten, because anyone who saw the
-first ruling needs to know it changed, and because neither cut should be
+### One ruling that reversed
+
+This one read the other way in an earlier version of this document. It is
+recorded as a reversal rather than quietly rewritten, because anyone who saw the
+first ruling needs to know it changed, and because the cut should not be
 re-applied by someone working from the old text.
-
-**Parchment is back, as a kit material.** This document said "Cut. Nothing. Not
-settings, not as a vellum material in the kit, not as a title label, not
-anywhere." That is now wrong in exactly one place. Joe has given parchment a
-material meaning inside the kit — a quick note, an entry from somewhere, the feel
-of filling out a check — so it returns as **one of the four tile sets**, and only
-as that. Everything else parchment used to mean stays cut: the scroll as app-wide
-chrome, the scroll as the settings surface, and the wax-sealed parchment title
-strip in `material-chrome.html`. Parchment is a material now, not a world. The
-one measured finding that constrains drawing it is in 2g.
 
 **The moth is held, not cut.** This document marked it cut, following the
 mockup's own ranking (`detail-pass.html:844-853`, which ranks it last and says to
@@ -461,27 +455,41 @@ at `--s:1` against multiples of 8, since toasts and tooltips run there.
 
 The kit's own rule is "material follows permanence and consequence, never screen
 or feature" (`border-kit.html:292-296`), and four `why` strings implement it in
-the data (`:463`, `:476`, `:490`, `:504`). The rule survives. The readings under
-it are rewritten, and one of the four materials changes identity.
+the data (`:463`, `:476`, `:490`, `:504`). The rule survives, and so do the four
+materials. What is rewritten is the readings under it.
 
 | Material | What it means | Where that lands |
 | --- | --- | --- |
 | **Iron** | where things are built, manufactured, ventured | the Forge, the Undercroft, the Colosseum — a workshop, not a threat |
 | **Oak** | showing listings and advertising wares — a daily specials board at a cafe | shops, offers, anything on sale for now |
 | **Stone** | things that last or stand with time, carved rather than written | Settings, and any "about" surface that states the doctrines or the methodology |
-| **Parchment** | a quick note, an entry from somewhere — the feel of filling out a check | short entries and quick records |
+| **Canvas** | pitched for the day and struck at dusk — and so a quick note, an entry from somewhere, the feel of filling out a check | short entries and quick records; market stalls, the Crankwerk, the Menagerie, toasts |
 
 **"Anything that can hurt you" is gone.** It was iron's `why`
 (`border-kit.html:463`) and Joe rejected it by name: it does not sound like this
 game. Iron is where work happens.
 
-**Parchment arrives carrying a measured constraint, and it is the one that will
-bite.** The deleted scroll study measured what happens to the app's accent
-language on a parchment field, and those numbers now govern a parchment tile
-rather than a whole theme. Read out of `docs/mockups/identity/scroll-parchment.html`
-at commit `0eb18bd` — the file is gone from this branch and is not being restored,
-so the figures are recorded here instead. Every bare `:n` in this entry is a line
-in that file at that commit:
+**Canvas is the mockup's own reading, sharpened rather than replaced.** The
+mockup already has it as "anything pitched for the day and struck at dusk"
+(`border-kit.html:504`), with market stalls and toasts in its domain (`:503`).
+Joe's reading — a quick note, an entry from somewhere, the feel of filling out a
+check — is the same thought taken from the writer's end instead of the
+stall-holder's: both are about the temporary and the immediate, the thing put up
+now and not meant to outlast the day. The row above is deliberately both at once,
+because a material that means only "temporary" says nothing about what goes
+*inside* it, and a material that means only "a quick note" loses the market
+stalls the mockup already assigned to it.
+
+**One measured trap, and it is waiting for whoever draws canvas pale.** Nothing
+about canvas *requires* a light field, but "the feel of filling out a check"
+invites one — a surface you write on reads lightest. There is a measurement on
+record for what the app's accent language does on a light ground, and it is worth
+having in front of you before you pick a value. The deleted scroll study took it
+on a vellum field, as an argument about a whole theme; that argument is gone, but
+the numbers are still numbers. Read out of
+`docs/mockups/identity/scroll-parchment.html` at commit `0eb18bd` — the file is
+gone from this branch and is not being restored, so the figures are recorded here
+instead. Every bare `:n` in this entry is a line in that file at that commit:
 
 | On the vellum field `#d8cfa8` (`:118`) | Measured | The study's replacement |
 | --- | --- | --- |
@@ -493,24 +501,22 @@ The field colour is not an invention. `#d8cfa8` is the app's own `--ink`
 (`static/style.css:53`), which is why the study's own comment on that token calls
 the field "identical to `--ink`".
 
-So there is a fork in front of whoever draws parchment, and it is not a small one.
-Section 2d requires the fill to stay in the panel family, near `--panel` `#121220`
-or `--panel2` `#191928`, because 12px body text sits on it — and a **dark**
-parchment tile keeps that constraint, keeps gold working, and largely gives up on
-looking like parchment. A **light** parchment tile is what the material is for,
-and it breaks 2d's fill constraint the moment it is drawn: gold at 1.5:1 on it is
-not dim, it is illegible, and every gold-accented thing that lands inside a
-parchment panel — a title, a key label, a stat label — needs a darker twin or has
-to stay out. That is the trap this entry exists to prevent, and it is not decided
-here. Whichever way it goes, `profile[0]` is still `--bg`, so the rim is dark
-regardless and the panel still floats on the void.
+None of that is a settled constraint on canvas. No one has picked a value for the
+tile yet, and a dark one meets none of it. It is the check to run the moment a
+pale ground is proposed, because it says what fails and by how much: gold at
+1.5:1 is not dim, it is illegible, and every gold-accented thing that lands inside
+such a panel — a title, a key label, a stat label — needs a darker twin or has to
+stay out.
 
-Note what this does to the fourth slot. The mockup ships **canvas** there, meaning
-"anything pitched for the day and struck at dusk" (`border-kit.html:504`), and
-Joe's four do not include it — parchment takes the fourth meaning instead.
-Whether canvas is renamed, redrawn, or kept alongside parchment as a fifth is not
-something he said, and it is not decided here. The canvas figures cited in 2c and
-2f are readings of the shipped mockup and stay accurate either way.
+So there is a fork in front of whoever draws canvas, and it is not a small one.
+Section 2d requires the fill to stay in the panel family, near `--panel` `#121220`
+or `--panel2` `#191928`, because 12px body text sits on it — and a **dark** canvas
+tile keeps that constraint, keeps gold working, and gives up most of the reading
+of a surface you write on. A **light** canvas tile is the material at its most
+legible as a material, and it breaks 2d's fill constraint the moment it is drawn,
+with the figures above as the bill. That is not decided here. Whichever way it
+goes, `profile[0]` is still `--bg`, so the rim is dark regardless and the panel
+still floats on the void.
 
 **A possible fifth: the Siege.** The Siege either keeps the ominous red borders it
 has now, or it gets a border built for it from scratch — Joe's words are
@@ -620,7 +626,7 @@ resolve behind 12px glyphs.
 
 | Property | Value | Reason |
 | --- | --- | --- |
-| Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. On a light parchment tile this is the same rule with the values inverted — see the contrast figures in 2g before picking any accent. |
+| Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. If canvas ends up light, this is the same rule with the values inverted — see the contrast figures in 2g before picking any accent. |
 | Contrast ceiling | every texture pixel within roughly ±6% relative luminance of `--panel` | it sits behind 10px and 12px glyphs (`static/style.css:80-82`, `--type-fine` and `--type-body`). Sanity check: if any texture pixel is closer in value to `--ink` `#d8cfa8` than to `--panel`, it is too bright. |
 | Steps | hard only, **dither instead of ramp** | where you want a transition, use a 50% checker between two adjacent values or a Bayer 4×4. A dither is made of the same hard pixels as everything else and survives `image-rendering: pixelated`; a ramp does not. |
 | Feature size | no feature longer than about a fifth of the tile in any row — ~6 pixels at 32×32 | longer runs resolve into stripes once the tile repeats. |
@@ -669,7 +675,7 @@ is the only thing that changes.
 | **Streak flame** | **Adopt** — "much better" | the `flamewob` CSS tween (`static/style.css:313`, keyframes `:1268`) | **10×10** | 4; frame 1 *is* the shipped `icon_flame`, pixel for pixel | header only, purely additive. Retires the last piece of sub-pixel tweened motion in an app that is otherwise all `steps(1, end)` |
 | **Notched scrollbar** | **Adopt** | the shared scrollbar treatment (`static/style.css:971-1014`) | none — CSS only | — | `::-webkit-scrollbar` only; Firefox keeps `scrollbar-width: thin` and is no worse off (`detail-pass.html:744-746`) |
 | **Quill** | **Adopt** | the block caret in `typewrite()`, called from `giver.js:386` and `:1195` | **6×9** | 2 | one function |
-| **Toast scrap + tack** | **Adopt, shape open** | `.toast` (`static/style.css:951`) | tack **6×6**; the scrap is a `clip-path` polygon | 1 | one component. `.err` keeps `--danger-ink` on the same scrap. Whether it stays its own drawing or becomes a parchment kit box is open — see below |
+| **Toast scrap + tack** | **Adopt, shape open** | `.toast` (`static/style.css:951`) | tack **6×6**; the scrap is a `clip-path` polygon | 1 | one component. `.err` keeps `--danger-ink` on the same scrap. Whether it stays its own drawing or becomes a canvas kit box is open — see below |
 | **Wax seal** | **Adopt, rewritten** | `confirmModal()` (`detail-pass.html:655`, sprite `:1251-1252`) | **12×12** | 4 — whole, two cracking, broken | not decoration on a dialog any more; the dialog becomes a letter. See below |
 | **Empty states** | **Neither** — "take it or leave it" | the muted-text empties (`detail-pass.html:760`) | drawn, one per screen | — | many screens, one line each. Neither in nor out; no work is sequenced against it |
 | **Candle** | **Hold** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | held, with a candidate clock — see below |
@@ -732,8 +738,8 @@ is now the transition into the opened state rather than a button's press
 animation.
 
 Two things that need deciding when it is drawn, neither of them settled here: what
-the letter is made of, which is a question for 2g's materials and probably wants
-parchment; and where the boundary of "destructive enough to be sealed" sits, which
+the letter is made of, which is a question for 2g's four and probably wants
+canvas; and where the boundary of "destructive enough to be sealed" sits, which
 is the same question the mockup was worrying about at `detail-pass.html:680-681`
 when it said the seal becomes noise everywhere and should be gated on
 `danger: true` alone.
@@ -742,17 +748,17 @@ when it said the seal becomes noise everywhere and should be gated on
 
 The toast scrap is adopted; what it *is* is not settled. Three readings are live
 and Joe named all three. It can stay its own drawing, the tacked scrap of
-`detail-pass.html`'s section 06. It can merge with parchment now that parchment is
-a kit material — a toast is a quick note from somewhere, which is parchment's
-meaning almost word for word (2g). Or, in his own framing, it might "just be
-another type of border kitted object", in which case toasts stop being a special
-component and become a small panel at `--s:1` like menus and tooltips already are
-(2a).
+`detail-pass.html`'s section 06. It can merge with canvas — a toast is a quick
+note from somewhere, pitched and struck, which is canvas's meaning almost word for
+word (2g). Or, in his own framing, it might "just be another type of border kitted
+object", in which case toasts stop being a special component and become a small
+panel at `--s:1` like menus and tooltips already are (2a).
 
 The third reading is the one that would simplify the most, and it is worth noting
 that the kit already runs at `--s:1` for toasts (`border-kit.html:426-429`) and
-that the mockup's own canvas material listed toasts in its domain
-(`border-kit.html:503`). Nothing is decided. Whoever draws it should pick
+that canvas already carries toasts in its domain (`border-kit.html:503`), which
+is what makes the second and third readings so close together. Nothing is
+decided. Whoever draws it should pick
 deliberately rather than by default, because the merge changes what `.err` means:
 a scrap with `--danger-ink` is a variant, but a kit box in a different material is
 a different object.
@@ -965,11 +971,11 @@ somebody has to assign consistently and becomes a fact about an object, which is
 what will keep it consistent as scenes get built by different passes months apart.
 
 **Different menus for different occasions falls out for free.** A material is
-twelve hex values, a 3×3 stamp and a ground. A fifth or sixth set — the Siege's
-own harrowing border (2g), brass for a betting board, something colder for
-whatever the Vale gets in winter — is an afternoon each plus a texture, not a
-design system. The vocabulary extends in exactly the direction the places thread
-wants, without anything downstream changing.
+twelve hex values, a 3×3 stamp and a ground. A fifth set — the Siege's own
+harrowing border (2g) — and any sixth after it, brass for a betting board or
+something colder for whatever the Vale gets in winter, are an afternoon each plus
+a texture, not a design system. The vocabulary extends in exactly the direction
+the places thread wants, without anything downstream changing.
 
 **Genuine menus stay genuine menus.** Not everything becomes a place. Settings is
 a menu, and by 2g it is stone: it gets the border kit as its chrome, ground
