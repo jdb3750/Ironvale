@@ -195,7 +195,6 @@ var SCENE_CSS = `
 .iv .watch .out { opacity:0.6; }
 
 /* corner glyphs — the X-close weight class: a 24px sprite and a fine caption */
-.iv .glyph-raven  { right:6px; }
 .iv .glyph-tally  { right:84px; }
 .iv .glyph-untie  { left:6px; }
 .iv .glyph-sage   { left:6px; }
@@ -257,12 +256,6 @@ IV.addSprites({
     '..pfTttttttTtf..', '..pqTttttttTtf..', '..FfTttttttTff..', '..ffllllllllff..',
     '..pllllllllll...', '..qllllllllll...', '...llll..llll...', '...bbbb..bbbb...',
     '...BBBB..BBBB...',
-  ]},
-  /* the raven — ravens are sync; the omens are only as fresh as the last flight */
-  raven_glyph: { p: { k: '#1b1b22', K: '#2e2e3a', y: '#c9a24b', i: '#8a8a9a' }, r: [
-    '............', '....kkkk....', '...kkkkkk...', '..kkiKkkkky.',
-    '..kkkkkkkkyy', '.kkkkkkkkkk.', '.kkKkkKkkk..', '..kkkkkk....',
-    '...k...k....',
   ]},
   /* the knot, loosened — untying is how a sworn writ is set aside */
   knot_glyph: { p: { p: '#e8e0cc', q: '#cfc4a4', w: '#6a4e2c' }, r: [
@@ -700,8 +693,6 @@ function desktopScene() {
   var panel = ''
   + '<div class="rack tail-up reading" style="--tailx:' + tailPct + '"'
   + ' data-seam="THE READING" data-tag="THE TAIL POINTS BACK|Pinned to that writ\'s own x, so the eye walks back up the paper to the bough it came off.">'
-  + glyph('glyph-raven', 'raven_glyph', 'send ravens',
-      'data-seam="CORNER GLYPHS" data-tag="GLYPHS, NOT BUTTONS|Utilities in the &#10005;-close weight class. Ravens are sync, so this is how the omens are refreshed."')
   + glyph('glyph-tally', 'tally_glyph', 'nights kept',
       'data-seam="ONE GLYPH, ONE MEANING" data-tag="A TALLY, NOT A BOOK|Notches cut in a stick. The book glyph it used to wear is the forge\'s DOCTRINES glyph, and no sprite in the set may carry two meanings."')
   + glyph('glyph-sage', 'elowen_bust', 'ask Elowen')

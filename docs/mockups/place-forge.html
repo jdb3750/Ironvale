@@ -97,7 +97,10 @@
 .iv .hut .door-lintel i { position:absolute; top:3px; width:3px; height:3px; background:#c8c2b0;
   box-shadow:0 0 0 1px rgba(0,0,0,0.6); }
 .iv .hut .door-lintel i.n1 { left:4px; } .iv .hut .door-lintel i.n2 { right:4px; }
-.iv-phone .hut .door-lintel { left:-9px; right:-9px; font-size:var(--type-fine); letter-spacing:0.5px; }
+.iv-phone .hut .door-lintel { left:-9px; right:-9px; padding-inline:6px;
+  font-size:var(--type-fine); letter-spacing:0.5px; }
+.iv-phone .hut .door-lintel i { top:2px; }
+.iv-phone .hut .door-lintel i.n1 { left:2px; } .iv-phone .hut .door-lintel i.n2 { right:2px; }
 .iv .hut .door-plank { position:absolute; inset:6px 6px 0;
   background:repeating-linear-gradient(90deg,#3c2c18 0 8px,#32240f 8px 9px);
   border-top:2px solid #4c3820; }
@@ -182,7 +185,6 @@
 .iv-phone .billet .b-rail { left:6px; right:6px; height:8px;
   background:linear-gradient(180deg,#b0b0be 0 1px,#74747f 1px 3px,#43434e 3px 6px,#1e1e26 6px 8px); }
 .iv-phone .billet .b-bar { bottom:5px; }
-.iv-phone .anvil-hold .lean { margin-left:-24px; }
 
 /* ================= THE ANVIL, holding a sworn oath ================= */
 .iv .anvil-hold { position:relative; line-height:0; }
@@ -193,6 +195,10 @@
 .iv .anvil-hold .lean { position:absolute; left:100%; margin-left:-4px; bottom:0; line-height:0;
   transform:rotate(-17deg); transform-origin:bottom left;
   filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); }
+/* on the phone the room's right wall is close, so the hammer stands further
+   in against the stump rather than out past the anvil (must follow the rule
+   above: same specificity, so order decides) */
+.iv-phone .anvil-hold .lean { margin-left:-26px; }
 
 /* ================= THE TERMS PANEL — .rack from the harness, dressed ====== */
 .iv .terms { margin:30px 6px 0; padding:56px 12px 10px; }
@@ -864,7 +870,7 @@
   /* --- the sworn plate, hung beside the anvil ----------------------------- */
 
   function swornPlate() {
-    return `<div class="rack tail-up sworn" style="--tailx:173px"
+    return `<div class="rack tail-up sworn" style="--tailx:270px"
         data-seam="PLATE" data-tag="${TAG_PLATE}">
 
       <button class="board-glyph glyph-tongs" data-seam="ABANDON" data-tag="${TAG_ABANDON}">

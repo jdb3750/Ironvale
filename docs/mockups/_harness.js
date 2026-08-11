@@ -196,6 +196,9 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .phone-dock { display:none; }
 .iv-phone .phone-dock { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:6px;
   border-top:2px solid var(--gold); background:rgba(10,10,18,0.97); box-shadow:0 -4px 0 rgba(0,0,0,0.45); position:relative; z-index:55; }
+/* the ambient raven sits on the fine-print line — no border, no button chrome */
+.iv .raven-line { display:flex; align-items:flex-end; justify-content:center; gap:6px; }
+.iv .raven-line .raven-perch { display:block; position:relative; top:3px; }
 .iv .dock-action { display:inline-flex; align-items:center; justify-content:center; gap:3px; min-height:44px; padding:4px;
   font-family:var(--font-body); font-size:var(--type-body); font-weight:700; line-height:1; text-transform:uppercase;
   color:var(--gold-bright); border:2px solid; border-color:var(--gold-bright) #7a5f28 #52401c var(--gold);
@@ -391,6 +394,17 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
       '..WWWWWW..', '.WwwwwwwW.', '.iiiiiiii.', '.WwwwwwwW.', '.WwwwwwwW.',
       '.iiiiiiii.', '.WwwwwwwW.', '..WWWWWW..',
     ]},
+    /* hand-authored: the ambient raven. Ravens are sync; they are birds, not a
+       button. Perched small on the footer's fine-print line — calm by default,
+       head turned when one is waiting. */
+    raven_perch: { p: { k: '#2a2a3e', K: '#454560', d: '#17172a', b: '#5a5a70', e: '#f0d080' }, r: [
+      '...kkk.......', '..kkkkk......', 'bbkkekk......', '..kkkkk......', '.kkkkkkkk....',
+      '.kkkKKKkkkkk.', '.kkkKKKKkkkkk', '..dkkkkkkkd..', '...b...b.....', '..bbb.bbb....',
+    ]},
+    raven_perch_waiting: { p: { k: '#2a2a3e', K: '#454560', d: '#17172a', b: '#5a5a70', e: '#f0d080' }, r: [
+      '...kkk.......', '..kkkkk......', '..kkkekbb....', '..kkkkk......', '.kkkkkkkk....',
+      '.kkkKKKkkkkk.', '.kkkKKKKkkkkk', '..dkkkkkkkd..', '...b...b.....', '..bbb.bbb....',
+    ]},
     stone_pile: { p: { s: '#62626e', S: '#84848f' }, r: [
       '.....SSSS.....', '....SsSSSS....', '..SSSSssSSSS..', '.SSssSSSSssSS.',
       '.SSssSSSSssSS.', '.SSSSSSSSSSSS.',
@@ -567,21 +581,24 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   </div>`;
   };
 
-  /* IV.footer() — SEND RAVENS / SETTINGS / SOUND: ON + the raven line.
+  /* IV.footer() — SETTINGS / SOUND: ON, then the ambient raven line.
+     Ravens are NOT a button any more: there is no SEND RAVENS action in the
+     footer or the dock. Sync shows itself as a bird perched on the fine print,
+     with `opts.ravenWaiting` turning its head when one is waiting.
      The .backrow and .footer-btns hide themselves under .iv-phone (CSS), so the
      same string serves both frames. */
   IV.footer = function (opts) {
     opts = opts || {};
     var ravens = opts.ravens == null ? '2026-08-06 17:40' : opts.ravens;
     var version = opts.version == null ? 'v0.36.1 &mdash; mockup' : opts.version;
+    var bird = opts.ravenWaiting ? 'raven_perch_waiting' : 'raven_perch';
     return `<div class="backrow"><button class="btn small">&larr; BACK</button></div>
   <div class="footer">
     <div class="footer-btns">
-      <button class="btn small">SEND RAVENS</button>
       <button class="btn small">SETTINGS</button>
       <button class="btn small green">SOUND: ON</button>
     </div>
-    <div class="muted">ravens last flew ${ravens} &middot; they fly every 15 min</div>
+    <div class="muted raven-line">${IV.spriteTag(bird, 26, 'raven-perch')}<span>ravens last flew ${ravens} &middot; they fly every 15 min</span></div>
     <div class="muted fine" style="margin-top:4px">${version}</div>
   </div>`;
   };
