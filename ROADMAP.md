@@ -426,6 +426,26 @@ entries are open work with the removal path worked out.
   durable sync error surfaced, so boot is not affected. **Not investigated** —
   it was outside that seam and is recorded here rather than chased. Reproduce by
   seeding all five corrupt shapes together and watching the background task log.
+- ~~**A claim for an unknown `activity_id` silently claims a different deed.**~~
+  **RESOLVED 2026-08-05** by review seam 13, as **two halves that had to ship
+  together**. The backend refuses an unmatched id with *"That deed already found
+  its way home."*; the no-argument path still claims the oldest pending deed.
+  The frontend wraps the claim in `try`/`catch` and falls through to the same
+  `refreshState()`/`render()` the success path runs, with a guard so a refusal
+  never triggers the ceremony.
+
+  **The investigation is why this was not a one-line backend fix.** The stale
+  bubble is genuinely reachable — the overnight sweep pays a candidate while a
+  tab sits open, and nothing refreshes `S.fennQueue` in the background (the only
+  `setInterval` in `static/js/` is a typewriter animation). And
+  `G.claimFennBubble` removes the bubble from the DOM *before* awaiting, has no
+  `catch`, and reaches `refreshState()` only on success — so today the
+  misattribution **accidentally self-heals**: the bogus success triggers a
+  refresh that surfaces the real pending deed moments later. A bare refusal
+  would have cut that path and left the player with no bubble and an error,
+  which is strictly worse than the defect. Each half is mutated separately and
+  fails on its own, at its own level. Original finding:
+
 - **A claim for an unknown `activity_id` silently claims a different deed.**
   Found 2026-08-05 during seam 7 verification, and **pre-existing** — the
   `next((...), 0)` fallback in `claim_unguided_bonus` predates it. Ask for an

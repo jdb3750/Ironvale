@@ -884,6 +884,82 @@ ok("already-rewarded unguided claim drops its bubble", db.kv_get("unguided_bonus
 quests._sweep_stale_unguided_candidates()  # stale-payout path must also refuse
 ok("double unguided sweep paid nothing", game.get_char()["gold"] == gold_before)
 
+# Seam 13: an activity_id that matches nothing in the queue — a stale bubble
+# left over after the overnight sweep already paid it, or a retried tap —
+# must be refused outright, never silently settle whatever the default index
+# happens to point at. A real candidate sits in the queue so this exercises
+# "no match found" rather than "queue empty", which is a different, earlier
+# branch with its own message.
+probe_activity_id = "smoke-unmatched-probe"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'Run', 'probe run', 1800, NULL)",
+    (probe_activity_id, game.now_iso()),
+)
+db.commit()
+probe_candidate = {
+    "activity_id": probe_activity_id, "activity_name": "a probe run",
+    "activity_type": "Run", "category": "run", "giver": "endurance",
+    "title": "probe deed", "minutes": 30, "date": game.today(),
+    "xp": 3, "gold": 3, "vigor": 1, "token": False, "drop": None,
+    "note": "probe", "stat_gains": {"end": 1},
+}
+db.kv_set("unguided_bonus_candidates", [probe_candidate])
+unmatched_gold_before = game.get_char()["gold"]
+unmatched = client.post(
+    "/api/unguided/claim", json={"activity_id": "smoke-does-not-exist-in-queue"},
+)
+ok("claiming an id absent from the queue is refused", unmatched.status_code == 400)
+ok("unmatched claim paid nothing", game.get_char()["gold"] == unmatched_gold_before)
+ok(
+    "unmatched claim removes nothing from the queue",
+    db.kv_get("unguided_bonus_candidates", []) == [probe_candidate],
+)
+
+# Two more assertions the index fallback used to put at risk: the no-argument
+# claim still takes the oldest pending deed, and a specific valid id still
+# claims THAT deed rather than the default one.
+oldest_activity_id = "smoke-oldest-unguided"
+newer_activity_id = "smoke-newer-unguided"
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'Run', 'an oldest run', 1200, NULL)",
+    (oldest_activity_id, game.now_iso()),
+)
+db.q(
+    "INSERT INTO activities (id, source, start, type, name, moving_time, distance) "
+    "VALUES (?, 'intervals.icu', ?, 'Walk', 'a newer walk', 900, NULL)",
+    (newer_activity_id, game.now_iso()),
+)
+db.commit()
+oldest_candidate = {
+    "activity_id": oldest_activity_id, "activity_name": "an oldest run",
+    "activity_type": "Run", "category": "run", "giver": "endurance",
+    "title": "oldest deed", "minutes": 20, "date": game.today(),
+    "xp": 2, "gold": 2, "vigor": 1, "token": False, "drop": None,
+    "note": "oldest", "stat_gains": {"end": 1},
+}
+newer_candidate = {
+    "activity_id": newer_activity_id, "activity_name": "a newer walk",
+    "activity_type": "Walk", "category": "walk", "giver": "endurance",
+    "title": "newer deed", "minutes": 15, "date": game.today(),
+    "xp": 1, "gold": 1, "vigor": 1, "token": False, "drop": None,
+    "note": "newer", "stat_gains": {"end": 1},
+}
+db.kv_set("unguided_bonus_candidates", [oldest_candidate, newer_candidate])
+default_claim = quests.claim_unguided_bonus()
+ok(
+    "no-argument claim takes the oldest pending deed",
+    default_claim["quest_title"] == oldest_candidate["title"]
+    and [c["activity_id"] for c in db.kv_get("unguided_bonus_candidates", [])] == [newer_activity_id],
+)
+specific_claim = quests.claim_unguided_bonus(newer_activity_id)
+ok(
+    "a specific valid id claims that deed, not the default one",
+    specific_claim["quest_title"] == newer_candidate["title"]
+    and db.kv_get("unguided_bonus_candidates", []) == [],
+)
+
 # ---- dungeon: enter -> move -> retire --------------------------------------
 print("dungeon lifecycle:")
 c = game.get_char()

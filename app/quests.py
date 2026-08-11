@@ -1200,7 +1200,12 @@ def claim_unguided_bonus(activity_id=None):
         idx = next((
             i for i, c in enumerate(cands)
             if isinstance(c, dict) and c.get("activity_id") == activity_id
-        ), idx)
+        ), None)
+        if idx is None:
+            # A stale bubble (sweep already paid it overnight) or a retry
+            # after a claim went through — refuse rather than silently
+            # falling back to whatever the default index happens to be.
+            raise ValueError("That deed already found its way home.")
     if idx not in valid_indexes:
         raise ValueError("Wick cannot read that deed. It remains in the ledger.")
     cand = cands[idx]
