@@ -117,7 +117,7 @@ pleasingly, literal.
 
 Desktop panels: [01](mockups/identity/border-kit-desktop-01.png) · [02](mockups/identity/border-kit-desktop-02.png) · [03](mockups/identity/border-kit-desktop-03.png) · [04](mockups/identity/border-kit-desktop-04.png) · [05](mockups/identity/border-kit-desktop-05.png)
 Phone panels: [01](mockups/identity/border-kit-phone-01.png) · [02](mockups/identity/border-kit-phone-02.png) · [03](mockups/identity/border-kit-phone-03.png) · [04](mockups/identity/border-kit-phone-04.png) · [05](mockups/identity/border-kit-phone-05.png) · [06](mockups/identity/border-kit-phone-06.png) · [07](mockups/identity/border-kit-phone-07.png) · [08](mockups/identity/border-kit-phone-08.png) · [09](mockups/identity/border-kit-phone-09.png) · [10](mockups/identity/border-kit-phone-10.png) · [11](mockups/identity/border-kit-phone-11.png)
-Full captures: [desktop](mockups/identity/border-kit-desktop.png) (2880×19000) · [phone](mockups/identity/border-kit-phone.png) (780×32278) · [HTML source](mockups/identity/border-kit.html)
+Full captures: [desktop](mockups/identity/border-kit-desktop.png) (2880×19000) · [phone](mockups/identity/border-kit-phone.png) (780×32278) · [HTML source](mockups/identity/border-kit.html) · [tile authoring spec](border-kit-tile-spec.md)
 
 ---
 
