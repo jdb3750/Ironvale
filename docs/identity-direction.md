@@ -13,7 +13,7 @@ identity work, so this document governs where it and any other spec disagree.
 | Option | Verdict | What carries forward |
 | --- | --- | --- |
 | The Modular Border Kit | **Adopt** | All of it, as the foundation. Nine 8×8 tiles per material, four materials, material assigned by permanence and consequence. Section 2. |
-| The Detail Pass | **Partial** | Raven, bell, bolts/nails, panel title, streak flame, toasts, quill. Candle held on a real implementation problem. Moth cut. Section 4. |
+| The Detail Pass | **Partial** | Raven, bell, bolts/nails, panel title, streak flame, toasts, quill. Candle parked on a real implementation problem. Moth cut. Section 4. |
 | Material Chrome | **Partial** | Two things: the textured panel backdrops (redrawn as pixel textures, not the painterly ones in the mockup), and some title variants (redrawn). The plate/board/slab construction, the ashlar wall, the octagonal fasteners and the per-material key sets are all dropped. Section 3. |
 | Type, Titles & Wordmark | **Partial** | The hand-drawn paragraph work — illuminated capitals and ornamented copy. Drawn display and panel titles keep the idea and lose the execution. Section 5. |
 | Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. It does not appear again in this document. |
@@ -354,7 +354,7 @@ will serve stale from browser caches.
 | **Streak flame** | the `flamewob` CSS tween (`static/style.css:313`, keyframes `:1268`) | **10×10** | 4; frame 1 *is* the shipped `icon_flame`, pixel for pixel | header only, purely additive. Retires the last piece of sub-pixel tweened motion in an app that is otherwise all `steps(1, end)` |
 | **Toast scrap + tack** | `.toast` (`static/style.css:951`) | tack **6×6**; the scrap is a `clip-path` polygon | 1 | one component. `.err` keeps `--danger-ink` on the same scrap |
 | **Quill** | the block caret in `typewrite()`, called from `giver.js:386` and `:1195` | **6×9** | 2 | one function |
-| **Candle** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | held — see below |
+| **Candle** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | parked — see below |
 | ~~Moth~~ | — | 8×6 | 2 | **cut** |
 
 Ordering, if it helps: nails first (an afternoon, and every panel stops being a
