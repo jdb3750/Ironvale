@@ -1020,8 +1020,9 @@ def grant_unguided_run_bonus():
 def _record_unguided_completion(cand, rewards, completed_at):
     import json
 
-    # Transaction invariant: the claim or stale-sweep caller owns the only
-    # commit; this recorder must leave its insert pending for rollback.
+    # Transaction invariant: the claim or stale-sweep caller wraps this in
+    # db.transaction(), which owns the only commit; this recorder must leave
+    # its insert pending so a later rollback in that block undoes it too.
     # No dedup guard needed here: _apply_unguided_bonus already refuses to pay
     # (and thus never reaches this) when the activity is linked to any quest.
     giver = cand.get("giver", "endurance")
@@ -1078,16 +1079,8 @@ def _apply_unguided_bonus(cand):
     if cand["token"]:
         c["tokens"] += 1
     if cand["drop"]:
-        db.q(
-            "INSERT INTO inventory (item_id, qty) VALUES (?, 1) "
-            "ON CONFLICT(item_id) DO UPDATE SET qty=qty+1",
-            (cand["drop"],),
-        )
-    db.q(
-        "INSERT INTO kv (key, value) VALUES ('character', ?) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        (json.dumps(c),),
-    )
+        db.inv_add(cand["drop"])
+    db.kv_set("character", c)
     rewards = {
         "xp": cand["xp"], "gold": cand["gold"], "vigor": cand["vigor"], "token": cand["token"],
         "item": items.get(cand["drop"]) if cand["drop"] else None,
@@ -1109,11 +1102,7 @@ def _apply_unguided_bonus(cand):
 
 
 def _stage_unguided_candidates(candidates):
-    db.q(
-        "INSERT INTO kv (key, value) VALUES ('unguided_bonus_candidates', ?) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        (json.dumps(candidates),),
-    )
+    db.kv_set("unguided_bonus_candidates", candidates)
 
 
 def _valid_unguided_candidate(candidate):
@@ -1174,7 +1163,7 @@ def _sweep_stale_unguided_candidates():
     stale_indexes = [index for index in valid_indexes if cands[index]["date"] != t]
     if not stale_indexes:
         return
-    try:
+    with db.transaction():
         for index in stale_indexes:
             _apply_unguided_bonus(cands[index])
         stale_indexes = set(stale_indexes)
@@ -1182,10 +1171,6 @@ def _sweep_stale_unguided_candidates():
             candidate for index, candidate in enumerate(cands)
             if index not in stale_indexes
         ])
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
 
 
 def unguided_pending():
@@ -1219,14 +1204,10 @@ def claim_unguided_bonus(activity_id=None):
     if idx not in valid_indexes:
         raise ValueError("Wick cannot read that deed. It remains in the ledger.")
     cand = cands[idx]
-    try:
+    with db.transaction():
         rewards = _apply_unguided_bonus(cand)
         cands.pop(idx)
         _stage_unguided_candidates(cands)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
     if rewards is None:
         # Activity got linked to a quest between queuing and this tap — the
         # quest already paid for it. Drop the bubble, grant nothing.

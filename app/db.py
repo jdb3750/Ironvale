@@ -2,6 +2,7 @@
 JSON columns for flexible game state. The active profile's DB path rides a
 contextvar set by middleware (and by the background sync loop), so every
 query below transparently hits the right save file."""
+import contextlib
 import contextvars
 import json
 import os
@@ -310,6 +311,45 @@ def rollback() -> None:
     conn().rollback()
 
 
+# Composable-transaction depth. A contextvar rather than a plain module
+# global for the same reason `_profile_path` is one: it must not leak
+# between contexts, and this file already uses contextvars for exactly that
+# per-context isolation. Each `with transaction():` block runs start-to-end
+# on one thread/task, so this never needs to cross a thread boundary itself.
+_tx_depth = contextvars.ContextVar("iv_tx_depth", default=0)
+
+
+@contextlib.contextmanager
+def transaction():
+    """Let a caller compose several of the auto-committing helpers below
+    (kv_set, kv_del, inv_add, inv_remove, and anything built on them, like
+    game.save_char) into one atomic unit. While a transaction is open, those
+    helpers still run their statement but skip their normal immediate
+    commit; this context manager commits once on clean exit, or rolls back
+    once and re-raises on exception. Nesting is refused rather than
+    silently flattened — a nested transaction's failure would otherwise
+    roll back writes the outer caller believes are already durable."""
+    if _tx_depth.get():
+        raise RuntimeError("db.transaction() does not support nesting")
+    token = _tx_depth.set(1)
+    try:
+        yield
+        commit()
+    except Exception:
+        rollback()
+        raise
+    finally:
+        _tx_depth.reset(token)
+
+
+def _commit_unless_transaction():
+    """The commit half of every auto-committing helper below. Deferred only
+    while a `db.transaction()` block is open on this context, so a caller
+    outside one still gets today's immediate-commit behaviour unchanged."""
+    if not _tx_depth.get():
+        commit()
+
+
 def kv_get(key, default=None):
     row = q("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
     return json.loads(row["value"]) if row else default
@@ -321,12 +361,12 @@ def kv_set(key, value):
         "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         (key, json.dumps(value)),
     )
-    commit()
+    _commit_unless_transaction()
 
 
 def kv_del(key):
     q("DELETE FROM kv WHERE key=?", (key,))
-    commit()
+    _commit_unless_transaction()
 
 
 def inv_add(item_id, n=1):
@@ -335,7 +375,7 @@ def inv_add(item_id, n=1):
         "ON CONFLICT(item_id) DO UPDATE SET qty=qty+?",
         (item_id, n, n),
     )
-    commit()
+    _commit_unless_transaction()
 
 
 def inv_remove(item_id, n=1):
@@ -346,7 +386,7 @@ def inv_remove(item_id, n=1):
         q("DELETE FROM inventory WHERE item_id=?", (item_id,))
     else:
         q("UPDATE inventory SET qty=qty-? WHERE item_id=?", (n, item_id))
-    commit()
+    _commit_unless_transaction()
     return True
 
 
