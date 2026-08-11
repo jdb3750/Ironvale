@@ -8,6 +8,37 @@ pixel editor, and the rest is scope.
 Joe has ruled that this project thread is the source of truth for the visual
 identity work, so this document governs where it and any other spec disagree.
 
+## 0. What else is on the branch, and why
+
+Everything that described a rejected direction has been deleted. What is left
+under `docs/mockups/identity/` is here because the settled direction still reads
+it:
+
+- **`border-kit.html`** — the implementer's reference for the tile numbers, the
+  generator and the nine-layer background rule. Nearly every coordinate and hex
+  value in section 2 is a citation into it.
+- **`detail-pass.html`** and **`raven-sheet.png`** — the adopted iconography of
+  section 4, and the only raven frames that exist anywhere (see section 4).
+- **`type-wordmark.html`** and **`wordmark-sheet.png`** — the drawn lettering
+  Joe is redrawing from: the wordmark, the fixed screen titles and the
+  illuminated capitals. Section 5 measures its glyphs.
+- **`material-chrome.html`** — kept for three of its ten sections and no more.
+  **00, "The lamp, and the rule it makes"**, which fixes the light source for
+  everything drawn here (`material-chrome.html:97-102`). **01–03**, "Bolted
+  iron", "Hung oak" and "Set stone", for their panel *textures* only — the
+  `.plate`, `.board` and `.slab` backgrounds and the ashlar wall that section 3
+  triages, which Joe redraws as pixel textures. And **04, "The title, five
+  ways"**, the title variants he is also redrawing — with one exception inside
+  it: the wax-sealed **parchment** strip is not a surviving variant
+  (`material-chrome.html:280`, `:725`, `:965`), because parchment is cut
+  including as a title label, per the table below. Sections 05–09 — the
+  per-material key sets, nesting, the side-by-side, the phone case and the cost
+  count — are cut, as is the plate/board/slab *construction* those textures sit
+  in.
+
+There are no page captures on the branch. The mockups are self-contained,
+dependency-free HTML with no build step: open the file.
+
 ## 1. What was decided
 
 | Option | Verdict | What carries forward |
@@ -16,13 +47,68 @@ identity work, so this document governs where it and any other spec disagree.
 | The Detail Pass | **Partial** | Raven, bell, bolts/nails, panel title, streak flame, toasts, quill. Candle parked on a real implementation problem. Moth cut. Section 4. |
 | Material Chrome | **Partial** | Two things: the textured panel backdrops (redrawn as pixel textures, not the painterly ones in the mockup), and some title variants (redrawn). The plate/board/slab construction, the ashlar wall, the octagonal fasteners and the per-material key sets are all dropped. Section 3. |
 | Type, Titles & Wordmark | **Partial** | The hand-drawn paragraph work — illuminated capitals and ornamented copy. Drawn display and panel titles keep the idea and lose the execution. Section 5. |
-| Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. It does not appear again in this document. |
+| Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch; the only place it is named again is section 0, to rule out the one title variant that used it. |
 | Palette Studies | **Hold** | Nothing now. Gold gets restricted to the touchable and the earned, but that restriction rides in on the border work. |
 
 The palette hold has one condition that would revive it: the border kit shipping
 and gold *still* reading as exhausting. That is the only evidence that a palette
 pass was the right instrument rather than a symptom fix, and it cannot be
 gathered before seam 1 lands.
+
+### What the palette study measured, and which of it the hold keeps
+
+Holding the pass does not discard what it measured. Four findings survive,
+because each is a fact about `static/style.css` rather than an argument for a
+retheme, and three of them bear on work in this document.
+
+**Gold does fourteen jobs.** `--gold` or `--gold-bright` paints the wordmark,
+the panel border, the panel outer ring, the panel title, every quest title,
+every key face bevel, every key label, every stat label, every table header,
+every building plate, the XP bar fill, the coin count, the moderate chip and the
+doctrine chip. An eye cannot rank fourteen equally bright things, so it stops
+trying, and a screen where nothing is emphasised looks like a screen where
+nobody decided anything. This is the whole reason the pass was **held** rather
+than cut: the finding is right, and the border kit is the instrument that spends
+the saving, so gold's restriction rides in on section 2 rather than on a `:root`
+edit.
+
+**Most of the colour is not tokenised.** `static/style.css` is 2,889 lines and
+carries **276 literal hex colours across 131 distinct values**. Most of those
+values are typed in place rather than tokenised, which is why an edit to `:root`
+alone repaints about two-thirds of a screen. The worst offenders by occurrence
+count:
+
+| literal | uses | what it is |
+| --- | --- | --- |
+| `#4a3d20` | **25** | the universal muted-gold hairline — header rule, footer rule, offer and dialog borders, the town-scene frame, the mantel shelf, tab strips, the stat-bar track, building plates |
+| `#3a2c10` | **11** | two unrelated jobs in one literal: the floor shadow under every key (`static/style.css:179`) and the `.pixel-title` text-shadow (`:132`) |
+| `#7a5f28` / `#6b5426` / `#52401c` | **8 each** | key bevels, and the `.win` outer ring (`static/style.css:140`) — the second-most identity-carrying line on the screen, and a literal |
+| `#12100a` | **6** | pressed and latched key faces |
+| `#22203a` | **5** | table and chronicle row dividers; the one cool literal in an otherwise warm set |
+
+Nothing in this document needs the tokenisation done first — the kit brings its
+own values, and section 2d explains why it is bound to almost none of them — but
+anyone who edits chrome colour outside the kit will meet it.
+
+**`#e07030` is two unrelated things with no token joining them.** It is
+`--activity-climb` (`static/style.css:69`) and, separately, the streak flame,
+written as a bare literal at `static/style.css:304` and `:365`, again on the
+climb chip at `:431`, and inline in `static/js/town.js:279` and
+`static/js/app.js:751`. Section 4 replaces that flame with a sprite; whoever
+does it should know that moving the value also moves the calendar dot legend,
+which is exactly where nobody would look for the regression.
+
+**The dark surfaces are not a hierarchy, and `--dim` is under the bar.** `--dim`
+`#776f8e` (`static/style.css:54`) on `--panel2` `#191928` (`:48`) measures
+**3.67:1**, and 3.93:1 on `--panel` (`:47`) — both under 4.5, on hand-drawn
+glyphs that are one pixel wide in places. And the surface ramp collapses twice:
+`--bg` `#0a0a12` (`:46`) sits at L\* 2.94, `--panel` at 6.01 and `--panel2` at
+9.44, so the gaps are ΔL\* 3.07 and 3.43 and **three of the four dark surfaces
+read as one surface at arm's length**. Only `--surface-raised` `#24243b` (`:49`,
+L\* 15.24) is clearly separate. Worth carrying into section 3: some of what
+reads as flat is not the gold at all, it is three near-identical darks
+pretending to be a hierarchy, and the backdrop texture is being drawn onto that
+ground.
 
 ---
 
@@ -98,6 +184,13 @@ catch-light pixel at (1,1), mirrored (`:556-557`). Then, on rails only: the mark
 where `band` counts inward from the outer edge and `at` runs along the rail
 (`:518-523`, `:537-539`).
 
+Paint order on a corner is itself a design decision, not an implementation
+detail. The stamp lands *after* the seam, so it covers the seam at d = 2, 3, 4
+and the seam survives at d = 5, 6 — running out from under the ornament and
+dying at the inner rim. That is a peg, a rivet or a grommet driven straight
+through the joint rather than set beside it. The catch light lands last and
+always wins; marks never touch a corner at all.
+
 ### 2c. The seam rule
 
 This is the constraint that makes the kit never show a join, and it is verifiable
@@ -131,6 +224,12 @@ exactly where one rail tile abuts the next, so it reads as a plate join or a
 stitch rather than a break — iron uses `at:[0]` for the plate seam
 (`border-kit.html:459`) and canvas uses `at:[6,7]` for its lacing (`:500`).
 
+The exception has a limit, and it is about halves rather than positions. A
+periodic *line* at position 0 survives being cut, because a line has no halves.
+A motif with a left half at position 7 and a right half at position 0 gets sawn
+apart at arbitrary panel widths. So anything with a silhouette — a rivet, a peg,
+a chisel peck — stays whole and inside one tile.
+
 ### 2d. Colour: what is actually constrained
 
 **One factual correction before you pick colours.** The mockup claims every value
@@ -154,6 +253,12 @@ What the app genuinely constrains:
 Everything between those is open. Twelve values per material plus two or three
 stamp values — call it fifteen — and nothing outside the kit needs to agree with
 them.
+
+One structural agreement inside the profile is worth keeping even though nothing
+enforces it: in all four shipped materials **band 5 equals band 3**. The face
+darkens toward band 4 and comes back, so the rail reads as a chamfered face
+viewed straight on rather than as a one-way ramp. Break that symmetry and the
+rail starts to look lit from one side, which fights the fixed lamp.
 
 ### 2e. How a drawn tile reaches the app
 
@@ -214,15 +319,40 @@ Both are `border-kit.html:525-560` and `:563-593` transcribed.
 
 The backdrop texture in section 3 flips this recommendation — see there.
 
-`border-image` is not an option, and this was measured rather than assumed. No
-repeat mode is pixel-exact across device pixel ratios: `repeat` is exact only at
-even widths at DPR 1 and 3, `round` rescales the tile to a non-integer scale,
-`stretch` smears a source pixel into a 25px block at width 200, and `space`
-develops holes (`border-kit.html:341-354`). Nine origin-anchored
-`background-repeat` layers were exact at DPR 1, 2 and 3 at every width tried,
-unconditionally (`:361-365`). The trap in the measurement is that DPR 2 rescues
-`border-image` completely, so it looks perfect on every modern phone and quietly
-wrong on a 1× desktop monitor — invisible to whoever builds it (`:355-359`).
+`border-image` is not an option, and this was measured rather than assumed. It
+is the justification for the whole nine-layer approach, so it is recorded in
+full.
+
+**The method.** Chromium 141, tiles rendered, the page screenshotted, the
+screenshot's pixels read back and run-length counted across the top rail. A rail
+counts as exact when every source pixel became a run of identical length
+(`border-kit.html:336-339`). All four repeat modes were tested; none is
+pixel-exact across device pixel ratios (`:341-354`).
+
+| mode | DPR 1 | DPR 2 | DPR 3 | what goes wrong |
+| --- | --- | --- | --- | --- |
+| `repeat` | exact only at **even** widths | **always exact** | exact only at **even** widths | the tiling is *centred* in the run, so an odd remainder puts the phase on a half pixel and every tile in the rail jitters 1px |
+| `round` | never exact | never exact | never exact | rescales the tile to fit a whole number of repeats — a non-integer scale, so source pixels become blocks of 1 and 2 |
+| `stretch` | never exact | never exact | never exact | a source pixel became a 25px smear at width 200 |
+| `space` | never exact | never exact | never exact | inserts gaps between tiles; the rail develops holes |
+
+Nine origin-anchored `background-repeat` layers measured exact at DPR 1, 2 and 3
+at every width tried, unconditionally, because background phase anchors to the
+element origin instead of being centred (`:361-365`).
+
+**The trap is the DPR 2 column.** It rescues `repeat` completely, because the
+half-CSS-pixel centring offset lands on a whole device pixel. So `border-image`
+looks perfect on every modern phone and in every screenshot, and is quietly
+wrong on a 1× desktop monitor at **odd** panel widths — a failure that is
+invisible to whoever builds it (`:355-359`). That is why this is written down
+rather than left as a preference.
+
+Where the drawing itself lives, per repo convention: editor sources
+(`.aseprite`, `.pxo`), palette swatches and superseded drafts go under
+`assets/`, mirroring the same subject folders as `static/art/`, and are never
+served (`static/js/art.js:23-26`). Draw in an indexed colour mode — it makes an
+off-palette pixel impossible rather than merely discouraged, which is what the
+band check in 2f tests for.
 
 ### 2f. Drawing checklist
 
@@ -250,6 +380,18 @@ wrong on a 1× desktop monitor — invisible to whoever builds it (`:355-359`).
   the rim.
 - Gold in a rail. It re-spends the thing the kit is meant to save.
 - Ornament below 40px of content. Handle it by stopping, not shrinking.
+
+**Three mechanical checks, before transcribing anything**
+
+- **Bands.** Cover the marks, the stamp, the catch and the seam. Every remaining
+  pixel must be exactly `P[min(distance to each outer edge)]` — no dithering, no
+  in-between values, no colour that is not one of the eight.
+- **Rail periodicity.** Strip the marks from `t` and `b` and every *column* must
+  be identical; strip them from `l` and `r` and every *row* must be. A rail tile
+  that fails this will not tile.
+- **The corner joins the rail.** Read `tl`'s rightmost column top to bottom, and
+  its bottom row left to right: both must be `P[0]` through `P[7]` in order,
+  mirrored for the other three corners. This is 2c's seam rule stated as a test.
 
 **The one-pixel-tall-feature trap**
 
@@ -357,12 +499,30 @@ will serve stale from browser caches.
 | **Candle** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | parked — see below |
 | ~~Moth~~ | — | 8×6 | 2 | **cut** |
 
+**Two facts behind the raven's rank, both checked against the repo.** First,
+*there is no raven drawn anywhere in it.* `static/js/pixel.js` has no raven
+entry, `assets/` holds only `palettes/` and `templates/`, and nothing under
+`static/art/` matches the name. Ravens are the game's oldest metaphor and they
+exist only as copy, in `app.js`, `town.js`, `giver.js` and `misc.js`. The frames
+in `detail-pass.html` are the only raven the project has ever had, which is why
+`raven-sheet.png` is kept. Second, *there is no way to send one from a phone.*
+`static/js/app.js:483` is the plain `SEND RAVENS` key, and
+`static/style.css:2674` sets `.footer-btns { display: none; }` inside the
+`@media (max-width: 719px)` block that opens at `:2570`, so the whole footer row
+is hidden at 719px and below. The only remaining path is Settings → APIs → Save
+& Send Ravens (`static/js/misc.js:942`), which also rewrites the athlete
+credentials — while the status line goes on telling the player when the ravens
+last flew. That is a defect rather than a taste question, and adopting the raven
+is what fixes it.
+
 Ordering, if it helps: nails first (an afternoon, and every panel stops being a
 rectangle), then the raven (most work, biggest payoff, fixes a defect), then the
 title, bell and flame. Toast and quill after. The only shortlist item Joe did not
 name and did not rule out is the notched scrollbar (`detail-pass.html:894-895`) —
-pure CSS, no sprite, cheap whenever. The wax seal and the drawn empty states were
-already self-held in the mockup and stay held.
+pure CSS, no sprite, cheap whenever. The wax seal here — the seal sprite gating
+genuinely destructive actions, not the parchment title strip ruled out in
+section 0 — and the drawn empty states were already self-held in the mockup and
+stay held.
 
 ### The candle is parked
 
@@ -481,6 +641,20 @@ the head of a paragraph, exactly where ornament is paid for. Their stated limits
 hold: at least three lines of copy beside one or drop it entirely
 (`type-wordmark.html:610-614`), and nothing drawn below 10px.
 
+### One rule with no user, and two files with no rule
+
+Not a drawing problem, but it is the state of the type shelf and it should not
+be lost. `quanta-strike-18-regular.woff2` (8,840 B) and
+`quanta-strike-20-regular.woff2` (9,792 B) both sit committed in `static/fonts/`
+and are named nowhere: `static/style.css` declares `@font-face` for the 10, 12,
+12-bold, 14 and 16 strikes only, and a repo-wide search for `quanta-strike-18`
+or `-20` outside the mockups returns nothing. The reverse is true of
+`vt323.woff2`, which has an `@font-face` at `static/style.css:2-5` and is
+applied to nothing at all — `DESIGN.md:103` already records it as a legacy asset
+outside the active default. So two committed strikes are unreachable type sizes,
+and one loaded face has no user. Anything ceremonial that wants to be set rather
+than drawn already has the bytes for it on disk.
+
 ---
 
 ## 6. Where this meets "places, not menus"
@@ -547,3 +721,41 @@ and none blocks anything — which is exactly why they go last.
 **Brief seam 1 first.** It unblocks 2, 3 and the title, and it is the only one
 where a wrong decision is expensive to undo. A tile drawn on the wrong grid gets
 redrawn; a nail on the wrong panel is a one-line change.
+
+### What seam 1 obliges in `DESIGN.md`
+
+`DESIGN.md` is binding on `static/style.css`, and two of its sections describe a
+`.win` that the kit replaces. Both need amending **in the same change that ships
+seam 1**, and neither should be amended before it. Flagging it here so it is not
+discovered late; nothing in this document edits either one.
+
+**`DESIGN.md` §5, "Pixel Window (`.win`)"** specifies the appearance as "`--panel` surface,
+`2px` `--gold` border, hard concentric rings, an offset block shadow, and a title
+cut out against `--bg`" (`DESIGN.md:214-215`) and the spacing as "`14px` padding
+and vertical margin with a `4px` outer side margin" (`:216-217`). Clause by
+clause against the kit:
+
+| `DESIGN.md` §5 clause | what the kit does |
+| --- | --- |
+| `--panel` surface | the `c` fill tile, per material |
+| `2px` `--gold` border | no `border` property at all; nine painted background layers |
+| hard concentric rings (`static/style.css:140`) | band 0 does the ring's job, inside the tile |
+| title cut out against `--bg` (`static/style.css:145-153`) | a plaque nailed to the rail — same span, same text, new rule (`border-kit.html:386-388`) |
+| `14px` padding | `calc(var(--u) + 7px) calc(var(--u) + 9px)` (`border-kit.html:789`) |
+| offset block shadow | survives, moved onto the 8px grid |
+
+**`DESIGN.md` §7, "Depth & Surface"** states the strategy as "borders plus tonal
+pixel windows" (`DESIGN.md:573-575`) and makes the `--edge-lit` / `--edge-shade`
+neutral bevel the marker of every raised surface (`:593-597`). A kit surface has
+neither a two-pixel border nor a neutral bevel — it has a material. That
+section's raised-surface contract is where the two systems have to agree on
+which surfaces are which.
+
+**One measurement to settle before drawing anything that depends on it.**
+`static/style.css:140` casts `6px 6px 0 rgba(0,0,0,0.5)`. The mockup's shipping
+CSS block says `8px 8px 0 rgba(0,0,0,0.55)`, so panel and shadow sit on one 8px
+grid (`border-kit.html:802`). The mockup's own live `.p9` rule uses
+`calc(3px * var(--s))` at alpha `.55`, which is 6px at `--s:2`
+(`border-kit.html:78`). The mockup disagrees with itself; pick one. Nothing in
+section 2 depends on the answer, but section 3's shadow-overlap test should use
+whichever value wins.
