@@ -485,7 +485,11 @@ RESETS.push(() => { RB.exercises = []; });
 SCREENS.doctrines = async function () {
   const token = captureRouteToken();
   const giver = S.params.giver;
-  const d = await api('/programs');
+  // Shared with the Council schedule editor (misc.js) via app.js's
+  // programsCache. This screen's own mutations below invalidate it before
+  // re-rendering, so it still refetches fresh after every create, select or
+  // delete — the same behaviour as before, just through the shared owner.
+  const d = await fetchPrograms();
   if (!isRouteTokenCurrent(token)) return;
   const active = d.active[giver];
   const progs = d.programs.filter(p => p.giver === giver);
@@ -548,6 +552,7 @@ G.selectProgram = async (giver, key) => {
   const token = captureRouteToken();
   await api('/programs/select', { method: 'POST', body: { giver, key } });
   if (!isRouteTokenCurrent(token)) return;
+  invalidatePrograms();
   SFX.accept();
   toast(key ? 'Sworn. The doctrine leads your offers now.' : 'Doctrine renounced.');
   render();
@@ -572,6 +577,7 @@ G.rbSave = async (giver) => {
   const name = document.getElementById('rb-name').value;
   await api('/routines', { method: 'POST', body: { name, giver, exercises: RB.exercises } });
   if (!isRouteTokenCurrent(token)) return;
+  invalidatePrograms();
   RB.exercises = []; RB.name = '';
   SFX.fanfare();
   toast('Routine forged.');
@@ -584,6 +590,7 @@ G.deleteRoutine = async (rid, giver) => {
   const token = captureRouteToken();
   await api(`/routines/${rid}`, { method: 'DELETE' });
   if (!isRouteTokenCurrent(token)) return;
+  invalidatePrograms();
   render();
 };
 

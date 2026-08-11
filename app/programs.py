@@ -88,6 +88,22 @@ def scheduled_routine_giver(key: str) -> Optional[str]:
 
 def save_routine(payload):
     routines = get_routines()
+    # Idempotency key: the frontend holds one client_key for the life of a
+    # forge draft, so a retry after a partial failure (e.g. the follow-up
+    # /programs refresh or schedule-slot write throwing) replays the same
+    # key instead of minting a second routine. Nothing else sends this key,
+    # so its absence is the ordinary case and falls straight through.
+    client_key = payload.get("client_key")
+    if isinstance(client_key, str) and client_key:
+        existing = next(
+            (
+                item for item in routines
+                if isinstance(item, dict) and item.get("client_key") == client_key
+            ),
+            None,
+        )
+        if existing is not None:
+            return existing
     exs = []
     for e in payload.get("exercises", []):
         name = e.get("exercise", "").strip()
@@ -108,6 +124,8 @@ def save_routine(payload):
         "giver": payload.get("giver", "strength"),
         "exercises": exs,
     }
+    if isinstance(client_key, str) and client_key:
+        r["client_key"] = client_key
     routines.append(r)
     db.kv_set("routines", routines)
     return r
