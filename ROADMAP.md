@@ -477,6 +477,29 @@ entries are open work with the removal path worked out.
   over it **destroys the preserved evidence**, and quarantining it to a second kv
   key adds a permanent representation for a state that has never occurred.
   Recorded so this is not re-litigated as an oversight.
+- ~~**`save_char` and `db.inv_add` are duplicated at a call site.**~~
+  **RESOLVED 2026-08-05** by review seam 11. `db.transaction()` is a context
+  manager: `kv_set`, `kv_del`, `inv_add` and `inv_remove` still run their
+  statement but defer the commit while a block is open, and the block commits
+  once on clean exit or rolls back once and re-raises. Chosen over `commit=False`
+  parameters because the atomic claim spans three call-stack levels and a flag
+  would have to be threaded through every intermediate function — including
+  `_apply_unguided_bonus`, which has a second independent caller. `game.save_char`
+  needed no change at all, being pure delegation to `kv_set`. Nesting is refused
+  rather than flattened: with one SQLite connection a nested rollback could not
+  selectively undo only its own writes. The inlined SQL in `quests.py` is gone.
+
+  **The seam shipped without a test for the new machinery**, which is the same
+  guard-with-no-test pattern seams 4, 6 and 8 hit; `tests/test_db_transaction.py`
+  was added during review. Every durability assertion there reads through a
+  **separate `sqlite3` connection**, because asserting on the same connection
+  proves the statement ran, not that it was committed — and the risk this seam
+  carried was precisely a helper that quietly stops committing for a caller that
+  never opted in, which looks correct in-session and is gone after a restart. It
+  also pins both depth-leak paths (after a failed block, after a refused nested
+  one), since a leaked depth is how an unrelated write would silently lose
+  durability. Original finding:
+
 - **`save_char` and `db.inv_add` are duplicated at a call site.** Introduced by
   seam 6, deliberately and with the cost recorded here rather than hidden. Both
   helpers commit internally, so the atomic claim path inlines their SQL instead
