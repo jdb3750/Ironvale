@@ -4,214 +4,163 @@
 <title>Iron Vale — Sage Elowen's willow, a scene</title>
 <!-- Design mockup. Nothing here is app code: static/ is the app, this is drawing
      paper. Everything visual comes from docs/mockups/_harness.js (tokens, fonts,
-     sprite engine, tiles, gallery chrome); this file adds only the glade's own
-     scenery and the two states of the screen. -->
+     sprite engine, gallery chrome); this file adds only the willow's own close-up
+     and the two states of the screen.
+
+     REWORKED TO THE LEDGER FORMULA. The previous mockup was an establishing shot:
+     a whole night glade with the writs as ribbons you tapped on the boughs. Joe
+     rated it one of the two worst ("difficult to understand what's happening")
+     and decreed the ledger the target: up-close on the work surface, everything
+     in frame displaying state or doing work, the menu driving and the scene
+     staging. This file is that redraw: Elowen's writing board under the willow. -->
 <script src="_harness.js"></script>
 <body>
 <script>
 IV.injectStyles();
 
 /* ===========================================================================
-   1. THE GLADE'S OWN STYLES — appended AFTER the harness sheet so these win.
+   1. THE SCENE'S OWN STYLES — appended AFTER the harness sheet so these win.
 
-   Palette note: the glade is the only night exterior in the set, so it is
-   deliberately pulled toward the shared warm brown/amber family — warm-olive
-   grass, an ember horizon, warm bark, and two real warm light sources (the
-   post lantern and the night-watch lanterns) that spill onto the grass, the
-   trunk, the water and the people standing in them.
+   Materials, per the decree: iron, oak, stone, canvas, dark subtle fills.
+   The night-exterior identity stands (exteriors track the town clock), but the
+   frame is close now, so night reads as lantern-light on an oak board under
+   the boughs — not a panorama.
    =========================================================================== */
 var SCENE_CSS = `
-/* ---------------- the glade: sky, bank, water ---------------- */
-.iv .glade { position:relative; border:2px solid #4a3d20; margin:12px 4px 0; overflow:hidden;
-  image-rendering:pixelated; }
-.iv .glade .sky { position:relative; overflow:hidden;
-  background:linear-gradient(180deg,#07060d 0,#0d0d1c 26%,#171426 54%,#241a26 78%,#3a2620 100%); }
-.iv .glade .mtns { position:absolute; left:0; right:0; bottom:0; height:72px;
-  background-repeat:repeat-x; background-position:bottom left; background-size:360px 72px; opacity:0.92; }
-.iv .glade .haze { position:absolute; left:0; right:0; bottom:0; height:104px; pointer-events:none;
-  background:linear-gradient(180deg, rgba(180,104,48,0) 0%, rgba(178,102,46,0.14) 58%, rgba(196,118,54,0.26) 100%); }
-.iv .glade .stars i { position:absolute; width:2px; height:2px; background:#e8e0cc; }
-.iv .glade .stars i.dim { background:#8d8474; }
-.iv .glade .moon { position:absolute; z-index:0; line-height:0; }
-/* drop-shadow follows the sprite's alpha; box-shadow would leave the canvas
-   box unlit and print a hard dark rectangle of sky around the moon */
-.iv .glade .moon canvas { filter:drop-shadow(0 0 3px rgba(255,240,205,0.60)) drop-shadow(0 0 11px rgba(235,220,190,0.30)); }
-.iv .glade .bank { position:relative; background-color:#232a1a; border-top:4px solid #3c4426; }
-.iv .glade .pond { position:absolute; left:0; bottom:0; background-color:#1a2130;
-  border-top:2px solid #4a4432; box-shadow:inset 0 3px 0 rgba(190,150,90,0.12); }
-.iv .glade .refl { position:absolute; width:12px;
-  background:repeating-linear-gradient(180deg, rgba(228,232,255,0.26) 0 2px, rgba(0,0,0,0) 2px 7px); }
-.iv .glade .refl.warm { width:22px;
-  background:repeating-linear-gradient(180deg, rgba(255,196,104,0.34) 0 2px, rgba(0,0,0,0) 2px 6px); }
-.iv .glade .prop { position:absolute; line-height:0; }
-.iv .glade .fig { position:absolute; z-index:4; line-height:0; }
-.iv .glade .contact { position:absolute; z-index:3; pointer-events:none; border-radius:50%;
-  background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0) 76%); }
-/* a lantern that casts: warm light lands on grass, trunk and people */
-.iv .glade .pool { position:absolute; z-index:1; pointer-events:none;
-  background:radial-gradient(ellipse at 50% 50%, rgba(255,206,124,0.34) 0%, rgba(250,182,88,0.16) 40%, rgba(240,170,70,0) 72%); }
-.iv .glade .pool.small { background:radial-gradient(ellipse at 50% 50%, rgba(255,206,124,0.30) 0%, rgba(250,182,88,0.13) 44%, rgba(240,170,70,0) 74%); }
-.iv .glade .fly { position:absolute; z-index:3; width:3px; height:3px; background:#fff2b0;
-  box-shadow:0 0 9px 3px rgba(240,200,110,0.62); animation:flyBlink 2.4s steps(2) infinite; }
-@keyframes flyBlink { 0% { opacity:1; } 50% { opacity:0.15; } }
+/* ---------------- the giver idiom: portrait + typewriter dialogue ----------
+   Copied from static/style.css (.npc-head / .dialog) so the mockup composes
+   Elowen in exactly the way the app talks: a bordered portrait beside a black
+   typewriter box. There is no tap-to-speak bust anywhere on this screen. */
+.iv .npc-head { display:flex; gap:14px; align-items:flex-start; }
+.iv .npc-head canvas { image-rendering:pixelated; flex-shrink:0; border:2px solid #4a3d20; background:#000; }
+.iv .dialog { background:#000; border:2px solid var(--gold); padding:10px 12px; min-height:64px;
+  font-family:var(--font-title); font-size:var(--type-title); flex:1; }
+.iv .dialog .npc-name { color:var(--gold-bright); }
+.iv .dialog .dlg { margin-top:3px; line-height:1.4; }
+.iv .cursor-blink::after { content:'\\258C'; animation:dlgBlink 0.8s infinite; color:var(--gold-bright); }
+@keyframes dlgBlink { 50% { opacity:0; } }
+.iv-phone .npc-head { gap:10px; }
+.iv-phone .dialog { padding:8px 9px; min-height:52px; }
 
-/* warm wood along the bank — one of the two anchors that keep the glade in the
-   same colour family as the forge and the hall */
-.iv .glade .fence { position:absolute; z-index:1; }
-.iv .glade .fence i { position:absolute; left:0; right:0; height:5px;
-  background:linear-gradient(180deg,#8a6636 0 2px,#5e4220 2px 4px,#33210d 4px 5px); }
-.iv .glade .fence u { position:absolute; width:6px; top:0; bottom:0;
-  background:linear-gradient(90deg,#9a7340 0 2px,#6a4c24 2px 5px,#2e1d0b 5px 6px); }
+/* ---------------- the close-up frame: boughs above, board below ---------- */
+.iv .grove { position:relative; border:3px solid #4a3d20; overflow:hidden; margin:12px 4px 6px;
+  image-rendering:pixelated; box-shadow:inset 0 0 0 2px #05050a, 6px 6px 0 rgba(0,0,0,0.55); }
 
-/* ---------------- the willow itself ---------------- */
-.iv .glade .willow { position:absolute; inset:0; pointer-events:none; z-index:2; }
-.iv .glade .willow > * { pointer-events:auto; }
-.iv .glade .willow canvas { position:absolute; display:block; }
-/* the weeping curtain: it is the strands, not the crown, that make a willow a
-   willow. They hang from the canopy's own ragged underside, thin over the
-   trunk so the boughs and bark stay legible. */
-.iv .glade .strand { position:absolute; width:2px; z-index:1;
+/* the strip of night the boughs dip into — all the "exterior" that survives */
+.iv .grove .nightband { position:relative; overflow:hidden;
+  background:linear-gradient(180deg,#04040a 0,#0a0b16 55%,#100e1a 100%); }
+.iv .grove .stars i { position:absolute; width:2px; height:2px; background:#cfc8b4; }
+.iv .grove .stars i.dim { background:#77705f; }
+.iv .grove .leafcan { position:absolute; left:0; top:0; }
+.iv .grove .strand { position:absolute; width:2px; z-index:2;
   background-image:repeating-linear-gradient(180deg,#25321a 0 6px,#1a2412 6px 11px); }
-.iv .glade .strand.lit { background-image:repeating-linear-gradient(180deg,#425c2c 0 5px,#2c3d1d 5px 11px); }
-.iv .glade .strand.deep { background-image:repeating-linear-gradient(180deg,#161d0d 0 7px,#101609 7px 12px); }
-.iv .glade .strand::after { content:''; position:absolute; left:0; bottom:-3px; width:2px; height:3px; background:#3a5228; }
+.iv .grove .strand.lit { background-image:repeating-linear-gradient(180deg,#425c2c 0 5px,#2c3d1d 5px 11px); }
+.iv .grove .strand.deep { background-image:repeating-linear-gradient(180deg,#161d0d 0 7px,#101609 7px 12px); }
+.iv .grove .strand::after { content:''; position:absolute; left:0; bottom:-3px; width:2px; height:3px; background:#3a5228; }
 
-/* a plate is a last resort — used only where nothing in the world can carry
-   the words (an NPC's name). Everything else is written on the object. */
-.iv .glade .gplate { position:absolute; z-index:5; font-family:var(--font-fine); font-size:var(--type-fine);
-  color:var(--ink); background:rgba(12,9,6,0.86); border:1px solid #6a4e2c; padding:1px 6px;
-  letter-spacing:0.5px; white-space:nowrap; line-height:1.4; }
-.iv .glade .gplate b { color:var(--gold-bright); font-weight:400; }
+/* the watch bough: thick at the frame edge, thin at the tip, dipping in */
+.iv .grove .bough { position:absolute; z-index:3; height:12px;
+  background:linear-gradient(180deg,#7a5a31 0 3px,#4f381a 3px 7px,#2c1c0b 7px 10px,#1d1206 10px 12px);
+  clip-path:polygon(0 34%, 42% 12%, 100% 0, 100% 100%, 42% 88%, 0 66%); }
+/* an iron hook driven into the bough's underside — empty until a writ is sworn */
+.iv .grove .hook { position:absolute; z-index:3; width:11px; height:14px;
+  border:3px solid #6e6e7c; border-top:none; border-right:none; border-bottom-left-radius:8px;
+  box-shadow:-2px 2px 0 rgba(0,0,0,0.5); }
+.iv .grove .lamp-hang { position:absolute; z-index:4; line-height:0; }
+.iv .grove .lamp-hang canvas { filter:drop-shadow(0 0 3px rgba(255,214,130,0.5)); }
+.iv .grove .lamp-hang.out canvas { filter:none; opacity:0.85; }
+.iv .grove .nightpool { position:absolute; z-index:1; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 30%, rgba(255,206,124,0.26) 0%, rgba(250,182,88,0.10) 46%, rgba(240,170,70,0) 74%); }
 
-/* the tally board — nights kept, carved on a plank nailed to the trunk, so the
-   count lives in the world instead of on a floating black label */
-.iv .glade .tally { position:absolute; z-index:5; padding:4px 8px 5px; text-align:center;
-  background:linear-gradient(180deg,#a07a44 0 3px,#8a6636 3px 60%,#6e5028 60% 100%);
-  border:2px solid; border-color:#c19a5c #4a3520 #3a2a18 #9a7340;
-  box-shadow:3px 3px 0 rgba(0,0,0,0.55); }
-.iv .glade .tally b { display:block; font-family:var(--font-fine); font-size:var(--type-fine);
-  letter-spacing:1.5px; text-transform:uppercase; color:#2c1c08; font-weight:400; line-height:1.4; }
-.iv .glade .tally i { display:block; font-style:normal; font-family:var(--font-fine); font-size:var(--type-fine);
-  color:#523716; line-height:1.4; }
-.iv .glade .tally u { display:block; height:7px; margin:3px auto 0; text-decoration:none;
-  background:repeating-linear-gradient(90deg,#3a2610 0 2px, rgba(0,0,0,0) 2px 6px); }
-.iv .glade .tally::before, .iv .glade .tally::after { content:''; position:absolute; top:3px; width:3px; height:3px;
-  background:#d8b978; box-shadow:0 1px 0 #4a3520; }
-.iv .glade .tally::before { left:3px; }
-.iv .glade .tally::after { right:3px; }
-.iv .glade .tally .ty-post { position:absolute; left:50%; top:100%; width:9px; margin-left:-4px;
-  background:linear-gradient(90deg,#9a7340 0 2px,#6a4c24 2px 6px,#33210d 6px 9px); }
+/* ---------------- the writing board: an oak surface, lantern-lit ---------- */
+.iv .boardtop { position:relative; padding:18px 16px 22px; background-color:#38281a;
+  border-top:4px solid #191006;
+  background-image:
+    radial-gradient(ellipse 68% 58% at 80% 0%, rgba(248,214,132,0.28), rgba(0,0,0,0) 72%),
+    linear-gradient(180deg, rgba(0,0,0,0.48) 0, rgba(0,0,0,0) 12%, rgba(0,0,0,0) 76%, rgba(0,0,0,0.36) 100%),
+    repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 42px, rgba(22,15,6,0.9) 42px 45px, rgba(140,106,60,0.28) 45px 46px),
+    repeating-linear-gradient(180deg, rgba(255,224,168,0.05) 0 1px, rgba(0,0,0,0) 1px 4px, rgba(0,0,0,0.10) 4px 5px, rgba(0,0,0,0) 5px 9px); }
+/* the board's near lip, same grammar as Wick's desk */
+.iv .boardtop::after { content:''; position:absolute; left:0; right:0; bottom:0; height:13px; z-index:0;
+  pointer-events:none; border-top:2px solid #7a5c38;
+  background:linear-gradient(180deg,rgba(120,88,48,0.35) 0,rgba(0,0,0,0.55) 100%); }
+.iv .boardtop > * { position:relative; z-index:1; }
+.iv .board-floor { display:grid; grid-template-columns:minmax(0,1fr) 118px; gap:0 18px; align-items:start; }
+.iv-phone .board-floor { grid-template-columns:minmax(0,1fr) 80px; gap:0 10px; }
 
-/* ---------------- the writs: folded paper tied over a bough ---------------- */
-/* Every part of the premise is drawn: the bough it hangs from, the paper
-   folded over that bough, the cord knotted round both, and the name written
-   down the paper itself. Nothing here is a card with a label under it. */
-.iv .glade .writ { position:absolute; z-index:5; background:none; border:none; padding:0; margin:0;
-  cursor:pointer; font:inherit; color:inherit; text-align:center; transform-origin:50% 11px; }
-/* the bough: thick where it leaves the tree, thin at the free end, and tilted
-   — a straight symmetrical bar reads as a crossbar on a post */
-.iv .glade .writ .wr-branch { position:absolute; top:7px; height:9px; z-index:2;
-  background:linear-gradient(180deg,#a07845 0 2px,#6b4a24 2px 5px,#402a10 5px 7px,#241705 7px 9px);
-  clip-path:polygon(0 6%, 46% 26%, 100% 42%, 100% 66%, 46% 84%, 0 100%); }
-.iv .glade .writ.lean .wr-branch { clip-path:polygon(0 42%, 54% 26%, 100% 6%, 100% 100%, 54% 84%, 0 66%); }
-.iv .glade .writ .wr-twig { position:absolute; top:5px; height:5px; z-index:2;
-  background:linear-gradient(180deg,#8a6636 0 2px,#5e4220 2px 4px,#33210d 4px 5px); }
-/* the free end of the paper, folded back over the top of the bough — it is the
-   reverse of the sheet, so it sits in shadow and is torn along its top */
-.iv .glade .writ .wr-flap { position:absolute; left:9px; right:9px; top:-9px; height:18px; z-index:1;
-  background:linear-gradient(90deg,#6b5c3c 0 26%,#a08c60 26% 64%,#5d4f33 64% 100%);
-  clip-path:polygon(0 14%, 26% 0, 58% 12%, 82% 2%, 100% 16%, 100% 100%, 0 100%); }
-/* the knot: two turns of cord round bough and paper together, with tails */
-.iv .glade .writ .wr-cord { position:absolute; left:-6px; right:-6px; top:19px; height:11px; z-index:3;
-  background:linear-gradient(180deg, #8a6c3c 0 1px, #3a2a10 1px 4px, rgba(0,0,0,0) 4px 6px,
-                                     #8a6c3c 6px 7px, #3a2a10 7px 10px, rgba(0,0,0,0) 10px 11px); }
-/* the knot itself, sitting proud on the front of the paper */
-.iv .glade .writ .wr-cord::before { content:''; position:absolute; left:50%; top:-2px; margin-left:-7px;
-  width:15px; height:15px;
-  background:linear-gradient(180deg,#a5854c 0 3px,#6d5430 3px 7px,#33240c 7px 10px,#6d5430 10px 15px); }
-/* and its two loose tails, hanging down the sheet */
-.iv .glade .writ .wr-cord::after { content:''; position:absolute; left:50%; top:13px; margin-left:-6px;
-  width:13px; height:13px;
-  background:linear-gradient(90deg, rgba(0,0,0,0) 0 2px, #4a3618 2px 4px, rgba(0,0,0,0) 4px 9px,
-                                    #33240c 9px 11px, rgba(0,0,0,0) 11px 13px); }
-/* the paper: narrow, fold-creased, shaded so one edge curls toward you, torn
-   at the free end, with the writ's name inked down it */
-.iv .glade .writ .wr-paper { position:relative; z-index:1; display:block; margin:11px auto 0; padding:33px 0 17px;
-  background:
-    repeating-linear-gradient(180deg, rgba(96,72,38,0) 0 12px, rgba(96,72,38,0.42) 12px 13px, rgba(255,246,222,0.55) 13px 14px),
-    linear-gradient(180deg, rgba(0,0,0,0) 0 calc(100% - 14px), #a08a5e calc(100% - 14px) calc(100% - 10px),
-                            #ecdfba calc(100% - 10px) calc(100% - 5px), #7d6c46 calc(100% - 5px) 100%),
-    linear-gradient(90deg,#8b7950 0 9%,#c9b88d 9% 26%,#e2d4b0 26% 48%,#cdbc94 48% 72%,#a8956a 72% 90%,#7f6f48 90% 100%);
-  border-left:1px solid #7f6f4c; border-right:1px solid #6d5f40;
-  box-shadow:3px 4px 0 rgba(0,0,0,0.45);
-  clip-path:polygon(20% 0, 80% 0, 100% 7%, 97% 40%, 100% 72%, 98% 97%, 74% 100%, 44% 96%, 16% 100%, 2% 96%, 4% 62%, 1% 32%, 0 7%);
-  transform-origin:50% 0; animation:writSway 5.2s steps(3) infinite; }
-@keyframes writSway { 0%,100% { transform:rotate(-0.9deg); } 50% { transform:rotate(1.1deg); } }
-.iv .glade .writ .wr-ink { display:block; margin:0 auto; writing-mode:vertical-rl; text-orientation:mixed;
-  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0; line-height:1;
-  color:#3f2b0f; white-space:nowrap; }
-.iv .glade .writ:hover .wr-paper { filter:brightness(1.12); }
+/* everything standing on the board stands in its own contact shadow */
+.iv .footed { position:relative; display:inline-block; line-height:0; }
+.iv .footed > canvas { position:relative; z-index:1; }
+.iv .footed .fshade { position:absolute; z-index:0; left:-12%; right:-28%; bottom:-6px; height:13px;
+  background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0,0,0,0.62) 0, rgba(0,0,0,0.30) 46%, rgba(0,0,0,0) 74%); }
+.iv .btool { text-align:center; margin-bottom:14px; }
+.iv .btool .under { display:block; margin-top:7px; line-height:1.2; }
+.iv .paper-tag { display:inline-block; background:#e8e0cc; border:1px solid #7a6244; color:#2a1c08;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.3; padding:1px 5px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.5); }
 
-/* the chosen writ has come loose and unfurled: the same stock, opened wide,
-   still tied at the bough, ending on the bank well short of the water */
-.iv .glade .writ.unfurled { z-index:6; }
-.iv .glade .writ.unfurled .wr-paper { animation:none; padding:38px 0 20px;
-  filter:drop-shadow(0 0 2px rgba(240,208,128,1)) drop-shadow(0 0 5px rgba(240,208,128,0.9))
-         drop-shadow(0 0 12px rgba(240,208,128,0.55));
-  border-left:2px solid #f6ead0; border-right:2px solid #8d7f5c; }
-.iv .glade .writ.unfurled .wr-ink { letter-spacing:1px; color:#3d2a0e; }
-.iv .glade .writ.unfurled .wr-roll { position:absolute; left:-3px; right:-3px; top:33px; height:9px; z-index:2;
-  background:linear-gradient(180deg,#8d7a52 0 1px,#f5ecd4 1px 4px,#d3c19a 4px 7px,#7a6842 7px 9px); }
-/* the stub left on the bough once the writ has been taken down */
-.iv .glade .writ.stub .wr-paper { padding:33px 0 13px;
-  clip-path:polygon(20% 0, 80% 0, 100% 7%, 97% 44%, 100% 78%, 82% 92%, 58% 100%, 34% 88%, 12% 99%, 0 80%, 3% 44%, 0 7%); }
+/* ---------------- the offered writ, open on the board ---------------------
+   A real sheet: cream stock, ruled, its terms inked on it. It DISPLAYS the
+   menu's selection; it is not a button and never gates anything. */
+.iv .wpaper { position:relative; background:#e8dfc0; color:#3c2a12; padding:10px 13px 13px;
+  max-width:392px; box-shadow:6px 7px 0 rgba(0,0,0,0.5);
+  background-image:
+    linear-gradient(90deg, rgba(96,72,38,0.28) 0, rgba(0,0,0,0) 3%, rgba(0,0,0,0) 97%, rgba(96,72,38,0.32) 100%),
+    linear-gradient(180deg, rgba(96,72,38,0.22) 0, rgba(0,0,0,0) 3%, rgba(0,0,0,0) 97%, rgba(96,72,38,0.26) 100%);
+  clip-path:polygon(0 1%, 4% 0, 31% 1%, 62% 0, 96% 1%, 100% 3%, 99% 38%, 100% 71%, 99% 97%,
+    72% 100%, 44% 98%, 15% 100%, 1% 98%, 0 64%, 1% 33%); }
+.iv .wpaper .wp-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+  padding-bottom:4px; margin-bottom:6px; border-bottom:2px solid #8a7a58; }
+.iv .wpaper .wp-title { color:#3c2a12; font-family:var(--font-title); font-size:var(--type-title);
+  letter-spacing:1px; text-transform:uppercase; }
+.iv .wpaper .wp-hand { color:#6a5436; font-family:var(--font-fine); font-size:var(--type-fine); white-space:nowrap; }
+.iv .wpaper .wp-asks { margin:0; color:#3c2a12; font-family:var(--font-body); font-size:var(--type-body); line-height:1.4; }
+.iv .wpaper .wpays { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; padding:6px 8px;
+  background:rgba(96,72,38,0.10); border:1px solid #b9af92; }
+.iv .wpaper .wpays .pay { display:inline-block;
+  font-family:var(--font-fine); font-size:var(--type-fine); color:#3c2a12; line-height:1.4; }
+.iv .wpaper .wpays .pay canvas { vertical-align:-3px; margin-right:4px; }
+.iv .wpaper .wvigor { color:#4a6b2a; letter-spacing:1px; }
+.iv .wpaper .wruns { margin-top:6px; color:#6a5436; font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .wpaper .wruns b { color:#3c2a12; font-weight:400; }
+/* her omen, inked in the margin against a red rule, the ledger's own grammar */
+.iv .wpaper .women { margin-top:7px; padding-left:9px; border-left:2px solid #b06050;
+  color:#6a5436; font-family:var(--font-fine); font-size:var(--type-fine); font-style:italic; line-height:1.35; }
+/* the foot of the sheet, where the wax lands */
+.iv .wpaper .sealseat { display:flex; align-items:center; gap:10px; margin-top:10px;
+  padding-top:8px; border-top:1px solid #b9af92; }
+.iv .wpaper .sealghost { flex-shrink:0; width:34px; height:34px; border:2px dashed #a8724a;
+  border-radius:50%; opacity:0.6; }
+.iv .wpaper .sealdone { flex-shrink:0; line-height:0; }
+.iv .wpaper .sealcap { color:#6a5436; font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.35; }
+.iv .wpaper .sealcap b { display:block; color:#3c2a12; font-weight:400; }
 
-/* ---------------- the reading / the sworn writ: a .rack panel with a tail ---------------- */
-.iv .reading, .iv .sworn { margin:34px 4px 8px; padding:52px 14px 12px; z-index:20; }
-.iv .reading .rk-title, .iv .sworn .rk-title { line-height:1.2; }
-.iv .reading .asks, .iv .sworn .asks { margin:8px 0 0; color:var(--ink); }
-.iv .pays { display:flex; flex-wrap:wrap; gap:4px 16px; margin:9px 0 0;
-  padding:7px 9px; background:rgba(8,8,14,0.42); border:1px solid var(--edge); }
-.iv .pays .pay { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
-.iv .pays .pay canvas { vertical-align:middle; }
-.iv .keeps { margin-top:6px; color:var(--green); font-family:var(--font-fine); font-size:var(--type-fine); }
-.iv .omens { margin-top:10px; padding:8px 10px; border:1px solid #4a3d20; background:rgba(24,16,10,0.55); }
-.iv .omens .omens-title { font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:1.5px;
-  color:var(--gold-bright); text-transform:uppercase; margin-bottom:4px; }
-.iv .omens .omen-line { color:var(--dim-readable); margin:2px 0; }
-.iv .seal-row { display:flex; align-items:center; gap:10px; margin-top:12px;
-  padding-top:9px; border-top:1px solid var(--edge); }
-.iv .seal-row .seal { background:none; border:none; padding:0; cursor:pointer; line-height:0; }
-.iv .seal-row .seal canvas { filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.55)); }
-.iv .seal-row .seal-cap { color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.4; }
-.iv .seal-row .seal-cap b { display:block; color:var(--ink); font-weight:400; }
+/* ---------------- the writ menu: the panel that drives ------------------- */
+.iv .writmenu .wentry { position:relative; border:2px solid; border-color:#8a6a40 #3a2a18 #2e2214 #6a4e2c;
+  background:linear-gradient(180deg,#4e3c22 0,#3c2d1a 100%); padding:8px 10px 9px; margin:10px 0;
+  color:var(--ink); font-family:var(--font-body); font-size:var(--type-body); cursor:pointer; }
+.iv .writmenu .wentry .wname { display:block; color:var(--gold-bright); font-family:var(--font-title); font-size:var(--type-title); }
+.iv .writmenu .wentry .wterms { display:block; margin-top:3px; color:var(--dim-readable);
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.45; }
+.iv .writmenu .wentry .women { display:block; margin-top:3px; color:#9db07c;
+  font-family:var(--font-fine); font-size:var(--type-fine); font-style:italic; line-height:1.4; }
+.iv .writmenu .wentry.open { cursor:default; border-color:#f0d080 #7a5f28 #52401c var(--gold);
+  background:linear-gradient(180deg,#5a4428,#48361f);
+  box-shadow:0 0 0 2px rgba(240,208,128,0.20), 3px 3px 0 rgba(0,0,0,0.5); }
+.iv .writmenu .wentry .onboard { display:block; margin-top:5px; color:var(--gold-bright);
+  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
+.iv .writmenu .wentry .watchline { display:block; margin-top:5px; color:var(--green);
+  font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .writmenu .wentry .btn { margin-top:9px; }
+.iv .writmenu .wentry.waits { cursor:default; opacity:0.55; }
+.iv .writmenu .menu-foot { margin-top:8px; color:var(--dim); font-family:var(--font-fine);
+  font-size:var(--type-fine); line-height:1.4; }
 
-/* the lanterns of the night watch, read as time remaining */
-.iv .watch { display:flex; align-items:flex-end; gap:10px; margin-top:10px;
-  padding:8px 10px; border:1px solid #4a3d20; background:rgba(8,8,14,0.42); }
-.iv .watch .watch-cap { color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.45; }
-.iv .watch .watch-cap b { display:block; color:var(--ink); font-weight:400; }
-.iv .watch canvas { display:block; }
-.iv .watch .out { opacity:0.6; }
-
-/* corner glyphs — the X-close weight class: a 24px sprite and a fine caption */
-.iv .glyph-tally  { right:84px; }
-.iv .glyph-untie  { left:6px; }
-.iv .glyph-sage   { left:6px; }
-.iv .sworn .glyph-sage { left:auto; right:6px; }
-.iv .board-glyph .g-cap { white-space:nowrap; }
-
-/* Elowen speaks only when her bust is tapped. The bubble hangs off her own
-   corner of the panel, kept inside the frame, clear of the glyph it points at,
-   and on the opposite side of the scene from where she is standing. */
-.iv .reading .gbubble-wrap { width:288px; left:2px; right:auto; bottom:calc(100% + 12px); }
-.iv .reading .gbubble::after { left:16px; right:auto; }
-.iv .reading .gbubble::before { left:18px; right:auto; }
-.iv .gbubble .fb-line { margin-bottom:4px; }
-
-/* phone dressing */
-.iv-phone .reading, .iv-phone .sworn { margin:28px 2px 6px; padding:48px 10px 10px; }
-.iv-phone .pays { gap:3px 10px; }
+/* desktop floor plan: the board close-up left, the menu that drives it right */
+.iv-desktop .stagegrid { display:grid; grid-template-columns:minmax(0,1fr) 292px; gap:0 14px;
+  align-items:start; margin:0 4px; }
+.iv-desktop .stagegrid .grove { margin:12px 0 6px; }
+.iv-desktop .stagegrid .win.writmenu { margin:26px 0 6px; }
 `;
 (function () {
   var el = document.createElement('style');
@@ -222,65 +171,52 @@ var SCENE_CSS = `
 
 /* ===========================================================================
    2. SCENE SPRITES — char maps in the harness's own shape.
-      Every figure has arms and hands; every light source has a body, a ring
-      and something to hang from.
    =========================================================================== */
 IV.addSprites({
-  /* Sage Elowen at her station: arms, hands, feet, a gold sash instead of the
-     old teal one, and a warm lit edge down the side facing her lantern */
-  elowen: { p: { h: '#f0e4b4', H: '#fff8dc', f: '#8f5c42', F: '#c08a55', k: '#1f0e1c',
-                 r: '#6a3576', R: '#3a1f33', E: '#a35f7a', y: '#c9a24b',
-                 g: '#5f7a3a', b: '#7a5630', B: '#3d2a12', w: '#6a4e2c', W: '#c9a24b' }, r: [
-    '......hhhhhh......', '.....hhhhhhhh.....', '.....HFfffffh.....', '.....HFkffkfh.....',
-    '.....HFfffffh.....', '.....HFfkkffh.....', '.....hhfffffh.....', '.....hffffffh.....',
-    '....gggggggggg....', '...ErrrrrrrrrrR.W.', '...ErRrrrrrrRrR.w.', '...ErRrrrrrrRrR.w.',
-    '...ErRyyyyyyRrR.w.', '...ErRyyyyyyRrR.w.', '...ErRrrrrrrRrR.w.', '...EfRrrrrrrRfR.w.',
-    '...FFRrrrrrrRff.w.', '...FfRrrrrrrRff.w.', '...ERrrrrrrrrRR.w.', '...ERrrrrrrrrRR.w.',
-    '..ERrrrrrrrrrrRRw.', '..ERrrrrrrrrrrRRw.', '..ERrrrrrrrrrrRRw.', '..RRRRRRRRRRRRRRw.',
-    '.....bbb..bbb...w.', '.....BBB..BBB...w.',
+  /* Sage Elowen's portrait for the giver idiom, 32x32 — a char-map STAND-IN
+     transcribed from Joe's hand-drawn art at
+     static/art/npcs/sage_elowen/sage_elowen_portrait.png (the app draws the
+     real PNG; a mockup keeps everything as char maps). It approximates his
+     art: the pale crescent circlet, the dark plum curls, the green robe. */
+  elowen_portrait: { p: {
+    k:'#f5edba', K:'#e4943a', p:'#d79b7d', f:'#70377f', F:'#9a6348', c:'#3e2137',
+    r:'#1f0e1c', g:'#7ec4c1', Y:'#d26471', o:'#9d303b', W:'#17434b', L:'#647d34',
+    R:'#c0c741', m:'#8c8fae' }, r: [
+    '................................',
+    '...........kkkkkkkkkk...........',
+    '......Kkkkk..........kkkkK......',
+    '....kkk.....p.p..p.p.....kkk....',
+    '...kK....p.pfFcKKrFrf......Kk...',
+    '..Kk....pFFcrcrcKrcfrf.p....kK..',
+    '..kk....frcFcccKrcrcrrFf....kk..',
+    '..kkK...kkkcrrrrKrcrrkkk...Kkk..',
+    '..KkkK..krgKKrKKrKrKKgrk..KkkK..',
+    '...KK..fKkrkgKKggKKgkrkKp..KK...',
+    '.....FfrrKKKKkrggrkKKKKrpp......',
+    '.....rpFrrrrrKKKKKKrrrrFcF......',
+    '....pcFcFrfcfpFFFFpfcfFrFcp.....',
+    '.....fcFcfpccccFFccccpFcrpf.....',
+    '....FrrccFcFrrFFpFrrFcFccrc.....',
+    '.....rrccFcFFFFFYFFFFcFcccrc....',
+    '....c.rcrcFFFFFFFFFFFFfrcrc.....',
+    '....rrrcccYYFFFffFFFYYcccrrr....',
+    '.....rrrcrcYYFFFFFFYYcrrrrcrc...',
+    '....rrrcrcrcYFFooFFYcrrcrcrc....',
+    '....crrccrrrcFooooFcrrcrcrcrc...',
+    '.....crrrrcrccFFFFcfrcrcrrcr....',
+    '....crrWWcWccccFFcFFcWcrWcrc....',
+    '....ccWWWWcWcffccFFFWcWWWWcc....',
+    '..cccccWWWWWfFFFFFFFWLLLWFffcc..',
+    '.ccffffWWWLWFFFFFFFFRWRRLFFfffc.',
+    'ccffFFFRRRWRWFFFFFFWRWRLLFFFfYfc',
+    'cfYfFFLLLRWRWppFFppWRWLLLLFFfYfc',
+    'cYfFFLLLLLWRRWfFffWmWLLLLLFFfYfc',
+    'cffFFLLLLLLWWmWffWWmmWLLLLLffffc',
+    'cccfLLLLLLLLWmWffmWLmWLLLLLWffcc',
+    'ccccWWWWWLLLWmWWWmWWWLLLWWWWcccc',
   ]},
-  /* her bust for a panel corner — tap her and she speaks, nothing before that */
-  elowen_bust: { p: { h: '#f0e4b4', H: '#fff8dc', f: '#8f5c42', F: '#c08a55', K: '#1f0e1c',
-                      r: '#6a3576', R: '#3a1f33', g: '#5f7a3a' }, r: [
-    '...hhhhhh...', '..hhhhhhhh..', '.hHhhhhhhhh.', '.hHFffffffh.',
-    '.hHFfKffKfh.', '.hHFffffffh.', '.hHFfffffhh.', '..HFffffhh..',
-    '..gggggggg..', '.RrrrrrrrrR.', 'RrrrrrrrrrrR', '............',
-  ]},
-  /* you, with the sworn writ knotted at your wrist — arms, hands, boots */
-  hero_ribbon: { p: { h: '#6a4428', f: '#e0b088', F: '#f2caa0', k: '#2a2a34',
-                      t: '#4a6a9a', T: '#3a5a8a', E: '#5f82b5',
-                      l: '#5a4028', b: '#6b4c28', B: '#33240f', p: '#f2ead6', q: '#cfc4a4' }, r: [
-    '.....hhhhhh.....', '....hhhhhhhh....', '....hffffffh....', '....hfkffkfh....',
-    '....hffffffh....', '....hffkkffh....', '.....ffffff.....', '...tttttttttt...',
-    '..EtTttttttTtT..', '..EtTttttttTtT..', '..EtTttttttTtT..', '..EfTttttttTtf..',
-    '..pfTttttttTtf..', '..pqTttttttTtf..', '..FfTttttttTff..', '..ffllllllllff..',
-    '..pllllllllll...', '..qllllllllll...', '...llll..llll...', '...bbbb..bbbb...',
-    '...BBBB..BBBB...',
-  ]},
-  /* the knot, loosened — untying is how a sworn writ is set aside */
-  knot_glyph: { p: { p: '#e8e0cc', q: '#cfc4a4', w: '#6a4e2c' }, r: [
-    'wwwwwwwwwwww', '....pqqp....', '...pppppp...', '..pqp..pqp..',
-    '..ppp..ppp..', '...pp..pp...', '..pq....qp..', '..pp....pp..',
-    '.pq......qp.', '.pp......pp.', '.p........p.',
-  ]},
-  /* nights kept — a notched tally stick, four cuts and a slash. Deliberately
-     NOT the forge's two-tan-rectangles book glyph, which means DOCTRINES. */
-  tally_glyph: { p: { w: '#8a6636', W: '#c19a5c', k: '#2c1c08' }, r: [
-    '.WWWWWWWWWW.', 'WwwwwwwwwwwW', 'WwkwkwkwkkwW', 'WwkwkwkkkwwW',
-    'WwkwkkkwkwwW', 'WwkkkwkwkwwW', 'WkkwkwkwkwwW', 'WwwwwwwwwwwW',
-    '.WWWWWWWWWW.',
-  ]},
-  /* the wax seal at the foot of the writ: a poured blob with drips and a
-     willow leaf pressed into it */
-  wax_seal: { p: { R: '#7d2027', r: '#c04036', l: '#e87a56', d: '#4d1015',
-                   g: '#4a1013', G: '#2c090c', s: '#e8916a' }, r: [
-    '.....RRRR.....', '...RRrrrrRR...', '..Rrllllrrrrd.', '.RrlllsgsrrrRd',
-    '.RrllsgggsrrRd', 'RrrlsgggggsrrR', 'RrrrsggGggsrrd', 'RrrrrsgGgsrrrd',
-    'RrrrrrsgsrrrRd', '.RrrrrrGrrrrd.', '.Rrrrrrrrrrdd.', '..RRrrrrrrdd..',
-    '....RRRddd....', '.....dd.dd....',
-  ]},
-  /* the night watch: a lantern with a body, a hanging ring and glass. The
-     bough it hangs from is drawn across the ring, so it reads as hooked on. */
+  /* the night watch: a lantern with a body, a hanging ring and glass — the
+     ring is what hooks over the bough's iron hook */
   lantern_lit: { p: { i: '#a89878', k: '#2a2118', y: '#ffe6a0', Y: '#fffbe6',
                       o: '#f0b854', O: '#d88c30', w: '#6a4e2c' }, r: [
     '....iiii....', '...i....i...', '...i....i...', '....iiii....',
@@ -297,35 +233,32 @@ IV.addSprites({
     '.kOyyyyyyOk.', '.kOooooooOk.', '.kkkkkkkkkk.', '..kkkkkkkk..',
     '...wwwwww...', '....kkkk....',
   ]},
-  /* a lantern on a wooden post at Elowen's station — warm wood, and it casts */
-  post_lantern: { p: { k: '#2a2118', y: '#ffe6a0', Y: '#fffbe6', o: '#f0b854', O: '#d88c30',
-                       w: '#5c421f', W: '#8a6636', L: '#a8803f', d: '#2a2418' }, r: [
-    '.....kkkk.....', '....kkkkkk....', '...kkkkkkkk...', '..kkkkkkkkkk..',
-    '..kOooooooOk..', '..kOyyyyyyOk..', '..kOyyYYyyOk..', '..kOyyYYyyOk..',
-    '..kOyyyyyyOk..', '..kOooooooOk..', '..kkkkkkkkkk..', '...kkkkkkkk...',
-    '....WWWWWW....', '.....LwwW.....', '.....LwwW.....', '.....LwwW.....',
-    '.....LwwW.....', '.....LwwW.....', '.....LwwW.....', '.....LwwW.....',
-    '.....LwwW.....', '.....LwwW.....', '.....LwwW.....', '....WLwwWW....',
-    '...WWLwwWWW...', '..dddddddddd..',
+  /* Elowen's work lamp, standing on the board on its own iron feet — a
+     different object from the hanging watch lanterns, so neither silhouette
+     has to carry two meanings */
+  board_lamp: { p: { k: '#2a2118', y: '#ffe6a0', Y: '#fffbe6', o: '#f0b854', O: '#d88c30' }, r: [
+    '.....kkkk.....', '....kkkkkk....', '..kkkkkkkkkk..', '..kOooooooOk..',
+    '..kOyyyyyyOk..', '..kOyyYYyyOk..', '..kOyyYYyyOk..', '..kOyyyyyyOk..',
+    '..kOooooooOk..', '..kkkkkkkkkk..', '...kkkkkkkk...', '..kk......kk..',
+    '.kk........kk.',
   ]},
-  /* the moon over the ridge — the same night the town square is wearing */
-  moon: { p: { m: '#f2eddc', M: '#d8d2bd', s: '#c2bca6' }, r: [
-    '.....mmmm.....', '...mmmmmmmm...', '..mmmmmmmmmm..', '.mmmmMmmmmmmm.',
-    '.mmmMMmmmmsmm.', 'mmmmMMmmmmssmm', 'mmmmmmmmmmsmmm', 'mmmmmmmmmmmmmm',
-    'mmsmmmmmmmmmmm', 'mmssmmmmmMmmmm', '.msmmmmmMMmmm.', '.mmmmmmmMmmmm.',
-    '..mmmmmmmmmm..', '...mmmmmmmm...',
+  /* her inkstone: a carved stone dish, oak-gall ink to the brim */
+  inkstone: { p: { s: '#5a5148', S: '#8d8272', l: '#a99c84', k: '#10131c', i: '#22304e', g: '#8fa8c8' }, r: [
+    '...SSSSSSSSSS...', '..SllllllllllS..', '.SlkkkkkkkkkklS.', 'SlkiiiiigiiiiklS',
+    'SlkiiiiiiiiiiklS', '.SlkkkkkkkkkklS.', '..SssssssssssS..', '...ssssssssss...',
   ]},
-  /* reeds at the water's edge */
-  reeds: { p: { g: '#3b4a26', G: '#5f7135', d: '#262f18' }, r: [
-    '..g........g..', '..g...g....g..', '.Gg...g...gG..', '.Gg..Gg...gG..',
-    '.Gg..Gg..gGG..', 'GGg..Gg..gGG.g', 'GGg.GGg..gGG.g', 'dGg.GGg.gGGGdg',
-    'dGgGGGgGgGGGdg', 'ddgGGGgGgGGddd', 'dddddddddddddd', 'dddddddddddddd',
+  /* the wax stick she seals with, lying where her hand left it */
+  waxstick: { p: { r: '#8a2020', R: '#c04036', d: '#4d1015', h: '#e87a56' }, r: [
+    '..........RRd.', '........RRrrd.', '......RRrrrd..', '....RRrrrd....',
+    '..RRrrrd......', '.Rhrrd........', '.Rrrd.........', '..dd..........',
   ]},
-  /* boulders at the waterline — angular, lit on top, with a ripple collar */
-  wet_stones: { p: { s: '#5a5148', S: '#7d7260', l: '#9a8d72', d: '#332e26',
-                     i: '#4a6070' }, r: [
-    '.....lSSS.......', '...lSSssssS.....', '..lSsssssssS.lS.', '.lSssssdssssSSsS',
-    'lSssssddsssdSssd', '.ddddddddddd.ddd', 'ii.iiii...ii.ii.', '...ii...ii...ii.',
+  /* the wax seal, pressed: a poured blob with drips and a willow leaf in it */
+  wax_seal: { p: { R: '#7d2027', r: '#c04036', l: '#e87a56', d: '#4d1015',
+                   g: '#4a1013', G: '#2c090c', s: '#e8916a' }, r: [
+    '.....RRRR.....', '...RRrrrrRR...', '..Rrllllrrrrd.', '.RrlllsgsrrrRd',
+    '.RrllsgggsrrRd', 'RrrlsgggggsrrR', 'RrrrsggGggsrrd', 'RrrrrsgGgsrrrd',
+    'RrrrrrsgsrrrRd', '.RrrrrrGrrrrd.', '.Rrrrrrrrrrdd.', '..RRrrrrrrdd..',
+    '....RRRddd....', '.....dd.dd....',
   ]},
   /* a sprout — what the willow pays in learning */
   icon_leaf: { p: { g: '#3f5a34', G: '#7ab55c', d: '#2a3c22' }, r: [
@@ -343,15 +276,13 @@ Object.keys(IV.SPRITES).forEach(function (k) {
 });
 
 /* ===========================================================================
-   3. THE TREE, DRAWN AS ONE CONNECTED OBJECT
+   3. THE FOLIAGE FRINGE — the boughs dipping into the top of the frame.
 
-   The trunk and the canopy are painted procedurally onto pixel canvases rather
-   than hand-typed char maps, because both need things a 20-column char map
-   cannot carry: real bark furrows, a root flare that spreads into the bank,
-   boughs that leave the trunk and climb into the leaves, and a canopy whose
-   silhouette is lobed and ragged instead of a stepped rectangle.
-   The canopy's underside profile is a pure function, so the hanging strands
-   and the painted leaves agree about where the foliage ends.
+   Painted procedurally so the underside is lobed and ragged instead of a
+   stepped rectangle. The depth array is computed once per frame and shared
+   with the strand placer, so leaves and strands agree about where the
+   foliage ends. Fullness is the earned-rest reading: at eleven nights kept
+   the fringe is heavy; at three it would thin to a few strands.
    =========================================================================== */
 
 function hash2(x, y) {
@@ -359,496 +290,339 @@ function hash2(x, y) {
   return n - Math.floor(n);
 }
 
-/* ---- the trunk ------------------------------------------------------- */
-var TRUNK_W = 64, TRUNK_H = 96, TRUNK_TOP = 0.55;
-var BARK = ['#1d1206', '#2c1c0b', '#3d2a12', '#4f381a', '#634726', '#7a5a31', '#94713f', '#b08a4e',
-            '#33421f', '#455a2a', '#c39a52'];
+var LEAFG = ['#0e1507', '#182310', '#223016', '#2c3f1e', '#3a5328', '#4c6b38', '#618748'];
 
-var TRUNK_BUF = (function () {
-  var W = TRUNK_W, H = TRUNK_H;
-  var buf = new Int8Array(W * H); buf.fill(-1);
-
-  function put(x, y, s) {
-    x = Math.round(x); y = Math.round(y);
-    if (x < 0 || y < 0 || x >= W || y >= H) return;
-    buf[y * W + x] = s < 0 ? 0 : (s > 10 ? 10 : s);
+/* full: 0..1 — the rest-kept reading. 1 = boughs came back thick. */
+function fringeDepth(W, H, seed, full) {
+  var d = [];
+  for (var x = 0; x < W; x++) {
+    var t = x / W;
+    var v = 0.30 + 0.34 * full
+      + 0.15 * Math.sin(t * 6.28 * 1.7 + seed)
+      + 0.11 * Math.sin(t * 6.28 * 3.3 + seed * 2.1)
+      + 0.06 * Math.sin(t * 6.28 * 7.1 + seed * 0.6)
+      + (hash2(x, seed * 13) - 0.5) * 0.06;
+    d.push(Math.max(4, Math.round(H * Math.min(0.96, v))));
   }
-  function cxAt(t) { return W / 2 + 2.6 * Math.sin(t * 2.6 + 0.7) - 1.2 * t; }
-  function hwAt(t) {
-    if (t < TRUNK_TOP) return 0;
-    var u = (t - TRUNK_TOP) / (1 - TRUNK_TOP);
-    var w = 5.6 + 6.4 * Math.pow(u, 1.15);
-    if (u > 0.70) w += 10.5 * Math.pow((u - 0.70) / 0.30, 2.0);
-    return w;
-  }
-  function disc(cx, cy, r) {
-    for (var y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
-      for (var x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-        var dx = (x - cx) / r, dy = (y - cy) / r;
-        if (dx * dx + dy * dy > 1.0) continue;
-        var s = 4 + Math.round(1.7 * (dx - 0.15));
-        if (hash2(x, y) < 0.28) s -= 1;
-        put(x, y, s);
-      }
-  }
-  /* one bough, with a twig or two thrown off it partway along */
-  function branch(x, y, a, len, w, bend, depth) {
-    var ds = 0.6, n = Math.max(2, Math.round(len / ds));
-    var spawn = Math.round(n * 0.55);
-    for (var i = 0; i < n; i++) {
-      var s = i / n;
-      disc(x, y, Math.max(0.55, w * (1 - 0.80 * s)));
-      if (depth > 0 && i === spawn) {
-        branch(x, y, a + (depth % 2 ? -0.9 : 0.9), len * 0.45, w * 0.55, bend * 0.6, depth - 1);
-      }
-      a += bend / n;
-      x += Math.cos(a) * ds; y += Math.sin(a) * ds;
-    }
-  }
-
-  /* 1. the boughs first, so the trunk column later closes over their roots */
-  [[0.58, -2.28, 0.40, 5.2, 0.60], [0.56, -0.88, 0.38, 5.0, -0.60],
-   [0.54, -1.62, 0.42, 4.4, 0.16], [0.64, -2.72, 0.26, 3.8, 0.55],
-   [0.62, -0.44, 0.26, 3.8, -0.55], [0.50, -2.05, 0.32, 3.0, 0.50],
-   [0.49, -1.15, 0.32, 3.0, -0.50]].forEach(function (L) {
-    branch(cxAt(L[0]), L[0] * H, L[1], L[2] * H, L[3], L[4], 2);
-  });
-
-  /* 2. the trunk column: rounded shading, vertical bark furrows, dark edges */
-  for (var y = 0; y < H; y++) {
-    var t = y / (H - 1), cx = cxAt(t), hw = hwAt(t);
-    if (hw <= 0) continue;
-    for (var x = Math.floor(cx - hw); x <= Math.ceil(cx + hw); x++) {
-      var d = (x - cx) / hw;
-      if (d < -1 || d > 1) continue;
-      var lit = 1 - Math.abs(d - 0.30) * 1.05;
-      var s = 1 + Math.round(4.6 * Math.max(0, Math.min(1, lit)));
-      var u = Math.round(x - cx);
-      var f = hash2(u, Math.floor(y / 7));
-      if (f < 0.30) s -= 1; else if (f > 0.76) s += 1;
-      if (hash2(u * 3 + 1, y) < 0.11) s -= 2;
-      if (Math.abs(d) > 0.88) s -= 2;
-      put(x, y, s);
-    }
-  }
-
-  /* 3. the root flare, spreading sideways into the bank */
-  [[-1, 0.90, 0.30, 3.0], [1, 0.92, 0.26, 2.8], [-1, 0.965, 0.17, 2.2],
-   [1, 0.97, 0.19, 2.2], [-1, 0.85, 0.11, 1.8], [1, 0.86, 0.11, 1.8]].forEach(function (R) {
-    var dir = R[0], t0 = R[1];
-    var x0 = cxAt(t0) + dir * hwAt(t0) * 0.55;
-    branch(x0, t0 * H, dir > 0 ? 0.20 : Math.PI - 0.20, R[2] * W, R[3], 0.55, 0);
-  });
-
-  /* 4. moss at the foot, and a warm rim down the lantern side */
-  for (var yy = 0; yy < H; yy++) {
-    var rightmost = -1;
-    for (var xx = 0; xx < W; xx++) {
-      if (buf[yy * W + xx] < 0) continue;
-      rightmost = xx;
-      if (yy / (H - 1) > 0.90 && hash2(xx * 5, yy * 3) > 0.55) buf[yy * W + xx] = 8;
-      else if (yy / (H - 1) > 0.955 && hash2(xx * 3, yy) > 0.4) buf[yy * W + xx] = 9;
-    }
-    if (rightmost >= 0 && yy / (H - 1) > 0.52 && hash2(rightmost, yy * 7) > 0.30) {
-      buf[yy * W + rightmost] = 10;
-    }
-  }
-  return buf;
-})();
-
-function paintTrunk(ctx, s) {
-  for (var y = 0; y < TRUNK_H; y++) for (var x = 0; x < TRUNK_W; x++) {
-    var v = TRUNK_BUF[y * TRUNK_W + x];
-    if (v < 0) continue;
-    ctx.fillStyle = BARK[v];
-    ctx.fillRect(x * s, y * s, s, s);
-  }
+  return d;
 }
 
-/* ---- the canopy ------------------------------------------------------ */
-/* a cluster of overlapping leaf lobes, not a stepped dome: the silhouette is
-   broken at the top, arched up over the trunk underneath, and ragged with
-   leaf tips along the bottom where the strands start */
-var CAN_W = 120, CAN_H = 46;
-var LOBES = [
-  [18, 20, 17, 11], [36, 15, 20, 12], [60, 11, 21, 10], [84, 15, 20, 12],
-  [102, 21, 16, 11], [26, 27, 15, 11], [94, 27, 14, 10], [10, 24, 9, 8],
-  [110, 25, 9, 8], [46, 22, 14, 9], [74, 23, 14, 9], [60, 20, 10, 6],
-];
-var HOLES = [[50, 17, 3.4, 2.0], [86, 21, 3.0, 1.8], [32, 21, 2.8, 1.6], [66, 26, 2.6, 1.5]];
-var GREENS = ['#111a0c', '#1a2611', '#243318', '#2f4321', '#3c552b', '#537043', '#6b8c48'];
-
-var CAN = (function () {
-  var top = [], bot = [], botR = [];
-  for (var x = 0; x < CAN_W; x++) {
-    var t = 1e9, b = -1e9;
-    for (var i = 0; i < LOBES.length; i++) {
-      var L = LOBES[i], dx = (x + 0.5 - L[0]) / L[2];
-      if (dx <= -1 || dx >= 1) continue;
-      var k = Math.sqrt(1 - dx * dx) * L[3];
-      if (L[1] - k < t) t = L[1] - k;
-      if (L[1] + k > b) b = L[1] + k;
-    }
-    if (b < t) { top.push(-1); bot.push(-1); botR.push(-1); continue; }
-    var n1 = hash2(x, 3), n2 = hash2(x, 11);
-    top.push(Math.round(t - (n1 < 0.30 ? 1 : 0) + (n1 > 0.82 ? 1 : 0)));
-    bot.push(Math.round(b));
-    botR.push(Math.round(b) + (n2 > 0.46 ? 1 + Math.floor(hash2(x, 19) * 4) : 0));
-  }
-  return { top: top, bot: bot, botR: botR };
-})();
-
-function paintCanopy(ctx, s) {
-  for (var x = 0; x < CAN_W; x++) {
-    if (CAN.top[x] < 0) continue;
-    var t0 = CAN.top[x], b0 = CAN.bot[x], b1 = Math.min(CAN_H - 1, CAN.botR[x]);
-    for (var y = t0; y <= b1; y++) {
-      if (y < 0) continue;
-      var hole = false;
-      for (var i = 0; i < HOLES.length; i++) {
-        var H = HOLES[i], dx = (x + 0.5 - H[0]) / H[2], dy = (y + 0.5 - H[1]) / H[3];
-        if (dx * dx + dy * dy < 1) { hole = true; break; }
-      }
-      if (hole) continue;
-      if (hash2(x * 7, y * 7) < 0.030) continue;              /* sky through the leaves */
-      if (y > b0 && hash2(x * 2, y * 5) < 0.42) continue;     /* ragged leaf tips */
-      var depth = (y - t0) / Math.max(1, b0 - t0);
-      var idx = depth < 0.16 ? 4 : depth < 0.42 ? 3 : depth < 0.72 ? 2 : 1;
+function paintFringe(ctx, depth, H, s) {
+  for (var x = 0; x < depth.length; x++) {
+    var d = depth[x];
+    for (var y = 0; y < d; y++) {
+      if (hash2(x * 7, y * 7) < 0.035) continue;              /* sky through the leaves */
+      var u = y / d;
+      var idx = u < 0.30 ? 1 : u < 0.55 ? 2 : u < 0.78 ? 3 : 4;
       var n = hash2(Math.floor(x / 2), Math.floor(y / 2));
-      if (n < 0.24) idx -= 1; else if (n > 0.80) idx += 1;
-      if (hash2(x * 5, Math.floor(y / 3)) > 0.82) idx += 1;
-      if (y - t0 < 2 && x > CAN_W * 0.40) idx = 6;            /* moonlit rim */
+      if (n < 0.22) idx -= 1; else if (n > 0.82) idx += 1;
+      if (d - y <= 2 && hash2(x * 3, y) > 0.40) idx += 2;     /* lamplit leaf tips */
       if (idx < 0) idx = 0; if (idx > 6) idx = 6;
-      ctx.fillStyle = GREENS[idx];
+      ctx.fillStyle = LEAFG[idx];
       ctx.fillRect(x * s, y * s, s, s);
     }
+    for (var e = 0; e < 4; e++) {                             /* ragged tips below */
+      var yy = d + e;
+      if (yy >= H) break;
+      if (hash2(x * 2, yy * 5) < 0.40 - e * 0.09) {
+        ctx.fillStyle = LEAFG[1 + (e % 2)];
+        ctx.fillRect(x * s, yy * s, s, s);
+      }
+    }
   }
 }
 
-/* the hanging curtain, started from the canopy's own underside. Longest either
-   side of the trunk, short directly over it — that envelope is what makes the
-   silhouette read as a willow, and it keeps the bark and boughs visible. */
-function curtain(n, left, top, s, base, amp, maxBottom) {
+/* the hanging curtain, started from the fringe's own underside */
+function strands(depth, s, count, maxLen, bandH) {
   var out = '';
-  for (var i = 0; i < n; i++) {
-    var t = (i + 0.5) / n;
-    var col = Math.min(CAN_W - 1, Math.floor(t * CAN_W));
-    if (CAN.bot[col] < 0) continue;
-    var x = Math.round(left + t * CAN_W * s);
-    var y0 = Math.round(top + (CAN.bot[col] - 2) * s);
-    var s1 = Math.sin(Math.PI * t);
-    var s2 = Math.sin(2 * Math.PI * t); s2 = s2 * s2;
-    var jitter = (((i * 37) % 17) / 17 - 0.5) * 0.26;
-    var len = Math.max(8, Math.round((base + amp * (0.10 + 0.90 * s2) * s1) * (1 + jitter)));
-    if (y0 + len > maxBottom) len = Math.max(8, maxBottom - y0);
+  for (var i = 0; i < count; i++) {
+    var t = (i + 0.5) / count;
+    var col = Math.min(depth.length - 1, Math.floor(t * depth.length));
+    var x = Math.round(t * depth.length * s);
+    var y0 = (depth[col] - 1) * s;
+    var jitter = ((i * 37) % 17) / 17;
+    var len = Math.round(maxLen * (0.30 + 0.70 * jitter));
+    if (y0 + len > bandH - 4) len = bandH - 4 - y0;
+    if (len < 8) continue;
     var cls = ((i * 7) % 5 === 0) ? ' lit' : (((i * 11) % 4 === 0) ? ' deep' : '');
     out += '<i class="strand' + cls + '" style="left:' + x + 'px;top:' + y0 + 'px;height:' + len + 'px"></i>';
   }
   return out;
 }
 
-function paintTag(kind, lw, lh, s, extra) {
-  return '<canvas data-paint="' + kind + '" data-s="' + s + '" width="' + (lw * s) + '" height="' + (lh * s)
-    + '" style="width:' + (lw * s) + 'px;height:' + (lh * s) + 'px;' + (extra || '') + '"></canvas>';
+function fringeTag(W, H, s, key, attrs) {
+  return '<canvas class="leafcan" data-paint="' + key + '" width="' + (W * s) + '" height="' + (H * s)
+    + '" style="width:' + (W * s) + 'px;height:' + (H * s) + 'px"' + (attrs || '') + '></canvas>';
 }
+
+/* depth arrays, one per frame — eleven nights kept, so both hang full */
+var FR_D = { W: 270, H: 54, s: 2 };   /* desktop fringe: 540 x 108 px */
+var FR_P = { W: 178, H: 46, s: 2 };   /* phone fringe:   356 x  92 px */
+FR_D.depth = fringeDepth(FR_D.W, FR_D.H, 3.0, 1.0);
+FR_P.depth = fringeDepth(FR_P.W, FR_P.H, 5.2, 1.0);
 
 /* ===========================================================================
    4. SCENE BUILDERS
    =========================================================================== */
 
-function stars(w, h, n) {
-  var out = '';
-  for (var i = 0; i < n; i++) {
-    var x = ((i * 7919) % 997) / 997 * w;
-    var y = ((i * 5081) % 613) / 613 * h;
-    out += '<i class="' + (i % 3 === 0 ? 'dim' : '') + '" style="left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px"></i>';
+function stars(spots) {
+  return '<div class="stars">' + spots.map(function (p) {
+    return '<i class="' + (p[2] ? 'dim' : '') + '" style="left:' + p[0] + 'px;top:' + p[1] + 'px"></i>';
+  }).join('') + '</div>';
+}
+
+function stands(key, px) {
+  return '<span class="footed"><span class="fshade"></span>' + IV.spriteTag(key, px) + '</span>';
+}
+
+/* the giver idiom: Elowen's portrait beside her typewriter line */
+function talkWin(opts) {
+  return '<div class="win"'
+    + ' data-seam="THE PORTRAIT" data-tag="HER PORTRAIT SPEAKS|The giver-screen idiom: portrait beside a typewriter line. Joe hand-drew the 32&times;32 at static/art/npcs/sage_elowen/; this char map is a stand-in approximating it. The old tap-to-speak bust is gone &mdash; this is the talking surface, always composed in.">'
+    + '<div class="npc-head">'
+    + IV.spriteTag('elowen_portrait', opts.px)
+    + '<div class="dialog"><div class="npc-name">Sage Elowen &middot; Quests of Stillness</div>'
+    + '<div class="dlg"><span class="cursor-blink">' + opts.line + '</span></div></div>'
+    + '</div></div>';
+}
+
+/* the watch bough: hooks bare while nothing is sworn; lanterns hung while
+   a writ runs, going dark one by one as its nights are kept */
+function watchBough(o) {
+  var out = '<div class="bough" style="right:-8px;top:' + o.top + 'px;width:' + o.w + 'px;transform:rotate(-4deg)"'
+    + (o.attrs || '') + '></div>';
+  (o.hooks || []).forEach(function (h) {
+    out += '<span class="hook" style="left:' + h[0] + 'px;top:' + h[1] + 'px"></span>';
+    if (h[2]) {
+      out += '<span class="lamp-hang' + (h[2] === 'lantern_dark' ? ' out' : '') + '" style="left:' + (h[0] - 9) + 'px;top:' + (h[1] + 7) + 'px">'
+        + IV.spriteTag(h[2], 24) + '</span>';
+      if (h[2] === 'lantern_lit') {
+        out += '<div class="nightpool" style="left:' + (h[0] - 42) + 'px;top:' + (h[1] + 26) + 'px;width:96px;height:64px"></div>';
+      }
+    }
+  });
+  return out;
+}
+
+/* the writ open on the board — the menu's selection, displayed */
+function wpaper(o) {
+  var pays = o.pays.map(function (p) { return '<span class="pay">' + p + '</span>'; }).join('');
+  var seat;
+  if (o.sealed) {
+    seat = '<div class="sealseat"' + (o.sealAttrs || '') + '>'
+      + '<span class="sealdone">' + IV.spriteTag('wax_seal', 42) + '</span>'
+      + '<span class="sealcap"><b>' + o.sealHead + '</b>' + o.sealCap + '</span></div>';
+  } else {
+    seat = '<div class="sealseat"' + (o.sealAttrs || '') + '>'
+      + '<span class="sealghost"></span>'
+      + '<span class="sealcap"><b>' + o.sealHead + '</b>' + o.sealCap + '</span></div>';
   }
-  return '<div class="stars">' + out + '</div>';
+  return '<div class="wpaper"' + (o.attrs || '') + '>'
+    + '<div class="wp-head"><span class="wp-title">' + o.title + '</span>'
+    + '<span class="wp-hand">in Elowen&rsquo;s hand</span></div>'
+    + '<p class="wp-asks">' + o.asks + '</p>'
+    + '<div class="wpays">' + pays + '</div>'
+    + '<div class="wruns">' + o.runs + '</div>'
+    + '<div class="women">' + o.omen + '</div>'
+    + seat
+    + '</div>';
 }
 
-function flies(spots) {
-  return spots.map(function (s) {
-    return '<i class="fly" style="left:' + s[0] + 'px;top:' + s[1] + 'px;animation-delay:' + s[2] + 's"></i>';
-  }).join('');
+/* the close-up: night strip with boughs above, the oak board below */
+function grove(o) {
+  var fr = o.fr;
+  return '<div class="grove"' + (o.attrs || '') + '>'
+    + '<div class="nightband" style="height:' + o.bandH + 'px">'
+    +   stars(o.stars)
+    +   fringeTag(fr.W, fr.H, fr.s, o.paintKey, o.fringeAttrs)
+    +   strands(fr.depth, fr.s, o.strandCount, o.strandLen, o.bandH)
+    +   watchBough(o.bough)
+    + '</div>'
+    + '<div class="boardtop">'
+    +   '<div class="board-floor">'
+    +     '<div>' + o.paper + '</div>'
+    +     '<div class="btools">'
+    +       '<div class="btool">' + stands('board_lamp', o.phone ? 28 : 42) + '</div>'
+    +       '<div class="btool">' + stands('inkstone', o.phone ? 32 : 48)
+    +         '<span class="under"><span class="paper-tag">oak-gall ink</span></span></div>'
+    +       '<div class="btool">' + stands('waxstick', o.phone ? 28 : 42)
+    +         '<span class="under"><span class="paper-tag">sealing wax</span></span></div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
 }
 
-function glyph(cls, sprite, cap, attrs) {
-  return '<button type="button" class="board-glyph ' + cls + '" ' + (attrs || '') + '>'
-    + IV.spriteTag(sprite, 24) + '<span class="g-cap">' + cap + '</span></button>';
-}
-
-/* a fence run: warm wood in the frame, and something for the bank to end at */
-function fence(left, top, w, h, posts) {
-  var out = '';
-  for (var i = 0; i < posts; i++) {
-    out += '<u style="left:' + Math.round(i * (w - 6) / (posts - 1)) + 'px"></u>';
-  }
-  out += '<i style="top:2px"></i><i style="top:' + Math.round(h * 0.55) + 'px"></i>';
-  return '<div class="fence" style="left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px">' + out + '</div>';
-}
-
-/* a writ: the bough, the paper folded over it, the cord round both, the name
-   inked down the paper. `w` is the paper width; the paper sizes to its ink. */
-function writ(o) {
-  var w = o.w || 30, bw = o.branchW || 150;
-  /* side -1: the writ hangs left of the trunk, so its bough runs back to the
-     right, thick at the trunk end and thin under the paper. A bough that
-     sticks out equally both ways reads as a crossbar on a post. */
-  var side = o.side || -1;
-  var bl = side < 0 ? Math.round(-w * 0.45) : Math.round(-(bw - w) + w * 0.45);
-  var tilt = side < 0 ? 3.5 : -3.5;
-  var cls = 'writ' + (side > 0 ? ' lean' : '') + (o.open ? ' unfurled' : '') + (o.stub ? ' stub' : '');
-  var twigs = '<span class="wr-twig" style="left:' + Math.round(bl + bw * (side < 0 ? 0.52 : 0.18))
-    + 'px;width:' + Math.round(bw * 0.22) + 'px;transform:rotate(' + (side < 0 ? -11 : 11) + 'deg)"></span>'
-    + '<span class="wr-twig" style="left:' + Math.round(bl + bw * (side < 0 ? 0.74 : 0.06))
-    + 'px;width:' + Math.round(bw * 0.18) + 'px;transform:rotate(' + (side < 0 ? 8 : -8) + 'deg)"></span>';
-  return '<button type="button" class="' + cls + '" style="left:' + (o.cx - w / 2) + 'px;top:' + o.y
-    + 'px;width:' + w + 'px;transform:rotate(' + tilt + 'deg)"' + (o.attrs || '') + '>'
-    + twigs
-    + '<span class="wr-flap"></span>'
-    + '<span class="wr-branch" style="left:' + bl + 'px;width:' + bw + 'px"></span>'
-    + '<span class="wr-cord"></span>'
-    + (o.open ? '<span class="wr-roll"></span>' : '')
-    + '<span class="wr-paper" style="width:' + w + 'px'
-    + (o.maxH ? ';max-height:' + o.maxH + 'px;overflow:hidden' : '') + '">'
-    + '<span class="wr-ink">' + (o.name || '') + '</span></span>'
-    + '</button>';
-}
-
-/* nights kept, carved on a plank on a stake driven into the bank — the count
-   lives on a real object instead of a black label floating over the scene */
-function tallyBoard(left, top, w, stake, nights, headline, sub, attrs) {
-  var post = stake ? '<span class="ty-post" style="height:' + stake + 'px"></span>' : '';
-  return '<div class="tally" style="left:' + left + 'px;top:' + top + 'px;width:' + w + 'px"' + (attrs || '') + '>'
-    + '<b>' + headline + '</b>' + (sub ? '<i>' + sub + '</i>' : '')
-    + '<u style="width:' + (nights * 6) + 'px"></u>' + post + '</div>';
+/* one row of the writ menu */
+function wentry(o) {
+  var cls = 'wentry' + (o.open ? ' open' : '') + (o.waits ? ' waits' : '');
+  return '<div class="' + cls + '"' + (o.attrs || '') + '>'
+    + '<span class="wname">' + o.name + '</span>'
+    + '<span class="wterms">' + o.terms + '</span>'
+    + '<span class="women">' + o.omen + '</span>'
+    + (o.onboard ? '<span class="onboard">&#9656; ' + o.onboard + '</span>' : '')
+    + (o.watchline ? '<span class="watchline">' + o.watchline + '</span>' : '')
+    + (o.action ? '<button type="button" class="btn small wide">' + o.action + '</button>' : '')
+    + '</div>';
 }
 
 /* ===========================================================================
-   5. DESKTOP — THE CHOOSING STATE
-      three writs tied to the boughs; the middle one has been touched and has
-      unfurled; the reading it opened sits below with its tail pointing back up
-      at exactly that writ.
+   5. THE THREE OPEN WRITS — one source, shared by menu and board
+   =========================================================================== */
+
+var WRITS = {
+  stillness: {
+    name: 'A Day of Stillness',
+    terms: 'asks a day of no hard work &middot; pays five-and-forty in learning and a purse of twenty &middot; runs until dawn',
+    omen: 'her omen: your heart sits nine parts in a hundred beneath its usual song.',
+  },
+  evenings: {
+    name: 'Three Quiet Evenings',
+    terms: 'asks lamps out by the tenth bell &middot; pays a draught of vigor at every dawn kept &middot; runs three nights',
+    omen: 'her omen: sleep has run thin all week &mdash; five hours and a half a night.',
+  },
+  slowroad: {
+    name: 'The Slow Road',
+    terms: 'asks tomorrow&rsquo;s miles at half your stride &middot; pays a purse of twelve, and the streak keeps itself &middot; runs one day',
+    omen: 'her omen: your legs have done heavy work two days together.',
+  },
+};
+
+/* ===========================================================================
+   6. DESKTOP — THE CHOOSING STATE
+      The menu holds three open writs; "A Day of Stillness" is the one being
+      weighed, so that is the sheet lying open on the board. The watch bough's
+      hooks hang empty: nothing is sworn.
    =========================================================================== */
 
 function desktopScene() {
-  var W = 848, SKY = 240, BANK = 200, POND = 88;
-  var canL = 100, canT = 4, canS = 4;                       /* canopy 480 x 184 */
-  var trS = 3, trW = TRUNK_W * trS, trH = TRUNK_H * trS;    /* trunk 192 x 288 */
-  var cx = canL + CAN_W * canS / 2;                         /* 340 — one centreline */
-  var trL = Math.round(cx - trW / 2), trT = 344 - trH;
-  var pondTop = SKY + BANK - POND;                          /* 352 */
+  var paper = wpaper({
+    title: 'A Day of Stillness',
+    asks: 'From the swearing until dawn: no hard work. A walk if the day wants one, a stretch if the hips ask, and a full night&rsquo;s sleep &mdash; that is the whole of it.',
+    pays: [
+      IV.spriteTag('icon_leaf', 15) + ' five-and-forty in learning',
+      IV.spriteTag('icon_coin', 15) + ' a purse of twenty',
+      '<span class="wvigor">&#9679;&#9679;</span> two draughts of vigor',
+    ],
+    runs: 'runs <b>from the swearing until dawn</b> &middot; walks and stretches never break it',
+    omen: WRITS.stillness.omen,
+    sealed: false,
+    sealHead: 'the wax lands here when it is sworn',
+    sealCap: 'the press is the flourish on the oath, not the oath &mdash; swearing happens in the menu',
+    attrs: ' data-seam="THE BOARD" data-tag="THE BOARD DISPLAYS|Whichever writ the menu is weighing lies open here, terms inked on the sheet. Choose another entry and the sheet swaps. It displays; it never gates &mdash; the paper is not a button."',
+    sealAttrs: ' data-seam="THE SEAL" data-tag="THE SEAL DECORATES|On swearing, the wax stick melts and the leaf-cut seal presses into this circle. Animation decorating a state change, never gating one &mdash; the swear itself is the menu action."',
+  });
 
-  var RIB = [
-    { cx: 194, y: 200, w: 32, branchW: 156, side: -1, name: 'the short walk' },
-    { cx: 264, y: 176, w: 32, branchW: 132, side: -1, name: 'a full night' },
-    { cx: 452, y: 154, w: 48, branchW: 140, side: 1, name: 'a day of stillness', open: true,
-      attrs: ' data-seam="WRIT-RIBBONS" data-tag="PAPER, TIED TO A BOUGH|The bough is drawn, the paper is folded over it, the cord is knotted round both, and the name is inked down the paper. Touched, this one came loose and unfurled." ' },
-  ];
-  var open = RIB[2];
-  var tailPct = ((open.cx / W) * 100).toFixed(1) + '%';
+  var scene = grove({
+    fr: FR_D, paintKey: 'fringe_d', bandH: 148, phone: false,
+    stars: [[36, 96, 0], [88, 118, 1], [150, 104, 0], [204, 126, 1], [258, 112, 0], [318, 130, 1], [368, 120, 0]],
+    strandCount: 40, strandLen: 64,
+    fringeAttrs: ' data-seam="REST KEPT" data-tag="FOLIAGE = REST KEPT|Eleven nights kept, so the boughs dip in heavy; at three this would thin to a few strands. One of the two ambient state displays kept from the old glade."',
+    bough: {
+      top: 66, w: 300,
+      attrs: ' data-seam="THE WATCH BOUGH" data-tag="LANTERNS = NIGHTS REMAINING|Three iron hooks on the low bough, all bare: nothing is sworn. Swear a writ and a lantern is hung for every night it runs. The other surviving ambient display."',
+      hooks: [[336, 80], [406, 77], [476, 74]],
+    },
+    paper: paper,
+    attrs: ' data-seam="THE CLOSE CROP" data-tag="UP CLOSE, NOT ESTABLISHING|The frame is Elowen&rsquo;s writing board, not the glade. No pond, no ridge, no moon &mdash; a strip of night, the boughs that carry state, and the oak the work happens on. Everything in frame displays state or does work."',
+  });
 
-  var scene = ''
-  + '<div class="glade tod-night" data-seam="THE GLADE"'
-  + ' data-tag="A PLACE, NOT A VOID|Ground, water and sky, warmed toward the same brown/amber family the forge and the hall live in. The screen about rest is drawn after dark, but not in another game\'s palette.">'
-  + '<div class="sky" style="height:' + SKY + 'px">'
-  +   stars(W, SKY - 46, 46)
-  +   '<div class="moon" style="right:64px;top:26px">' + IV.spriteTag('moon', 56) + '</div>'
-  +   '<div class="mtns" data-fill="mtns"></div>'
-  +   '<div class="haze"></div>'
-  + '</div>'
-  + '<div class="bank" style="height:' + BANK + 'px" data-fill="grass">'
-  +   '<div class="pond" data-fill="water" style="width:66%;height:' + POND + 'px">'
-  +     '<div class="refl" style="right:26%;top:5px;height:56px"></div>'
-  +     '<div class="refl warm" style="right:6px;top:4px;height:50px"></div>'
-  +   '</div>'
-  /* the post lantern actually lights things: grass, water, Elowen, the fence */
-  +   '<div class="pool" style="left:512px;top:112px;width:266px;height:92px"></div>'
-  +   '<div class="pool small" style="left:556px;top:82px;width:170px;height:66px"></div>'
-  +   fence(566, 112, 282, 36, 5)
-  +   '<div class="prop" style="left:470px;top:92px">' + IV.spriteTag('reeds', 42) + '</div>'
-  +   '<div class="prop" style="left:118px;top:148px">' + IV.spriteTag('wet_stones', 48) + '</div>'
-  +   '<div class="prop" style="left:308px;top:166px">' + IV.spriteTag('wet_stones', 32) + '</div>'
-  +   '<div class="contact" style="left:584px;top:180px;width:56px;height:14px"></div>'
-  +   '<div class="fig" style="left:590px;top:110px"'
-  +     ' data-seam="A LIGHT THAT CASTS" data-tag="THE LANTERN LIGHTS THINGS|A warm wooden post lantern, with its light landing on the grass, the fence, the water and the side of Elowen facing it — the forge\'s rule, applied outdoors.">'
-  +     IV.spriteTag('post_lantern', 42) + '</div>'
-  +   '<div class="contact" style="left:644px;top:180px;width:62px;height:14px"></div>'
-  +   '<div class="fig" style="left:648px;top:110px">' + IV.spriteTag('elowen', 56) + '</div>'
-  +   '<span class="gplate" style="left:576px;top:86px"'
-  +     ' data-seam="SAGE AT HER STATION" data-tag="SHE STANDS IN THE PLACE|A scene sprite by her lantern, not a portrait in a bordered card. Silent until her bust is tapped. Hers is the only nameplate left in the scene — nothing in the world can carry a person\'s name.">'
-  +     'Sage Elowen &middot; <b>Quests of Stillness</b></span>'
-  +   flies([[300, 24, 0], [352, 68, 0.7], [214, 104, 1.4], [498, 36, 0.4], [760, 74, 1.1], [96, 44, 1.9], [420, 118, 0.2], [800, 30, 1.5]])
-  + '</div>'
-  + '<div class="willow">'
-  +   paintTag('trunk', TRUNK_W, TRUNK_H, trS, 'left:' + trL + 'px;top:' + trT + 'px')
-  +   paintTag('canopy', CAN_W, CAN_H, canS, 'left:' + canL + 'px;top:' + canT + 'px')
-  +   curtain(110, canL, canT, canS, 62, 178, SKY + BANK - 78)
-  +   RIB.map(writ).join('')
-  +   tallyBoard(8, 268, 150, 40, 11, 'eleven nights kept', 'the boughs came back thick',
-      ' data-seam="TREE FULLNESS" data-tag="THE TREE REMEMBERS|Strand count is the earned-rest reading — thin enough to see the ridge through at three nights kept, closed over the water at eleven. The number is carved on a plank staked into the bank, not floated over the scene on a black label."')
-  + '</div>'
-  + '</div>';
+  var menu = '<div class="win writmenu"'
+    + ' data-seam="THE MENU DRIVES" data-tag="THE MENU DRIVES|Choosing and swearing happen in this bordered panel: one entry per open writ &mdash; what it asks, pays and runs, Elowen&rsquo;s omen as one line &mdash; and the swear action. The scene stages the choice; it never takes the tap."><span class="win-title">The Open Writs</span>'
+    + wentry({ open: true, name: WRITS.stillness.name, terms: WRITS.stillness.terms, omen: WRITS.stillness.omen,
+        onboard: 'lies open on the board', action: 'SWEAR THE WRIT' })
+    + wentry({ name: WRITS.evenings.name, terms: WRITS.evenings.terms, omen: WRITS.evenings.omen })
+    + wentry({ name: WRITS.slowroad.name, terms: WRITS.slowroad.terms, omen: WRITS.slowroad.omen })
+    + '<div class="menu-foot">the board shows whichever writ you are weighing &middot; one writ sworn at a time</div>'
+    + '</div>';
 
-  var panel = ''
-  + '<div class="rack tail-up reading" style="--tailx:' + tailPct + '"'
-  + ' data-seam="THE READING" data-tag="THE TAIL POINTS BACK|Pinned to that writ\'s own x, so the eye walks back up the paper to the bough it came off.">'
-  + glyph('glyph-tally', 'tally_glyph', 'nights kept',
-      'data-seam="ONE GLYPH, ONE MEANING" data-tag="A TALLY, NOT A BOOK|Notches cut in a stick. The book glyph it used to wear is the forge\'s DOCTRINES glyph, and no sprite in the set may carry two meanings."')
-  + glyph('glyph-sage', 'elowen_bust', 'ask Elowen')
-  + '<div class="gbubble-wrap"'
-  + ' data-seam="ELOWEN SPEAKS" data-tag="PULL, NOT PUSH|Her bust sits on the far corner. Untapped there is no bubble at all; this one is drawn open because it was tapped. It is kept inside the frame and clear of the glyph it points at.">'
-  +   '<div class="gbubble">'
-  +     '<span class="fb-line">&ldquo;The willow bends and does not break. Be the willow.&rdquo;</span>'
-  +     '<span class="week-note fine">she has read four nights of your sleep and two of your pulse</span>'
-  +   '</div>'
-  + '</div>'
-  + '<div class="rk-title">A Day of Stillness</div>'
-  + '<div class="rk-sub">unfurled from the low bough &middot; written in the willow&rsquo;s own hand</div>'
-  + '<p class="asks">From the moment it is sworn until dawn: no hard work. A walk if the day wants one, a stretch if the hips ask, and a full night&rsquo;s sleep &mdash; that is the whole of the quest.</p>'
-  + '<div class="pays">'
-  +   '<span class="pay">' + IV.spriteTag('icon_leaf', 15) + ' five-and-forty in learning</span>'
-  +   '<span class="pay">' + IV.spriteTag('icon_coin', 15) + ' a purse of twenty</span>'
-  +   '<span class="pay"><span class="stat vigor">&#9679;&#9679;&#9679;</span> two draughts of vigor, and a third for the asking</span>'
-  + '</div>'
-  + '<div class="keeps">and the streak keeps itself tonight &mdash; rest counts</div>'
-  + '<div class="omens">'
-  +   '<div class="omens-title">the omens she reads behind it</div>'
-  +   '<div class="omen-line">&#9656; your heart&rsquo;s rhythm sits nine parts in a hundred beneath its usual song</div>'
-  +   '<div class="omen-line">&#9656; your resting pulse runs four beats hot</div>'
-  +   '<div class="omen-line">&#9656; sleep has run thin this week &mdash; five hours and a half a night</div>'
-  + '</div>'
-  + '<div class="seal-row" data-seam="TAKING IT"'
-  + ' data-tag="TAKING IS TOUCHING|No SWEAR THE WRIT button. The oath is the wax at the foot of the paper — poured, dripped, and stamped with a willow leaf.">'
-  +   '<button type="button" class="seal">' + IV.spriteTag('wax_seal', 42) + '</button>'
-  +   '<span class="seal-cap"><b>press your thumb to the wax</b>the willow keeps its own copy</span>'
-  + '</div>'
-  + '</div>';
-
-  return '<div class="app-pad">' + IV.header({ phone: false }) + scene + panel + IV.footer() + '</div>';
+  return '<div class="app-pad">' + IV.header({ phone: false })
+    + talkWin({ px: 128, line: '&ldquo;Three writs tonight, and none heavier than a blanket. Whichever you weigh in the list, I lay open on the board &mdash; swear it there, and I will seal it here.&rdquo;' })
+    + '<div class="stagegrid">' + scene + menu + '</div>'
+    + IV.footer() + '</div>';
 }
 
 /* ===========================================================================
-   6. PHONE — THE SWORN STATE
-      the writ is off the bough and knotted at your wrist; the night watch
-      counts down in lanterns hung on a bough; renouncing it is a corner glyph.
+   7. PHONE — THE SWORN STATE
+      "Three Quiet Evenings" was sworn at dusk yesterday. The board holds the
+      sworn sheet, sealed; three lanterns went up on the bough, the first has
+      gone dark (a night kept), two still burn. Renounce is a menu action.
    =========================================================================== */
 
 function phoneScene() {
-  var W = 358, SKY = 176, BANK = 168, POND = 56;
-  var canL = 38, canT = 4, canS = 2;                        /* canopy 240 x 92 */
-  var trS = 2, trW = TRUNK_W * trS, trH = TRUNK_H * trS;    /* trunk 128 x 192 */
-  var cx = canL + CAN_W * canS / 2;                         /* 158 */
-  var trL = Math.round(cx - trW / 2), trT = 280 - trH;
+  var paper = wpaper({
+    title: 'Three Quiet Evenings',
+    asks: 'Lamps out by the tenth bell, three evenings running. Read if you like, stretch if you like &mdash; but the lamps go out, and sleep takes the rest.',
+    pays: [
+      '<span class="wvigor">&#9679;</span> a draught of vigor at every dawn kept',
+      IV.spriteTag('icon_leaf', 15) + ' thirty in learning at the end',
+    ],
+    runs: 'runs <b>three nights</b> &middot; this is the second',
+    omen: WRITS.evenings.omen,
+    sealed: true,
+    sealHead: 'sworn at dusk, sealed with the willow leaf',
+    sealCap: 'the first lantern went dark at dawn &mdash; a night kept',
+    attrs: ' data-seam="SEALED ON THE BOARD" data-tag="THE SWORN SHEET|The board holds the sworn writ, sealed. The wax pressed when the oath was taken in the menu &mdash; the flourish that decorated the change, still sitting on the paper as its state."',
+  });
 
-  var heroL = 196, heroTop = 92;
-  var tailPct = (((heroL + 24) / W) * 100).toFixed(1) + '%';
+  var scene = grove({
+    fr: FR_P, paintKey: 'fringe_p', bandH: 132, phone: true,
+    stars: [[28, 84, 0], [70, 104, 1], [122, 92, 0], [168, 110, 1], [214, 98, 0]],
+    strandCount: 26, strandLen: 52,
+    fringeAttrs: ' data-seam="REST KEPT" data-tag="FOLIAGE = REST KEPT|Same reading as the desktop frame: eleven nights kept, boughs heavy."',
+    bough: {
+      top: 52, w: 252,
+      attrs: ' data-seam="THE NIGHT WATCH" data-tag="LANTERNS = NIGHTS REMAINING|Three went up when the writ was sworn. One has guttered dark &mdash; a night kept; two still burn. When the last goes dark it is dawn and the writ is kept."',
+      hooks: [[148, 66, 'lantern_dark'], [208, 63, 'lantern_lit'], [268, 60, 'lantern_lit']],
+    },
+    paper: paper,
+    attrs: ' data-seam="THE CLOSE CROP, SWORN" data-tag="SAME BOARD, DIFFERENT STATE|The identical close-up. Only what the frame displays changed: the sealed sheet, and the lanterns on the bough."',
+  });
 
-  /* three lanterns hooked over one bough — the bough crosses each hanging ring */
-  var LX = [188, 218, 248], LY = 196;
-  var lanterns = LX.map(function (x, i) {
-    return '<span class="prop" style="left:' + x + 'px;top:' + LY + 'px;z-index:3">'
-      + IV.spriteTag(i === 2 ? 'lantern_dark' : 'lantern_lit', 24) + '</span>';
-  }).join('');
-  var lanternPools = LX.slice(0, 2).map(function (x) {
-    return '<div class="pool small" style="left:' + (x - 26) + 'px;top:' + (LY + 24) + 'px;width:76px;height:66px;z-index:1"></div>';
-  }).join('');
+  var menu = '<div class="win writmenu"'
+    + ' data-seam="RENOUNCE, IN THE MENU" data-tag="RENOUNCE IS A MENU ACTION|Setting a sworn writ aside is an ordinary entry action in the same panel that swore it &mdash; no red DANGER control, no scolding, and nothing in the scene to find and tap."><span class="win-title">The Sworn Writ</span>'
+    + wentry({ open: true, name: WRITS.evenings.name, terms: WRITS.evenings.terms, omen: WRITS.evenings.omen,
+        onboard: 'sworn at dusk &middot; sealed on the board',
+        watchline: 'two of three lanterns still burn &mdash; the last goes dark at dawn after next',
+        action: 'RENOUNCE THE WRIT' })
+    + wentry({ waits: true, name: WRITS.stillness.name, terms: WRITS.stillness.terms, omen: WRITS.stillness.omen })
+    + wentry({ waits: true, name: WRITS.slowroad.name, terms: WRITS.slowroad.terms, omen: WRITS.slowroad.omen })
+    + '<div class="menu-foot">the willow does not scold &mdash; renounce whenever the body disagrees &middot; the others wait for a clear board</div>'
+    + '</div>';
 
-  var scene = ''
-  + '<div class="glade tod-night" data-seam="THE GLADE, SWORN"'
-  + ' data-tag="SAME BONES, DIFFERENT HOUR|The identical glade. Only what is hanging in it changed.">'
-  + '<div class="sky" style="height:' + SKY + 'px">'
-  +   stars(W, SKY - 34, 26)
-  +   '<div class="moon" style="right:14px;top:12px">' + IV.spriteTag('moon', 42) + '</div>'
-  +   '<div class="mtns" data-fill="mtns"></div>'
-  +   '<div class="haze"></div>'
-  + '</div>'
-  + '<div class="bank" style="height:' + BANK + 'px" data-fill="grass">'
-  +   '<div class="pond" data-fill="water" style="width:56%;height:' + POND + 'px">'
-  +     '<div class="refl" style="right:16%;top:4px;height:34px"></div>'
-  +   '</div>'
-  +   fence(228, 66, 126, 28, 4)
-  +   '<div class="prop" style="left:132px;top:82px">' + IV.spriteTag('reeds', 32) + '</div>'
-  +   '<div class="prop" style="left:56px;top:126px">' + IV.spriteTag('wet_stones', 32) + '</div>'
-  +   '<div class="contact" style="left:' + (heroL + 2) + 'px;top:150px;width:48px;height:12px"></div>'
-  +   '<div class="fig" style="left:' + heroL + 'px;top:' + heroTop + 'px"'
-  +     ' data-seam="THE WRIT IS WORN" data-tag="TIED AT YOUR WRIST|The paper left the bough when the wax was pressed. Sworn is something you can see on your own arm.">'
-  +     IV.spriteTag('hero_ribbon', 48) + '</div>'
-  +   '<div class="contact" style="left:256px;top:150px;width:58px;height:12px"></div>'
-  +   '<div class="fig" style="left:258px;top:78px">' + IV.spriteTag('elowen', 56) + '</div>'
-  +   '<span class="gplate" style="left:242px;top:56px">Sage <b>Elowen</b></span>'
-  +   flies([[120, 24, 0], [96, 60, 0.9], [60, 44, 1.6], [166, 30, 0.5]])
-  + '</div>'
-  + '<div class="willow">'
-  +   paintTag('trunk', TRUNK_W, TRUNK_H, trS, 'left:' + trL + 'px;top:' + trT + 'px')
-  +   paintTag('canopy', CAN_W, CAN_H, canS, 'left:' + canL + 'px;top:' + canT + 'px')
-  +   curtain(80, canL, canT, canS, 34, 96, SKY + BANK - 54)
-  +   lanternPools
-  /* the bough the watch hangs from, drawn across the lanterns' rings */
-  +   '<span class="prop" style="left:170px;top:202px;width:112px;height:6px;z-index:4;'
-  +     'background:linear-gradient(180deg,#96703f 0 2px,#5e4220 2px 4px,#33210d 4px 6px);'
-  +     'clip-path:polygon(0 26%,34% 4%,70% 0,100% 18%,100% 92%,70% 100%,34% 96%,0 74%)"'
-  +     ' data-seam="TIME AS LANTERNS" data-tag="THE NIGHT WATCH|Time left is three lanterns hooked over a bough — a body, a ring, a hook — not three gold discs floating in the leaves. Two still burn; when the last gutters out it is dawn and the writ is kept."></span>'
-  +   lanterns
-  +   writ({ cx: 72, y: 122, w: 28, branchW: 112, side: -1, name: 'cut it loose', stub: true,
-      attrs: ' data-seam="RENOUNCE, IN THE WORLD" data-tag="THE STUB ON THE BOUGH|The torn stub of the writ you took, still corded to its bough. Its own paper carries the words — there is no floating label, and no red DANGER button." ' })
-  +   tallyBoard(6, 236, 116, 28, 11, 'eleven nights kept', '', '')
-  + '</div>'
-  + '</div>';
-
-  var panel = ''
-  + '<div class="rack tail-up sworn" style="--tailx:' + tailPct + '"'
-  + ' data-seam="THE SWORN WRIT" data-tag="TAIL ON THE WRIST|Same grammar as the choosing state: the tail is pinned to the writ you are wearing.">'
-  + glyph('glyph-untie', 'knot_glyph', 'untie it')
-  + glyph('glyph-sage', 'elowen_bust', 'ask Elowen')
-  + '<div class="rk-title">The Writ Is Sworn</div>'
-  + '<div class="rk-sub">tied at your wrist since dusk</div>'
-  + '<p class="asks">No hard work until dawn. Walk if you like &mdash; walks and stretches never break it. Sleep is the greater part of it.</p>'
-  + '<div class="watch">'
-  +   IV.spriteTag('lantern_lit', 24) + IV.spriteTag('lantern_lit', 24)
-  +   '<span class="out">' + IV.spriteTag('lantern_dark', 24) + '</span>'
-  +   '<span class="watch-cap"><b>two of three still burn.</b>the last goes dark at dawn, and the writ is kept</span>'
-  + '</div>'
-  + '<div class="pays">'
-  +   '<span class="pay">' + IV.spriteTag('icon_leaf', 15) + ' five-and-forty in learning</span>'
-  +   '<span class="pay">' + IV.spriteTag('icon_coin', 15) + ' a purse of twenty</span>'
-  + '</div>'
-  + '<div class="keeps">the streak keeps itself tonight &mdash; rest counts</div>'
-  + '<div class="rk-foot" data-seam="RENOUNCE"'
-  + ' data-tag="UNTYING, NOT ABANDONING|Renouncing is the loosened-knot glyph in the corner — no red DANGER button, and no scolding when it is used.">'
-  +   'the willow does not scold. untie it whenever the body disagrees.'
-  + '</div>'
-  + '</div>';
-
-  return '<div class="app-pad">' + IV.header({ phone: true }) + scene + panel + IV.footer() + '</div>' + IV.dock();
+  return '<div class="app-pad">' + IV.header({ phone: true })
+    + talkWin({ px: 96, line: '&ldquo;Sworn and sealed. Two lanterns yet burn on the bough &mdash; sleep them dark, and the willow keeps the third night for you.&rdquo;' })
+    + scene + menu
+    + IV.footer() + '</div>' + IV.dock();
 }
 
 /* ===========================================================================
-   7. THE WALL
+   8. THE WALL
    =========================================================================== */
 
 IV.page({
   title: "Iron Vale — Sage Elowen's willow, a scene",
-  subtitle: 'visual mockup, nothing wired up &middot; replaces the two stacked gold panels on the void at giver.js:185 (giver=recovery)',
+  subtitle: 'visual mockup, nothing wired up &middot; replaces the ribbon-glade mockup for giver=recovery (giver.js:185), redrawn to the ledger formula',
   legend: [
-    { label: 'THE PLACE', text: 'ground, water, boughs and sky, warmed into the set&rsquo;s brown/amber family' },
-    { label: 'THE OFFERS', text: 'folded writs corded to drawn boughs, their names inked on the paper' },
-    { label: 'THE PANEL', text: 'a .rack whose tail points back at the thing that opened it' },
-    { label: 'THE GLYPHS', text: 'utilities and Elowen&rsquo;s bust in the &#10005;-close weight class, opposite corners' },
-    { label: 'THE TREE', text: 'strand count is the earned-rest reading; the count is carved on a board in the glade' },
+    { label: 'THE CROP', text: 'the writing board, up close &mdash; not the glade' },
+    { label: 'THE MENU', text: 'a bordered panel chooses and swears; the scene never gates' },
+    { label: 'THE BOARD', text: 'the weighed writ lies open, terms inked &mdash; the menu&rsquo;s selection, displayed' },
+    { label: 'THE SEAL', text: 'wax pressed on swearing &mdash; decoration on a state change, never a gate' },
+    { label: 'ELOWEN', text: 'her portrait and a typewriter line, the giver-screen idiom' },
+    { label: 'THE BOUGHS', text: 'lanterns count nights remaining; foliage fullness is rest kept' },
   ],
-  note: '<b>Thesis.</b> Elowen&rsquo;s screen is currently two gold panels floating on nothing: a portrait with a typewriter box, then a list of REST WRIT cards each ending in a SWEAR THE WRIT button. Everything the player is asked to decide is decided by reading text and pressing a labelled control. Here the same offers hang in a place you walked to &mdash; a weeping willow over dark water at night, with folded writs corded to its boughs, turning. You take one by touching it: the paper comes loose, unfurls, and the reading it opens is anchored to that exact writ by its tail. The oath is a wax seal at the foot of the paper, not a button beneath a card; renouncing it is a loosened knot in a panel corner, not a red DANGER control; and Elowen stands at her own station saying nothing at all until her bust is tapped. Every name that can be written on an object is written on it, and the tree itself carries the only number that mattered: the more rest the player has earned, the fuller the willow.',
+  note: '<b>The ledger formula, applied to the willow.</b> The old screen was an establishing shot &mdash; sky, ridge, pond and the whole tree, with the writs as ribbons tapped on the boughs &mdash; and it was hard to tell what was happening. This redraw frames the work surface instead: Elowen&rsquo;s writing board under the willow. The <b>menu drives</b> &mdash; open writs are chosen and sworn in the bordered panel, never by touching the scene. The <b>board stages</b> &mdash; whichever writ the menu holds lies open on the oak with its terms inked, and swearing is decorated by the wax pressing onto the sheet: animation on a state change, never a gate. Elowen talks through the giver idiom &mdash; her hand-drawn portrait beside a typewriter line &mdash; not a tap-to-speak bust. Of the old glade only the two working state displays survive, moved onto the boughs that dip into frame: <b>lanterns hung for the nights remaining</b> on a sworn writ, and <b>the fullness of the foliage for rest kept</b>. It is still night out there &mdash; exteriors keep the town clock &mdash; but night is now lantern-light on oak, not a panorama.',
   frames: {
     phone: {
       title: 'Phone — 414px bezel — THE SWORN STATE',
-      sub: 'the writ has left the bough and is knotted at your wrist; the night watch burns down on lanterns hooked over a bough; untying it is a corner glyph',
-      chips: ['writ at the wrist', 'lanterns = time left', 'untie glyph', 'bust, untapped'],
+      sub: 'the sworn writ sealed on the board; three lanterns on the bough, one dark for the night already kept; renounce is a menu action',
+      chips: ['sealed on the board', 'two lanterns burn', 'renounce, in the menu', 'portrait + typewriter'],
       html: phoneScene(),
     },
     desktop: {
       title: 'Desktop — 900px viewport, scaled to fit — THE CHOOSING STATE',
-      sub: 'three writs corded to the boughs, the low one unfurled, its reading anchored below by a tail pointing back up at it',
-      chips: ['three writs', 'unfurled writ', 'tail-up at the bough', 'seal, not a button', 'Elowen tapped'],
+      sub: 'the menu weighs three writs; the weighed one lies open on the board with its terms inked; the watch bough&rsquo;s hooks hang bare',
+      chips: ['menu drives', 'the sheet on the board', 'empty hooks', 'wax waits in its circle', 'Elowen, composed in'],
       url: "ironvale.local:8322 — Sage Elowen's willow",
       html: desktopScene(),
     },
@@ -857,58 +631,14 @@ IV.page({
 
 IV.boot();
 
-/* ===========================================================================
-   8. THE GLADE'S OWN TILES AND CANVASES — night grass, still water, a warmed
-      ridge line, and the two procedural tree canvases. Painted with the
-      harness's tileURL() so they stay data-URIs and the page runs offline.
-   =========================================================================== */
-(function paintGlade() {
-  var GRASS = IV.tileURL(24, 24, function (ctx, w, h) {
-    ctx.fillStyle = '#232a1a'; ctx.fillRect(0, 0, w, h);
-    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
-      var k = (x * 7 + y * 13 + ((x * x + y) % 5)) % 23;
-      if (k === 0) { ctx.fillStyle = '#1a2013'; ctx.fillRect(x, y, 2, 1); }
-      else if (k === 7) { ctx.fillStyle = '#2c3421'; ctx.fillRect(x, y, 1, 1); }
-      else if (k === 14 && (y % 9 === 4)) { ctx.fillStyle = '#3d4526'; ctx.fillRect(x, y, 2, 2); }
-      else if (k === 19 && (x % 11 === 3)) { ctx.fillStyle = '#4a4128'; ctx.fillRect(x, y, 1, 2); }
-    }
-  });
-  var WATER = IV.tileURL(32, 16, function (ctx, w, h) {
-    ctx.fillStyle = '#1a2130'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#212b3c';
-    for (var y = 0; y < h; y += 4) ctx.fillRect((y * 7) % w, y, 15, 1);
-    ctx.fillStyle = '#2f4258';
-    ctx.fillRect(4, 2, 9, 1); ctx.fillRect(20, 9, 10, 1); ctx.fillRect(12, 13, 6, 1);
-    ctx.fillStyle = '#4a3d24';
-    ctx.fillRect(24, 5, 7, 1); ctx.fillRect(2, 11, 6, 1);
-  });
-  /* the harness's ridge tile is cold navy; the glade wears a warmed one so the
-     horizon belongs to the same family as the rest of the set */
-  var MTNS = IV.tileURL(120, 24, function (ctx, w, h) {
-    var tri = function (t) { return 1 - Math.abs(2 * (t - Math.floor(t)) - 1); };
-    for (var x = 0; x < w; x++) {
-      var farTop = Math.round(12 - 9 * tri(x / 60));
-      ctx.fillStyle = '#3d3040'; ctx.fillRect(x, farTop, 1, h - farTop);
-      ctx.fillStyle = '#54424a'; ctx.fillRect(x, farTop, 1, 1);
-      var nearTop = Math.round(23 - 13 * tri((x + 18) / 40));
-      ctx.fillStyle = '#251c24'; ctx.fillRect(x, nearTop, 1, h - nearTop);
-      ctx.fillStyle = '#3a2a2a'; ctx.fillRect(x, nearTop, 1, 1);
-    }
-  });
-  document.querySelectorAll('.glade [data-fill="grass"]').forEach(function (el) {
-    el.style.backgroundImage = GRASS; el.style.backgroundSize = '72px 72px';
-  });
-  document.querySelectorAll('.glade [data-fill="water"]').forEach(function (el) {
-    el.style.backgroundImage = WATER; el.style.backgroundSize = '96px 48px';
-  });
-  document.querySelectorAll('.glade [data-fill="mtns"]').forEach(function (el) {
-    el.style.backgroundImage = MTNS;
-  });
+/* paint the two foliage fringes, then relayout so the gutter tags land */
+(function paintGrove() {
   document.querySelectorAll('canvas[data-paint]').forEach(function (c) {
-    var s = +c.dataset.s, ctx = c.getContext('2d');
-    if (c.dataset.paint === 'trunk') paintTrunk(ctx, s);
-    else if (c.dataset.paint === 'canopy') paintCanopy(ctx, s);
+    var ctx = c.getContext('2d');
+    if (c.dataset.paint === 'fringe_d') paintFringe(ctx, FR_D.depth, FR_D.H, FR_D.s);
+    else if (c.dataset.paint === 'fringe_p') paintFringe(ctx, FR_P.depth, FR_P.H, FR_P.s);
   });
   IV.layout();
 })();
 </script>
+</body>
