@@ -45,9 +45,9 @@ dependency-free HTML with no build step: open the file.
 | Option | Verdict | What carries forward |
 | --- | --- | --- |
 | The Modular Border Kit | **Adopt** | All of it, as the foundation, and it now absorbs the interior of the box as well: the centre tile is the material background, not a flat fill behind one. Nine 8×8 tiles per material; four materials with the meanings rewritten (2g); a possible fifth for the Siege. Sections 2 and 3. |
-| The Detail Pass | **Partial** | Adopted: raven, bell, hanging title panel, streak flame, toast scrap, notched scrollbar, quill. Rewritten into something better: the wax seal. Dropped: corner nails, made redundant by the kit's own corners, and the ribbon on the tab. Held: candle, moth. Left undecided: the drawn empty states. Section 4. |
+| The Detail Pass | **Partial** | Adopted: raven, bell, hanging title panel, streak flame, toast (as a canvas kit box), notched scrollbar, quill. Rewritten into something better: the wax seal. Dropped: corner nails, made redundant by the kit's own corners, and the ribbon on the tab. Held: candle, moth. Left undecided: the drawn empty states. Section 4. |
 | Material Chrome | **Partial** | The title variants, and nothing else — "border kit trumps everything else." The lamp rule (`material-chrome.html:97-102`) survives as a constraint rather than as a design, and the panel textures survive only as reference for the fill tile. Section 3. |
-| Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it needs hand-pixel tightening for readability, settled placement, and a set of rules for which face is used where — rules that do not exist yet. Section 5. |
+| Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it needs hand-pixel tightening for readability, settled placement, and a set of rules for which typeface is used where — rules that do not exist yet. Section 5. |
 | Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch. Beyond the correction below, it is named again in two places only: section 0, to rule out the one title variant that used it, and 2g, where the contrast figures the study measured survive as the evidence behind section 3's dark-ground ruling. |
 | Palette Studies | **Hold** | Nothing now. Gold gets restricted to the touchable and the earned, but that restriction rides in on the border work. |
 
@@ -515,6 +515,68 @@ open direction, not a decision. If it is taken it is a fifth tile set to draw, o
 the same twelve-values-and-a-stamp budget as the others, and it is the one place
 in the kit where the brief is to be unpleasant on purpose.
 
+**What the Siege's material still needs, stated as questions rather than
+answered.** Joe's note is fair: *"the siege's fifth material is already described,
+albeit abstract. what exactly do you need?"* The *meaning* is described, and it is
+the only one of the five that arrives with its tone already fixed. What is missing
+is not more meaning — it is the three things whoever draws it would have to guess
+at, and guessing at any of them produces a tile set that has to be redrawn. None
+of them is answered here.
+
+*1. Does the harrowing border replace the Siege's red chrome, or sit alongside
+it?* His original wording offered both and did not pick: "the siege can maintain
+its ominous looking red borders (or honestly it could even be a brand new
+harrowing border that's grotesque and creepy)". Those are different jobs. Replace
+means the reds inventoried below are deleted and the fifth material carries the
+whole reading;
+alongside means the fifth material is a frame drawn *around* chrome that stays,
+and the two have to be designed not to fight — a grotesque rail outside a red
+gradient is two ideas of "ominous" stacked.
+
+*2. Which surfaces get it — the Siege banner only, or everything the Siege
+touches?* Concretely, this is what exists today, all of it in the town scene and
+none of it a `.win`:
+
+| Siege chrome now | Where |
+| --- | --- |
+| the banner itself: `2px solid #6a2828` over a `#1c1010`→`#120c0c` gradient | `static/style.css:1527-1530` |
+| collapsed variant and its `#a84028` hover | `:1545-1551`, `:1546` |
+| expanded variant's double ring, `0 0 0 2px var(--bg), 0 0 0 4px #4a2828` | `:1560-1569` |
+| boss column divider `2px solid #4a2828`; boss glow `rgba(120,40,28,0.30)` | `:1589`, `:1594` |
+| `.sg-content`, a panel inside the banner: its own two-layer ground, `1px solid #3a1818`, inset hairline | `:1603-1611` |
+| `.sg-desc`'s `3px` `#6a2828` side rails | `:1627-1634` |
+| `.sg-meta` / `.sg-trophy` hairlines `#3a2020` | `:1625`, `:1640` |
+| `.sg-divider` rules `#4a2828` / `#2a1414` and its `#8a3838` lettering | `:1655-1662` |
+| `.sg-board-title` underline `#4a2828`; leader row hover `#241618` | `:1674`, `:1679` |
+| the whole parallel green **won** family | `:1531`, `:1578`, `:1596`, `:1613-1617`, `:1644-1650`, `:1663-1665`, `:1676` |
+| phone stacking override for the expanded card | `:2832-2843` |
+
+So "the Siege banner" is not one surface — it is a banner with a second panel
+nested inside it (`.sg-content`), a third block inside that (`.sg-desc`), a
+divider and a roster, rendered as a `<button>` when collapsed and a `<section>`
+when expanded (`static/js/town.js:322`, `:356`). Nesting steps the scale down by
+one (2a, `border-kit.html:975`), so a fifth material applied here is a `--s:2`
+box containing a `--s:1` box, and the question is where in that stack it stops.
+There is also a green won-state family that has no equivalent anywhere in the
+kit: a material has one appearance, so either the won state is a sixth material,
+or it stops being a colour change, or the fifth material is red-only and the win
+is expressed some other way. And note what is *not* Siege chrome: the Siege Bell
+in Settings (`static/js/misc.js:898-899`) is a stone surface by 2g, and the Siege
+trophies (`static/js/pixel.js:468`) are sprites, not frames.
+
+*3. Is the Siege allowed to break the dark-and-subtle fill rule?* This is the one
+that matters most, and it is the one most likely to be discovered rather than
+decided. Section 3 just made that rule universal across all four materials, with
+no per-material exception. "Grotesque and creepy" invites the opposite — a louder,
+higher-contrast ground is most of how a surface reads as wrong. If the Siege is to
+be the exception it should be written down as a deliberate one, before anyone
+draws it, because an exception found at the pixel editor is indistinguishable from
+a mistake. And the reasoning that produced the rule does not stop applying to the
+Siege: Siege panels carry body text too — the epithet, the description, the stat
+line, the war-party roster, all at `--type-body` and `--type-fine`
+(`static/style.css:1620-1642`, `:1680-1683`) — so whatever headroom the exception
+takes, it takes from legibility on a surface people actually read.
+
 **Ornament can go much further than the 3×3 stamp.** What ships is deliberately
 minimal — a driven rivet, a pale peg, a chisel peck, a punched grommet
 (`border-kit.html:861-864`). Joe wants the vocabulary pushed:
@@ -562,26 +624,42 @@ a different period, per material — two grounds beating against each other for 
 gain. Section 7's seam list is updated to match: the backdrop is no longer its own
 seam, it is part of seam 1, and the drawing budget in 2b grows accordingly.
 
-**What does not merge, and has to be settled before drawing.** The old backdrop
-spec pinned two numbers that the fill layer contradicts:
+**What the old backdrop spec pinned, and what became of it.** The old spec fixed
+two numbers that the fill layer contradicts:
 
 | The old spec said | The fill layer does | Consequence |
 | --- | --- | --- |
-| tile is 32×32 native | the fill tile is 8×8 like the other eight (`border-kit.html:446`) | an 8×8 ground repeats every 16px at `--s:2` and every 8px at `--s:1` — a far tighter period than any texture survives without reading as a grid |
-| render always at 1× | `background-size: var(--u) var(--u)` is a single value applied to all nine layers (`border-kit.html:77`), so the ground scales with the frame | the ground gets *coarser* exactly where the panel is largest, which is backwards |
+| tile is 32×32 native | the fill tile is 8×8 like the other eight (`border-kit.html:446`) | an 8×8 ground repeats every 16px at `--s:2` and every 8px at `--s:1` — a far tighter period than a loud texture survives without reading as a grid |
+| render always at 1× | `background-size: var(--u) var(--u)` is a single value applied to all nine layers (`border-kit.html:77`), so the ground scales with the frame | the ground gets *coarser* exactly where the panel is largest |
 
-Both are fixable by one edit rather than a redesign: `background-size` takes a
-per-layer list, so the eight frame layers keep `var(--u) var(--u)` and `--fc` takes
-its own value. That is the entire mechanical cost of the merge, and it is a CSS
-change, not a drawing one.
+**Settled: the fill tile is 8×8, rendered at `--u` like the other eight.** In
+Joe's words: *"i think the fill tile at 8x8 is fine if it's a simple, subtle
+pattern."* The condition is part of the ruling, not a softening of it — it is
+precisely what makes the choice safe, and it should be carried into the drawing
+rather than dropped once the number is settled.
 
-Which size wins is a real choice and it is deliberately left open. **8×8 at `--u`**
-keeps the kit uniform — nine tiles, one authoring path, one scale — at the cost of
-a repeat period so short that little but noise survives it. **32×32 at a fixed 1×**
-buys a ground that can carry a weave, a grain, or a course of stone without
-collapsing into a check, at the cost of the fill tile no longer being the same kind
-of object as the other eight. The texture work wants the second; the generator
-wants the first. Draw one of each at panel size before deciding.
+The arithmetic in the table above is unchanged and still true; what changed is
+what it argues for. A 16px period at `--s:2` and an 8px period at `--s:1` is only
+dangerous for a texture bright enough to be tracked from one repeat to the next,
+and the dark-and-subtle ruling below already forbids that texture for every
+material. The short period was never the hazard on its own — the loud pattern
+was, and it is already gone. So 32×32 at a fixed 1× is closed, and with it the
+argument that the fill tile is a different kind of object from the other eight:
+nine tiles, one authoring path, one scale.
+
+The second row's consequence is accepted along with the first. The ground is
+coarser on a `.win` at `--s:2` than on a toast at `--s:1`, which is the wrong
+direction on paper; the same subtlety that defuses the short period defuses this
+too, because a pixel that cannot be tracked across one repeat cannot announce a
+coarse one either. Verify it the way everything else here is verified — at panel
+size, on real content, per the test below.
+
+**One mechanical consequence, in the app's favour.** The merge no longer costs a
+CSS change at all. The per-layer `background-size` list that would have let `--fc`
+render at its own scale is not needed: all nine layers keep `var(--u) var(--u)`
+exactly as the mockup already ships them (`border-kit.html:77`). The per-layer
+list remains available if the ground ever has to be decoupled from the frame, but
+nothing in this document asks for it now.
 
 **The ground is dark, for all four materials.** This was a fork in an earlier
 version of this document, attached to canvas. It is not one any more, and it was
@@ -594,6 +672,12 @@ work."*
 Iron, oak, stone and canvas: every fill tile is dark. There is no light variant
 of any material and no per-material exception — the reading canvas gives up by
 being dark is priced in 2g, and the price was worth paying.
+
+The possible fifth material is the one place that could want an exception, and 2g
+now asks the question rather than assuming an answer: a "grotesque and creepy"
+Siege ground pulls against this rule, and if it is to be exempt that has to be
+written as a deliberate exception rather than discovered at the pixel editor. The
+rule as it stands covers four materials, not five.
 
 **The two-sided constraint, which is the thing to hold while drawing.** "Dark and
 subtle" is the ruling; the drawing instruction underneath it is that the fill has
@@ -620,14 +704,14 @@ it, and a light canvas tile would have broken that constraint the moment it was
 drawn. With dark settled for all four, that rule and the material reading agree,
 and there is nothing left to reconcile.
 
-**It also changes the stakes of the size question above, without deciding it.** A
-low-contrast ground shows its repeat period far less than a high-contrast one:
-what makes a short period resolve into a visible grid is a pixel bright enough to
-be tracked from one repeat to the next, and that ceiling caps how bright any
-pixel may be. So the coarse-repeat risk that made **8×8 at `--u`** the worrying
-option drops substantially. It does not vanish — an emergent diagonal is a
-pattern rather than a brightness, and 16px is still 16px — and nothing here
-picks a size. Draw one of each, as above.
+**It is also what settled the size question above.** A low-contrast ground shows
+its repeat period far less than a high-contrast one: what makes a short period
+resolve into a visible grid is a pixel bright enough to be tracked from one repeat
+to the next, and that ceiling caps how bright any pixel may be. That is the whole
+reason **8×8 at `--u`** stopped being the worrying option. The risk drops; it does
+not vanish, and the residue is a drawing problem rather than a size one — an
+emergent diagonal is a pattern rather than a brightness, and 16px is still 16px.
+Draw simple, draw subtle, and check at panel size.
 
 Everything below is the drawing brief for that tile. None of it changed when the
 seam merged — it repeats on **both** axes, it must not resolve into a visible grid
@@ -651,21 +735,23 @@ like, and it is worth knowing which of them were already right. The study's own 
 So one was crisp and got rotated, one was half crisp, one was never crisp. That is
 the whole of the painterly problem.
 
-**The drawing constraints.** These are unchanged by the merge and they now attach
-to the fill tile whichever size it ends up being. The two rows that used to head
-this table — tile size and render scale — are the open question above, and the
-numbers behind them are worth keeping in front of you while you decide: an 8×8
-ground repeats about 37 times across a 300px panel and shows its diagonal
-immediately, 32×32 gives about 9 repeats across a phone panel and 24 across a
-desktop one, and 64×64 costs four times the drawing for detail the eye cannot
-resolve behind 12px glyphs.
+**The drawing constraints.** These are unchanged by the merge and they attach to
+the 8×8 fill tile settled above. The two rows that used to head this table — tile
+size and render scale — are now that ruling, and the arithmetic behind them is
+still worth keeping in front of you, because it is what the simple-and-subtle
+condition is guarding against: an 8×8 ground repeats about 37 times across a 300px
+panel at 1× and will show a diagonal immediately if one is drawn into it, 32×32
+would have given about 9 repeats across a phone panel and 24 across a desktop one,
+and 64×64 costs four times the drawing for detail the eye cannot resolve behind
+12px glyphs. The counts did not change; what changed is that the pattern being
+repeated is now required to be quiet enough that the count stops mattering.
 
 | Property | Value | Reason |
 | --- | --- | --- |
 | Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. The base is dark for every material, canvas included, so there is no inverted form of this rule; an accent is still checked against the ceiling below rather than against the material. |
 | Contrast ceiling | every texture pixel within roughly ±6% relative luminance of **that material's own base** — the fill value this tile is drawn from, near `--panel` `#121220` (`static/style.css:47`) or `--panel2` `#191928` (`:48`), whichever of the two this material sits on (2d). Not of `--panel` specifically: `--panel2` is about **58% brighter** in relative luminance, so a material grounded on it would breach a `--panel`-anchored ceiling before a single texture pixel existed, and the four materials could never differ from one another at all. **In a pixel editor: at most ±1 code value on each channel from the base.** At this black level one 8-bit step moves relative luminance by about 7% on a `--panel` base and about 6% on a `--panel2` one, so the code-value form is the same ceiling restated in the units you actually draw in — not a second, looser rule. | it sits behind 10px and 12px glyphs (`static/style.css:80-82`, `--type-fine` and `--type-body`). Sanity check: if any texture pixel is closer in value to `--ink` `#d8cfa8` than to the base, it is too bright — but that threshold sits around L\* 45, while the ceiling sits within about half an L\* of a base near L\* 6. It catches gross errors only and is nowhere near the bar; draw to the ceiling, and read the sanity check as the thing that tells you a tile has gone badly wrong rather than as the thing that says it is right. |
 | Steps | hard only, **dither instead of ramp** | where you want a transition, use a 50% checker between two adjacent values or a Bayer 4×4. A dither is made of the same hard pixels as everything else and survives `image-rendering: pixelated`; a ramp does not. |
-| Feature size | no feature longer than about a fifth of the tile in any row — ~6 pixels at 32×32 | longer runs resolve into stripes once the tile repeats. |
+| Feature size | no feature longer than about a fifth of the tile in any row — **about 2 pixels at 8×8** (the rule was written against 32×32, where a fifth is ~6) | longer runs resolve into stripes once the tile repeats. At 8×8 this is the constraint that does most of the work of "simple": a run of three or more in one row is already a stripe at a 16px period. |
 
 **Seamlessness, on both axes.** The last column has to sit next to column 0 and
 the last row next to row 0 with no visible line. Author it in wrap-around/tiled
@@ -711,7 +797,7 @@ is the only thing that changes.
 | **Streak flame** | **Adopt** — "much better" | the `flamewob` CSS tween (`static/style.css:313`, keyframes `:1268`) | **10×10** | 4; frame 1 *is* the shipped `icon_flame`, pixel for pixel | header only, purely additive. Retires the last piece of sub-pixel tweened motion in an app that is otherwise all `steps(1, end)` |
 | **Notched scrollbar** | **Adopt** | the shared scrollbar treatment (`static/style.css:971-1014`) | none — CSS only | — | `::-webkit-scrollbar` only; Firefox keeps `scrollbar-width: thin` and is no worse off (`detail-pass.html:744-746`) |
 | **Quill** | **Adopt** | the block caret in `typewrite()`, called from `giver.js:386` and `:1195` | **6×9** | 2 | one function |
-| **Toast scrap + tack** | **Adopt, shape open** | `.toast` (`static/style.css:951`) | tack **6×6**; the scrap is a `clip-path` polygon | 1 | one component. `.err` keeps `--danger-ink` on the same scrap. Whether it stays its own drawing or becomes a canvas kit box is open — see below |
+| **Toast** | **Adopt as canvas** | `.toast` (`static/style.css:951`) | no sprite of its own — a canvas kit box at `--s:1`; the `clip-path` scrap is superseded, and the **6×6** tack survives only if it is wanted as ornament | — | one component, and it stops being a special one. What `.err` becomes is the part still open — see below |
 | **Wax seal** | **Adopt, rewritten** | `confirmModal()` (`detail-pass.html:655`, sprite `:1251-1252`) | **12×12** | 4 — whole, two cracking, broken | not decoration on a dialog any more; the dialog becomes a letter. See below |
 | **Empty states** | **Neither** — "take it or leave it" | the muted-text empties (`detail-pass.html:760`) | drawn, one per screen | — | many screens, one line each. Neither in nor out; no work is sequenced against it |
 | **Candle** | **Hold** | a duration meter that does not exist yet | **8×14** plus the flame | 5 | held, with a candidate clock — see below |
@@ -780,24 +866,41 @@ is the same question the mockup was worrying about at `detail-pass.html:680-681`
 when it said the seal becomes noise everywhere and should be gated on
 `danger: true` alone.
 
-### The toast question is open
+### The toast is canvas
 
-The toast scrap is adopted; what it *is* is not settled. Three readings are live
-and Joe named all three. It can stay its own drawing, the tacked scrap of
-`detail-pass.html`'s section 06. It can merge with canvas — a toast is a quick
-note from somewhere, pitched and struck, which is canvas's meaning almost word for
-word (2g). Or, in his own framing, it might "just be another type of border kitted
-object", in which case toasts stop being a special component and become a small
-panel at `--s:1` like menus and tooltips already are (2a).
+**Settled.** Joe: *"I'm happy with the toasts being canvas."* A toast is a canvas
+kit box at `--s:1`, not a component of its own.
 
-The third reading is the one that would simplify the most, and it is worth noting
-that the kit already runs at `--s:1` for toasts (`border-kit.html:426-429`) and
-that canvas already carries toasts in its domain (`border-kit.html:503`), which
-is what makes the second and third readings so close together. Nothing is
-decided. Whoever draws it should pick
-deliberately rather than by default, because the merge changes what `.err` means:
-a scrap with `--danger-ink` is a variant, but a kit box in a different material is
-a different object.
+Three readings were live and he named all three. It could stay its own drawing,
+the tacked scrap of `detail-pass.html`'s section 06. It could merge with canvas —
+a toast is a quick note from somewhere, pitched and struck, which is canvas's
+meaning almost word for word (2g). Or, in his own framing, it might "just be
+another type of border kitted object", in which case toasts stop being a special
+component and become a small panel at `--s:1` like menus and tooltips already are
+(2a).
+
+The ruling picks the second, and the second and third were never really two
+things: the kit already runs at `--s:1` for toasts (`border-kit.html:426-429`) and
+canvas already carries toasts in its domain (`border-kit.html:503`), so "canvas"
+and "another kit object" land on the same drawing. What this ratifies is mostly
+what the material already implied — the mockup had put toasts inside canvas before
+anyone asked the question. The first reading is the one that is closed: the toast
+does not get a bespoke silhouette.
+
+Two consequences, one of them a question this opens rather than closes:
+
+- **The scrap shape goes.** A kit box is rectangular and its edges are the kit's
+  rails, so the `clip-path` polygon has nothing left to do. Whether the tack
+  survives as ornament on a canvas box is a drawing detail rather than a decision
+  — it is a silhouette, so if it is kept it obeys 2c and stays whole inside one
+  tile.
+- **`.err` is now genuinely open, and it was not before.** The old note here said
+  a scrap with `--danger-ink` is a variant while a kit box in a different material
+  is a different object; settling on canvas is what makes that live. Either the
+  error toast stays a canvas box and carries `--danger-ink` on its contents, or it
+  is a different material and error becomes a material rather than a colour. The
+  second is the more interesting reading and it is not taken here. It resolves in
+  seam 2 with the rest of the `--s:1` audit.
 
 ### The candle is held, and it now has a candidate clock
 
@@ -854,12 +957,15 @@ panel, its rail and its plaque is not settled anywhere, and the kit changes the
 answer — a title that hangs over a 16px rail (section 4) is not positioned the way
 a title notched into a 2px border was.
 
-**There are no rules for which face goes where, and there need to be.** This is
-the gap. `static/style.css` declares five strikes and applies them by habit rather
-than by role; the study's own "stop shouting" section is the closest thing to a
-role model and it only covers casing. An explicit table — this face at this size
-for this kind of string — does not exist yet, and every other decision in this
-section is downstream of it.
+**There are no rules for which typeface goes where, and there need to be.** This
+is the gap. Two axes are easy to hear as one, so name both: **material** is what a
+surface is made of — iron, oak, stone, canvas — and 2g rules on it; **typeface**
+is which of the pixel fonts a piece of text is set in, and that is what is missing
+here. This paragraph is about the second only. `static/style.css` declares five
+strikes and applies them by habit rather than by role; the study's own "stop
+shouting" section is the closest thing to a role model and it only covers casing.
+An explicit table — this typeface at this size for this kind of string — does not
+exist yet, and every other decision in this section is downstream of it.
 
 **"Stop shouting" is adopted.** The app currently applies
 `text-transform: uppercase` and `letter-spacing: 1px` to titles, buttons, chips,
@@ -972,7 +1078,7 @@ the placement work above. **And they need to be used more selectively.** The lim
 in the mockup is a floor — three lines of copy — not a policy. A capital on every
 paragraph that clears the floor is a page of capitals, and the thing that makes
 one ceremonial is that the next one is a long way away. Which paragraphs get one
-is part of the missing rules for which face goes where.
+is part of the missing rules for which typeface goes where.
 
 ### One rule with no user, and two files with no rule
 
@@ -985,7 +1091,7 @@ or `-20` outside the mockups returns nothing. The reverse is true of
 `vt323.woff2`, which has an `@font-face` at `static/style.css:2-5` and is
 applied to nothing at all — `DESIGN.md:103` already records it as a legacy asset
 outside the active default. So two committed strikes are unreachable type sizes,
-and one loaded face has no user. Anything ceremonial that wants to be set rather
+and one loaded typeface has no user. Anything ceremonial that wants to be set rather
 than drawn already has the bytes for it on disk.
 
 ---
@@ -1037,8 +1143,10 @@ been folded into seam 1.
 Build `BORDER_KITS`, the generator and the nine-layer background rule; apply it to
 `.win` at `--s:2` and to nothing else. This is the foundation, and it settles the
 things that are expensive to get wrong later: the 8px grid, the seam rule, and now
-the fill tile — its size, its render scale, and the `background-size` split that
-lets the ground stop scaling with the frame. It is a bigger seam than it was, and
+the fill tile. The fill tile's size and render scale are no longer open here —
+section 3 fixes both at 8×8 at `--u`, which is what the mockup already does, so
+the nine-layer rule ships unmodified and there is no `background-size` split to
+build. What is left in this seam for the ground is the drawing. It is a bigger seam than it was, and
 that is the honest consequence of the fill insight rather than a reason to split
 it back apart: a frame shipped over a flat fill would have to be re-judged the
 moment the ground arrived underneath it.
@@ -1049,8 +1157,10 @@ not touched. This is where roughly thirty panel-ish classes get triaged
 (`border-kit.html:426-429`), and it needs seam 1 shipped so the triage is judged
 against real tiles rather than a mockup — the audit will surface three or four
 surfaces that are neither a panel nor a chip, and those need a real frame in front
-of them to decide. The open toast question (section 4) resolves here or not at
-all, because "is a toast a kit object?" is exactly what this audit asks.
+of them to decide. The toast comes into this seam already answered — it is a
+canvas kit box at `--s:1` (section 4) — so what the audit has to settle about it
+is narrower than it was: what `.err` becomes, given that the scrap it used to vary
+is gone.
 
 **3 — The title, then the icons.** The strap or the carve on `.win-title` (CSS on
 live text, so interpolation keeps working), hung as a plaque rather than notched,
