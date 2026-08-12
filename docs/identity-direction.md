@@ -47,7 +47,7 @@ dependency-free HTML with no build step: open the file.
 | The Modular Border Kit | **Adopt** | All of it, as the foundation, and it now absorbs the interior of the box as well: the centre tile is the material background, not a flat fill behind one. Nine 8×8 tiles per material; four materials with the meanings rewritten (2g); a possible fifth for the Siege. Sections 2 and 3. |
 | The Detail Pass | **Partial** | Adopted: raven, bell, hanging title panel, streak flame, toast (as a canvas kit box), notched scrollbar, quill. Rewritten into something better: the wax seal. Dropped: corner nails, made redundant by the kit's own corners, and the ribbon on the tab. Held: candle, moth. Left undecided: the drawn empty states. Section 4. |
 | Material Chrome | **Partial** | The title variants, and nothing else — "border kit trumps everything else." The lamp rule (`material-chrome.html:97-102`) survives as a constraint rather than as a design, and the panel textures survive only as reference for the fill tile. Section 3. |
-| Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it needs hand-pixel tightening for readability, settled placement, and a set of rules for which typeface is used where — rules that do not exist yet. Section 5. |
+| Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it still needs hand-pixel tightening for readability. The two things that were missing — which typeface goes where, and where a drawn title sits — are now proposed rather than open: section 5 carries the role table, the plaque geometry and the drop-cap rule. |
 | Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch. Beyond the correction below, it is named again in two places only: section 0, to rule out the one title variant that used it, and 2g, where the contrast figures the study measured survive as the evidence behind section 3's dark-ground ruling. |
 | Palette Studies | **Hold** | Nothing now. Gold gets restricted to the touchable and the earned, but that restriction rides in on the border work. |
 
@@ -942,7 +942,7 @@ actually good at.
 
 ## 5. Type, and the drawn-title execution fix
 
-### The verdict, and the three things it is waiting on
+### The verdict, and the three things it was waiting on
 
 The type study is adopted. Joe's word is "great" — and then three pieces of work
 that have to happen before any of it is right, none of which is a redesign.
@@ -953,19 +953,24 @@ critique below is exactly that work, written down: it says which pixel in which
 stem is doing the wrong job.
 
 **Placement has to be nailed down.** Where a drawn title sits relative to its
-panel, its rail and its plaque is not settled anywhere, and the kit changes the
+panel, its rail and its plaque was not settled anywhere, and the kit changes the
 answer — a title that hangs over a 16px rail (section 4) is not positioned the way
-a title notched into a 2px border was.
+a title notched into a 2px border was. "Where the drawn title sits" below proposes
+the geometry, and it turns out to force one of the open questions in the glyph
+critique.
 
-**There are no rules for which typeface goes where, and there need to be.** This
-is the gap. Two axes are easy to hear as one, so name both: **material** is what a
-surface is made of — iron, oak, stone, canvas — and 2g rules on it; **typeface**
-is which of the pixel fonts a piece of text is set in, and that is what is missing
-here. This paragraph is about the second only. `static/style.css` declares five
-strikes and applies them by habit rather than by role; the study's own "stop
-shouting" section is the closest thing to a role model and it only covers casing.
-An explicit table — this typeface at this size for this kind of string — does not
-exist yet, and every other decision in this section is downstream of it.
+**The rules for which typeface goes where are proposed below.** This was the gap
+that everything else in this section was downstream of. Two axes are easy to hear
+as one, so name both: **material** is what a surface is made of — iron, oak, stone,
+canvas — and 2g rules on it; **typeface** is which of the pixel fonts a piece of
+text is set in. This is about the second only. `static/style.css` declares five
+strikes (`:2-44`) and five family tokens paired with eight size tokens (`:75-87`),
+and then applies them by habit rather than by role — the study's own "stop
+shouting" section is the closest thing to a role model, and it only covers casing.
+The next subsection is the table that was missing. It is a proposal rather than a
+survey: where a choice is genuinely open between two defensible answers it is made
+anyway and marked as arbitrary, and where it is forced by the size-bound doctrine
+or by a measurement, that is said instead, because those are not up for taste.
 
 **"Stop shouting" is adopted.** The app currently applies
 `text-transform: uppercase` and `letter-spacing: 1px` to titles, buttons, chips,
@@ -977,7 +982,152 @@ off does not produce mixed case, it produces whatever case the string was writte
 in, and the sweep is a hand pass across `giver.js`, `hall.js`, `town.js`,
 `misc.js`, `ranch.js`, `colosseum.js` and `dungeon.js` where every string has to be
 read in place — "SWORN" is a chip and stays, "THE OMENS" is a heading and goes
-(`type-wordmark.html:929-935`). There is no safe automatic version.
+(`type-wordmark.html:929-935`). There is no safe automatic version. That remains
+true as a *method*; the table below measures the *size*, and it is smaller than
+this paragraph implies, because the largest block of shouting turns out to be the
+one that keeps shouting.
+
+### The role table
+
+Three constraints shape it, and they are worth stating before the rows.
+
+**It obeys the size-bound doctrine, which is not negotiable.** Quanta-Strike is a
+family of hand-drawn, size-bound strikes; each role therefore carries both a family
+token and a size token, and rendering a strike away from its native pixel size is
+blurry by design (`DESIGN.md:108-124`). So every row below names a face *and* its
+native size, no row reuses a strike at a size it was not drawn for, and there is no
+fluid type anywhere in the table. Where a row changes a size, it changes the
+*strike*, not the scale of an existing one.
+
+**"Stop shouting" is adopted, so the table has to say where uppercase survives.**
+It survives in three places, and the thing those three share is that none of them
+is a sentence and none of them grows: **a key legend** — the thing you press; **a
+stamped token** — a chip; and **an abbreviation** — a day name, a unit. Everywhere
+else it goes. Tracking follows case: `letter-spacing: 1px` stays wherever uppercase
+stays, because caps genuinely need the air, and drops to `0` wherever case drops,
+because 1px of tracking on mixed-case 12px hand-drawn glyphs pulls words back apart
+into letters. The display tier keeps its own tracking (`.pixel-title` at 2px,
+`static/style.css:133`), since PressStart is an outline font rather than a strike.
+
+**The 16-to-26 gap is filled with the two strikes already on disk**, and the gap is
+worth stating precisely because the obvious framing overstates it. PressStart
+already sits at 18 (`--type-display-ceremony`, `static/style.css:86`) and 22
+(`--type-display-gate`, `:85`), so it is not true that nothing exists between 16
+and 26. What has nothing between 16 and 26 is the **Quanta** ladder — and Quanta is
+the only face in the app that can carry an interpolated string. The gap is
+therefore not "no big type"; it is *no big type that can hold a name, a count or a
+date*. That is exactly why the two unwired strikes land where they do below: both
+roles they fill — a screen title that names something, and a numeral that is the
+point of its panel — are data, and data is precisely what drawn lettering and
+ceremony type cannot carry (see the diagnosis). Wiring them costs two `@font-face`
+blocks and two token pairs over 8,840 B and 9,792 B already committed to
+`static/fonts/`; no new asset, no new drawing.
+
+**Set type — the Quanta ladder.** This is the whole of it. Every role in the app
+resolves to one of these rows.
+
+| Role | Face | Native size | Case | Why this face |
+| --- | --- | --- | --- | --- |
+| Screen title that names something | `quanta-strike-20` **(to wire)** | 20px | Title Case | The only set size above a panel title. A screen title that interpolates cannot be drawn (the diagnosis) and must not be PressStart, which is the ceremony voice. |
+| Headline numeral and stat readout | `quanta-strike-18` **(to wire)** | 18px | — | The streak count, the sleep figure, the stepper value are the point of their panels and are currently the same size as their own labels (`static/style.css:314`, `:450`, `:1524`). Pure data, so never drawable. |
+| Form input and select | `quanta-strike-16` | 16px | as typed | Unchanged (`static/style.css:457-465`). The one place the player's own text appears, and the only role sized for typing rather than reading. |
+| Panel title, on the plaque | `quanta-strike-14` | 14px | Title Case | Unchanged in size (`:145-153`), changed in case. It repeats on ~50 panels and it interpolates, so it is set, not drawn — and small, because there are many. |
+| NPC dialogue | `quanta-strike-14` | 14px | Sentence case | Unchanged (`:397-403`). Speech gets the largest reading size because it is read once at a time and typed out character by character. |
+| Quest and offer title, exercise name, item name | `quanta-strike-14` | 14px | Title Case | Unchanged (`:417`, `:446`, `:876`). The named thing inside a panel, one step above the copy describing it. |
+| Body copy, prose, table cells, toasts | `quanta-strike-12` | 12px | Sentence case | Unchanged (`:98-100`, `:857`, `:951-955`). The reading size, and the one the fill tile's contrast ceiling was computed against (section 3). |
+| Table header | `quanta-strike-12` **bold** | 12px | Sentence case | Bold is the only strike drawn as a weight pair (`:24-30`), so it is the one way to mark a header without spending case or gold. Gives up `--gold` (`:858`) — see below. |
+| Button and key legend | `quanta-strike-12` bold | 12px | **UPPERCASE**, 1px | Unchanged (`:166-172`). A key carries an engraved legend; that is what a key cap does, and it is why the bold strike exists. |
+| Chip and status token | `quanta-strike-12` | 12px | **UPPERCASE**, 0 | Unchanged (`:423`). A chip is a stamp, not a sentence — it is bounded, it never grows, and it is already read as a mark rather than a word. |
+| Form label | `quanta-strike-12` | 12px | Sentence case | Unchanged in size (`:467`), changed in case. A label is a question asked of the player, not a sign hung over them. |
+| Muted and secondary line | `quanta-strike-12` | 12px | Sentence case | Same strike as body; the distinction is colour, and it must be `--dim-readable` `#958ca8` (`:55`) rather than `--dim` `#776f8e` (`:54`), which measures 3.67:1 on `--panel2` (section 1). |
+| Fine print, timestamp, caption, bubble | `quanta-strike-10` | 10px | Sentence case | Unchanged (`:75`, `:80`). The floor of the ladder, and also the floor for anything drawn (`type-wordmark.html:813`). |
+| Abbreviation label | `quanta-strike-10` | 10px | **UPPERCASE**, 1px | Day names in the calendar grid (`:1195`), unit suffixes. An abbreviation is uppercase by convention rather than by emphasis, which is why it is not shouting. |
+
+**Display type — PressStart.** Unchanged, and deliberately so. PressStart is a
+conventional outline pixel font rather than a size-bound strike, so it has its own
+scale and a Quanta font pack must never resize it (`DESIGN.md:126-135`).
+
+| Role | Face | Size | Case |
+| --- | --- | --- | --- |
+| Wordmark, until the drawn one lands | `PressStart` | 26px (`--type-display-title`) | UPPERCASE |
+| Login and adventurer gates | `PressStart` | 22px (`--type-display-gate`) | UPPERCASE |
+| Ceremony heading | `PressStart` | 18px (`--type-display-ceremony`) | UPPERCASE |
+| Defeat display | `PressStart` | 26px (`--type-display-death`) | UPPERCASE |
+
+**Drawn, not set.** These three roles are not in the table above because they are
+not typefaces at all. The ruling that governs them is already settled below — drawn
+lettering earns its cost only on fixed, ceremonial, read-once things, and never on
+anything interpolated or repeated — and this table does not restate it, it only
+marks which roles fall on that side of the line.
+
+| Role | Treatment | Governed by |
+| --- | --- | --- |
+| The wordmark | drawn; PressStart 26 stands in until it lands | the diagnosis table below |
+| Fixed screen titles that never change | drawn, at 1×, never below 10px | the diagnosis table; `type-wordmark.html:813` |
+| Illuminated capital | drawn 24×24, rendered at 2× | the diagnosis table; placement settled below |
+
+**Two tokens to add**, named as pairs the way `DESIGN.md:108-111` requires, so a
+future font pack replaces family and size together:
+`--font-screen: 'quanta-strike-20'` with `--type-screen: 20px`, and
+`--font-readout: 'quanta-strike-18'` with `--type-readout: 18px`.
+
+#### What "stop shouting" actually costs
+
+Measured, not estimated. `static/style.css` carries **19** `text-transform:
+uppercase` rules. Under the table above, **5 keep it** — `.btn` (`:166-172`),
+`.chip` (`:423`), `.calgrid .dow` (`:1195`), `.pen-visit .pen-visit-label`
+(`:1301-1312`) and `.phone-dock .dock-action` (`:2606-2619`) — and **14 lose it**.
+
+The pen label is the one that tests the rule rather than merely obeying it. Its own
+comment calls it "a bare, half-there invitation floating on the glass — no box, no
+key" (`:1300`), so by appearance it is not a key at all. But it is touchable —
+`pointer-events: auto` and `cursor: pointer` at `:1302-1303` — and the rule is
+about what a string *is*, not what it is painted like. It reads "ENTER THE PEN", it
+is the thing you press, and it keeps its caps. A rule that only works on things
+already drawn as keys would not be a rule.
+
+One coincidence to disarm before it causes an error: the fourteen rules that lose
+uppercase are *not* the same fourteen that pair it with `letter-spacing: 1px`.
+Those two sets both have fourteen members and they overlap in thirteen. The
+1px-tracked set is `:152`, `:170`, `:418`, `:467`, `:537`, `:589`, `:760`, `:858`,
+`:2023`, `:2030`, `:2154`, `:2210`, `:2238`, `:2340`; the losing set is the same
+list with `.btn` at `:170` removed — a key keeps both its caps and its tracking —
+and `.equip-slot .slot-label` at `:892` added. The remaining four uppercase rules
+carry no tracking or different tracking (`:423`, `:1195`, `:1306` at 4px, `:2619`
+at 0).
+
+The copy bill, per role:
+
+| Role | Sites | Cost |
+| --- | --- | --- |
+| Button and key legends | 84 literal labels across nine JS files (`giver.js` 23, `misc.js` 16, `dungeon.js` 11, `hall.js` 9, `town.js` 8, `app.js` 8, `colosseum.js` 4, `ranch.js` 4, `dev-console.js` 1) | **zero** — uppercase survives, and this is the largest block by a wide margin |
+| Panel titles | ~50 `.win-title` sites | **zero** — every string is *already* written in title case. "The Colosseum", "The Descent", "This Run's Findings", "Doctrines of ${name}", and — exactly the diagnosis's own example — "${name}, Level ${level}". Turning the property off is the entire change |
+| Chips | `SWORN`, `DOCTRINE`, `REST WRIT` in `giver.js` | **zero** — uppercase survives |
+| Table headers | 14 `<th>`, ~13 distinct strings | **capitalise** — they are written *lower*case (`date`, `lift`, `max`, `est 1RM`, `last trained`), so turning the property off yields lowercase headers, not sentence case |
+| Form labels | 15 `<label>` sites | **capitalise** — mostly lowercase (`movement`, `name`, `reps`, `routine name`, `4-digit pin`) |
+| Counsel and Compendium labels, legends | mixed | ~7 lowercase to capitalise (`ambition`, `timezone`, `weight unit`); 2 all-caps to lower (`WHY THIS PATH`, `PROVIDER & AS-OF`); the rest already read correctly (`Choose a path`, `Primary focus`, `How It Is Done`) |
+| Remaining hardcoded all-caps headings | 37 all-caps non-button literals exist; the chips, the wordmark and the PressStart display lines stay, leaving roughly 20 | **rewrite** — `THE OMENS`, `THE VERDICT`, `THE WAR PARTY`, `RULES OF THE UNDERCROFT`, `WHO GOES THERE?`, `NEW ADVENTURER`, `SPOILS OF THE SIEGE` and similar |
+
+So the whole sweep is on the order of **fifty short strings**, concentrated in
+`giver.js`, `misc.js` and `hall.js` — not a pass over every string in seven files.
+The reason is the one the ruling above already gives from the other end: the two
+roles that shout most in the source, keys and chips, are the two roles that are
+*supposed* to shout, and the role that repeats most, the panel title, was already
+being written in mixed case and then uppercased by CSS.
+
+What does not change is that it cannot be automated, and for precisely the reason
+already stated: `SWORN` and `THE OMENS` are both bare uppercase literals in
+`giver.js`, one is a chip that stays and one is a heading that goes, and nothing
+about the strings tells them apart. The method is a hand pass. Only the size was
+overstated.
+
+**One thing the table spends, and it is deliberate.** The table header gives up
+`--gold`. Section 1 measured gold doing fourteen jobs, and a table header is
+neither touchable nor earned, which is the restriction the border work is meant to
+buy. Bold at the same size does the header's job without spending any of it. This
+is a real choice rather than a forced one — keeping gold and dropping the bold is
+defensible — but it is picked, and it is picked because it pays into a restriction
+this document has already committed to elsewhere.
 
 ### The diagnosis
 
@@ -1070,29 +1220,174 @@ where ornament is paid for. Their stated limits hold: at least three lines of co
 beside one or drop it entirely (`type-wordmark.html:610-614`), and nothing drawn
 below 10px.
 
-Two things about them are still open, and both are his. **They need to sit more
+Two things about them were open, and both are his. **They need to sit more
 naturally inline.** A 24×24 block dropped beside 12px copy currently reads as a
 capital parked next to a paragraph rather than one the paragraph is set around;
-that is a positioning and baseline problem, not a drawing one, and it belongs with
-the placement work above. **And they need to be used more selectively.** The limit
-in the mockup is a floor — three lines of copy — not a policy. A capital on every
-paragraph that clears the floor is a page of capitals, and the thing that makes
-one ceremonial is that the next one is a long way away. Which paragraphs get one
-is part of the missing rules for which typeface goes where.
+that is a positioning and baseline problem, not a drawing one. **And they need to
+be used more selectively.** The limit in the mockup is a floor — three lines of
+copy — not a policy. A capital on every paragraph that clears the floor is a page
+of capitals, and the thing that makes one ceremonial is that the next one is a long
+way away. Both were waiting on the role table; both are proposed two subsections
+below.
 
-### One rule with no user, and two files with no rule
+### Where the drawn title sits
 
-Not a drawing problem, but it is the state of the type shelf and it should not
-be lost. `quanta-strike-18-regular.woff2` (8,840 B) and
-`quanta-strike-20-regular.woff2` (9,792 B) both sit committed in `static/fonts/`
-and are named nowhere: `static/style.css` declares `@font-face` for the 10, 12,
-12-bold, 14 and 16 strikes only, and a repo-wide search for `quanta-strike-18`
-or `-20` outside the mockups returns nothing. The reverse is true of
-`vt323.woff2`, which has an `@font-face` at `static/style.css:2-5` and is
-applied to nothing at all — `DESIGN.md:103` already records it as a legacy asset
-outside the active default. So two committed strikes are unreachable type sizes,
-and one loaded typeface has no user. Anything ceremonial that wants to be set rather
-than drawn already has the bytes for it on disk.
+The plaque is the settled title treatment (2g, section 4): the title as its own
+miniature kit box at `--s:1`, nailed over the top rail rather than notched into it
+(`border-kit.html:86-99`). So this is not a question about where a title floats on
+a panel. A drawn title is a **drawn plaque face**; a set title is the same plaque
+with type in it. One geometry, two contents. Three rules.
+
+**1. The plaque clears the corner, and this is forced rather than chosen.** The
+mockup puts it at `left: 20px` (`border-kit.html:88`). At `--s:2` the corner tile
+is 16px wide and carries the stamp — the rivet, peg or grommet that is the corner's
+whole detail budget (2b, 2f). A plaque overlapping it puts two drawn objects in one
+8px square. So: **the plaque's left edge starts at least one full corner tile plus
+one rhythm step from the panel's left edge — 20px at `--s:2`**, which is what the
+mockup already does, for a reason it does not state.
+
+**2. The plaque lives on the rail and never touches the interior.** With
+`top: -6px` (`:88`) the plaque hangs 6px proud of the panel's outer edge and the
+rest of it sits on the 16px rail. That is what makes it read as nailed *onto* the
+rail rather than cut *into* it, and it is why the fill tile's ground (section 3) is
+never interrupted by a title. The rule is the consequence: **the plaque's bottom
+edge lands on the panel's inner rim, and not past it.**
+
+**3. That arithmetic forces a fork the glyph critique left open.** Work rule 2 out.
+The plaque's box is padding-top + content + padding-bottom, hanging 6px above a
+16px rail, so it closes exactly when the box is 22px: 6 above, 16 on the rail, 0
+into the interior. The mockup's `padding: 2px 9px 3px` around a 14px line
+(`:89`, `:97`) gives 19px, which stops 3px short. Take the content box to **16px**
+and the padding to `2px 9px 4px` and it closes exactly.
+
+That matters because the critique above offers two ways to fix the carved family's
+stem-to-counter ratio — drop the stem to 2px, or **raise the cap height to 16px and
+keep the 3px stem** — and leaves the choice open. The plaque arithmetic picks the
+second. It is also the reason the drawn titles do not currently fit: `title_hall`
+is a 117×**16** bitmap (`type-wordmark.html:991`), 16px tall against a 14px plaque
+line, so the drawn titles were always going to overflow the mockup's own plaque.
+Raising the box to 16px fits the drawn titles as they are and fixes the counters at
+the same time. This is a measurement, not a preference.
+
+Set titles keep `quanta-strike-14` at 14px per the role table, sitting in a fixed
+16px line box. A 14px strike in a 16px line box is leading, not scaling, so the
+size-bound doctrine is untouched — nothing is resampled. And 16px is 4 × the app's
+4px rhythm (`DESIGN.md:137-142`), which is where the plaque's own numbers should
+have been all along.
+
+### The illuminated capital: which paragraphs, and how it sits
+
+**Which surfaces get one at all — three, not the mockup's four.** The mockup
+proposes restricting illumination to "giver dialog, doctrine descriptions, almanac
+pages, keepsake plaques" (`type-wordmark.html:612-613`). Three of those survive in
+a different form and one has to go:
+
+| Surface | Verdict |
+| --- | --- |
+| The Almanac entry (`.alm-p`, `static/style.css:1506`) | **Yes.** Long, read once, ceremonial, and already set as a page rather than a panel |
+| The Compendium prose block (`.compendium-prose`, `:764-769`) | **Yes.** The only other genuinely long-copy surface in the app |
+| Ceremony and death copy | **Yes**, where the copy clears the floor below — it is the definition of read-once |
+| Giver dialogue | **No**, and for a mechanical reason rather than a taste one |
+| Doctrine descriptions, keepsake plaques | **No** — the first is body copy on a panel that also carries chips and keys, so a capital there is ornament on a control surface; the second is too short to clear the floor |
+
+The dialogue exclusion is the one that disagrees with the mockup, so it is worth
+being explicit about why. Dialogue is typewritten a character at a time by
+`typewrite()` (`static/js/app.js:687`, called from `giver.js:386`, `:1195`,
+`dungeon.js:71`, `hall.js:301`), and three separate places in the code already
+carry comments warning that the typewriter dialog **reflows its window** as it
+types and shoves adjacent controls around (`dungeon.js:32`, `giver.js:1160`,
+`hall.js:292`). A floated capital with copy wrapping around it would re-wrap on
+every character of the reveal. That is not a drawing problem that can be tuned
+away; it is the wrong container.
+
+**Selectivity — one per screen.** The three-line limit is a floor, not a trigger.
+The trigger is:
+
+- **At most one illuminated capital on screen at any time.** Not one per panel and
+  not one per paragraph. If two qualifying blocks are on screen, the first takes it
+  and the second does not.
+- Only the **first paragraph** of a qualifying block.
+- The block must clear the length floor below.
+
+That is what makes it ceremonial: the rule is not "which paragraphs deserve one",
+it is "the next one is a screen away".
+
+**The length floor, in units that can be checked before layout.** The mockup states
+it as three lines of copy (`type-wordmark.html:610-611`), which is only knowable
+after the text has been laid out. Restated as a count: **under about 150
+characters, no capital.** That is three lines at roughly 50 characters, on the
+app's usual measure — an overlay `.win` capped at 480px (`static/style.css:934`)
+less the kit's `calc(var(--u) + 9px)` horizontal padding of 25px a side at `--s:2`
+(2a), leaving about 430px. *Flagged as arbitrary:* the 150 is a round number
+standing in for the mockup's three lines, and the per-line character estimate has
+not been measured against the 12px strike's actual advance width. Anything from 120
+to 180 is defensible; 150 is picked so there is a number, and it should be checked
+once the strike is measured rather than argued about now.
+
+**How it sits, which is arithmetic rather than taste.** The capital is a 24×24
+sprite (`type-wordmark.html:541-543`). Rendered at **2×, so 48×48**, on the same
+integer-scale sprite path everything else uses (2e; the raven is 16×14 at 48px,
+which is 3×, section 4). Set the prose line box to **16px** — the same box the
+plaque uses, and 4 × the 4px rhythm. Then:
+
+> 48 ÷ 16 = **exactly three lines.** The capital's own height *is* the three-line
+> floor.
+
+Which means the floor stops being a rule somebody has to remember and becomes a
+fact about the drawing: a capital that overhangs is a capital next to a block that
+was too short, and you can see it.
+
+The scale is forced, not chosen. At a 16px line box, 1× (24px) spans 1.5 lines and
+3× (72px) spans 4.5 — neither is a whole number of lines, and 4× is absurd. **2× is
+the only integer sprite scale that lands on a whole number of lines**, which is the
+kind of constraint worth knowing before someone tries to tune it.
+
+The rest follows:
+
+| Property | Value |
+| --- | --- |
+| Float | left, with an **8px** gutter (2 × the 4px rhythm) |
+| Vertical anchor | the capital's top edge on the top of line 1's line box; its bottom edge lands on the baseline of line 3, because 3 × 16 = 48. No optical nudge and no negative margin |
+| Indent | lines 1–3 indent by 48 + 8 = **56px**; line 4 returns to the full measure |
+| Overhang | any ornament that overhangs is drawn **inside** the 24×24, never added in CSS — otherwise it stops being an integer-scaled sprite and starts resampling |
+
+**One consequence to accept along with it.** `.alm-p` is currently
+`line-height: 1.45` — 17.4px on 12px copy (`static/style.css:1506`). A 16px line
+box tightens it by 1.4px. That is a real change to the Almanac's setting, proposed
+here rather than assumed, and 16px on 12px is 133%, comfortably inside readable
+leading. *Marked as semi-arbitrary:* 15px or 18px would also read fine; 16 is
+picked because it is on the rhythm and because it is the number that makes 48
+divide evenly, which is the whole mechanism above.
+
+### One rule with no user, and two files that now have one
+
+The state of the type shelf, verified rather than recalled, because the role table
+spends two thirds of it.
+
+`static/fonts/` holds nine files. Six are declared and used: the five Quanta
+strikes `-10-regular`, `-12-regular`, `-12-bold`, `-14-regular` and `-16-regular`
+at `static/style.css:10-44`, reached through `--font-fine`, `--font-body`,
+`--font-title` and `--font-form` (`:75-78`); plus `pressstart.woff2` at `:6-9`,
+reached through `--font-display` (`:79`).
+
+**Two are committed and unreachable.** `quanta-strike-18-regular.woff2` (8,840 B)
+and `quanta-strike-20-regular.woff2` (9,792 B) sit in `static/fonts/` with no
+`@font-face` and no reference anywhere outside the mockups. The role table above
+gives both a job — 18 for headline numerals and stat readouts, 20 for screen titles
+that name something — and that is the whole of what closes the Quanta ladder's
+16-to-26 gap. The cost is two `@font-face` blocks and two token pairs over bytes
+already in the repository: no new asset, no new drawing, no download the player is
+not already paying for.
+
+**One is declared and has no user.** `vt323.woff2` has an `@font-face` at
+`static/style.css:2-5` and is applied to nothing at all; `DESIGN.md:103` already
+records it as a legacy asset outside the active default. The role table does not
+find a use for it either, and it should not be given one — VT323 is a conventional
+outline font, so putting it in a Quanta role would break the family/size pairing
+the size-bound doctrine depends on, and putting it in a display role would mean two
+display faces where PressStart already covers all four. It is a candidate for
+deletion rather than a slot waiting to be filled, and that is a separate call from
+anything in this document.
 
 ---
 
