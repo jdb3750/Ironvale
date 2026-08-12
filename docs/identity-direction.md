@@ -609,10 +609,10 @@ has stopped being the material at all.
 
 **What "mostly subtle" is in numbers.** The measurable version of the ruling is
 already in this section and does not need reopening: every texture pixel within
-roughly ±6% relative luminance of `--panel`, three values and at most four, and
-dither rather than ramp. Those figures predate the ruling and are unchanged by it
-— they are what it means, stated so a tile can be checked rather than argued
-about. See the constraints table below.
+roughly ±6% relative luminance of that material's own base, three values and at
+most four, and dither rather than ramp. Those figures predate the ruling and are
+unchanged by it — they are what it means, stated so a tile can be checked rather
+than argued about. See the constraints table below.
 
 **One conflict this closes.** 2d requires the fill to stay in the panel family,
 near `--panel` `#121220` or `--panel2` `#191928`, because 12px body text sits on
@@ -663,7 +663,7 @@ resolve behind 12px glyphs.
 | Property | Value | Reason |
 | --- | --- | --- |
 | Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. The base is dark for every material, canvas included, so there is no inverted form of this rule; an accent is still checked against the ceiling below rather than against the material. |
-| Contrast ceiling | every texture pixel within roughly ±6% relative luminance of `--panel` | it sits behind 10px and 12px glyphs (`static/style.css:80-82`, `--type-fine` and `--type-body`). Sanity check: if any texture pixel is closer in value to `--ink` `#d8cfa8` than to `--panel`, it is too bright. |
+| Contrast ceiling | every texture pixel within roughly ±6% relative luminance of **that material's own base** — the fill value this tile is drawn from, near `--panel` `#121220` (`static/style.css:47`) or `--panel2` `#191928` (`:48`), whichever of the two this material sits on (2d). Not of `--panel` specifically: `--panel2` is about **58% brighter** in relative luminance, so a material grounded on it would breach a `--panel`-anchored ceiling before a single texture pixel existed, and the four materials could never differ from one another at all. **In a pixel editor: at most ±1 code value on each channel from the base.** At this black level one 8-bit step moves relative luminance by about 7% on a `--panel` base and about 6% on a `--panel2` one, so the code-value form is the same ceiling restated in the units you actually draw in — not a second, looser rule. | it sits behind 10px and 12px glyphs (`static/style.css:80-82`, `--type-fine` and `--type-body`). Sanity check: if any texture pixel is closer in value to `--ink` `#d8cfa8` than to the base, it is too bright — but that threshold sits around L\* 45, while the ceiling sits within about half an L\* of a base near L\* 6. It catches gross errors only and is nowhere near the bar; draw to the ceiling, and read the sanity check as the thing that tells you a tile has gone badly wrong rather than as the thing that says it is right. |
 | Steps | hard only, **dither instead of ramp** | where you want a transition, use a 50% checker between two adjacent values or a Bayer 4×4. A dither is made of the same hard pixels as everything else and survives `image-rendering: pixelated`; a ramp does not. |
 | Feature size | no feature longer than about a fifth of the tile in any row — ~6 pixels at 32×32 | longer runs resolve into stripes once the tile repeats. |
 
