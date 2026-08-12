@@ -209,6 +209,20 @@ entries are open work with the removal path worked out.
 
 **Defects (behaviour is wrong today)**
 
+- **The deployed image ships no `tools/`, so maintenance tools cannot reach
+  production.** Found 2026-08-12 while running the giver backfill. The container
+  serves the app from `/opt/ironvale` and contains only `VERSION`, `app`,
+  `requirements.txt`, `static` and `vendor` — the Dockerfile never copies
+  `tools/`. So "merge the tool and let the server pull it" is not a route that
+  exists, and `tools/backfill_unguided_givers.py` had to be `docker cp`'d in for
+  the run and removed afterwards. That worked, but it is undocumented, easy to
+  get wrong under pressure, and every future maintenance tool has the same
+  problem. Either add `tools/` to the image, or write the copy-in/copy-out
+  procedure into the `iron-vale-ops` skill so it is a known step rather than
+  improvisation. **Note the tool imports `app.quests` for its mapping**, so
+  wherever it runs it needs the app package importable — inside the container
+  that means placing it under `/opt/ironvale/`.
+
 - ~~**Browser assertions intermittently read empty or truncated `innerText`.**~~
   **RESOLVED 2026-08-03.** The unidentified v0.30.3 and v0.33.0 flakes were
   eventually captured at two unrelated attached elements: Bram's `.npc-name`
@@ -603,11 +617,19 @@ entries are open work with the removal path worked out.
     This is more correct than before, but it leaves a real open question the seam
     deliberately did not settle: **should an unguided deed advance *any* authored
     lane, given it was never accepted from a schedule?** Nobody has decided that.
-  - **Historical rows are still wrong.** In a representative scratch database
-    with one row per category, **4 of 8 were misattributed**, and all 8 were
-    reconstructible from `details.activity_type` and `details.category`. No
-    migration was performed — live player data is safety rule 3 and needs Joe's
-    explicit sign-off as its own piece of work.
+  - ~~**Historical rows are still wrong.**~~ **BACKFILLED 2026-08-12** with
+    Joe's explicit go-ahead, using `tools/backfill_unguided_givers.py`. The live
+    scope was far smaller than the scratch sample implied — **2 rows in
+    `ironvale.db`, both `endurance -> bram`** (unsworn climbs credited to Fenn),
+    and **0 in `pog.db`**. That follows from the defect's shape: the old code
+    hardcoded `"endurance"`, and run/ride/walk/swim *legitimately* map there, so
+    only non-endurance deeds could ever be wrong.
+
+    Sequence: WAL-safe snapshot to
+    `/data/backups/ironvale-pre-giver-backfill-20260812T223605Z.db` via SQLite's
+    backup API (a plain `cp` can miss committed data sitting in the `-wal`), dry
+    run on the live save, apply, re-survey both saves clean, one ledger entry
+    written. `pog.db` was never touched.
 
   Original finding:
 
