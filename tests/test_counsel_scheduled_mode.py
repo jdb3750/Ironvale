@@ -14,7 +14,7 @@ from counsel_giver_test_support import (
     write_fresh_sync,
 )
 
-from app import programs
+from app import programs, quests
 
 
 TODAY = "friday"
@@ -150,6 +150,60 @@ def scheduled_same_lane_sequence() -> None:
     assert (second[0].modality, second[0].tier_label) == ("climb", "technique")
 
 
+def scheduled_unguided_deed_does_not_consume_lane() -> None:
+    # Given: two Fenn slots. When: an unguided deed is claimed for today. Then: it earns credit
+    # (a done quest, an advanced streak) but leaves the lane untouched — only a sworn quest,
+    # accepted from the plan, consumes it.
+    new_profile("scheduled-unguided-lane")
+    write_fresh_sync()
+    save_plan([
+        {"modality": "run", "tier": "easy", "optional": False},
+        {"modality": "climb", "tier": "technique", "optional": False},
+    ])
+    first = offers("endurance")
+    assert len(first) == 1 and (first[0].modality, first[0].tier_label) == ("run", "easy")
+
+    streak_before = game.get_char()["streak"]["count"]
+    activity_id = "unguided-lane-run"
+    db.q(
+        "INSERT INTO activities (id, source, start, type, name, moving_time) "
+        "VALUES (?,?,?,?,?,?)",
+        (activity_id, "intervals.icu", NOW.isoformat(timespec="seconds"), "Run", "An unsworn run", 1800),
+    )
+    db.commit()
+    quests.grant_unguided_run_bonus()
+    claimed = client.post("/api/unguided/claim", json={"activity_id": activity_id})
+    assert claimed.status_code == 200, claimed.json()
+
+    # Credit side: a completed quest row and an advanced streak — the other half of Joe's rule.
+    unguided_row = db.q("SELECT * FROM quests WHERE activity_id=?", (activity_id,)).fetchone()
+    assert unguided_row is not None
+    assert (unguided_row["status"], unguided_row["kind"], unguided_row["giver"]) == (
+        "done", "unguided_activity", "endurance",
+    )
+    assert game.get_char()["streak"]["count"] == streak_before + 1
+
+    # Schedule side: the lane is untouched — the same first slot is still offered.
+    still = offers("endurance")
+    assert len(still) == 1 and (still[0].modality, still[0].tier_label) == ("run", "easy")
+
+    # Contrast: a sworn quest for the same giver, same day, DOES consume the lane.
+    accepted = client.post(
+        "/api/quests/accept",
+        json={"giver": "endurance", "option_key": still[0].option_key},
+    )
+    assert accepted.status_code == 200
+    quest_id = AcceptanceResponse.model_validate(accepted.json()).quest_id
+    db.q(
+        "UPDATE quests SET status='done', completed_at=? WHERE id=?",
+        (NOW.isoformat(timespec="seconds"), quest_id),
+    )
+    db.commit()
+    second = offers("endurance")
+    assert len(second) == 1
+    assert (second[0].modality, second[0].tier_label) == ("climb", "technique")
+
+
 def scheduled_wellness_handling() -> None:
     # Given: adverse wellness. When: scheduled work is served. Then: sized work eases and routines warn.
     new_profile("scheduled-quality-downgrade")
@@ -265,6 +319,7 @@ for label, scenario in (
     ("open slots", scheduled_open_slots),
     ("rest and empty giver", scheduled_rest_and_empty_giver),
     ("same-lane sequence", scheduled_same_lane_sequence),
+    ("unguided deed does not consume lane", scheduled_unguided_deed_does_not_consume_lane),
     ("wellness handling", scheduled_wellness_handling),
     ("long fallback boundary", scheduled_long_fallback_boundary),
     ("schedule attribution", scheduled_attribution),
