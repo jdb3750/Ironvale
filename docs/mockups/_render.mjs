@@ -2,8 +2,9 @@
 
    Regenerates the desktop/phone PNGs for every place-*.html gallery in
    docs/mockups/ using the same two viewports the existing screenshots were
-   shot at: a 1440px-wide viewport for "-desktop.png" (wide enough to keep
-   the two-column gallery layout, >1199px breakpoint) and a 420px-wide
+   shot at: a 1280px-wide viewport for "-desktop.png" (wide enough to keep
+   the two-column gallery layout, >1199px breakpoint, and narrow enough to
+   stay phone-readable — captures must be <=1280px wide) and a 420px-wide
    viewport for "-phone.png" (narrow enough to collapse to the single-column,
    gutter-less layout, <760px breakpoint). Both are full-page screenshots —
    the PNG shows the whole gallery wall (head, legend, note, both stations),
@@ -30,9 +31,9 @@ async function renderScene(browser, scene) {
   const file = path.join(DIR, `${scene}.html`);
   const url = 'file://' + file;
 
-  // Desktop — 1440px viewport, full-page screenshot.
+  // Desktop — 1280px viewport, full-page screenshot.
   {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
     await page.goto(url);
     await page.evaluate(() => document.fonts && document.fonts.ready);
     await page.waitForTimeout(400);
