@@ -48,7 +48,7 @@ dependency-free HTML with no build step: open the file.
 | The Detail Pass | **Partial** | Adopted: raven, bell, hanging title panel, streak flame, toast scrap, notched scrollbar, quill. Rewritten into something better: the wax seal. Dropped: corner nails, made redundant by the kit's own corners, and the ribbon on the tab. Held: candle, moth. Left undecided: the drawn empty states. Section 4. |
 | Material Chrome | **Partial** | The title variants, and nothing else — "border kit trumps everything else." The lamp rule (`material-chrome.html:97-102`) survives as a constraint rather than as a design, and the panel textures survive only as reference for the fill tile. Section 3. |
 | Type, Titles & Wordmark | **Adopt, with work** | The wordmark, the fixed screen titles, "stop shouting" and the illuminated capitals. All of it needs hand-pixel tightening for readability, settled placement, and a set of rules for which face is used where — rules that do not exist yet. Section 5. |
-| Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch. Beyond the correction below, it is named again in two places only: section 0, to rule out the one title variant that used it, and 2g, where a contrast figure the study measured survives as a warning about pale grounds. |
+| Scroll & Parchment | **Cut** | Nothing. Not settings, not as a vellum material in the kit, not as a title label, not anywhere. Everything describing it has been deleted from the branch. Beyond the correction below, it is named again in two places only: section 0, to rule out the one title variant that used it, and 2g, where the contrast figures the study measured survive as the evidence behind section 3's dark-ground ruling. |
 | Palette Studies | **Hold** | Nothing now. Gold gets restricted to the touchable and the earned, but that restriction rides in on the border work. |
 
 One correction, so nobody reopens it: a draft of this document briefly listed
@@ -480,13 +480,14 @@ because a material that means only "temporary" says nothing about what goes
 *inside* it, and a material that means only "a quick note" loses the market
 stalls the mockup already assigned to it.
 
-**One measured trap, and it is waiting for whoever draws canvas pale.** Nothing
-about canvas *requires* a light field, but "the feel of filling out a check"
-invites one — a surface you write on reads lightest. There is a measurement on
-record for what the app's accent language does on a light ground, and it is worth
-having in front of you before you pick a value. The deleted scroll study took it
-on a vellum field, as an argument about a whole theme; that argument is gone, but
-the numbers are still numbers. Read out of
+**Canvas is dark, like the other three — and this is the measurement that
+settled it.** "The feel of filling out a check" invites a light field, because
+a surface you write on reads lightest, and that reading is the one thing canvas
+gives up by being dark (section 3 rules every material's fill dark and subtle).
+It gives it up for a measured reason. The deleted scroll study took the
+measurement on a vellum field, as an argument about a whole theme; that argument
+is gone, but the numbers are still numbers, and they are why the ruling went the
+way it did. Read out of
 `docs/mockups/identity/scroll-parchment.html` at commit `0eb18bd` — the file is
 gone from this branch and is not being restored, so the figures are recorded here
 instead. Every bare `:n` in this entry is a line in that file at that commit:
@@ -499,24 +500,13 @@ instead. Every bare `:n` in this entry is a line in that file at that commit:
 
 The field colour is not an invention. `#d8cfa8` is the app's own `--ink`
 (`static/style.css:53`), which is why the study's own comment on that token calls
-the field "identical to `--ink`".
-
-None of that is a settled constraint on canvas. No one has picked a value for the
-tile yet, and a dark one meets none of it. It is the check to run the moment a
-pale ground is proposed, because it says what fails and by how much: gold at
-1.5:1 is not dim, it is illegible, and every gold-accented thing that lands inside
-such a panel — a title, a key label, a stat label — needs a darker twin or has to
-stay out.
-
-So there is a fork in front of whoever draws canvas, and it is not a small one.
-Section 2d requires the fill to stay in the panel family, near `--panel` `#121220`
-or `--panel2` `#191928`, because 12px body text sits on it — and a **dark** canvas
-tile keeps that constraint, keeps gold working, and gives up most of the reading
-of a surface you write on. A **light** canvas tile is the material at its most
-legible as a material, and it breaks 2d's fill constraint the moment it is drawn,
-with the figures above as the bill. That is not decided here. Whichever way it
-goes, `profile[0]` is still `--bg`, so the rim is dark regardless and the panel
-still floats on the void.
+the field "identical to `--ink`". Read those figures as a bill rather than a
+warning: gold at 1.5:1 is not dim, it is illegible, and every gold-accented
+thing that landed inside a pale panel — a title, a key label, a stat label —
+would have needed a darker twin or would have had to stay out. That is what a
+light canvas would have cost, and it is the cost the dark ruling declines.
+Nobody is drawing a pale ground, so this is history rather than a hazard to
+watch for.
 
 **A possible fifth: the Siege.** The Siege either keeps the ominous red borders it
 has now, or it gets a border built for it from scratch — Joe's words are
@@ -593,6 +583,52 @@ collapsing into a check, at the cost of the fill tile no longer being the same k
 of object as the other eight. The texture work wants the second; the generator
 wants the first. Draw one of each at panel size before deciding.
 
+**The ground is dark, for all four materials.** This was a fork in an earlier
+version of this document, attached to canvas. It is not one any more, and it was
+resolved wider than it was asked. In Joe's words:
+*"honestly i think the tiles for all of them should be dark, and mostly subtle. so
+you can tell that the tile retains the texture of the border, but not so much that
+it's jarring or we'd have to rework our texts/colors in order for everything to
+work."*
+
+Iron, oak, stone and canvas: every fill tile is dark. There is no light variant
+of any material and no per-material exception — the reading canvas gives up by
+being dark is priced in 2g, and the price was worth paying.
+
+**The two-sided constraint, which is the thing to hold while drawing.** "Dark and
+subtle" is the ruling; the drawing instruction underneath it is that the fill has
+to do two things that pull against each other. It must be recognisably **the same
+material as its own rails** — the same palette family and the same mark
+vocabulary, so a stone panel's interior reads as stone and an oak one reads as
+oak, rather than as generic noise with a frame around it. And it must sit **far
+enough below the rails in contrast** that it never competes with the body text
+lying on top of it. Same material, much quieter. Both failure modes are real and
+they are opposite: a ground the eye can name while reading a table is too loud,
+and a ground that could be swapped between two materials without anyone noticing
+has stopped being the material at all.
+
+**What "mostly subtle" is in numbers.** The measurable version of the ruling is
+already in this section and does not need reopening: every texture pixel within
+roughly ±6% relative luminance of `--panel`, three values and at most four, and
+dither rather than ramp. Those figures predate the ruling and are unchanged by it
+— they are what it means, stated so a tile can be checked rather than argued
+about. See the constraints table below.
+
+**One conflict this closes.** 2d requires the fill to stay in the panel family,
+near `--panel` `#121220` or `--panel2` `#191928`, because 12px body text sits on
+it, and a light canvas tile would have broken that constraint the moment it was
+drawn. With dark settled for all four, that rule and the material reading agree,
+and there is nothing left to reconcile.
+
+**It also changes the stakes of the size question above, without deciding it.** A
+low-contrast ground shows its repeat period far less than a high-contrast one:
+what makes a short period resolve into a visible grid is a pixel bright enough to
+be tracked from one repeat to the next, and that ceiling caps how bright any
+pixel may be. So the coarse-repeat risk that made **8×8 at `--u`** the worrying
+option drops substantially. It does not vanish — an emergent diagonal is a
+pattern rather than a brightness, and 16px is still 16px — and nothing here
+picks a size. Draw one of each, as above.
+
 Everything below is the drawing brief for that tile. None of it changed when the
 seam merged — it repeats on **both** axes, it must not resolve into a visible grid
 at panel size, and it sits behind body text, so it has a hard contrast ceiling that
@@ -626,7 +662,7 @@ resolve behind 12px glyphs.
 
 | Property | Value | Reason |
 | --- | --- | --- |
-| Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. If canvas ends up light, this is the same rule with the values inverted — see the contrast figures in 2g before picking any accent. |
+| Values | **3, maximum 4** | one base in the panel family, one a hair darker, one a hair lighter, and at most one accent used on fewer than 1 pixel in 40. The base is dark for every material, canvas included, so there is no inverted form of this rule; an accent is still checked against the ceiling below rather than against the material. |
 | Contrast ceiling | every texture pixel within roughly ±6% relative luminance of `--panel` | it sits behind 10px and 12px glyphs (`static/style.css:80-82`, `--type-fine` and `--type-body`). Sanity check: if any texture pixel is closer in value to `--ink` `#d8cfa8` than to `--panel`, it is too bright. |
 | Steps | hard only, **dither instead of ramp** | where you want a transition, use a 50% checker between two adjacent values or a Bayer 4×4. A dither is made of the same hard pixels as everything else and survives `image-rendering: pixelated`; a ramp does not. |
 | Feature size | no feature longer than about a fifth of the tile in any row — ~6 pixels at 32×32 | longer runs resolve into stripes once the tile repeats. |
