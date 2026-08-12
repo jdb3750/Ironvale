@@ -32,21 +32,24 @@ attracts all four, and this one must not.
 
 ## 1. The vision, walked once end to end
 
-A player opens the town and finds a new corner of it: the Bazaar row, a
-walkable market lane in the same pixel register as everything else. Stalls
-line the row, one per kind of ware — the Dyer's Tent hung with cloth swatches
-(themes), the Scrivener's Stall stacked with bound doctrines (program packs),
-the Tinker's Bench of oddities (behavior plugins), the Bellmaker's Cart of
-chimes and bells (sound kits). Browsing costs nothing and executes nothing:
-every stall renders from manifest metadata alone, and its signboard carries no
-more than the trade and a count of wares. Step up to a stall and the goods are
-in reach — tap one and its paper tag swings into view with the plain facts of
-what it is, who made it, and what it asks of the player; the merchant speaks
-the full disclosure when the player moves to take it home, answered with
-response lines like any other conversation in the Vale. A ware taken home travels packed, into the ornament box in the
-player's dwelling; hung upon the hearth tree there, it wakes and works. When
-a new version of an installed ware appears in the index, a raven brings word,
-the same way ravens already carry sync news.
+A player opens the town and finds a new corner of it: the Bazaar, a single
+four-sided stall in the same pixel register as everything else. The player
+walks around it, and each side is one trade — a face hung with cloth swatches
+(themes), a face stacked with bound doctrines (program packs), a bench of
+oddities (behavior plugins), a face strung with chimes and bells (sound kits)
+— every one of them staffed by the same trader, Snuff, who slips around the
+corner ahead of the player in a different hat. Browsing costs nothing and
+executes nothing: every side renders from manifest metadata alone, and its
+side-board carries no more than the trade and a count of wares. Turn to a
+side and the goods are listed plain — select one and a pair of arms reaches
+up to take it in hand, its paper tag swinging into view with the plain facts
+of what it is, who made it, and what it asks of the player; the merchant
+speaks the full disclosure when the player moves to take it home, answered
+with response lines like any other conversation in the Vale. A ware taken
+home travels packed, into the ornament box in the player's dwelling; hung
+upon the hearth tree there, it wakes and works. When a new version of an
+installed ware appears in the index, a raven brings word, the same way ravens
+already carry sync news.
 
 Behind that screen there is almost nothing: a JSON index file in a public
 GitHub repository, one entry per ware pointing at an author's repo and its
@@ -388,18 +391,42 @@ brave, and the tier label displayed identically in both paths. Tier 2 wares
 are never one-click from either path — explicit URL, explicit confirmation,
 the docker-compose-from-a-stranger bar §2i sets.
 
-### 8b. The market screen
+### 8b. The carousel stall
 
-Player-facing, therefore in-world, end to end. The Bazaar is a walkable
-town-scene reached from the square: a row of stalls under one sky, each with
-its merchant behind the boards and its goods set out, grouped by ware type
-and browsable while offline from the cached index. The row renders in the
-town's canonical register — stalls at the same 5x density as the square's
-buildings, under the canonical sky, with the hero at his town scale. The
-Bazaar is the same village seen from its market lane, not a close-up of one;
-town consistency wins over any staged-for-legibility variant. On a narrow
-screen the row folds into the same two-column town grid the app already uses
-at phone widths — the stalls stack in pairs, nothing redesigned.
+Player-facing, therefore in-world, end to end. The Bazaar is one stall, not
+a row. Snuff's stall stands in a small town-scene reached from the square,
+in the town's canonical register — the stall at the same 5x density as the
+square's buildings, under the canonical sky — and browsable while offline
+from the cached index. The stall has four sides and the player walks around
+it: the sides are the tabs, one per kind of ware — dyes (themes), doctrines
+and roads (program packs), oddities (behavior wares), bells (sound kits) —
+and left and right arrows, drawn as in-world affordances at the stall's
+corners, rotate the view to the next face. An earlier draft made the Bazaar
+a walkable row of four stalls; the row read as a submenu of four entities,
+and one quirky entry point with navigable faces is fewer layers and more
+place. On a narrow screen nothing redesigns: each side is already a header
+band over a list (below), and the arrows keep to the band's edges, in thumb
+reach.
+
+One principle governs motion here, named so the rest of the plan can cite
+it — **the decoration rule: animation decorates a state change; it never
+gates one.** Press an arrow and the side's content switches instantly — the
+new face's list is live the moment the turn is asked for — while Snuff
+walks around the corner to staff the new side, arriving in a thin disguise:
+a false mustache, a different hat, deliberately transparent. The running
+gag is that every trade in the Bazaar is Snuff, and the game never says so.
+The walk, the arms, the hanging beat at the tree — all of them play over a
+switch that has already happened. The one place an animation's duration
+usefully covers real work is the plugin-load mask (§7, §8c), where the
+loader genuinely labors behind the beat; that exception is kept
+deliberately and stays the only one.
+
+Snuff is an outland scrivener with Wick's own face in different dress. Wick
+refuses to speak of him, and Wick's one catty line on the subject — a
+scrivener, they say, from beyond; check the margins before you swear by
+anything — doubles as the Bazaar's check-the-margins trust warning, worn as
+character. On the doctrine side Snuff appears as himself; on every other
+side the disguise fools no one and is not meant to.
 
 One rule governs every plugin-management surface, here and at the hearth
 tree: **the crucial facts are always legible, in plain shared language.** A
@@ -410,25 +437,29 @@ permissions. The fiction decorates those facts; it never obscures them. Full
 costume is reserved for playing the game — managing *how* you play may break
 the fourth wall, and wherever costume and clarity pull apart, clarity wins.
 
+Ware browsing, under that rule, is a plain list. The side itself — canopy,
+boards, Snuff behind them — is a header band; beneath it, a scrollable list
+of the side's wares with tag and keyword filter chips, the same filter
+idiom the workout screens already use. Each row carries the contributor's
+pixel icon, the name, a one-line description, the version, the last
+release, and the tier in words. Selecting a ware, a long pair of arms
+reaches up from the bottom of the screen and takes it in hand — the paper
+tag swings out with the full plain facts, and Snuff offers a half-line of
+patter while the player turns it over; he is ceremony and character, never
+a gate in front of basic information. The disclosure-at-commitment beat and
+the bridge lines below are unchanged.
+
 Copy in the register the game already speaks:
 
-- The screen: **"The Bazaar Row"** — "Traders from beyond the Vale — every
-  stall hangs its board."
-- A stall: one ware type — "The Dyer's Tent" (themes), "The Scrivener's
-  Stall" (doctrines and programs), "The Tinker's Bench" (behavior wares),
-  "The Bellmaker's Cart" (sound kits). The signboard carries the trade and an
-  in-world count — "Dyes — five wares", "Scrolls — four" — and nothing more;
-  the listing lives on the goods themselves, not on the sign.
-- The Scrivener's Stall is run by Wick's estranged brother: an outland rival
-  with Wick's own face in different dress. Wick refuses to speak of him, and
-  Wick's one catty line on the subject — a scrivener, they say, from beyond;
-  check the margins before you swear by anything — doubles as the Bazaar's
-  check-the-margins trust warning, worn as character.
-- Goods are directly handleable. Browsing is tactile: tap a good and it
-  comes to hand, its paper tag swinging into view with the full plain facts
-  the rule above requires. The merchant offers a half-line of patter while
-  the player turns things over — he is ceremony and character, never a gate
-  in front of basic information.
+- The screen: **"The Bazaar"** — "One stall, four trades — walk it round;
+  every side hangs its board."
+- A side: one ware type — "Dyes" (themes), "Doctrines & Roads" (programs),
+  "Oddities" (behavior wares), "Bells" (sound kits). The side-board carries
+  the trade and an in-world count — "Dyes — five wares", "Scrolls — four" —
+  and nothing more; the listing lives in the list, not on the board. Fresh
+  chalk marks an arrow or a side-board when an unvisited side holds
+  something new — "Dyes — five, one fresh-chalked" — and weathers away once
+  the player has turned to it.
 - The merchant speaks the full disclosure at the commitment threshold —
   after "Take it home," before the parcel is wrapped — in the same window
   every other conversation in the Vale uses: name, maker ("crafted by"),
@@ -448,8 +479,14 @@ Copy in the register the game already speaks:
   ornament box (§8c). The walk home remains available but is never required
   for the first purchase to make sense. "What does 'first tier of trust'
   mean?" and "Another day, trader." round out the lines. Taking a ware home
-  never activates it; nothing bought at a stall acts until it hangs on the
-  tree.
+  never activates it; nothing bought at the stall acts until it hangs on
+  the tree.
+- The stall's back side is the escape hatch (§8a): install-from-URL. Bare
+  crates, no signage — "from a named road" lives here now, and the carter
+  leaning on the crates (Snuff under a carter's cap, the thinnest of his
+  disguises) speaks the line that is both discovery and the path's trust
+  warning: "Come by no stall, this one. Name the road it traveled and I'll
+  haul it in — but I carry crates; I don't vouch for them."
 - An incompatible or broken ware: "This ware was made for another season of
   the Vale. The trader must mend it." — the §2h break-loudly rule, worn as
   copy. Never a silent absence.
@@ -466,7 +503,7 @@ real structural limbs rather than a solid leaf cone — wares hang from actual
 branches, and new limbs extrude at plant-node-like angles as the collection
 grows, a little light procedural math. The rule the tree embodies fits in one
 line: what hangs upon the tree works; what sleeps in the box only sleeps. The
-stalls fill the ornament box — the tree is where a ware wakes. This replaces
+stall fills the ornament box — the tree is where a ware wakes. This replaces
 any shelf- or list-shaped lifecycle screen: enablement is not a toggle in a
 row of rows, it is an ornament hung.
 
@@ -477,9 +514,13 @@ carrying the same plain facts the stall's tag shows (§8b). On the right, a
 detail list of every owned ware with its state in Vale speech — "upon the
 tree", "in the box", "being hung…" — and choosing a ware hangs it or lifts
 it down. The hanging is proper
-work: a pair of pixel hands in the player's own skin tone carries the
-ornament up and sets it on a branch, and that animation is the plugin load
-mask (§7) — the loader runs behind the very beat the player is watching, so
+work, done by the player's own reach: the same long pair of arms that takes
+a ware in hand at the stall rises from the bottom of the screen, carries
+the ornament up, and sets it on a branch — the player is the hands on every
+screen, and no little hero on a stool does the work for them. That
+animation is the plugin load mask (§7) — the one place where an animation's
+duration covers real work, the kept exception to §8b's decoration rule —
+so the loader runs behind the very beat the player is watching and
 activation never shows a spinner. Lifting a ware down rewinds the same motion
 while the auto-cleanup lifecycle tears its registrations down. Returning a
 ware entirely — uninstall — keeps its line, "Return the ware," from the same
@@ -490,16 +531,28 @@ The tree also gives capacity a shape a shelf never had: branches grow
 forever. Unbounded capacity is canon — where a shelf fills and ends, the
 tree puts out another limb and the box deepens, and there is no hook count
 and no cap. Legibility at scale is handled by the tree telling the summary
-truth and the list the itemized truth: ornaments cluster by stall on a
+truth and the list the itemized truth: ornaments cluster by trade on a
 shared bough, a tapped cluster fans its wares out for handling, and when the
-box outgrows depiction it shows a fuller sprite with a chalked count on the
-slats — honest at any size, with curation never forced by the furniture.
+box outgrows depiction it simply shows a fuller sprite — honest at any size,
+with curation never forced by the furniture. The box carries no chalked
+tally: itemizing is the list's job, and a count painted on the slats would
+duplicate it as decoration.
+
+Four details of the scene, settled in review, stand unchanged: a ware that
+breaks in the night falls from the tree and lies dark at its foot, its list
+line naming the reason; a ware made for a coming season of the Vale hangs
+as a closed bud, owned but not yet wakeable; the dye branch bears its
+little wooden tag — one skein, by law of the tree; and update news reaches
+the detail list as raven-word rows — "a raven left word — v1.5.0 waits at
+the stall."
 
 The look of all of this is settled in mockups rather than prose:
-`docs/mockups/bazaar-row-v2.png` (the row), `bazaar-row-mobile.png` (the same
-row at phone width), `bazaar-stall.png` (the step-up dialogue), and
-`dwelling-tree.png` (the hearth tree) are the visual reference for this
-section.
+`docs/mockups/bazaar-carousel.png` (the stall and its sides),
+`bazaar-carousel-turn.png` (the turn — Snuff rounding the corner, the new
+side already live), `bazaar-carousel-mobile.png` (the same screen at phone
+width), and the reworked `bazaar-stall.png` (a side's header band, list,
+and held-ware beat) and `dwelling-tree.png` (the hearth tree) are the
+visual reference for this section, replacing the retired row set.
 
 ### 8d. Ravens carry word
 
@@ -508,11 +561,12 @@ Sync already speaks through ravens ("The ravens returned: N new deeds",
 join the same postal service: the background loop's index refresh compares
 release tags, and when an installed ware has a newer compatible release, the
 raven's news includes "A raven brings word of new wares at the Bazaar" — and
-in the row itself, the raven perches over the stall it brings word of. The
-raven names versions plainly — "v1.5.0 hangs on the cart; yours is v1.4.1"
+at the stall itself, the raven perches on the corner facing the side its
+news concerns. The
+raven names versions plainly — "v1.5.0 hangs at the stall; yours is v1.4.1"
 — because update news is plugin management, and §8b's rule holds: the fact
 stays legible even in a character's mouth.
-Updating remains a deliberate act at the ware's stall — no silent auto-update,
+Updating remains a deliberate act at the ware's side of the stall — no silent auto-update,
 because tier 1 and 2 wares are trusted per version, and because a player whose
 game changed overnight without their hand on it has lost something this game
 cares about. A ware whose new release requires a newer `api_version` than the
@@ -630,11 +684,11 @@ town-slot harnesses; locale; anything requiring the voice-catalog extraction.
 
 **Phase 5 — the Bazaar.** The index repo with CI checks; the in-game client
 (index fetch, install, update, uninstall, tier and permission disclosure);
-the Bazaar row with its stalls and merchant dialogue; the hearth tree in the
-dwelling; ravens carrying update word; install-from-URL. Player observes: the
-Bazaar row opens in the town — read the boards, step up to a stall, take a
-ware home, hang it upon the hearth tree, and later a raven brings word of new
-wares. Excludes: ratings, download counts, accounts, auto-update, any
+the carousel stall with its four sides and Snuff's dialogue; the hearth tree
+in the dwelling; ravens carrying update word; install-from-URL at the
+stall's back side. Player observes: the Bazaar opens in the town — walk
+around the stall, turn its sides, take a ware home, hang it upon the hearth
+tree, and later a raven brings word of new wares. Excludes: ratings, download counts, accounts, auto-update, any
 server-side anything.
 
 **Phase 6 — community tooling.** The template repo, the `plugin new`
@@ -680,12 +734,13 @@ an `extras` JSON column — blocks the provider and chart harnesses and is
 easiest to settle before phase 4 starts. `PLUGINS.md` recommends the superset;
 this plan has no reason to disagree, but it is not settled until you settle it.
 
-**When does the Bazaar row open?** A row with one stall and three wares — all
-authored by you — is either charming (a quiet market that fills as the Vale
-grows) or embarrassing (an empty mall). Ship the row in phase 5 regardless,
-or hold it until some threshold of wares exists and let install-from-URL
-carry early adopters? The hearth tree does not wait on this answer either
-way — wares that arrive by hand-copied folder or by URL still need hanging.
+**When does the Bazaar open?** A stall with one stocked side and three wares
+— all authored by you — is either charming (a quiet market that fills as the
+Vale grows) or embarrassing (an empty mall). Ship the stall in phase 5
+regardless, or hold it until some threshold of wares exists and let
+install-from-URL carry early adopters? The hearth tree does not wait on this
+answer either way — wares that arrive by hand-copied folder or by URL still
+need hanging.
 
 **The Undercroft as the proof.** `PLUGINS.md` §5 argues core should ship at
 least one whole subsystem through a harness, because a seam only stays real if
