@@ -34,8 +34,11 @@ an implementing agent reports a result, reproduce it before believing it.
 2. **Never touch `data/`** — it holds Joe's real save and real intervals.icu
    credentials. Test against a scratch `DATA_DIR`, never the default.
 3. **Any change under `static/` requires bumping `?v=N` on *every* asset URL in
-   `static/index.html`.** Currently `?v=126`. A missed bump ships stale JS and
-   **no test catches it.**
+   `static/index.html`.** Currently `?v=129`. A missed bump ships stale JS and
+   **no test catches it.** The bump also has a **pinned counterpart**:
+   `tests/frontend_browser.test.mjs` asserts the exact `assetVersion`, and that
+   assertion lives inside a test named for WCAG contrast — so forgetting it
+   fails a colour test with no mention of caching anywhere in the output.
 4. **Commit or push only when Joe asks.** Branch for anything non-trivial.
 5. **Persisted data is untrusted input** — malformed rows degrade to unknown,
    never raise. `/api/state` is the boot endpoint; failing it means the game does
@@ -48,8 +51,8 @@ an implementing agent reports a result, reproduce it before believing it.
 
 ```
 .venv/bin/ruff check .                      # expect: All checks passed!
-.venv/bin/python tests/smoke.py             # expect: SMOKE PASSED — 257 checks green
-npm run test:frontend                       # Node DOM harness — expect 21 pass, 0 fail
+.venv/bin/python tests/smoke.py             # expect: SMOKE PASSED — 262 checks green
+npm run test:frontend                       # Node DOM harness — expect 27 pass, 0 fail
 npm run test:browser                        # headless Chromium — expect 63 pass, 0 fail
 for f in tests/test_*.py; do .venv/bin/python "$f" >/dev/null || echo "FAILED: $f"; done
 ```

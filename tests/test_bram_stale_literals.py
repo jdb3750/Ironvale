@@ -1,4 +1,6 @@
 import json
+import re
+from pathlib import Path
 from typing import Optional
 
 from counsel_giver_test_support import (
@@ -11,6 +13,22 @@ from counsel_giver_test_support import (
 )
 
 from app import programs, quests
+
+ROOT = Path(__file__).resolve().parents[1]
+GIVER_JS = (ROOT / "static" / "js" / "giver.js").read_text(encoding="utf-8")
+TOWN_JS = (ROOT / "static" / "js" / "town.js").read_text(encoding="utf-8")
+
+# Vocabulary that belongs to Grunhilda's weight room, not Bram's wall. His
+# retirement (§0c) was from setting tasks, not from being a lifter — he was
+# never one. A v0.30.1 sweep corrected seven such literals; these are the
+# live pools that survived it.
+LIFTING_WORDS = ("barbell", "deadlift", "load", "carry", "iron", "plates", "bell")
+
+
+def _block(text: str, pattern: str) -> str:
+    match = re.search(pattern, text, re.S)
+    assert match is not None, f"pattern not found: {pattern}"
+    return match.group(1)
 
 
 def seed_legacy_bram_quest(status: str = "active") -> int:
@@ -168,6 +186,35 @@ def bram_identity_and_history_remain_registered() -> None:
     }
 
 
+def bram_greeting_pool_has_no_lifting_vocabulary() -> None:
+    # Given: the pool Bram greets from when an old wall oath is still active.
+    greetings = _block(GIVER_JS, r"const GREETINGS = \{(.*?)\n\};")
+    bram_lines = _block(greetings, r"bram: \[(.*?)\]").lower()
+
+    # Then: nothing in it talks about carrying, barbells or deadlifts.
+    for word in LIFTING_WORDS:
+        assert word not in bram_lines, f"greeting pool still says '{word}': {bram_lines!r}"
+
+
+def bram_completion_reaction_has_no_lifting_vocabulary() -> None:
+    # Given: what Bram says when a legacy climb quest is completed.
+    reactions = _block(GIVER_JS, r"const REACTIONS = \{(.*?)\n\};")
+    complete_block = _block(reactions, r"complete: \{(.*?)\n  \},\n  abandon:")
+    bram_lines = _block(complete_block, r"bram: \[(.*?)\]").lower()
+
+    # Then: the reward for finishing a wall oath isn't a barbell's approval.
+    for word in LIFTING_WORDS:
+        assert word not in bram_lines, f"completion pool still says '{word}': {bram_lines!r}"
+
+
+def bram_unsworn_deed_bubble_credits_climbing_not_iron() -> None:
+    # Given: the town bubble Bram raises when he credits an unsworn climb.
+    bram_bubble = _block(TOWN_JS, r"bld-bram'.*?lines: \[(.*?)\]").lower()
+
+    # Then: it speaks to ground or wall gained, not iron moved.
+    assert "iron" not in bram_bubble, f"unsworn bubble still says 'iron': {bram_bubble!r}"
+
+
 SCENARIOS = (
     ("legacy climb completion", legacy_bram_quest_matches_climbing),
     ("honor activity type", legacy_bram_honor_activity_is_climbing),
@@ -176,6 +223,9 @@ SCENARIOS = (
     ("routine default giver", routine_without_giver_defaults_to_strength),
     ("unguided climb credit", unguided_climb_still_belongs_to_bram),
     ("permanent identity", bram_identity_and_history_remain_registered),
+    ("greeting pool voice", bram_greeting_pool_has_no_lifting_vocabulary),
+    ("completion reaction voice", bram_completion_reaction_has_no_lifting_vocabulary),
+    ("unsworn bubble voice", bram_unsworn_deed_bubble_credits_climbing_not_iron),
 )
 
 failures = []

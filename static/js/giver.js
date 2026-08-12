@@ -12,9 +12,9 @@ const GREETINGS = {
     'Iron is honest, friend. It weighs what it weighs.',
   ],
   bram: [
-    'A knight is measured by what they can carry. Shall we measure you?',
-    'The barbell is a dragon that lies very still. Slay it in sets.',
-    'Heavy is the head... and the deadlift. Mostly the deadlift.',
+    'A knight is measured by the ground they’ve won. Shall we see yours?',
+    'The wall is a dragon that never blinks. Slay it a hold at a time.',
+    'Heavy is the head... and the climb. Mostly the climb.',
   ],
   recovery: [
     'You cannot pour from a torn hamstring, dear. Sit. Breathe.',
@@ -39,7 +39,7 @@ const REACTIONS = {
   complete: {
     endurance: ['You reek of effort. Wonderful. The road speaks highly of you.', 'Back already? The miles yield to you, runner.'],
     strength: ['LOOK AT YOU. The bell sings your name — off-key, but it sings.', 'Done and done. The iron remembers the honest ones.'],
-    bram: ['The load was borne. You stand taller for it, I see it.', 'Well carried. Even the barbell seems impressed, and it hates everyone.'],
+    bram: ['The wall was answered. You stand taller for it, I see it.', 'Well climbed. Even the wall seems impressed, and it hates everyone.'],
     recovery: ['See? Softer already. The willow nods to you.', 'The debt is settled. Your joints whisper their thanks.'],
   },
   abandon: {

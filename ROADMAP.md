@@ -859,6 +859,23 @@ entries are open work with the removal path worked out.
   and gets orphaned attribution rows with no error. Per `AGENTS.md`, name the
   invariant in a comment at the boundary it protects — this is the exact shape
   that cost five truthfulness defects when the Council was refactored.
+- ~~**Reachable Bram copy still calls him a lifter.**~~ **RESOLVED 2026-08-05**
+  by review seam 12. His greeting and completion pools speak to the wall now,
+  and the unsworn-deed bubble reads *"Ground gained is ground gained, writ or no
+  writ"* — he receives unsworn **climb** credit, not iron. The rewrite kept the
+  jokes rather than replacing them: the dragon that never blinks, the "heavy is
+  the head" riff, and the wall that seems impressed and hates everyone all
+  survive with their rhythm intact.
+
+  **One change caught in review:** the rewritten maxim read *"the ground he's
+  won"* where the line it replaced said *"what they can carry"*. That sentence
+  is about knights in general, not about Bram, so the generic singular *they*
+  was deliberate — restored. Worth noting because a voice seam is the easiest
+  place for an unrelated change to ride along unnoticed; nothing failed.
+
+  `DEED_GIVER_BY_CATEGORY`'s Bram climb credit is untouched, and
+  `REACTIONS.accept.bram` stays for the dead-code seam. Original finding:
+
 - **Reachable Bram copy still calls him a lifter — the v0.30.1 sweep was
   incomplete.** Found 2026-08-04. That entry claimed seven literals and closed;
   these survived it, and they split into two different fixes:
