@@ -614,9 +614,26 @@ entries are open work with the removal path worked out.
     counts quests by giver and date, so an unguided strength deed now advances
     **Grunhilda's** lane and a mobility deed **Elowen's**, where both previously
     advanced Fenn's. Bram and Wick deeds advance no offer-producing lane at all.
-    This is more correct than before, but it leaves a real open question the seam
-    deliberately did not settle: **should an unguided deed advance *any* authored
-    lane, given it was never accepted from a schedule?** Nobody has decided that.
+    This was more correct than before, but it left a real open question the seam
+    deliberately did not settle: should an unguided deed advance *any* authored
+    lane, given it was never accepted from a schedule?
+
+    **DECIDED 2026-08-12 (Joe), and implemented.** No. *"If someone sets a
+    schedule but decides they want to do something different on a particular
+    day, they should still get credit for something — but not for completing
+    their schedule."* They keep the calendar marker, the tapestry stitch and the
+    streak; they do not consume an authored slot. Three of those four already
+    worked, so the change was one clause in `_accepted_today`: exclude
+    `kind='unguided_activity'`.
+
+    The exclusion is **provably complete** rather than a guess about what else
+    might be caught — `quests` has exactly two insert sites, and sworn claims
+    before Wick create no quest row at all. Scale worth recording: **26 of 44
+    quest rows on the live save are unguided**, so this had been inflating lane
+    consumption most of the time, not rarely. `counsel_adherence.current_week`
+    was checked and needs nothing: it joins `counsel_attributions` requiring
+    `mode='schedule'`, and an unguided completion never writes an attribution
+    row — an invariant with a test of its own.
   - ~~**Historical rows are still wrong.**~~ **BACKFILLED 2026-08-12** with
     Joe's explicit go-ahead, using `tools/backfill_unguided_givers.py`. The live
     scope was far smaller than the scratch sample implied — **2 rows in

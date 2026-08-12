@@ -51,10 +51,13 @@ def _slot_giver(slot: counsel_context.CounselScheduleSlot) -> Optional[str]:
 
 
 def _accepted_today(giver: str, current_date: str) -> int:
-    # Schedule-consumption invariant: each accepted quest advances only its giver's authored lane.
+    # Schedule-consumption invariant: each accepted quest advances only its giver's authored
+    # lane. Unguided deeds are excluded: they carry the giver's name and an accepted_at (seam
+    # 5/15), but were never accepted from a schedule, so they earn credit without consuming
+    # an authored slot (Joe's rule — effort counts, adherence to the plan is separate).
     row = db.q(
         "SELECT COUNT(*) AS n FROM quests "
-        "WHERE giver=? AND substr(accepted_at, 1, 10)=?",
+        "WHERE giver=? AND substr(accepted_at, 1, 10)=? AND kind != 'unguided_activity'",
         (giver, current_date),
     ).fetchone()
     return int(row["n"])

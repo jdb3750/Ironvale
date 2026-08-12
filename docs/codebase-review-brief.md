@@ -88,14 +88,17 @@ never closing — was the review's largest single finding.
 
 **Open, briefed below:** seams 9–14.
 
-**Open, not briefed — Joe's calls:**
+**Both of Joe's open calls were settled on 2026-08-12:**
 
-- Whether to backfill historically misattributed unguided quest rows (4 of 8 were
-  wrong in a representative sample; all reconstructible from stored details).
-  This is **live player data** — safety rule 3, needs explicit sign-off.
-- Whether an unguided deed should advance *any* authored Scheduled lane, given it
-  was never accepted from a schedule. Seam 5 changed which lane it advances but
-  deliberately did not answer this.
+- **The backfill ran** against the live save via
+  `tools/backfill_unguided_givers.py`, after a WAL-safe snapshot and a dry run.
+  Live scope was 2 rows in `ironvale.db` (both `endurance → bram`) and 0 in
+  `pog.db`; one ledger entry records it. **Note the deployed image ships no
+  `tools/`** — see §3; the tool had to be copied into the container and removed
+  after, which is the procedure any future maintenance script needs.
+- **An unguided deed no longer advances an authored Scheduled lane.** Joe's
+  rule: credit the effort, not the plan. It keeps the calendar marker, the
+  tapestry stitch and the streak, but consumes no slot.
 
 **Open, unexplained:**
 
@@ -1118,10 +1121,12 @@ change, because `AGENTS.md` and `PLUGINS.md` quote it.
   key. That is frontend work and it belongs with the routine-ownership seam.
   *(An earlier plan of mine put both instances in this seam. That was wrong —
   the shape is shared, the remedy is not.)*
-- **Whether an unguided deed should advance an authored Scheduled lane.** Open
-  question in §3, nobody has decided it, and it is not decided here.
-- **Backfilling historically misattributed rows.** Live data, needs its own
-  sign-off.
+- ~~Whether an unguided deed should advance an authored Scheduled lane.~~
+  **DECIDED 2026-08-12 and implemented:** no. It keeps the calendar marker, the
+  tapestry stitch and the streak, but does not consume an authored slot — credit
+  the effort, not the plan. See `ROADMAP.md` §3.
+- ~~**Backfilling historically misattributed rows.**~~ **DONE 2026-08-12** —
+  2 rows corrected on the live save with a snapshot and a ledger entry.
 - `static/`, and any other §3 entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
@@ -1252,8 +1257,10 @@ change, because `AGENTS.md` and `PLUGINS.md` quote it.
   its own seam. Do not refactor it here.
 - **The frontend.** If a degraded value would render badly, report it — §3
   already collects these for a frontend seam.
-- **Backfilling misattributed rows**, and **whether an unguided deed should
-  advance a Scheduled lane.** Both open, neither decided here.
+- ~~**Backfilling misattributed rows**, and **whether an unguided deed should
+  advance a Scheduled lane.**~~ Both **settled 2026-08-12**: the backfill ran
+  against the live save (2 rows), and an unguided deed no longer consumes an
+  authored slot. Neither was decided by this seam.
 - Any other §3 entry.
 
 Build → verify → **stop and report** → wait for an explicit "commit that seam."
