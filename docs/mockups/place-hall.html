@@ -353,14 +353,47 @@ var hall_lamp = {
     '..iiii..', '..iiii..', '...ii...', '..mmmm..', '...mm...',
   ],
 };
-/* Maud, the Curator — an owl in spectacles, lifted verbatim from static/js/pixel.js */
-var maud = {
-  p: { b: '#6a4e2c', B: '#8a6a40', w: '#e8e0d0', k: '#1a1410', y: '#e0a030', g: '#c9a24b', f: '#c8a878' },
+/* Maud, Curator of the Hall — her portrait, per the portrait ruling. This
+   char map is a stand-in transcribed at size from Joe's hand-drawn 32x32
+   static/art/npcs/maud/maud_portrait.png (same palette, same pixels as near
+   as a char map can carry them) — the real PNG cannot be inlined here and
+   lands with the art pass. It only APPROXIMATES Joe's art. */
+var maud_portrait = {
+  p: { b: '#9a6348', p: '#584563', d: '#3e2137', k: '#1f0e1c',
+       H: '#f5edba', g: '#8c8fae', t: '#7ec4c1', y: '#e4943a' },
   r: [
-    '................', '..bb........bb..', '..bbb......bbb..', '...bbbbbbbbbb...',
-    '..bBBBBBBBBBBb..', '..bBgggBBgggBb..', '..bgwwwgBgwwwgb.', '..bgwkwgggwkwgb.',
-    '..bgwwwgBgwwwgb.', '..bBgggByBgggBb.', '..bBBBByyyBBBb..', '..bBfBBByBBfBb..',
-    '...bffBBBBBff...', '...bBBBBBBBBb...', '....bb.bb.bb....', '................',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '...........pppppppppp...........',
+    '.........pppppppppppppp.........',
+    '.......pppHppHppHpppHpppp.......',
+    '......dppppbbppHppHppppppp......',
+    '.....dpHpHbbHbHpHbpbbbpHpp......',
+    '.....dpppppHbbbHbHbHdddddpp.....',
+    '....dpgdddddpbHbHbbdppbbgdddd...',
+    '....dgdgbbtHdpbbbbktHHtbbgddd...',
+    '...dgkgkkkkkHdtbbkHHkkkkkbgdp...',
+    '...kkgHkykkgkHdbkkHkkgkykHpdp...',
+    '..kkkpHykkkkHkdkkkkkkkHkyHgdg...',
+    '..kkkgHykkkkgkdkgkkkkkgkyHbdp...',
+    '...dkgHyykkkkHdggkHkkkkyyHgdg...',
+    '...dkgbHyykkHHdgggkHkkyyHbkgp...',
+    '...dgkgtHHHHHddttddkHHHtbkgbp...',
+    '...dpgkttHHHkddddddHkkkkkgpgp...',
+    '....dbbkkkkkgddddddgtHbbbbgp....',
+    '....ddbbbttgtHddddHtgttbbbpd....',
+    '..dddddpbbbbtHHddHHtbbbbppdddd..',
+    '.ddddddpbbbbbtHddHtbbbbbpdddddd.',
+    'dddddddppbbbbbbbbbbbbbppppdddddd',
+    'dddddpppbbbbbbbbbbbbbbpbbppppddd',
+    'dddppgbbgbbbbgbbbbbbbbbbbHppppdd',
+    'dddpbHbbbbbHbbbbbbbHbHgbbbbbpppd',
+    'dddpppgHbHbbbbgbgbgbbbbbHgbbbppp',
+    'dddddpppppppbbbbbbbbbbbbbbbbgppp',
   ],
 };
 
@@ -368,7 +401,7 @@ var SCENE_SPRITES = {
   fx_case: fx_case, fx_chartwall: fx_chartwall, fx_maptable: fx_maptable,
   fx_ironrack: fx_ironrack, fx_loom: fx_loom, fx_shelf: fx_shelf,
   fx_lectern: fx_lectern, fx_scroll: fx_scroll,
-  glyph_arch: glyph_arch, hall_lamp: hall_lamp, maud: maud,
+  glyph_arch: glyph_arch, hall_lamp: hall_lamp, maud_portrait: maud_portrait,
   walker: walker, walker_shadow: walker_shadow,
 };
 /* self-check: a ragged row would silently shift pixels, so shout about it */
@@ -447,11 +480,6 @@ var SCENE_CSS = `
   color:var(--dim-readable); font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px;
   display:flex; justify-content:space-between; gap:10px; }
 .iv .corr-hint b { color:var(--gold-bright); font-weight:400; }
-/* Maud hangs in the near corner of the frame, over open floor — never across
-   the vault, where she cut a clerestory in half */
-.iv .corridor .board-glyph { top:auto; bottom:30px; z-index:12; padding:3px 5px 2px;
-  background:rgba(8,8,14,0.88); border:1px solid #4a3d20; }
-.iv .corridor .board-glyph.glyph-maud { right:10px; }
 
 /* ---------- the phone: a fixture opened ---------- */
 .iv .standing { position:relative; margin:10px 4px 0; border:2px solid #4a3d20;
@@ -484,12 +512,24 @@ var SCENE_CSS = `
 .iv .win.fixture-win > .win-title { left:66px; }
 .iv .win .board-glyph { z-index:12; }
 .iv .win .board-glyph.glyph-back { left:6px; }
-.iv .win .board-glyph.glyph-maud { right:6px; }
-.iv .win .gbubble-wrap { position:absolute; left:2px; right:2px; width:auto;
-  bottom:calc(100% + 22px); z-index:50; }
-.iv .gbubble .fb-line { margin-bottom:0; }
-.iv .gbubble .hush { display:block; text-align:center; margin-top:6px; color:var(--dim);
-  font-family:var(--font-fine); font-size:var(--type-fine); }
+
+/* ---------- Maud's portrait + typewriter dialogue — the portrait ruling.
+   The app's own npc-head idiom (static/js/hall.js curatorWin, giver.js):
+   the 32x32 hand-drawn portrait beside the black, gold-bordered typewriter
+   box, narrating the room you are standing in. No tap-to-speak bust. */
+.iv .npchat { margin-top:10px; }
+.iv .npc-head { display:flex; gap:14px; align-items:flex-start; }
+.iv .npc-head canvas { flex-shrink:0; border:2px solid #4a3d20; background:#000; }
+.iv .npc-dialog { flex:1; min-width:0; background:#000; border:2px solid var(--gold);
+  padding:10px 12px; min-height:64px; font-family:var(--font-title); font-size:var(--type-title); }
+.iv .npc-dialog .npc-name { color:var(--gold-bright); }
+.iv .npc-dialog .npc-name .aside { color:var(--dim-readable); font-family:var(--font-fine);
+  font-size:var(--type-fine); }
+.iv .npc-dialog .dlg { margin-top:4px; color:var(--ink); line-height:1.4; }
+.iv .npc-dialog .dlg .caret { display:inline-block; width:8px; height:13px; margin-left:2px;
+  background:var(--gold-bright); vertical-align:-2px; animation:caretBlink 0.8s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity:0; } }
+.iv-phone .npc-head canvas { width:96px; height:96px; }
 
 /* ---------- the reading surfaces, carried over from static/style.css -------- */
 .iv table.rpg { width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:var(--type-body); }
@@ -535,7 +575,7 @@ var SCENE_CSS = `
 
 /* contrast floor: no caption in this scene sits under ~4.5:1 on its own ground */
 .iv .muted, .iv .board-glyph .g-cap, .iv .tap-legend, .iv .legend,
-.iv .calday .dn, .iv .board-foot, .iv .gbubble .hush, .iv .calgrid .dow,
+.iv .calday .dn, .iv .board-foot, .iv .calgrid .dow,
 .iv .stage-caption .cap { color:var(--dim-readable); }
 `;
 (function () {
@@ -683,7 +723,6 @@ var NEAR_FX = FIXTURES.filter(function (f) { return f.near; })[0];
 var TAG_CORRIDOR = 'THE CORRIDOR|Where the eight-tab bar stood. body / vitals / deeds / iron / calendar / compendium / chronicle / almanac were four button clusters over 29 stacked panels; here they are eight fixtures along one hall you walk.';
 var TAG_LOOM = 'THE NAME IS THE BUILDING|No plate floats. Each name is on a brass plaque set into the stone sill the fixture stands on &mdash; one course, one height, running the length of the hall. The gold tap-box is the drill yard&rsquo;s own idiom: the thing you are about to handle lights up.';
 var TAG_DEPTH = 'THE HALL IS A BUILDING|Boards recede, each bay carries a lit clerestory, and lamplight pools on the floor between fixtures. Depth is what makes it a place rather than a strip of icons.';
-var TAG_MAUD_QUIET = 'MAUD, HUNG AT THE DOOR|A 32px bust in the near corner, over open floor, cutting no arch and no window. Untapped she is silent.';
 var TAG_OPENED = 'THE RECORD, OPENED|Step into a fixture and its record unrolls below the hall &mdash; the corridor never leaves the screen.';
 var TAG_FOLD = 'THE FOLD|Under 760px the corridor stops scrolling sideways and stands up: the same eight fixtures, in the same order, in the two-column grid the app already uses at phone widths &mdash; a vertical hall you walk downward.';
 
@@ -715,9 +754,6 @@ function corridorHtml() {
   }
   var walkerX = FX_X0 + 4 * BAY + 22;
   return '<div class="corridor" data-seam="CORRIDOR" data-tag="' + TAG_CORRIDOR + '">'
-    + '<button class="board-glyph glyph-maud" title="ask Maud"'
-    + ' data-seam="MAUD" data-tag="' + TAG_MAUD_QUIET + '">'
-    + IV.spriteTag('maud', 32) + '<span class="g-cap">MAUD</span></button>'
     + '<div class="corr-scroll"><div class="corr-run">'
     + '<div class="c-vault" data-fill="vault"></div>'
     + '<div class="c-wall" data-fill="wall"></div>'
@@ -749,6 +785,7 @@ function desktopScene() {
     + 'You stepped into <b>the loom</b>, and the year of stitches unrolled below it. '
     + 'The hall is still up there, with the lamp still lit over the arch you walked through.'
     + '</span></div>'
+    + maudChat()
     + tapestryWinHtml(false)
     + '<div class="rec-cols">' + calendarHtml(false) + dayWinHtml() + '</div>'
     + IV.footer()
@@ -761,7 +798,7 @@ function desktopScene() {
 var TAG_STANDING = 'WHERE YOU STAND|The fixture stays on screen above the panel, cropped and dimmed by the lamplight falling off. You never lose the room: this is the loom, seen from in front of it.';
 var TAG_SURFACE = 'THE READING SURFACE|A plain .win panel &mdash; the Tapestry canvas, its legend and its counts, exactly as hall.js draws them today. The fixture is the door, not the record.';
 var TAG_BACK = 'STEP BACK OUT|A 24px archway in the &times;-close weight class with a fine caption under it. Not a BACK button: a doorway, in the corner of the panel you are reading.';
-var TAG_MAUD = 'PULL, NOT PUSH|She speaks only when tapped, and only about the room you are in. The bubble is the town&rsquo;s double-triangle idiom, tail down at her bust. Untapped, there is no bubble at all.';
+var TAG_MAUD = 'THE PORTRAIT SPEAKS|Joe&rsquo;s hand-drawn 32&times;32 portrait beside the black typewriter box &mdash; the app&rsquo;s own npc-head idiom (static/js/hall.js seats the Curator exactly this way today). She narrates the room you are standing in, the way giver screens talk. No tap-to-speak corner bust anywhere. The portrait here is a char-map stand-in transcribed from static/art/npcs/maud/maud_portrait.png &mdash; it only approximates Joe&rsquo;s art; the real PNG lands with the art pass.';
 var TAG_TABLES = 'TABLES STAY TABLES|A record you cannot read is not a better record. The grid, the rows and the numbers keep the same density and the same useful dullness they have now. Only the way in changed.';
 
 var CAT_LABELS = { run: 'run', ride: 'ride', climb: 'climb', strength: 'lift',
@@ -818,13 +855,6 @@ function tapestryWinHtml(phone) {
     + (phone
       ? '<button class="board-glyph glyph-back" title="back to the hall" data-seam="BACK" data-tag="' + TAG_BACK + '">'
         + IV.spriteTag('glyph_arch', 24) + '<span class="g-cap">CORRIDOR</span></button>'
-        + '<button class="board-glyph glyph-maud tapped" title="ask Maud" data-seam="MAUD" data-tag="' + TAG_MAUD + '">'
-        + IV.spriteTag('maud', 32) + '<span class="g-cap">MAUD</span></button>'
-        + '<div class="gbubble-wrap"><div class="gbubble">'
-        + '<span class="fb-line">A year of days, pressed flat between two covers. '
-        + 'Tap one; they like being remembered.</span>'
-        + '<span class="hush">tap her again to let her get back to her filing</span>'
-        + '</div></div>'
       : '')
     + '<div class="muted" style="margin-bottom:6px">a year of days, one stitch each, '
     + 'colored by the day&rsquo;s longest labor</div>'
@@ -835,6 +865,22 @@ function tapestryWinHtml(phone) {
     + '&middot; longest unbroken thread: <b style="color:var(--gold-bright)">19</b> days'
     + '<br><span class="muted fine">tap a stitch to inspect that day</span>'
     + '</div></div>';
+}
+
+/* Maud's portrait panel, composed into the opened-fixture view: she greets
+   and narrates the room you are in — the way giver screens talk today. Her
+   line is CURATOR_LINES.calendar, verbatim from static/js/hall.js. Phones
+   seat her below the records, like the quest givers, for the same reason
+   hall.js gives: her typewriter dialog reflows its window. */
+function maudChat() {
+  return '<div class="win tight npchat" data-seam="MAUD" data-tag="' + TAG_MAUD + '">'
+    + '<div class="npc-head">'
+    + IV.spriteTag('maud_portrait', 128)
+    + '<div class="npc-dialog">'
+    + '<div class="npc-name">Maud, Curator of the Hall <span class="aside">(an owl, somehow)</span></div>'
+    + '<div class="dlg">A year of days, pressed flat between two covers. '
+    + 'Tap one; they like being remembered.<span class="caret"></span></div>'
+    + '</div></div></div>';
 }
 
 function dayWinHtml() {
@@ -874,6 +920,7 @@ function phoneScene() {
     + '</div>'
     + tapestryWinHtml(true)
     + calendarHtml(true)
+    + maudChat()
     + IV.footer()
     + '</div>'
     + IV.dock();
@@ -889,7 +936,7 @@ IV.page({
     { label: 'TODAY', text: 'hall.js:40 &mdash; eight tab buttons in four clusters, over 29 stacked .win panels' },
     { label: 'HERE', text: 'eight fixtures along one hall; you approach one and it opens' },
     { label: 'UNCHANGED', text: 'every table, chart and canvas inside a fixture' },
-    { label: 'MAUD', text: 'a corner bust that speaks on tap, never a standing sprite with a live bubble' },
+    { label: 'MAUD', text: 'her hand-drawn 32&times;32 portrait + typewriter line, first-class — no tap-to-speak bust' },
   ],
   note: '<b>THE THESIS.</b> The Hall of Records is already <i>a place</i> in the player&rsquo;s head &mdash; '
     + 'Maud keeps it, it has rooms, and every room holds a different kind of record. On screen it is a strip of '
@@ -903,15 +950,16 @@ IV.page({
     phone: {
       title: 'Phone &mdash; 414px bezel',
       sub: 'the loom, opened: the fixture still overhead with its name in the sill, the Tapestry and the '
-        + 'calendar of deeds below it, Maud tapped in the corner, an archway back out to the hall',
-      chips: ['WHERE YOU STAND', 'THE READING SURFACE', 'STEP BACK OUT', 'PULL, NOT PUSH', 'TABLES STAY TABLES'],
+        + 'calendar of deeds below it, Maud narrating from her portrait beneath the records, '
+        + 'an archway back out to the hall',
+      chips: ['WHERE YOU STAND', 'THE READING SURFACE', 'STEP BACK OUT', 'THE PORTRAIT SPEAKS', 'TABLES STAY TABLES'],
       html: phoneScene(),
     },
     desktop: {
       title: 'Desktop &mdash; 900px viewport, scaled to fit',
       sub: 'the same room at width: eight bays of corridor across the top, the loom lit because you walked '
-        + 'into it, and its record laid out in two columns underneath',
-      chips: ['THE CORRIDOR', 'THE NAME IS THE BUILDING', 'THE HALL IS A BUILDING', 'MAUD, HUNG AT THE DOOR',
+        + 'into it, Maud greeting from her portrait, and its record laid out in two columns underneath',
+      chips: ['THE CORRIDOR', 'THE NAME IS THE BUILDING', 'THE HALL IS A BUILDING', 'THE PORTRAIT SPEAKS',
         'THE RECORD, OPENED', 'THE FOLD'],
       url: 'ironvale.local:8322 &mdash; the Hall of Records',
       html: desktopScene(),

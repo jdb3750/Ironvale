@@ -59,34 +59,28 @@
   box-shadow:2px 2px 0 rgba(0,0,0,0.5); }
 .iv .paper-tag b { color:#5a2010; font-weight:400; }
 
-/* --- the desk's near edge: a nameplate, and Wick's bust in the corner --- */
+/* --- the desk's far edge: a nameplate, and Wick's portrait beside a short
+       typewriter line — the app's own npc-head idiom (static/js/giver.js
+       SCREENS.scrivener seats him exactly this way today). Kept small and on
+       the band the plate already owns, so the up-close desk framing holds. --- */
 .iv .desk-band { display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-  margin-bottom:10px; }
+  flex-wrap:wrap; margin-bottom:10px; }
 .iv .desk-plate { border:2px solid var(--gold); background:#1a1208; color:var(--gold-bright);
   font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px;
   text-transform:uppercase; padding:3px 12px; box-shadow:3px 3px 0 rgba(0,0,0,0.55); }
 .iv .desk-plate small { display:block; margin-top:2px; color:#c0b48c; text-transform:none;
   font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
-/* the x-close weight class: a 24-36px sprite and a fine caption, never a button */
-.iv .desk-glyph { background:none; border:none; padding:2px 4px; cursor:pointer; line-height:0;
-  text-align:center; flex-shrink:0; }
-.iv .desk-glyph .g-cap { display:block; margin-top:3px; color:#c0b48c; letter-spacing:0.5px;
-  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.2; }
-.iv .desk-glyph.tapped canvas { outline:2px solid var(--gold-bright); outline-offset:1px; }
-.iv .desk-glyph.tapped .g-cap { color:var(--gold-bright); }
-/* he speaks only when tapped; the bubble opens beside him, tail pointing at him */
-.iv .wick-bubble { position:relative; max-width:330px; margin-top:1px; padding:7px 9px 8px;
-  background:var(--surface-raised); border:2px solid;
-  border-color:var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit);
-  box-shadow:4px 4px 0 rgba(0,0,0,0.6); }
-.iv .wick-bubble::after, .iv .wick-bubble::before { content:''; position:absolute; left:100%;
-  border:10px solid transparent; }
-.iv .wick-bubble::after { top:11px; border-left-color:var(--edge-lit); }
-.iv .wick-bubble::before { top:13px; border-left-color:var(--surface-raised); border-width:8px;
-  margin-left:-3px; z-index:1; }
-.iv .wick-bubble .fb-line { display:block; font-style:italic; color:var(--ink); line-height:1.35; }
-.iv .wick-bubble .fb-who { display:block; margin-top:4px; color:var(--dim-readable);
-  font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; }
+.iv .wick-chat { display:flex; gap:8px; align-items:flex-start; max-width:400px; min-width:250px;
+  flex:1; }
+.iv .wick-chat canvas { flex-shrink:0; border:2px solid #4a3d20; background:#000; }
+.iv .wick-chat .npc-dialog { flex:1; min-width:0; background:#000; border:2px solid var(--gold);
+  padding:6px 9px 7px; font-family:var(--font-title); font-size:var(--type-title);
+  box-shadow:3px 3px 0 rgba(0,0,0,0.55); }
+.iv .wick-chat .npc-name { color:var(--gold-bright); }
+.iv .wick-chat .dlg { margin-top:3px; color:var(--ink); line-height:1.4; }
+.iv .wick-chat .dlg .caret { display:inline-block; width:8px; height:13px; margin-left:2px;
+  background:var(--gold-bright); vertical-align:-2px; animation:caretBlink 0.8s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity:0; } }
 
 /* --- the floor plan of the desk --- */
 .iv-desktop .desk-floor { display:grid; grid-template-columns:206px minmax(0,1fr) 152px;
@@ -465,16 +459,45 @@
      ========================================================================= */
 
   IV.addSprites(Object.assign(stampSprites, {
-    /* Wick, as a corner bust: white tufts over a high forehead, brass
-       spectacles, scrivener's robe and collar, both hands on the desk, the
-       left one stained to the knuckle with oak-gall ink */
-    wick_bust: { p: { W:'#e4dfd0', f:'#e6c6a4', F:'#b78f68', K:'#191410', m:'#c9a24b',
-      c:'#efe8d4', p:'#4a3a66', P:'#6c5c8c', i:'#22304e' }, r: [
-      '....ffff....', '...ffffff...', '..WffffffW..', '.WWffffffWW.',
-      '.WWmKmmKmWW.', '..ffffFfff..', '..fffKKfff..', '...ffffff...',
-      '....FFFF....', '..cccccccc..', '.cppppppppc.', 'pppppppppppp',
-      'pPppppppppPp', 'pppppppppppp', 'pp.pppppp.pp', 'Ff.pppppp.fF',
-      'ff.pppppp.ff', '.f........f.', '.i..........',
+    /* Wick the Scrivener — his portrait, per the portrait ruling. This char
+       map is a stand-in transcribed at size from Joe's hand-drawn 32x32
+       static/art/npcs/wick/wick_portrait.png (same palette, same pixels as
+       near as a char map can carry them) — the real PNG cannot be inlined
+       here and lands with the art pass. It only APPROXIMATES Joe's art. */
+    wick_portrait: { p: { f:'#d79b7d', p:'#584563', F:'#9a6348', g:'#8c8fae',
+      d:'#3e2137', t:'#34859d', H:'#f5edba', r:'#9d303b', k:'#1f0e1c' }, r: [
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '.............pppppp.............',
+      '...........ppppggggpp...........',
+      '..........ppgggggggggp..........',
+      '.........ppgffggggffggp.........',
+      '........ppgffffggffffggp........',
+      '........pgffffffffffffgg........',
+      '.......ppgffffffffffffggg.......',
+      '.......ppFfFFFffffFFFffgg.......',
+      '......FpFFFfffFffFfffFffgF......',
+      '......FpFfFHkHffFfHkHFfffF......',
+      '......FpFfffffffFffffffffF......',
+      '.......pFfffffffFfffffffd.......',
+      '.......ppFFfffffFffffFFFd.......',
+      '........pFFFfffFFfffFFFd........',
+      '........pFFFffffffffFFFd........',
+      '.........pFfffrrrrfffFd.........',
+      '.........dpFffHffHfffpd.........',
+      '....ddddddppgffFFffgpppddddd....',
+      '..dddpddddFppgffffgppFdpdpdpdd..',
+      '.dddpdpppppFppggggppFttptptpdpd.',
+      'ddpdgpftfpttFppppppFttptptgtptdd',
+      'dpdgpftftftftFFFFFFttfgfgftgtppd',
+      'ddFpgpftftftftttttttfgfgfgftgtdd',
+      'dpdgpftFtFtftfgfgfgfgfgFgftgtFpd',
+      'ddFpgpftftFtFgfgfgFgFgfgftgtFpFd',
+      'dpdFpgpftftfgfgfgfgfgfgftgtFpFdd',
+      'ddpdFdgpgpfpftftftftftftgtFdFddd',
     ]},
     /* the quill: a goose feather with a barbed vane either side of the
        rachis, a bare shaft, and a cut nib still holding a bead of ink */
@@ -566,21 +589,20 @@
     return `<span class="footed ${cls || ''}"><span class="fshade"></span>${IV.spriteTag(key, px)}</span>`;
   }
 
-  /* Wick's corner: the bust alone, or the bust with what he says once tapped */
-  function wickCorner(tapped) {
-    var bubble = tapped ? `<div class="wick-bubble">
-          <span class="fb-line">&ldquo;Press the stamp, tip the glass, and I&rsquo;ll write it down.
-            No witness means seven coins in ten &mdash; I don&rsquo;t make the rule, I keep it.&rdquo;</span>
-          <span class="fb-who">Wick the Scrivener &middot; tap the bust again and he goes back to his work</span>
-        </div>` : '';
+  /* Wick's corner, per the portrait ruling: his hand-drawn portrait beside a
+     short typewriter line, small on the far-edge band beside the nameplate —
+     the desk below it stays exactly as framed. No tap-to-speak bust. */
+  function wickCorner() {
     return `<div class="desk-band">
       <div class="desk-plate">The Ledger House<small>Wick&rsquo;s desk &mdash; where a deed the ravens missed gets sworn</small></div>
-      ${bubble}
-      <div class="desk-glyph ${tapped ? 'tapped' : ''}"
+      <div class="wick-chat"
            data-seam="WICK"
-           data-tag="WICK, ON TAP|A bust in the &times;-glyph weight class. Silent until tapped &mdash; no standing sprite, no bubble left hanging open.">
-        ${IV.spriteTag('wick_bust', tapped ? 36 : 24)}
-        <span class="g-cap">${tapped ? 'Wick, asked' : 'ask Wick'}</span>
+           data-tag="THE PORTRAIT SPEAKS|Joe&rsquo;s hand-drawn 32&times;32 portrait beside the black typewriter box &mdash; the app&rsquo;s own npc-head idiom (static/js/giver.js seats Wick exactly this way today). Small, on the far-edge band beside the nameplate, so the up-close desk framing holds. No tap-to-speak bust. The portrait here is a char-map stand-in transcribed from static/art/npcs/wick/wick_portrait.png &mdash; it only approximates Joe&rsquo;s art; the real PNG lands with the art pass.">
+        ${IV.spriteTag('wick_portrait', 64)}
+        <div class="npc-dialog">
+          <div class="npc-name">Wick the Scrivener</div>
+          <div class="dlg">Press the stamp, tip the glass, and I&rsquo;ll write it down.<span class="caret"></span></div>
+        </div>
       </div>
     </div>`;
   }
@@ -700,7 +722,7 @@
       ${IV.header({ phone: false })}
       <div class="deskwrap">
         <div class="desk">
-          ${wickCorner(true)}
+          ${wickCorner()}
           <div class="desk-floor">
 
             <div class="desk-col-left">
@@ -775,7 +797,7 @@
            data-seam="FOLD"
            data-tag="THE FOLD|Nothing redesigned: the left page, ink, candle and slips fold away; today&rsquo;s page takes the width; the block sits on the near edge of the desk, glass beside it.">
         <div class="desk">
-          ${wickCorner(false)}
+          ${wickCorner()}
           <div class="desk-floor">
             <div class="ledger-book">
               <div class="lp">
@@ -827,7 +849,7 @@
       { label: 'NOTE', text: 'the text field becomes a quill writing on the line' },
       { label: 'SUBMIT', text: 'the button becomes the blot the die leaves' },
       { label: 'DELETE', text: 'the straightedge rules a line — struck from the record' },
-      { label: 'WICK', text: 'a bust at the desk corner, silent until tapped' },
+      { label: 'WICK', text: 'his hand-drawn 32&times;32 portrait + typewriter line, first-class — no tap-to-speak bust' },
     ],
     note: '<b>The thesis.</b> Today this screen is three form rows &mdash; a kind select, a minutes number field, a note text field &mdash; ' +
       'one submit button, and a list of rows with a <i>strike</i> button on each. Here they are five objects on Wick&rsquo;s desk: ' +
@@ -837,14 +859,14 @@
     frames: {
       phone: {
         title: 'Phone — 414px bezel',
-        sub: 'the desk folded to its near edge; one entry mid-strike; Wick untapped, so he says nothing',
+        sub: 'the desk folded to its near edge; one entry mid-strike; Wick&rsquo;s portrait small on the far-edge band, a line half-typed',
         chips: ['the fold', 'straightedge mid-rule', 'the block on the near edge', 'glass beside it'],
         html: phoneScene(),
       },
       desktop: {
         title: 'Desktop — 900px viewport, scaled to fit',
         sub: 'one desk, one light, seen from a high three-quarter: candle, stamp block, ink, ledger, straightedge, hourglass and the slips the ravens brought — every object standing in its own shadow',
-        chips: ['the stamp block', 'open ledger', 'the die, held and wet', 'the quill', 'the hourglass', 'ravens&rsquo; slips', 'Wick, tapped'],
+        chips: ['the stamp block', 'open ledger', 'the die, held and wet', 'the quill', 'the hourglass', 'ravens&rsquo; slips', 'Wick&rsquo;s portrait'],
         url: 'ironvale.local:8322 — the Ledger House',
         html: desktopScene(),
       },
