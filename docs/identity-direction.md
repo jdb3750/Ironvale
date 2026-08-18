@@ -18,7 +18,11 @@ it:
   generator and the nine-layer background rule. Nearly every coordinate and hex
   value in section 2 is a citation into it.
 - **`detail-pass.html`** and **`raven-sheet.png`** — the adopted iconography of
-  section 4, and the only raven frames that exist anywhere (see section 4).
+  section 4, and the only raven frames *on this branch* (see section 4). That
+  wording was "the only raven frames that exist anywhere" and it is no longer
+  true: other identity threads have since drawn their own, three visually
+  distinct birds now exist across the branches, and which one is canon is Joe's
+  call. Nothing here is repainted while that is open.
 - **`type-wordmark.html`** and **`wordmark-sheet.png`** — the drawn lettering
   Joe is redrawing from: the wordmark, the fixed screen titles and the
   illuminated capitals. Section 5 measures its glyphs.
@@ -37,8 +41,28 @@ it:
   because parchment is cut — including as a title label, per the table in
   section 1.
 
-There are no page captures on the branch. The mockups are self-contained,
-dependency-free HTML with no build step: open the file.
+**The branch does carry page captures, and this is what they are.** The mockups
+are still self-contained, dependency-free HTML with no build step — opening the
+file is always the authoritative read — but the captures exist so a reviewer can
+see a page without a browser, and so a claim in this document can be checked
+against a picture. Verified against `git ls-files docs/mockups/identity/`:
+
+| File | What it is |
+| --- | --- |
+| `<name>-desktop.png` | the whole page, one image, captured at a 1440px viewport and deviceScaleFactor 2 — so 2880px wide. One per mockup, four in all |
+| `<name>-desktop-NN.png` | the same capture cut into readable slices, `01`–`05` for `border-kit`, `detail-pass` and `material-chrome`, `01`–`06` for `type-wordmark` |
+| `<name>-thumb.png` | a 900×1400 contact print: the top 2880×4480 of the desktop capture at 3.2× down |
+| `border-kit-phone-390.png`, `border-kit-phone-414.png` | the kit at phone width, deviceScaleFactor 1 (1:1). `border-kit` is the only mockup captured at phone width so far, because it is the only one whose phone behaviour a rule now depends on (section 5, the plaque overflow rule) |
+| `raven-sheet.png`, `wordmark-sheet.png` | not page captures at all — the drawn sheets themselves, referenced above |
+| `capture.mjs` | the script that produces all of the above, re-runnable, with the viewport widths as arguments rather than constants |
+
+Two things about the phone captures are deliberately provisional. **390 and 414
+are not a settled contract** — the threads disagree, `DESIGN.md` names
+320/375/430, and Joe has the question; the widths are script arguments precisely
+so a different ruling costs one re-run. And **only `border-kit` has them.** The
+other three are desktop-only, which is a gap rather than a decision: nothing in
+this document yet turns on how `detail-pass`, `material-chrome` or `type-wordmark`
+behave at phone width.
 
 ## 1. What was decided
 
@@ -253,14 +277,29 @@ a chisel peck — stays whole and inside one tile.
 
 ### 2d. Colour: what is actually constrained
 
-**One factual correction before you pick colours.** The mockup claims every value
-in the kit comes from `assets/palettes/town_palette.png` or `base.png`, or is an
-existing token (`border-kit.html:402-404`). It does not. Both palette files are
-16×2 PNGs holding 18 distinct colours each, and none of the kit's greys or browns
-appear in either — those two files are the *sprite art* palettes for NPCs,
-buildings and town tiles (`static/js/art.js:8-26`), and the UI chrome has always
-run on its own token family in `static/style.css:45-88`, which contains no browns
-at all and no greys between `#3a3450` and `#5a526b`.
+**One factual correction before you pick colours — now made in the mockup too.**
+The mockup used to claim every value in the kit came from
+`assets/palettes/town_palette.png` or `base.png`, or was an existing token. It did
+not, and that passage has been rewritten to declare the new colours instead
+(`border-kit.html:402-404`). The count, verified by reading both PNGs and the
+token block: **57 distinct values across the four materials, of which 3 are
+sourced and 54 are new.** The three that are sourced are `--bg` `#0a0a12`
+(`static/style.css:46`, every material's `profile[0]` and `profile[7]`), `--ink`
+`#d8cfa8` (`:53`, canvas's rail marks) and `#8c8fae` (canvas's grommet stamp,
+which really is in `base.png`). Everything else — every iron grey, every oak
+brown, the stone set, the canvas olives — appears in neither palette file and is
+not a token. Both palette files are 16×2 PNGs holding 18 distinct colours each;
+they are the *sprite art* palettes for NPCs, buildings and town tiles
+(`static/js/art.js:8-26`), and the UI chrome has always run on its own token
+family in `static/style.css:45-88`, which contains no browns at all and no greys
+between `#3a3450` and `#5a526b`.
+
+The fix chosen was to **declare the new colours, not to bind them to tokens**, and
+the reason is the table below: this document already records tile colour as open
+with exactly three constraints on it. Binding chrome art to `style.css` tokens
+would contradict that, and would hand the kit a palette it was never drawn
+against. The iron greys and the oak browns are deliberate new values, inside those
+three constraints and answerable to nothing else.
 
 So you are **not** bound to `base.png` or `town_palette.png` for chrome tiles.
 What the app genuinely constrains:
@@ -468,6 +507,52 @@ materials. What is rewritten is the readings under it.
 **"Anything that can hurt you" is gone.** It was iron's `why`
 (`border-kit.html:463`) and Joe rejected it by name: it does not sound like this
 game. Iron is where work happens.
+
+**Oak has one drawing constraint, and it is measured rather than felt.** In the
+mockup the oak face sits warmer and more saturated than the scene it has to live
+inside, and the real tiles should be pulled toward that ambient. Joe is redrawing
+these; nothing in the mockup is being repainted, this is the note to draw
+against.
+
+The dusk envelope is established by the town scene's sunset pair —
+`static/art/town/sky_mountains_sunset.png` and `ground_sunset.png`, loaded by
+`.town-scene.tod-sunset` at `static/style.css:1073-1077`, which also frames the
+scene in `#4a3d20` over a `#1e2a1c` fallback (`:1055-1056`). Both tiles are tiny
+and flat — five colours each — so the ambient is not a matter of taste:
+
+| Where | Colour | Share | Hue | Saturation | Value |
+| --- | --- | --- | --- | --- | --- |
+| sunset sky | `#826560` | 34.6% | 8.8° | **26.2%** | 51.0% |
+| sunset sky | `#928b7b` | 25.7% | 41.7° | **15.8%** | 57.3% |
+| sunset sky | `#634943` | 22.3% | 11.2° | **32.3%** | 38.8% |
+| sunset sky | `#413b47` | 15.1% | 270.0° | 16.9% | 27.8% |
+| sunset ground | `#653a46` | 97.8% | 343.3° | **42.6%** | 39.6% |
+
+Mean per-pixel saturation is **23.8%** for the sky and **42.6%** for the ground;
+the sky's mean colour is `#75615c`, hue 12.4°, saturation 21.1%, value 45.8%.
+
+Oak's five face bands (`border-kit.html:466-468` — `#a97f4b`, `#8c6a3e`,
+`#6f5230`, `#5a4126`, `#4e381f`) average **hue 32.5°, saturation 57.2%, value
+46.1%**, and every single band lands between 55.6% and 60.3% saturation. So:
+
+- **Value is already right.** 46.1% against the sky's 45.8% — oak sits at the
+  ambient's brightness, which is why the problem reads as colour rather than as
+  glare.
+- **Saturation is the whole error.** Oak is **+33 points** over the sky's mean
+  per-pixel saturation and **+15** over the ground's, and it is more saturated
+  than *any* colour in either tile except the 2%-share `#895f47` (48.2%). Pull
+  the face bands to roughly **40–45%** and oak lands inside the ambient's own
+  range instead of on top of it.
+- **Hue is a secondary drift.** Oak at 32.5° is 24° yellower than the sky's
+  dominant `#826560` (8.8°) and 49° off the ground's `#653a46` (343.3°). The
+  shade bands are where to spend that: walking `#4e381f` and `#2c1f11` a few
+  degrees toward the sky's 8–12° rose costs nothing in the lit half and settles
+  the whole rail into the dusk.
+
+The lit stamp `#ab8541` (62.0%) and the seam `#33240f` (70.6%) are the two most
+saturated values in the material and should come down with the rest. Iron, stone
+and canvas do not have this problem — their profiles are already near-neutral —
+so this is an oak note, not a kit-wide one.
 
 **Canvas is the mockup's own reading, sharpened rather than replaced.** The
 mockup already has it as "anything pitched for the day and struck at dusk"
@@ -824,9 +909,13 @@ understanding that its author may never see it on his own machine.
 *there is no raven drawn anywhere in it.* `static/js/pixel.js` has no raven
 entry, `assets/` holds only `palettes/` and `templates/`, and nothing under
 `static/art/` matches the name. Ravens are the game's oldest metaphor and they
-exist only as copy, in `app.js`, `town.js`, `giver.js` and `misc.js`. The frames
-in `detail-pass.html` are the only raven the project has ever had, which is why
-`raven-sheet.png` is kept. Second, *there is no way to send one from a phone.*
+exist only as copy, in `app.js`, `town.js`, `giver.js` and `misc.js`. That is
+still true of the shipping app, and it is why `raven-sheet.png` is kept. What has
+changed since this was written is that `detail-pass.html`'s frames are no longer
+the *only* raven anyone has drawn — two other identity threads have drawn one
+each, and the canon ruling is Joe's (section 0). The rank and the reasoning below
+are unaffected: they are about the raven's job, not about which bird gets it.
+Second, *there is no way to send one from a phone.*
 `static/js/app.js:483` is the plain `SEND RAVENS` key, and
 `static/style.css:2674` sets `.footer-btns { display: none; }` inside the
 `@media (max-width: 719px)` block that opens at `:2570`, so the whole footer row
@@ -835,6 +924,37 @@ is hidden at 719px and below. The only remaining path is Settings → APIs → S
 credentials — while the status line goes on telling the player when the ravens
 last flew. That is a defect rather than a taste question, and adopting the raven
 is what fixes it.
+
+**One contrast constraint, recorded now and waiting on the canon ruling.** Three
+visually distinct ravens exist across the threads and which one is canon is Joe's
+call, so nothing here repaints anything — but the rule the drawing has to answer
+does not depend on which bird wins, so it is written down while the question is
+open. The measurements are against `--bg` `#0a0a12`, the token block at
+`detail-pass.html:17`:
+
+| Value | Where | Against `--bg` |
+| --- | --- | --- |
+| body `#26263a` | `detail-pass.html:1011` | **1.33:1** |
+| rim `#4e4e6a` | `detail-pass.html:1013`, `:1233` | **2.46:1** |
+| wing flash `#4a5a7a` | `detail-pass.html:1233` | **2.85:1** |
+| lit wing `#7186ae` | `detail-pass.html:1233` | **5.37:1** |
+
+A 16×14 bird on the void cannot carry legibility in its body fill: black corvid
+on `#0a0a12` is the right *drawing* and 1.33:1 is the arithmetic that follows from
+it. The mockup already knows this — the comment at `detail-pass.html:1005-1009`
+records lifting the body from the canon `#20202a` to `#26263a` precisely because
+the canon bird sat against a lit market stall and this one does not — and lifting
+the fill further only turns a raven into a pigeon.
+
+**So the rule is that the silhouette boundary carries the legibility, not the body
+fill: a rim ink measuring at least 3:1 against `--bg`, present in both the rest
+and the flight frames.** Stated that way it is a constraint on one value rather
+than on the whole palette, it leaves the body as dark as the bird wants to be, and
+it survives whichever raven Joe rules canon. Note what it costs the frames as
+drawn: the existing rim at 2.46:1 does not meet it, and the only value in the
+sprite that already clears 3:1 is the lit wing at 5.37:1, which appears in the
+flight frames rather than at rest. Whoever draws the canon bird resolves that;
+nobody resolves it before the ruling.
 
 Ordering, if it helps: the scrollbar first, because it is pure CSS and costs an
 afternoon, then the raven (most work, biggest payoff, fixes a defect), then the
@@ -1274,6 +1394,56 @@ Set titles keep `quanta-strike-14` at 14px per the role table, sitting in a fixe
 size-bound doctrine is untouched — nothing is resampled. And 16px is 4 × the app's
 4px rhythm (`DESIGN.md:137-142`), which is where the plaque's own numbers should
 have been all along.
+
+**4. What the plaque does when the title does not fit — measured, then ruled.**
+`white-space: nowrap` (`border-kit.html:98`) forbids wrapping, so a long title at
+phone width has to do *something*, and until now nothing said what. Measured in
+Chromium 141 at a 390px viewport, against the kit's own phone frame
+(`border-kit.html:323-328`), whose panels come out **342px** wide at `--s:2` —
+the closest thing here to a real app panel on a phone. Rule 1 spends 20px on the
+left inset, the right corner tile spends 16px, and the plaque's own
+`padding: 2px 9px` spends 18px, leaving **288px of type** — a run of 326px from
+the panel's left edge to where the right corner tile starts.
+
+At `quanta-strike-14` that is **30 characters**. At `quanta-strike-12` it is
+**35**. The longest fixed panel title the app actually ships is **`Vitals (from
+intervals.icu)`** (`static/js/hall.js:126`, 27 characters), whose plaque measures
+273px and clears the corner by 33px — so no hard-coded title in the app overflows
+at 390. The first genuine overflow is data-driven: `Amend: ${set.exercise}`
+(`static/js/giver.js:992`) resolves to `Amend: Kettlebell Clean & Press` at 31
+characters, whose plaque measures 310px and crosses into the corner tile by 4px.
+`Quest: ${quest.title}` (`giver.js:841`) and `${monster.name}` are unbounded the
+same way.
+
+The size-bound doctrine (`DESIGN.md:129-133`) rules out the obvious fix: a strike
+may not be rendered at a size it was not drawn for, so shrinking the type is legal
+only as a step to the next *native* strike, never as a scale. That leaves four
+real options, and only one of them survives:
+
+| Option | Verdict |
+| --- | --- |
+| Scale the 14 strike down to fit | **Illegal.** Resampling a strike is the one thing the doctrine forbids outright |
+| Truncate with an ellipsis | **No.** The plaque is the panel's *name*. `Amend: Kettlebell Clean…` is strictly worse than a shorter name somebody chose |
+| Let the plaque overhang the corner or the panel | **No.** It puts the title over the corner stamp, which is the corner's whole detail budget (2b, 2f), and rule 1 exists to prevent exactly that |
+| Step to the next native strike, then treat the rest as a copy bug | **Adopt** |
+
+**The rule: the plaque steps 14 → 12 when the title exceeds the plaque's measured
+run at 14, and never does anything else. It does not wrap, does not scale, does
+not truncate, and does not cross the corner tile. If a title still does not fit at
+12 — 35 characters at 390 — that is a copy defect at the source and gets shortened
+there, not absorbed by the chrome.** 12 is a native strike with a token already
+(`--font-body`, `--type-body`, `style.css:76`, `:81`), so the step costs nothing
+but a class; 10 is *not* offered as a third step, because the role table gives 10
+to labels and a 10px title stops reading as a title.
+
+Two consequences worth stating. The step is a property of the *rendered* run, not
+of the string: the same title steps at 390 and does not at 430, which is correct —
+the plaque is answering the panel it is nailed to. And 30/35 are the figures at
+390 specifically; the phone width is still open (2f tests at 390 and 360, and the
+responsive contract in `DESIGN.md` names 320/375/430), so re-measure rather than
+hard-code the character counts if the width is ruled differently. The capture
+script at `docs/mockups/identity/capture.mjs` takes the width as an argument for
+this reason.
 
 ### The illuminated capital: which paragraphs, and how it sits
 

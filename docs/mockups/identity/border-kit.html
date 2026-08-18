@@ -95,7 +95,7 @@
   background-size:8px 8px;
   box-shadow:2px 3px 0 rgba(0,0,0,.6);
   font-family:var(--f14);font-size:14px;line-height:1;color:var(--gold-bright);
-  text-transform:uppercase;letter-spacing:1px;white-space:nowrap;
+  letter-spacing:1px;white-space:nowrap;
 }
 .bk .plaque .nail{position:absolute;top:-7px;width:8px;height:8px;background-size:8px 8px;
   background-repeat:no-repeat;image-rendering:pixelated}
@@ -399,9 +399,9 @@
         best thing in the current stylesheet; the kit changes the room, not the furniture.</li>
         <li><b>Square corners, no radius, no blur.</b> The kit is more rectangular than what it replaces,
         not less.</li>
-        <li><b>The palette.</b> Every colour here is from <code>assets/palettes/town_palette.png</code>
-        or <code>base.png</code>, or is an existing token. The rim colour is literally
-        <code>--bg</code>, so panels still float on the same void.</li>
+        <li><b>The palette, corrected.</b> An earlier version of this line claimed every colour here came from <code>assets/palettes/town_palette.png</code> or <code>base.png</code> or was an existing token. That was false. <b>Three</b> of the kit's 57 values are sourced: the rim is literally <code>--bg</code> <code>#0a0a12</code> (<code>style.css:46</code>), so panels still float on the same void; canvas's rail marks are <code>--ink</code> <code>#d8cfa8</code> (<code>style.css:53</code>); and canvas's grommet <code>#8c8fae</code> really is in <code>base.png</code>.</li>
+        <li><b>The other 54 are new, deliberately.</b> Every iron grey, every oak brown, the whole stone set and the canvas olives appear in neither palette PNG and are not <code>style.css</code> tokens. Those two files are 16&times;2 <i>sprite art</i> palettes for NPCs, buildings and town tiles; the token block at <code>style.css:45-88</code> holds no browns at all. The kit is chrome, not sprite art, and it is not bound to either.</li>
+        <li><b>The three rules the new colours do answer to.</b> <code>profile[0]</code> stays <code>--bg</code>; the fill stays in the panel family near <code>--panel</code> <code>#121220</code> / <code>--panel2</code> <code>#191928</code>; gold stays off the rails. Inside those, tile colour is open on purpose &mdash; binding chrome art to tokens would hand the kit a palette it was never drawn against.</li>
         <li><b>The cast shadow</b> and the fixed vignette, unchanged.</li>
         <li><b>The fonts</b> at native pixel sizes, unchanged. <code>quanta-strike-18</code> and
         <code>-20</code> finally have a job: section headings.</li>
