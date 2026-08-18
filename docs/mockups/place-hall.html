@@ -544,6 +544,15 @@ var SCENE_CSS = `
 .iv .tapestry-scroll::-webkit-scrollbar-track { background:#0c0c14; }
 .iv .tapestry-scroll::-webkit-scrollbar-thumb { background:#4a3d20; }
 .iv .tapestry-scroll canvas { display:block; image-rendering:pixelated; }
+/* the annotation-layer depiction of one stitch's REAL tap target: stitches
+   stay 12px on the wall, but each answers to an invisible 44x44px hit region
+   (the DESIGN.md phone minimum). One is outlined here, centred on its stitch:
+   left = 26 + 50*14 + 6 - 22, top = 18 + 2*14 + 6 - 22 (col 50, row 2 of the
+   tapestry grid drawn below — a woven day). */
+.iv .tap-stage { position:relative; width:max-content; }
+.iv .stitch-hit { position:absolute; left:710px; top:30px; width:44px; height:44px;
+  box-sizing:border-box; border:2px dashed var(--gold-bright);
+  background:rgba(240,208,128,0.10); pointer-events:none; z-index:3; }
 .iv .tap-legend { display:flex; gap:8px 12px; flex-wrap:wrap; justify-content:center;
   font-family:var(--font-body); font-size:var(--type-body); color:var(--dim); margin-top:8px; }
 .iv .tap-legend .cdot { margin-right:4px; }
@@ -800,6 +809,7 @@ var TAG_SURFACE = 'THE READING SURFACE|A plain .win panel &mdash; the Tapestry c
 var TAG_BACK = 'STEP BACK OUT|A 24px archway in the &times;-close weight class with a fine caption under it. Not a BACK button: a doorway, in the corner of the panel you are reading.';
 var TAG_MAUD = 'THE PORTRAIT SPEAKS|Joe&rsquo;s hand-drawn 32&times;32 portrait beside the black typewriter box &mdash; the app&rsquo;s own npc-head idiom (static/js/hall.js seats the Curator exactly this way today). She narrates the room you are standing in, the way giver screens talk. No tap-to-speak corner bust anywhere. The portrait here is a char-map stand-in transcribed from static/art/npcs/maud/maud_portrait.png &mdash; it only approximates Joe&rsquo;s art; the real PNG lands with the art pass.';
 var TAG_TABLES = 'TABLES STAY TABLES|A record you cannot read is not a better record. The grid, the rows and the numbers keep the same density and the same useful dullness they have now. Only the way in changed.';
+var TAG_HIT = 'A STITCH&rsquo;S REAL TARGET|Stitches stay 12px on the wall &mdash; but every stitch answers to an invisible 44&times;44px hit region, the DESIGN.md phone minimum. One is outlined here in the annotation layer, centred on its stitch: tap anywhere in the square and that day opens.';
 
 var CAT_LABELS = { run: 'run', ride: 'ride', climb: 'climb', strength: 'lift',
   mobility: 'mobility', walk: 'walk/hike', swim: 'swim', other: 'other' };
@@ -858,12 +868,14 @@ function tapestryWinHtml(phone) {
       : '')
     + '<div class="muted" style="margin-bottom:6px">a year of days, one stitch each, '
     + 'colored by the day&rsquo;s longest labor</div>'
-    + '<div class="tapestry-scroll"><canvas class="tapestry-cv"></canvas></div>'
+    + '<div class="tapestry-scroll"><div class="tap-stage"><canvas class="tapestry-cv"></canvas>'
+    + '<span class="stitch-hit" data-seam="44PX" data-tag="' + TAG_HIT + '"></span>'
+    + '</div></div>'
     + '<div class="tap-legend">' + tapLegendHtml() + '</div>'
     + '<div class="road-caption">'
     + '<b style="color:var(--gold-bright)">243</b> days woven this past year '
     + '&middot; longest unbroken thread: <b style="color:var(--gold-bright)">19</b> days'
-    + '<br><span class="muted fine">tap a stitch to inspect that day</span>'
+    + '<br><span class="muted fine">tap a stitch to inspect that day &mdash; every 12px stitch answers a 44&times;44px hit region (one outlined)</span>'
     + '</div></div>';
 }
 
@@ -952,7 +964,7 @@ IV.page({
       sub: 'the loom, opened: the fixture still overhead with its name in the sill, the Tapestry and the '
         + 'calendar of deeds below it, Maud narrating from her portrait beneath the records, '
         + 'an archway back out to the hall',
-      chips: ['WHERE YOU STAND', 'THE READING SURFACE', 'STEP BACK OUT', 'THE PORTRAIT SPEAKS', 'TABLES STAY TABLES'],
+      chips: ['WHERE YOU STAND', 'THE READING SURFACE', 'A STITCH&rsquo;S REAL TARGET', 'STEP BACK OUT', 'THE PORTRAIT SPEAKS', 'TABLES STAY TABLES'],
       html: phoneScene(),
     },
     desktop: {
@@ -960,7 +972,7 @@ IV.page({
       sub: 'the same room at width: eight bays of corridor across the top, the loom lit because you walked '
         + 'into it, Maud greeting from her portrait, and its record laid out in two columns underneath',
       chips: ['THE CORRIDOR', 'THE NAME IS THE BUILDING', 'THE HALL IS A BUILDING', 'THE PORTRAIT SPEAKS',
-        'THE RECORD, OPENED', 'THE FOLD'],
+        'THE RECORD, OPENED', 'A STITCH&rsquo;S REAL TARGET', 'THE FOLD'],
       url: 'ironvale.local:8322 &mdash; the Hall of Records',
       html: desktopScene(),
     },
