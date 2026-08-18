@@ -201,27 +201,27 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv-phone .stage { margin-top:-88px; }
 .iv .dummy { display:flex; flex-direction:column; align-items:center; }
 .iv .dummy-fig { position:relative; }
-.iv .plinth-top { position:relative; height:10px; background:linear-gradient(180deg,#7a7a88,#5a5a68); border:2px solid; border-color:#9a9aa8 #3a3a44 #2c2c34 #8a8a98; }
+.iv .plinth-top { position:relative; height:10px; background:linear-gradient(180deg,#7b7264,#5b5244); border:2px solid; border-color:#9c9484 #3f3a31 #312c23 #8c8374; }
 /* the stone LIP: an 8px dead zone between the dummy's calves (muscle taps)
    and the spin band below — a missed spin tap lands on inert stone, never
    falls through to nearest-muscle resolution */
-.iv .plinth-lip { height:8px; background:linear-gradient(180deg,#7a7a88,#5a5a68); border:2px solid; border-color:#9a9aa8 #3a3a44 #2c2c34 #8a8a98; }
+.iv .plinth-lip { height:8px; background:linear-gradient(180deg,#7b7264,#5b5244); border:2px solid; border-color:#9c9484 #3f3a31 #312c23 #8c8374; }
 /* the SPIN BAND: the plinth's turn control, an honest 44px-tall stone latch
    (DESIGN.md's binding minimum) with the worn arrows grown to legible size */
 .iv .plinth-spin { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 12px;
-  cursor:pointer; background:linear-gradient(180deg,#62626e,#46464e); border:2px solid; border-color:#8a8a98 #30303a #26262e #72727e;
+  cursor:pointer; background:linear-gradient(180deg,#645b4a,#484034); border:2px solid; border-color:#8c8374 #353027 #2a2620 #746b5a;
   font-family:var(--font-fine); }
 .iv .plinth-spin .spin-arrow { position:static; transform:none; font-size:16px; }
-.iv .plinth-spin .spin-engrave { font-family:var(--font-fine); font-size:10px; letter-spacing:2px; color:#33333d; text-shadow:0 1px 0 #9a9aa8; }
+.iv .plinth-spin .spin-engrave { font-family:var(--font-fine); font-size:10px; letter-spacing:2px; color:#38332a; text-shadow:0 1px 0 #9c9484; }
 /* worn arrows chiseled into the stone: the plinth's own turn affordance */
 .iv .spin-arrow { position:absolute; top:50%; transform:translateY(-50%); font-size:10px; line-height:1;
-  color:#33333d; text-shadow:0 1px 0 #a2a2b0; }
+  color:#38332a; text-shadow:0 1px 0 #a49c8c; }
 .iv .spin-arrow.a-left { left:7px; }
 .iv .spin-arrow.a-right { right:7px; }
-.iv .plinth-base { position:relative; height:14px; background:linear-gradient(180deg,#62626e,#46464e); border:2px solid; border-color:#8a8a98 #30303a #26262e #72727e; }
+.iv .plinth-base { position:relative; height:14px; background:linear-gradient(180deg,#645b4a,#484034); border:2px solid; border-color:#8c8374 #353027 #2a2620 #746b5a; }
 /* FRONT / BACK engraved into the plinth stone — letters in the bevel tones, no floating chips */
 .iv .plinth-engrave { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-fine); font-size:10px; letter-spacing:2px; color:#33333d; text-shadow:0 1px 0 #9a9aa8; }
+  font-family:var(--font-fine); font-size:10px; letter-spacing:2px; color:#38332a; text-shadow:0 1px 0 #9c9484; }
 .iv .stage-caption { text-align:center; margin:10px auto 0; max-width:440px; position:relative; z-index:1; }
 .iv .stage-caption .cap { display:inline-block; background:rgba(8,8,14,0.82); border:1px solid #4a3d20; padding:4px 10px; color:var(--dim-readable); }
 .iv .stage-caption .cap b { color:var(--ink); font-weight:400; }
@@ -651,7 +651,7 @@ const SPRITES = {
   /* hand-authored: Grunhilda's yard forge — stone hearth, coals, anvil.
      Her standing sprite left the yard: she now lives as her real hand-drawn
      portrait on the board (GRUN_PORTRAIT below). */
-  yard_forge: { p: { s: '#5a5a68', S: '#7a7a88', k: '#181820', o: '#e07030', y: '#f0d060', m: '#3a3a46', i: '#8a8a9a', I: '#a8a8b8', w: '#6a4e2c' }, r: [
+  yard_forge: { p: { s: '#5b5244', S: '#7b7264', k: '#181820', o: '#e07030', y: '#f0d060', m: '#3a3a46', i: '#8a8a9a', I: '#a8a8b8', w: '#6a4e2c' }, r: [
     '...mm.....................', '...mm.....................', '..mmmm....................',
     '..SSSSSSSSSS..............', '..SssSSSSssS..............', '..SSSSSSSSSS..............',
     '..SSkkkkkkSS..............', '..SSkkookkSS..............', '..SSkoyyokSS....IIIIIIII..',
