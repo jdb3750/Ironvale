@@ -758,7 +758,10 @@ canvas { image-rendering: pixelated; }
         </div>
       <!-- Snuff: Wick's face in different dress (plan §8b) — a portrait-format
            char map derived from pixel.js's wick portrait, one integer scale;
-           he steps back into frame, so the map is clipped at the pane edge -->
+           he steps back into frame, so the map is clipped at the pane edge.
+           Not a pure 2x doubling of the wick rows: the five rim-shading cells
+           on the hood's edge and the extended collar (the bottom two rows) are
+           deliberate additions, not drift — leave them be. -->
       <div class="sl-clip" style="left:0; top:26px; width:330px; height:384px">
         <div class="sl-in" style="left:-84px; top:0"><canvas data-sprite="snuff_portrait_bells" width="384" height="384" style="width:384px;height:384px;image-rendering:pixelated"></canvas></div>
       </div>

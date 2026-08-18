@@ -713,6 +713,13 @@ canvas { image-rendering: pixelated; }
     <div class="tree-split">
 
     <div class="tree-pane">
+      <!-- pixel densities — one integer scale per scene layer, and the split
+           is DELIBERATE (design review): a background structural object reads
+           coarser than the goods the hands handle —
+           tree layer (the hearth tree, background structural object)  8x
+           bud layer (the closed bud on its branch)                    5x
+           goods layer (hung ornaments, charms, box wares)             4x desktop / 3x phone
+           player layer (your reaching arms)                           4x desktop / 3x phone -->
       <div class="scene-label">The Hearth Tree<small>what hangs upon it, works</small></div>
       <div class="tree-art2">
         <canvas data-sprite="hearth_tree2" width="336" height="400" style="width:336px;height:400px;image-rendering:pixelated"></canvas>
