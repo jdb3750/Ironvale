@@ -531,7 +531,7 @@ and flat — five colours each — so the ambient is not a matter of taste:
 Mean per-pixel saturation is **23.8%** for the sky and **42.6%** for the ground;
 the sky's mean colour is `#75615c`, hue 12.4°, saturation 21.1%, value 45.8%.
 
-Oak's five face bands (`border-kit.html:466-468` — `#a97f4b`, `#8c6a3e`,
+Oak's five face bands (`border-kit.html:467-469` — `#a97f4b`, `#8c6a3e`,
 `#6f5230`, `#5a4126`, `#4e381f`) average **hue 32.5°, saturation 57.2%, value
 46.1%**, and every single band lands between 55.6% and 60.3% saturation. So:
 
