@@ -152,22 +152,32 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   background:#2e2a1c; box-shadow:0 3px 0 #3a2c10, 0 4px 0 rgba(0,0,0,0.5); cursor:pointer; }
 
 /* ================= THE DRILL YARD, drawn as a scene ================= */
-.iv .yard { position:relative; border:2px solid #4a3d20; margin:12px 4px 4px; image-rendering:pixelated; }
+.iv .yard { position:relative; border:2px solid #4a3d20; margin:8px 4px 4px; image-rendering:pixelated; }
 /* the sky is the TOWN's sky: the same sunset tileset the town swaps in at
    18:00 (static/art/town/sky_mountains_sunset.png, 96x64 art at 3x = 288x192,
    ridge at the bottom edge — town.css .town-scene grammar). The yard inherits
-   the town clock; drawn here at dusk. Band trimmed vs last round so the forge
-   and dummy ride higher on phone. */
-.iv .yard .sky { height:126px; position:relative; overflow:hidden; background-color:#4a3038;
+   the town clock; drawn here at dusk. RESTAGED per the adversarial review:
+   the sky is now a compact HEADER BAND — the room shrank so the work surface
+   could rise into the first viewport. On phone the band carries the location
+   plate and the compact forge; the dummy stands tight under it, head at the
+   band's top edge. */
+.iv .yard .sky { height:88px; position:relative; background-color:#4a3038;
   background-image:url(data:image/png;base64,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);
   background-repeat:repeat-x; background-position:bottom left; background-size:288px 192px; }
-.iv-desktop .yard .sky { height:150px; }
+.iv-desktop .yard .sky { height:110px; }
 .iv .yard .ground { position:relative; padding:0 8px 12px; background-color:#3d3122; border-top:4px solid #2a2028; }
+
+/* the location plate rides the band (the win plaque's job, restaged) */
+.iv .loc-plate { position:absolute; top:6px; left:8px; z-index:2; background:rgba(8,8,14,0.8); border:1px solid #4a3d20;
+  padding:2px 10px; color:var(--gold-bright); font-family:var(--font-title); font-size:var(--type-title); letter-spacing:1px; text-transform:uppercase; }
 
 /* things standing at the horizon poke up into the sky */
 .iv .hrow { display:flex; justify-content:flex-start; align-items:flex-end; margin-top:-52px; position:relative; z-index:2; }
 .iv-desktop .hrow { position:absolute; left:8px; top:-52px; margin-top:0; }
-.iv-desktop .stage { margin-top:-52px; }
+.iv-desktop .stage { margin-top:-110px; }
+/* phone: the compact forge lives IN the band, bottom-left */
+.iv-phone .sky .forge-spot { position:absolute; left:6px; bottom:2px; z-index:2; }
+.iv-phone .sky .forge-spot .splate { max-width:96px; }
 .iv .spot { text-align:center; position:relative; }
 /* the town-plate pattern: name + a short line, never wider than the object */
 .iv .spot .splate { font-family:var(--font-body); font-size:var(--type-body); line-height:1.1; color:var(--gold-bright);
@@ -181,14 +191,28 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   animation:coalPulse 1.6s steps(3) infinite; }
 .iv .coal-glow.blazing { left:6px; top:18px; width:48px; height:34px;
   background:radial-gradient(ellipse at center, rgba(255,200,110,0.8) 0%, rgba(250,150,70,0.3) 55%, rgba(250,150,70,0) 78%); }
+.iv .coal-glow.compact { left:7px; top:13px; width:16px; height:11px; }
+.iv .coal-glow.compact.blazing { left:3px; top:9px; width:24px; height:17px; }
 @keyframes coalPulse { 0%,100% { opacity:0.55; } 50% { opacity:1; } }
 
 /* the training dummies */
 .iv .stage { display:flex; justify-content:center; align-items:flex-end; gap:26px; margin-top:10px; position:relative; z-index:1; }
+/* phone: the dummy stands AT the horizon — head at the band's top edge */
+.iv-phone .stage { margin-top:-88px; }
 .iv .dummy { display:flex; flex-direction:column; align-items:center; }
 .iv .dummy-fig { position:relative; }
 .iv .plinth-top { position:relative; height:10px; background:linear-gradient(180deg,#7a7a88,#5a5a68); border:2px solid; border-color:#9a9aa8 #3a3a44 #2c2c34 #8a8a98; }
-.iv .plinth-top.spin { height:16px; }
+/* the stone LIP: an 8px dead zone between the dummy's calves (muscle taps)
+   and the spin band below — a missed spin tap lands on inert stone, never
+   falls through to nearest-muscle resolution */
+.iv .plinth-lip { height:8px; background:linear-gradient(180deg,#7a7a88,#5a5a68); border:2px solid; border-color:#9a9aa8 #3a3a44 #2c2c34 #8a8a98; }
+/* the SPIN BAND: the plinth's turn control, an honest 44px-tall stone latch
+   (DESIGN.md's binding minimum) with the worn arrows grown to legible size */
+.iv .plinth-spin { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 12px;
+  cursor:pointer; background:linear-gradient(180deg,#62626e,#46464e); border:2px solid; border-color:#8a8a98 #30303a #26262e #72727e;
+  font-family:var(--font-fine); }
+.iv .plinth-spin .spin-arrow { position:static; transform:none; font-size:16px; }
+.iv .plinth-spin .spin-engrave { font-family:var(--font-fine); font-size:10px; letter-spacing:2px; color:#33333d; text-shadow:0 1px 0 #9a9aa8; }
 /* worn arrows chiseled into the stone: the plinth's own turn affordance */
 .iv .spin-arrow { position:absolute; top:50%; transform:translateY(-50%); font-size:10px; line-height:1;
   color:#33333d; text-shadow:0 1px 0 #a2a2b0; }
@@ -201,6 +225,27 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .stage-caption { text-align:center; margin:10px auto 0; max-width:440px; position:relative; z-index:1; }
 .iv .stage-caption .cap { display:inline-block; background:rgba(8,8,14,0.82); border:1px solid #4a3d20; padding:4px 10px; color:var(--dim-readable); }
 .iv .stage-caption .cap b { color:var(--ink); font-weight:400; }
+/* phone: the mirror caption rides BESIDE the dummy instead of below it —
+   zero rows of the first viewport spent on it */
+.iv-phone .cap-side { position:absolute; right:2px; top:-56px; width:128px; z-index:2; }
+.iv-phone .cap-side .stage-caption { margin:0; text-align:left; max-width:none; }
+.iv-phone .cap-side .cap { font-family:var(--font-fine); font-size:var(--type-fine); padding:4px 6px; }
+
+/* ============ the MENU STRIP — the app's plain button-row furniture ============ */
+.iv .menu-strip { display:flex; gap:6px; margin:8px 4px 0; align-items:stretch; }
+.iv .menu-strip .btn { flex:1; min-height:44px; padding:4px 8px; }
+/* the seven-group stamp rack: BY MUSCLE's guaranteed-reach door. Every stamp
+   carries its color AND a 3-letter engraving — color is never the only channel */
+.iv .stamp-rack { display:grid; grid-template-columns:auto repeat(7,minmax(0,1fr)); gap:4px; margin:4px 4px 0; }
+.iv .stamp-rack .sr-label { display:flex; align-items:center; padding:0 4px; max-width:56px;
+  font-family:var(--font-fine); font-size:var(--type-fine); line-height:1.25; color:var(--dim-readable); letter-spacing:1px; }
+.iv .stamp { min-height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:0;
+  cursor:pointer; background:var(--panel2); border:2px solid; border-color:var(--edge-lit) var(--edge-shade) var(--edge-shade) var(--edge-lit); }
+.iv .stamp i { width:10px; height:10px; display:block; }
+.iv .stamp span { font-family:var(--font-fine); font-size:var(--type-fine); letter-spacing:0.5px; color:var(--ink); }
+
+/* Grunhilda's real hand-drawn portrait (static/art/npcs/grunhilda/grunhilda_portrait.png) */
+.iv .grun-portrait { width:32px; height:32px; image-rendering:pixelated; display:block; }
 
 /* the tapped muscle: target brackets + a glint */
 .iv .tap-box { position:absolute; border:2px solid var(--gold-bright); background:rgba(240,208,128,0.10);
@@ -298,7 +343,7 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 .iv .plate-iron.wood .pname { color:#3c2a12; }
 .iv .plate-iron.wood .scheme { color:#5c452a; }
 .iv .plate-iron.wood .scheme b { color:#33230f; }
-.iv .plate-iron.wood .p-unknown { grid-column:1; color:#6b4f2a; font-family:var(--font-fine); font-size:var(--type-fine); }
+.iv .plate-iron.wood .p-unknown { grid-column:1; color:#3c2a12; font-family:var(--font-fine); font-size:var(--type-fine); }
 .iv .plate-iron.fresh { border-color:#f0a850 #7a4a20 #5c3816 #c07838; box-shadow:0 0 0 2px rgba(240,168,80,0.28), 4px 4px 0 rgba(0,0,0,0.5);
   animation:freshGlow 1.4s ease-in-out infinite alternate; }
 @keyframes freshGlow { from { box-shadow:0 0 0 2px rgba(240,168,80,0.14), 4px 4px 0 rgba(0,0,0,0.5); }
@@ -313,8 +358,14 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
 
 /* floor arrangement — the wide board sits central beneath the dummies */
 .iv .floor { margin-top:16px; position:relative; }
-.iv-phone .floor .ledger { margin:18px 2px 0; }
-.iv-desktop .floor .ledger { max-width:700px; margin:20px auto 0; }
+.iv-phone .floor { margin-top:6px; }
+.iv-phone .floor .ledger { margin:4px 2px 0; }
+.iv-desktop .floor .ledger { max-width:700px; margin:14px auto 0; }
+/* phone rhythm tightened so the working board lands in the first viewport */
+.iv-phone .floor .ledger-hang { height:10px; }
+.iv-phone .board { padding:8px 8px 8px; }
+.iv-phone .plate-iron { padding:5px 8px; margin:6px 0; }
+.iv-phone .board .btn.wide { margin-top:4px; }
 </style>
 
 <header class="mock-head">
@@ -329,16 +380,17 @@ body { margin:0; background:var(--wall); color:var(--note); font-family:'quanta-
   <span><b>SEAM 6</b> — Grunhilda speaks only when tapped; her ember glint = a week reading waits</span>
 </div>
 <div class="vnote"><b>V3 vs V2 — centered and floating.</b> per Joe's third note: the dummies stand centered, every secondary panel FLOATS over the scene — elevated, shadowed, reflowing nothing — and the forge earned its job as the routines entry point. The barrel and stones left the yard so the board could widen and move central.</div>
-<div class="vnote"><b>THIS ROUND — the yard at rest, and bare.</b> per Joe's decisions of 2026-08-06: the yard inherits the town's time-of-day clock and sky tilesets (drawn at dusk — one village, one sky); the first run is austere (dark dummy, bare board, the coals the brightest thing, no unprompted Grunhilda line); phone gets ONE dummy on a spinning plinth with two guards so the spin never gates information (the caption counts the whole body; a movement lighting the hidden side auto-turns the dummy), while desktop keeps the pair; plates take capped wear from logged sessions; the vocabulary is codified — the forge births (strike/draw), the board hangs, the plates wear, the dummy only mirrors, and weeks are never forged, hung, or struck. Critique fixes landed throughout: the caption is generated from the same counts that light the dummy, spec voice left the frames for the margins, tooltip census enforced, --dim-readable on wood, honest 44px-class reorder latches and corner-glyph hit regions, and the rack keeps the neutral-bevel-no-dim grammar of a coexisting floater.</div>
+<div class="vnote"><b>THIS PASS — restaged as a work surface.</b> per the adversarial review&rsquo;s five confirmed findings: the scenery compressed to a compact header band (the real sunset tile kept; location plate and compact forge ride it) so the working board lands in the first phone viewport; a plain MENU STRIP guarantees reach — STRIKE A NEW BOARD / DRAW FROM THE COALS beside the seven-group BY MUSCLE stamp rack (each stamp color + 3-letter engraving; the forge and the dummy tap stay the diegetic doors — two doors, one action); Grunhilda&rsquo;s board corner now carries her real hand-drawn portrait; the plinth spin control grew to a 44px stone band with an 8px dead lip; unknown-plate copy re-inked for contrast; captures re-shot 1:1.</div>
+<div class="vnote"><b>LAST ROUND — the yard at rest, and bare.</b> per Joe's decisions of 2026-08-06: the yard inherits the town's time-of-day clock and sky tilesets (drawn at dusk — one village, one sky); the first run is austere (dark dummy, bare board, the coals the brightest thing, no unprompted Grunhilda line); phone gets ONE dummy on a spinning plinth with two guards so the spin never gates information (the caption counts the whole body; a movement lighting the hidden side auto-turns the dummy), while desktop keeps the pair; plates take capped wear from logged sessions; the vocabulary is codified — the forge births (strike/draw), the board hangs, the plates wear, the dummy only mirrors, and weeks are never forged, hung, or struck. Critique fixes landed throughout: the caption is generated from the same counts that light the dummy, spec voice left the frames for the margins, tooltip census enforced, --dim-readable on wood, honest 44px-class reorder latches and corner-glyph hit regions, and the rack keeps the neutral-bevel-no-dim grammar of a coexisting floater.</div>
 
 <div class="frames">
 
   <section class="station phone-station" id="st-phone-rest">
     <div class="station-head">
       <div class="st-title">Phone — at rest, 390px</div>
-      <div class="st-sub">the state the player inhabits: no overlays open. One dummy on the spinning plinth, the mid-built board hanging beneath, the forge warm at the left horizon, both corner glyphs riding the board &mdash; the town&rsquo;s dusk sky overhead</div>
+      <div class="st-sub">restaged as a work surface: menu strip + seven-stamp BY MUSCLE rack up top, the town&rsquo;s dusk sky compressed to a header band carrying the location plate and the compact forge, the dummy tight under it, the working board landing in the first viewport</div>
       <div class="tag-chips">
-        <span>one dummy + spinning plinth</span><span>worn Bench Press plate</span><span>ember glint on Grunhilda</span><span>three-button dock</span>
+        <span>menu strip + stamp rack</span><span>44px spin band</span><span>real Grunhilda portrait</span><span>board in first viewport</span>
       </div>
     </div>
     <div class="phone-bezel">
@@ -594,7 +646,8 @@ function muscleBox(side, character) {
 /* ===== sprites: grunhilda + hero + icons from pixel.js; the yard furniture hand-authored in the same char-map style ===== */
 const SPRITES = {
   /* hand-authored: Grunhilda's yard forge — stone hearth, coals, anvil.
-     Her standing sprite left the yard: she now lives as grun_bust on the board. */
+     Her standing sprite left the yard: she now lives as her real hand-drawn
+     portrait on the board (GRUN_PORTRAIT below). */
   yard_forge: { p: { s: '#5a5a68', S: '#7a7a88', k: '#181820', o: '#e07030', y: '#f0d060', m: '#3a3a46', i: '#8a8a9a', I: '#a8a8b8', w: '#6a4e2c' }, r: [
     '...mm.....................', '...mm.....................', '..mmmm....................',
     '..SSSSSSSSSS..............', '..SssSSSSssS..............', '..SSSSSSSSSS..............',
@@ -608,12 +661,8 @@ const SPRITES = {
     '.....nn.....', '.ppppkkqqqq.', 'pppppkkqqqqq', 'pppppkkqqqqq',
     'wppppkkqqqqw', 'wwwwwkkwwwww', '.wwwwwwwwww.',
   ]},
-  /* hand-authored: Grunhilda's bust for the board's other corner — tap her to hear a reading */
-  grun_bust: { p: { h: '#b84a20', H: '#d86a30', f: '#e0b088', K: '#1a1410', m: '#c04030', i: '#8a8a9a', d: '#6a3a18' }, r: [
-    '...iiiiii...', '..hhhhhhhh..', '.hHHHHHHHHh.', '.hHffffffHh.',
-    '.hHfKffKfHh.', '.hHffffffHh.', '.hHfmmmmfHh.', '.hhffffffhh.',
-    '..hhhhhhhh..', '.dddddddddd.', 'dddddddddddd', '............',
-  ]},
+  /* Grunhilda's board-corner portrait is her REAL hand-drawn 32x32
+     (GRUN_PORTRAIT below), not an invented sprite */
   hero: { p: { h: '#6a4428', f: '#e0b088', t: '#4a6a9a', T: '#3a5a8a', l: '#5a4028', b: '#2a2a34' }, r: [
     '...hhhhhh...', '..hhhhhhhh..', '..hffffffh..', '..hfbffbfh..', '...ffffff...',
     '....ffff....', '..tttttttt..', '.tttttttttt.', '.t.tTTTTt.t.', '...tTTTTt...',
@@ -685,12 +734,19 @@ function meetsLine(list) {
 }
 
 /* ===== the scene pieces ===== */
-function plinthTop(w, spin) {
-  return `<div class="plinth-top ${spin ? 'spin' : ''}" style="width:${w}px">${spin
-    ? '<span class="spin-arrow a-left">&#9668;</span><span class="spin-arrow a-right">&#9658;</span>' : ''}</div>`;
+function plinthTop(w) {
+  return `<div class="plinth-top" style="width:${w}px"></div>`;
 }
 function plinthBase(w, label) {
   return `<div class="plinth-base" style="width:${w}px"><span class="plinth-engrave">${label}</span></div>`;
+}
+/* phone: the spinning plinth is a stone LIP (8px dead zone under the dummy's
+   calves) over a 44px SPIN BAND — arrows + the current facing engraved */
+function plinthSpin(w, label) {
+  return `<div class="plinth-lip" style="width:${w}px"></div>
+  <button class="plinth-spin" style="width:${w + 16}px" aria-label="turn the dummy" data-tag="THE SPIN CONTROL — 44PX|the turn control grew to an honest 44px-tall stone band (DESIGN.md&rsquo;s binding minimum; it was ~34px) with the worn arrows at legible 16px. Above it, an 8px inert stone lip is the DEAD ZONE between the spin band and the dummy&rsquo;s calves &mdash; a missed tap lands on stone, it can never fall through to nearest-muscle resolution and pop the rack">
+    <span class="spin-arrow a-left">&#9668;</span><span class="spin-engrave">${label}</span><span class="spin-arrow a-right">&#9658;</span>
+  </button>`;
 }
 function dummyFig(side, scale, litKey, tapped) {
   const w = HALF_W * scale, h = MAP_H * scale;
@@ -706,13 +762,12 @@ function dummyFig(side, scale, litKey, tapped) {
    side auto-turns the dummy to show the glow. */
 function stageSingle(scale, litKey, agg) {
   const w = HALF_W * scale;
-  return `<div class="stage" data-seam="1" data-tag="SEAM 1 — THE SPIN|phone gets ONE dummy on a spinning plinth: tap the plinth to turn it — instant, and it remembers its facing; the worn arrows are chiseled into the stone itself. TWO GUARDS so the spin never gates information: the caption always counts the whole body regardless of facing, and adding a movement that lights the hidden side auto-turns the dummy to show the glow. Any tap on the figure resolves to the NEAREST muscle — the whole dummy is one honest target, no 12px strips">
+  return `<div class="stage" data-seam="1" data-tag="SEAM 1 — THE SPIN|phone keeps ONE dummy on a spinning plinth, now standing AT the horizon — head at the band&rsquo;s top edge, a working object tight under the header, not scenery below it. Tap the spin band to turn it — instant, and it remembers its facing. TWO GUARDS so the spin never gates information: the caption always counts the whole body regardless of facing, and adding a movement that lights the hidden side auto-turns the dummy to show the glow. Any tap on the figure resolves to the NEAREST muscle — the whole dummy is one honest target, no 12px strips">
     <div class="dummy">
       ${dummyFig('front', scale, litKey, false)}
-      ${plinthTop(w + 34, true)}
-      ${plinthBase(w + 50, 'FRONT')}
+      ${plinthSpin(w + 34, 'FRONT')}
     </div>
-  </div>` + (agg ? `<div data-tag="THE MIRROR|the caption is generated from the same aggregation that lights the dummy, muscle for muscle — whole body, both faces, even the side turned away; no lying by omission. The wood plate the dummy cannot feel is not counted">${captionHtml(agg)}</div>` : '');
+  </div>` + (agg ? `<div class="cap-side" data-tag="THE MIRROR|the caption is generated from the same aggregation that lights the dummy, muscle for muscle — whole body, both faces, even the side turned away; no lying by omission. The wood plate the dummy cannot feel is not counted. On phone it rides BESIDE the dummy, spending no vertical budget">${captionHtml(agg)}</div>` : '');
 }
 /* desktop keeps the pair, FRONT and BACK engraved into the plinth stone */
 function stagePair(scale, litKey, agg, tapped) {
@@ -723,21 +778,66 @@ function stagePair(scale, litKey, agg, tapped) {
   </div>` + (agg ? captionHtml(agg) : '');
 }
 
-/* the forge, wearing the town-plate sign pattern: name + five words */
-function forgeSpot(blazing) {
-  return `<div class="spot forge-spot tappable" data-tag="THE FORGE|births routines — tap it to STRIKE a new board or DRAW an old one from the coals (strike = create; it replaces any +/new button). The sign shrank to the town-plate pattern; the meaning moved into the object: the coals pulse${blazing ? ', and on first run they burn visibly brighter than anything else on screen — the yard itself points at the door' : ' — the forge reads warm because it is the door'}">
+/* the forge, wearing the town-plate sign pattern: name + five words.
+   compact=true is the phone header-band rendering: half-scale sprite, same
+   object, same tap, same panel — Joe ruled the forge IS the routines entry
+   point, so it stays; the menu strip merely duplicates its verbs */
+function forgeSpot(blazing, compact) {
+  if (compact) {
+    return `<div class="spot forge-spot tappable" data-tag="THE FORGE, COMPACT|the forge kept its job in the restage — Joe ruled the object is the routines entry point, so it rides the header band as a compact reactive object opening the SAME strike/draw panel as the menu strip. Two doors, one action: forge and menu both strike — the object reacts, the menu guarantees reach (the same coexistence as Grunhilda&rsquo;s board button and the town door)${blazing ? '. First run: the coals still burn visibly brighter than anything else on screen' : ''}">
+      <div class="forge-row">${spriteTag(blazing ? 'yard_forge_hot' : 'yard_forge', 52)}<i class="coal-glow compact${blazing ? ' blazing' : ''}"></i></div>
+      <span class="splate">the forge<small>strike or draw</small></span>
+    </div>`;
+  }
+  return `<div class="spot forge-spot tappable" data-tag="THE FORGE|births routines — tap it to STRIKE a new board or DRAW an old one from the coals. Forge and menu both strike — the object reacts, the menu strip guarantees reach. The sign wears the town-plate pattern; the meaning lives in the object: the coals pulse${blazing ? ', and on first run they burn visibly brighter than anything else on screen — the yard itself points at the door' : ' — the forge reads warm because it is the door'}">
     <div class="forge-row">${spriteTag(blazing ? 'yard_forge_hot' : 'yard_forge', 104)}<i class="coal-glow${blazing ? ' blazing' : ''}"></i></div>
     <span class="splate">the forge<small>strike or draw a board</small></span>
   </div>`;
 }
+
+/* the location plate: on phone the win plaque folded into the band — the
+   yard's name rides the sky instead of costing a row above it */
+function locPlate() {
+  return `<div class="loc-plate" data-tag="THE LOCATION PLATE|the win plaque folded into the header band on phone — the yard&rsquo;s name rides the sky, spending zero rows; the fuller &lsquo;out the back of her forge&rsquo; line stays on desktop where the room is">The Drill Yard</div>`;
+}
+
+/* ===== the MENU STRIP: the app's plain button-row furniture, near the top.
+   Row 1 duplicates the forge's two verbs; row 2 is the seven-group stamp
+   rack — BY MUSCLE's guaranteed-reach door into the same weapon rack the
+   dummy tap opens. Group palette = GROUPS (app/exercises.py:16), each stamp
+   colored by a representative muscle AND engraved with 3 letters ===== */
+const GROUP_STAMPS = [
+  ['LEG', 'legs', MUSCLE_COLORS.quadriceps],
+  ['POS', 'posterior', MUSCLE_COLORS.hamstrings],
+  ['CHE', 'chest', MUSCLE_COLORS.chest],
+  ['BAC', 'back', MUSCLE_COLORS['middle back']],
+  ['SHO', 'shoulders', MUSCLE_COLORS.shoulders],
+  ['ARM', 'arms', MUSCLE_COLORS.biceps],
+  ['COR', 'core', MUSCLE_COLORS.abdominals],
+];
+function menuStrip() {
+  return `<div class="menu-strip" data-tag="THE MENU STRIP|the app&rsquo;s plain button-row furniture, restaged in near the top: STRIKE A NEW BOARD / DRAW FROM THE COALS duplicate the forge&rsquo;s two verbs at guaranteed reach. Two doors, one action — forge and menu both strike: the object reacts, the menu guarantees reach">
+    <button class="btn small">Strike a New Board</button>
+    <button class="btn small">Draw from the Coals</button>
+  </div>
+  <div class="stamp-rack" data-tag="BY MUSCLE — SEAM 2&rsquo;S SECOND DOOR|the seven-group stamp rack is the guaranteed-reach door for by-muscle adding: tap a stamp, the SAME weapon rack swings open — the dummy tap remains the diegetic door. Each 44px stamp carries its color AND a 3-letter engraving (LEG POS CHE BAC SHO ARM COR — GROUPS, app/exercises.py) so color is never the only channel">
+    <span class="sr-label">BY MUSCLE</span>
+    ${GROUP_STAMPS.map(([ab, full, color]) =>
+      `<button class="stamp" aria-label="${full} — open the rack"><i style="background:${color}"></i><span>${ab}</span></button>`).join('')}
+  </div>`;
+}
+
+/* Grunhilda's real hand-drawn 32x32 portrait, base64-inlined from
+   static/art/npcs/grunhilda/grunhilda_portrait.png */
+const GRUN_PORTRAIT = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAA4tJREFUWIXtlk9oG1cQxn/KHwohtSNCTqp0SHOIbtbBWNgIgopw44uNQbA61muMDIUealoIlG6PBbenBIPJOqcgNYYgX1QXUxFhKtaI4tzUQ1uKGp0KFXaML6a8HuT3tLvaf4bckg8Eu7NP88373sybgXd42xG7yGJzYkbMLgv1/sGnrRjAq4fTwr5O2qPg0kXItZ+/BiBeMpDEklza4iVjJKA3EoBEvGTQrxiK0M8WFZGk0gq6AFif7zgIvQIDqB+OAbBi7ob6j6yAJAd8FZCYyxxHdRuugFbQxfp8R+1qLnPsK3W/YjjW1Q/HQlW4EhZA4Z/fqB+OKYeSKAhybRQlQgPYu3WX9cxQgdfvfRS4PpeFutV2BByE0ByQCgBkY+lQh2cHJ+Syk29egX9fTvHht/cd37rP9wFILeaGxkX448sfIysQmCBaQRf5VA+AXHYSgI8/fwLA7nefAIMdX526PmIH2LfaNLoJqnumL0+oAm7YCaLYwxCYA9U9M9boJgIdXJ267mnft9p89dflwN1DxDL8L/U+ZwcnI4T7VhsYHg+g1kVFaBU8uHmDzdtFLNEZIchlJz3JLdHh8q+vSeYXMSdmAhtTYADmxIz489lnrG5vOYKQaD1q0HrUcNgs0WHzdpGN4hLNcpLZZREYhG8A5sSM2Cgu0a8YzC4LVre3mMscqyDsxPLZEh3mMsesbm/RLCdVz3hw84bvJn0TRA4fC0c6tXETGAwasjTt0sMwH1bM3dirh9NibSfN7/emAaiNm/z0OIb+8pcRPs8klOTxkkGtYrBwpHPnRQutkBYAg8poqyDsybgJon6IIobzYeXxN54bHQlAK+hi4940WimpbHdetBxr5OUkiSW5F2Tn3Cguod26K9xlqV7k0AGD3r9wpHsG4CW/G/IGBBzHALC2M+gnMpBLXuQAzXKS2rhJszxUIgq5fa300ywnlRL5VI98qqc4Y/Ihn+rR6CZYn+84Bo5+xWBtJ60cSvgloRvuAebpF9+TjaWxRIdGNzFQIJ/qOVqtHDgkuUQ2llY/+4V0dnDi+Gb3ZR/XvAaZK9LxoL4TLBzpjhpm5wfgPPNTzosIy3PTDkg//fNqWmHb8V3VtUwadwL+3XgOQDK/iHYtHs4IVE/7jv9J1MZNx4ygjsDd8WTiyMy9CDmAdi2uiGUi25PZzunbDd3nVT3tjwRRPe0rQi+7lz/3Zv8HDMrC74h8E8AAAAAASUVORK5CYII=';
 
 function boardGlyphs(opts) {
   const o = opts || {};
   return `<button class="board-glyph glyph-book" aria-label="the book — browse all movements" data-tag="THE BOOK|the Compendium as the book on the board, pinned under a nail head — the by-name path for the lifter who knows what they want. 24px art riding an invisible 44px hit region (both corners)">
     <span class="g-art">${spriteTag('book_glyph', 24)}</span><span class="g-cap">the book</span>
   </button>
-  <button class="board-glyph glyph-grun" aria-label="Grunhilda — tap for a reading" data-tag="SEAM 6|Grunhilda speaks ONLY when tapped — a grunhilda-shaped button, a fully optional lifeline, never forced${o.glint ? '. The tiny ember glint means she holds a week-level reading; glints and other notification tells can be toggled off in Settings (noted, not mocked)' : o.firstRun ? '. First run: no glint — she has nothing to read yet and will not pretend to' : ''}">
-    <span class="g-art">${spriteTag('grun_bust', 24)}${o.glint ? '<span class="gg-ember"></span>' : ''}</span><span class="g-cap">Grunhilda</span>
+  <button class="board-glyph glyph-grun" aria-label="Grunhilda — tap for a reading" data-tag="SEAM 6|her REAL hand-drawn portrait now (static/art/npcs/grunhilda/grunhilda_portrait.png, 32px pixelated in the 44px slot — the invented face is gone). Grunhilda speaks ONLY when tapped — a grunhilda-shaped button, a fully optional lifeline, never forced${o.glint ? '. The tiny ember glint means she holds a week-level reading; glints and other notification tells can be toggled off in Settings (noted, not mocked)' : o.firstRun ? '. First run: no glint — she has nothing to read yet and will not pretend to' : ''}">
+    <span class="g-art"><img class="grun-portrait" width="32" height="32" src="${GRUN_PORTRAIT}" alt="Grunhilda">${o.glint ? '<span class="gg-ember"></span>' : ''}</span><span class="g-cap">Grunhilda</span>
   </button>`;
 }
 
@@ -887,14 +987,11 @@ function winHtml() {
 function phoneRest() {
   return `<div class="app-pad">
     ${headerPhone()}
-    ${winHtml()}
-    <div class="yard" data-seam="A" data-tag="ONE VILLAGE, ONE SKY|the yard inherits the town&rsquo;s time-of-day clock and sky tilesets unchanged — the same day/sunset/night art, swapping at 06:00/18:00/20:00; drawn here at dusk (sky_mountains_sunset.png, the town&rsquo;s own tile). Sky band trimmed ~50px so the forge and dummy ride higher. AT-REST TOOLTIP CENSUS: exactly two standing fine-print lines — the forge sign&rsquo;s subtitle and the nameplate hint; everything transient waits for its moment, and Grunhilda&rsquo;s reading owns the &lsquo;sets alone light the dummy&rsquo; line">
-      <div class="sky"></div>
+    ${menuStrip()}
+    <div class="yard" data-seam="A" data-tag="A WORK SURFACE, NOT A ROOM|restaged per the adversarial review: the scenery compressed to an 88px HEADER BAND — still the town&rsquo;s own sunset tile (sky_mountains_sunset.png; the yard inherits the town clock unchanged, day/sunset/night at 06:00/18:00/20:00) — carrying the location plate and the compact forge. The dummy is a working object: prominent, tight under the band, head at its top edge. The working board (nameplate + first plates) now lands inside the first phone viewport (~760px budget). AT-REST TOOLTIP CENSUS: exactly two standing fine-print lines — the forge sign&rsquo;s subtitle and the nameplate hint">
+      <div class="sky">${locPlate()}${forgeSpot(false, true)}</div>
       <div class="ground" data-fill="dirt">
-        <div class="hrow">
-          ${forgeSpot(false)}
-        </div>
-        ${stageSingle(4, 'session', AGG)}
+        ${stageSingle(3, 'session', AGG)}
         <div class="floor">
           ${boardHtml({ glint: true, hangTag: true })}
         </div>
@@ -907,14 +1004,11 @@ function phoneRest() {
 function phoneFirst() {
   return `<div class="app-pad">
     ${headerPhone()}
-    ${winHtml()}
-    <div class="yard" data-seam="A" data-tag="FIRST RUN — AUSTERE|bare dark-wood dummy, an empty board, and the coals visibly the brightest thing on screen: the yard itself points at the door. NO unprompted Grunhilda line — she is a grunhilda-shaped button, never forced. One fine-print line total (the forge sign&rsquo;s), no caption (nothing to describe), quiet and inviting, not dead">
-      <div class="sky"></div>
+    ${menuStrip()}
+    <div class="yard" data-seam="A" data-tag="FIRST RUN — AUSTERE|bare dark-wood dummy, an empty board, and the coals visibly the brightest thing on screen: the yard itself points at the door — and the menu strip guarantees the same doors by plain button. NO unprompted Grunhilda line — she is a grunhilda-shaped button, never forced. One fine-print line total (the forge sign&rsquo;s), no caption (nothing to describe), quiet and inviting, not dead">
+      <div class="sky">${locPlate()}${forgeSpot(true, true)}</div>
       <div class="ground" data-fill="dirt">
-        <div class="hrow">
-          ${forgeSpot(true)}
-        </div>
-        ${stageSingle(4, 'none', null)}
+        ${stageSingle(3, 'none', null)}
         <div class="floor">
           ${boardHtml({ firstRun: true })}
         </div>
@@ -928,7 +1022,8 @@ function desktopRest() {
   return `<div class="app-pad">
     ${headerDesktop()}
     ${winHtml()}
-    <div class="yard" data-seam="A" data-tag="THE PLACE ITSELF|the state the player inhabits 95% of the time, finally drawn: undimmed yard, dummies lit, board hanging, nothing floating. Forge at the left edge, the pair centered, the wide board beneath — the whole screen is the yard">
+    ${menuStrip()}
+    <div class="yard" data-seam="A" data-tag="THE PLACE ITSELF|the state the player inhabits 95% of the time: undimmed yard, dummies lit, board hanging, nothing floating. Restage, gentler on desktop: dead sky trimmed (150&rarr;110px), the pair stands at the horizon, board and actions ride higher. Forge at the left edge, the wide board beneath — the whole screen is still the yard">
       <div class="sky"></div>
       <div class="ground" data-fill="dirt">
         <div class="hrow">
@@ -947,7 +1042,8 @@ function desktopRack() {
   return `<div class="app-pad">
     ${headerDesktop()}
     ${winHtml()}
-    <div class="yard" data-seam="A" data-tag="SEAM A|one tap from the town square; the yard stays fully live beneath the floating rack — same scene as the at-rest frame, one panel open">
+    ${menuStrip()}
+    <div class="yard" data-seam="A" data-tag="SEAM A|one tap from the town square; the yard stays fully live beneath the floating rack — same scene as the at-rest frame, one panel open. The rack this frame shows is the SAME panel the menu strip&rsquo;s stamps open">
       <div class="sky"></div>
       <div class="ground" data-fill="dirt">
         <div class="hrow">
