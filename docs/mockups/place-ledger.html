@@ -181,15 +181,16 @@
 /* the strike action. Destructive, so it is never the smallest target on the
    screen: a padded small-caps line in the body weight class, carrying the
    straightedge's own brass motif — visually modest, but its invisible hit
-   region (the ::before inset) extends past the border to 44x44px, the
-   DESIGN.md phone minimum. */
+   region (the ::before inset, resolved against the padding box) reaches 8px
+   past the border on every side: ~47px tall at the 414 scale, clearing the
+   DESIGN.md 44x44px phone minimum. */
 .iv .strike-row { display:block; text-align:right; margin:6px 8px 0 0; }
 .iv .strike-act { position:relative; display:inline-flex; align-items:center; gap:8px;
   appearance:none; -webkit-appearance:none; padding:7px 12px; cursor:pointer;
   border:2px solid #7a1e1e; background:rgba(122,30,30,0.10); color:#7a1e1e;
   font-family:var(--font-body); font-size:var(--type-body); font-variant:small-caps;
   letter-spacing:1px; line-height:1.1; box-shadow:2px 2px 0 rgba(0,0,0,0.35); }
-.iv .strike-act::before { content:''; position:absolute; left:-6px; right:-6px; top:-7px; bottom:-7px; }
+.iv .strike-act::before { content:''; position:absolute; left:-10px; right:-10px; top:-10px; bottom:-10px; }
 .iv .strike-act .edge-mote { display:inline-block; width:22px; height:6px; border:1px solid #7a1e1e;
   background:linear-gradient(180deg,#c4a97e,#ab9066); }
 
@@ -726,7 +727,7 @@
       <div class="sandrail"><span class="ticks"></span><span class="fill"></span><span class="knob"></span></div>
       <div class="minute-line"
            data-seam="MINUTES"
-           data-tag="MINUTES, INKED PLAINLY|A real numeric field beside the glass: ink 52 and 52 is what is sworn. Precision follows the backend &mdash; plain minutes, never rounded on the way through. The prose reading below is decoration only; whether a display may gloss to quarter-hours is parked for Joe.">
+           data-tag="MINUTES, INKED PLAINLY|A real numeric field beside the glass: ink 52 and 52 is what is sworn. Precision follows the backend &mdash; plain minutes, never rounded on the way through. The prose reading below is decoration only. Settled entries and raven-borne slips speak in Wick&rsquo;s rounded prose &mdash; that is the scrivener&rsquo;s voice &mdash; while the record beneath holds the exact minutes. The line being written shows its figure, because the figure is what stands.">
         <label class="paper-tag" for="${mid}">minutes, inked plainly</label>
         <input class="minute-in" id="${mid}" type="number" inputmode="numeric" min="1" max="600" value="52">
       </div>
@@ -859,7 +860,7 @@
                     <span class="rule-ink" style="width:68%"></span>
                     <span class="strike-row"
                           data-seam="44PX"
-                          data-tag="NEVER THE SMALLEST TARGET|A destructive action must never be the smallest target on the screen. The strike line is a padded small-caps action in the body weight class with the straightedge&rsquo;s brass motif &mdash; visually modest, and its invisible hit region extends past the border to 44&times;44px, the DESIGN.md phone minimum.">
+                          data-tag="NEVER THE SMALLEST TARGET|A destructive action must never be the smallest target on the screen. The strike line is a padded small-caps action in the body weight class with the straightedge&rsquo;s brass motif &mdash; visually modest, and its invisible hit region reaches 8px past the border on every side &mdash; about 47px tall at the 414 scale, clearing the DESIGN.md 44&times;44px phone minimum.">
                       <button type="button" class="strike-act"><i class="edge-mote"></i>strike from the record</button>
                     </span>
                   </div>
