@@ -947,14 +947,27 @@ the canon bird sat against a lit market stall and this one does not — and lift
 the fill further only turns a raven into a pigeon.
 
 **So the rule is that the silhouette boundary carries the legibility, not the body
-fill: a rim ink measuring at least 3:1 against `--bg`, present in both the rest
-and the flight frames.** Stated that way it is a constraint on one value rather
-than on the whole palette, it leaves the body as dark as the bird wants to be, and
-it survives whichever raven Joe rules canon. Note what it costs the frames as
-drawn: the existing rim at 2.46:1 does not meet it, and the only value in the
-sprite that already clears 3:1 is the lit wing at 5.37:1, which appears in the
-flight frames rather than at rest. Whoever draws the canon bird resolves that;
-nobody resolves it before the ruling.
+fill.** The bird is read by its outline against the void, and that is the only
+part of it that can be asked to meet a ratio. The body stays as dark as the bird
+wants to be.
+
+**The rim ink must measure at least 3:1 against `--bg` `#0a0a12`, in both the rest
+frame and the flight frames.** Not one or the other: a bird that is legible only
+mid-flap is a bird that disappears whenever it is still, which is most of the
+time. Stated this way the constraint binds one value rather than the whole
+palette, and it survives whichever raven Joe rules canon.
+
+**A new rim ink is required.** This is the part worth being blunt about, because
+the constraint reads like something the existing palette could be shuffled into
+satisfying, and it is not. The current rim `#4e4e6a` (`detail-pass.html:1013`,
+`:1233`) measures 2.46:1 and fails. Nothing else in the sprite clears 3:1 either —
+body `#26263a` (`detail-pass.html:1011`) is 1.33:1 and wing flash `#4a5a7a`
+(`detail-pass.html:1233`) is 2.85:1 — with the single exception of the lit wing
+`#7186ae` (`detail-pass.html:1233`) at 5.37:1, and that value appears only in a
+flight frame, so it cannot serve as the rest-frame rim. There is no rearrangement
+of the values already drawn that satisfies the rule; whoever draws the canon bird
+is choosing a colour that is not in the sprite today. Nobody resolves it before
+the ruling.
 
 Ordering, if it helps: the scrollbar first, because it is pure CSS and costs an
 afternoon, then the raven (most work, biggest payoff, fixes a defect), then the
